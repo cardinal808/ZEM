@@ -107,6 +107,33 @@
       },
       "rssi": {
         "name": "Wi-Fi signal"
+      },
+      "setpoint": {
+        "name": "Setpoint"
+      },
+      "grid_power": {
+        "name": "Grid power"
+      },
+      "action": {
+        "name": "Current action",
+        "state": {
+          "standby": "Standby",
+          "charge": "Charge",
+          "deliver": "Deliver",
+          "hold": "Hold",
+          "blocked": "Blocked",
+          "calibration": "Calibration"
+        }
+      },
+      "reason": {
+        "name": "Reason"
+      },
+      "control": {
+        "name": "Control",
+        "state": {
+          "shadow": "Shadow mode (calculates only)",
+          "active": "Active"
+        }
       }
     },
     "binary_sensor": {
@@ -115,6 +142,20 @@
       },
       "fault": {
         "name": "Fault"
+      },
+      "p1_ok": {
+        "name": "P1 meter"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "standby": "Standby",
+          "zero_meter": "Zero meter",
+          "fast_charge": "Fast charge",
+          "fast_discharge": "Fast discharge"
+        }
       }
     }
   },
@@ -122,6 +163,20 @@
     "serial_mismatch": {
       "title": "Different set at the address of set {number}",
       "description": "The device at {host} reports a different serial number than set {number}. ZEM does not use it. Check the IP address of the set (for example a fixed address in your router), or remove set {number} and add it again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sources",
+        "description": "Choose the sensor of your grid meter (P1) in W, + for import. ZEM runs in shadow mode: it computes what it would do, but does not control the battery yet.",
+        "data": {
+          "p1_entity": "P1 meter (power)"
+        },
+        "data_description": {
+          "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup."
+        }
+      }
     }
   }
 }

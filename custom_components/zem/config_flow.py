@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -12,15 +13,18 @@ from homeassistant.config_entries import (
     ConfigSubentry,
     ConfigSubentryData,
     ConfigSubentryFlow,
+    OptionsFlow,
     SubentryFlowResult,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_HOST,
     CONF_NUMBER,
+    CONF_P1_ENTITY,
     CONF_PRODUCT,
     CONF_SERIAL,
     DOMAIN,
@@ -84,6 +88,11 @@ class ZemConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._host: str | None = None
         self._report: SetReport | None = None
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry[Any]) -> ZemOptionsFlow:
+        return ZemOptionsFlow()
 
     @classmethod
     @callback
@@ -193,3 +202,36 @@ class SetSubentryFlow(ConfigSubentryFlow):
                     unique_id=report.serial,
                 )
         return self.async_show_form(step_id="user", data_schema=HOST_SCHEMA, errors=errors)
+
+
+P1_HINTS = ("p1", "power_consumption", "net_power", "grid_power", "electricity_meter", "homewizard")
+
+
+def suggest_p1_entity(hass: HomeAssistant) -> str | None:
+    """Best guess for the P1 power sensor: a power sensor whose id looks like a grid meter."""
+    candidates: list[tuple[int, str]] = []
+    for state in hass.states.async_all("sensor"):
+        if state.attributes.get("device_class") != SensorDeviceClass.POWER or state.entity_id.startswith("sensor.zem_"):
+            continue
+        name = state.entity_id.lower()
+        score = sum(10 - i for i, hint in enumerate(P1_HINTS) if hint in name)
+        if score:
+            candidates.append((score, state.entity_id))
+    return max(candidates)[1] if candidates else None
+
+
+class ZemOptionsFlow(OptionsFlow):
+    """Sources (M3: the P1 meter)."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+        current = self.config_entry.options.get(CONF_P1_ENTITY) or suggest_p1_entity(self.hass)
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_P1_ENTITY, default=current) if current else vol.Required(CONF_P1_ENTITY): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

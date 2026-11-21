@@ -1,12 +1,14 @@
 """ZEM: Home Assistant integration for Zendure home batteries.
 
-Milestone M2: reading only. ZEM does not write to the sets yet.
+Milestone M3: reading and shadow mode. ZEM computes what it would do but
+does not write to the sets yet.
 """
 
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -17,7 +19,10 @@ from .const import DOMAIN, SUBENTRY_SET
 from .coordinator import SetCoordinator
 from .core.totals import Totals, compute_totals
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT]
+
+if TYPE_CHECKING:
+    from .control import ZemControl
 
 
 @dataclass(slots=True)
@@ -25,6 +30,7 @@ class ZemRuntime:
     """Runtime objects of one ZEM installation."""
 
     coordinators: dict[str, SetCoordinator] = field(default_factory=dict)
+    control: ZemControl | None = None
 
     def totals(self) -> Totals:
         return compute_totals((c.snapshot() for c in self.coordinators.values()), time.monotonic())
@@ -50,9 +56,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZemConfigEntry) -> bool:
         coordinator = SetCoordinator(hass, entry, subentry)
         await coordinator.async_refresh()  # never raises; an unreachable set starts offline
         runtime.coordinators[subentry.subentry_id] = coordinator
+    from .control import ZemControl
+
+    runtime.control = ZemControl(hass, entry, runtime)
     entry.runtime_data = runtime
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(runtime.control.async_start())
     return True
 
 
