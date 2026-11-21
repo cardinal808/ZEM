@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.3.3
+- SolarFlow 2400 AC+ recognised: model name, limits and the 2.4 kWh built-in battery (before, its capacity was too low by 2.4 kWh). Thanks to a tester for the diagnostics.
+
 ### 0.3.2
 - Minimum and maximum state of charge in the options (Configure). Defaults stay 10 % and 95 %.
 

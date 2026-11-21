@@ -54,11 +54,24 @@ MODELS: Final[dict[str, ModelInfo]] = {
         charge_temperature=(0.0, 55.0),
         deliver_temperature=(-20.0, 55.0),
     ),
+    # AC-coupled version without solar inputs (seen in a user's report, product
+    # "solarFlow2400AC+"). Power from the product specifications; temperature
+    # limits assumed equal to the 2400 Pro (same housing and battery).
+    "solarFlow2400AC+": ModelInfo(
+        product="solarFlow2400AC+",
+        name="SolarFlow 2400 AC+",
+        max_charge_power=2400,
+        max_deliver_power=2400,
+        charge_temperature=(0.0, 55.0),
+        deliver_temperature=(-20.0, 55.0),
+    ),
 }
 
 PACKS: Final[dict[PackKey, PackInfo]] = {
     # Built-in battery of the SolarFlow 2400 Pro (measured: packType 500).
     PackKey("solarFlow2400Pro", 500, "J"): PackInfo("Built-in battery (SolarFlow 2400 Pro)", 2.40),
+    # Built-in battery of the SolarFlow 2400 AC+ (2.4 kWh base capacity, also packType 500).
+    PackKey("solarFlow2400AC+", 500, "J"): PackInfo("Built-in battery (SolarFlow 2400 AC+)", 2.40),
     # AB3000L add-on battery (measured: packType 350).
     PackKey("*", 350, "G"): PackInfo("AB3000L", 2.88),
 }
