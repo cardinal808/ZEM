@@ -65,6 +65,7 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
         self.health = SetHealth()
         self._last_report: SetReport | None = None
         self._last_raw: Mapping[str, Any] | None = None
+        self._unknown_issue_shown: bool | None = None  # None: not checked since start
         super().__init__(
             hass,
             LOGGER,
@@ -82,6 +83,27 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
     @property
     def mismatch_issue_id(self) -> str:
         return f"serial_mismatch_{self.subentry_id}"
+
+    def _update_unknown_pack_issue(self, report: SetReport, capacity: CapacityResult) -> None:
+        if capacity.complete:
+            # Also after a restart: the issue may still be stored from before.
+            if self._unknown_issue_shown is not False:
+                ir.async_delete_issue(self.hass, DOMAIN, self.unknown_pack_issue_id)
+                self._unknown_issue_shown = False
+            return
+        if self._unknown_issue_shown:
+            return
+        packs = ", ".join(f"{d['serial_prefix']}… (packType {d['pack_type']})" for d in unknown_pack_details(report, capacity))
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            self.unknown_pack_issue_id,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="unknown_pack",
+            translation_placeholders={"number": str(self.number), "packs": packs},
+        )
+        self._unknown_issue_shown = True
 
     async def _async_update_data(self) -> SetData:
         now = time.monotonic()
@@ -115,9 +137,15 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
         self.health.check_stale(now)
         return self._build(mismatch)
 
+    @property
+    def unknown_pack_issue_id(self) -> str:
+        return f"unknown_pack_{self.subentry_id}"
+
     def _build(self, mismatch: bool) -> SetData:
         report = self._last_report
         capacity = set_capacity(report, self.capacity_override) if report else None
+        if report is not None and capacity is not None:
+            self._update_unknown_pack_issue(report, capacity)
         online = self.health.online and not mismatch
         if not online or report is None:
             status = SetStatus.OFFLINE
@@ -143,3 +171,9 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
             online=data.online,
             offline_since=self.health.offline_since,
         )
+
+
+def unknown_pack_details(report: SetReport, capacity: CapacityResult) -> list[dict[str, Any]]:
+    """Type and serial prefix of the packs ZEM does not recognise (no full serial numbers)."""
+    unknown = set(capacity.unknown_packs)
+    return [{"pack_type": p.pack_type, "serial_prefix": p.serial[:4]} for p in report.packs if p.serial in unknown]

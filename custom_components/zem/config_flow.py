@@ -22,6 +22,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
+    CONF_CAPACITY_OVERRIDE,
     CONF_HOST,
     CONF_MAX_SOC,
     CONF_MIN_SOC,
@@ -205,6 +206,25 @@ class SetSubentryFlow(ConfigSubentryFlow):
                     unique_id=report.serial,
                 )
         return self.async_show_form(step_id="user", data_schema=HOST_SCHEMA, errors=errors)
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        """Capacity by hand, for packs ZEM does not recognise (0 = automatic)."""
+        entry = self._get_entry()
+        subentry = self._get_reconfigure_subentry()
+        if user_input is not None:
+            value = float(user_input.get(CONF_CAPACITY_OVERRIDE) or 0)
+            result = self.async_update_and_abort(entry, subentry, data_updates={CONF_CAPACITY_OVERRIDE: value or None})
+            self.hass.config_entries.async_schedule_reload(entry.entry_id)
+            return result
+        current = subentry.data.get(CONF_CAPACITY_OVERRIDE) or 0
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_CAPACITY_OVERRIDE, default=current): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=0, max=60, step=0.01, unit_of_measurement="kWh", mode=selector.NumberSelectorMode.BOX)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="reconfigure", data_schema=schema)
 
 
 P1_HINTS = ("p1", "power_consumption", "net_power", "grid_power", "electricity_meter", "homewizard")

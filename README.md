@@ -22,6 +22,11 @@ Requirements: HEMS turned off in the Zendure app; Home Assistant 2026.1 or newer
 
 [Nederlands](README.nl.md)
 
+## Supported sets and batteries
+- Sets with the local zenSDK API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro and 4000 AC+. Tested so far: 2400 Pro and 2400 AC+. Turn HEMS off in the Zendure app.
+- Batteries are recognised by their serial number: AB1000, AB1000S, AB2000(S/X), AB3000X, AB3000L and the built-in batteries of the 2400 Pro, 2400 AC+, 4000 AC+ and AIO 2400.
+- Battery not recognised? Home Assistant shows a repair notice. Enter the capacity via ZEM → the set → *Reconfigure*, and please open an issue with the line from the notice so we can add it.
+
 ## Planned features
 - Modes: Standby, Zero meter, Dynamic Forecasting, Fast charge, Fast discharge.
 - One to three sets, with the grid demand distributed over the sets.

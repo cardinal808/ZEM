@@ -213,3 +213,27 @@ async def test_diagnostics_hide_serials_and_addresses(hass: HomeAssistant, fake_
     assert pack["sn_prefix"] == "J"
     assert diag["sets"][0]["capacity"]["capacity_kwh"] == pytest.approx(11.04)
     assert diag["totals"]["power"] == -760
+
+
+async def test_unknown_pack_gives_repair_and_manual_capacity(hass: HomeAssistant, fake_sets: FakeSets) -> None:
+    data = fake_sets.add("10.0.0.10", "standby")
+    data["packData"][1]["sn"] = "XO2AEXAMPLE0002"
+    entry = await _install(hass)
+    subentry_id = next(iter(entry.subentries))
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"unknown_pack_{subentry_id}")
+    assert issue is not None
+    assert issue.translation_placeholders == {"number": "1", "packs": "XO2A… (packType 350)"}
+    assert float(hass.states.get("sensor.zem_set_1_capacity").state) == pytest.approx(11.04 - 2.88)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["sets"][0]["capacity"]["unknown_packs"] == [{"pack_type": 350, "serial_prefix": "XO2A"}]
+    assert "XO2AEXAMPLE0002" not in str(diag)
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "set"), context={"source": config_entries.SOURCE_RECONFIGURE, "subentry_id": subentry_id}
+    )
+    assert result["step_id"] == "reconfigure"
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"capacity_override": 11.04})
+    assert result["reason"] == "reconfigure_successful"
+    await hass.async_block_till_done()
+    assert float(hass.states.get("sensor.zem_set_1_capacity").state) == pytest.approx(11.04)
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"unknown_pack_{subentry_id}") is None

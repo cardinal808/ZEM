@@ -1,9 +1,10 @@
 """Known Zendure models and battery packs.
 
-Sources: product specifications of Zendure and our own measurements
-(MEET-zensdk). `packType` alone is not unique across models, so packs are
-matched on model + packType + the first letter of the pack's serial number
-(SPEC-basis §3.4). Unknown packs need a capacity from the user.
+Sources: product specifications of Zendure, the official Zendure integration
+(Zendure/Zendure-HA, MIT licence; facts only) and our own measurements
+(MEET-zensdk). Packs are recognised by their serial number; `packType` is
+only needed to tell the 8 kWh pack of a SolarFlow 4000 from an AB1000S.
+Unknown packs need a capacity from the user.
 """
 
 from __future__ import annotations
@@ -36,45 +37,44 @@ class PackInfo:
     capacity_kwh: float
 
 
-@dataclass(frozen=True, slots=True)
-class PackKey:
-    """Lookup key: model ('*' for any), packType and serial prefix."""
-
-    product: str
-    pack_type: int
-    serial_prefix: str
+# Temperature limits: the LiFePO4 ranges of the SolarFlow 2400 Pro, assumed for
+# the other models too until their own values are known.
+_CHARGE_T: Final = (0.0, 55.0)
+_DELIVER_T: Final = (-20.0, 55.0)
 
 
+def _model(product: str, name: str, charge: int, deliver: int) -> ModelInfo:
+    return ModelInfo(product, name, charge, deliver, _CHARGE_T, _DELIVER_T)
+
+
+# Models with the local zenSDK API. Keys are the `product` of the report in
+# lower case. Power: product specifications and the official Zendure
+# integration (Zendure/Zendure-HA, MIT); the set's own chargeMaxLimit and
+# inverseMaxPower in the report always win when ZEM controls it.
 MODELS: Final[dict[str, ModelInfo]] = {
-    "solarFlow2400Pro": ModelInfo(
-        product="solarFlow2400Pro",
-        name="SolarFlow 2400 Pro",
-        max_charge_power=2400,
-        max_deliver_power=2400,
-        charge_temperature=(0.0, 55.0),
-        deliver_temperature=(-20.0, 55.0),
-    ),
-    # AC-coupled version without solar inputs (seen in a user's report, product
-    # "solarFlow2400AC+"). Power from the product specifications; temperature
-    # limits assumed equal to the 2400 Pro (same housing and battery).
-    "solarFlow2400AC+": ModelInfo(
-        product="solarFlow2400AC+",
-        name="SolarFlow 2400 AC+",
-        max_charge_power=2400,
-        max_deliver_power=2400,
-        charge_temperature=(0.0, 55.0),
-        deliver_temperature=(-20.0, 55.0),
-    ),
+    m.product.lower(): m
+    for m in (
+        _model("solarFlow800", "SolarFlow 800", 1000, 800),
+        _model("solarFlow800Plus", "SolarFlow 800 Plus", 1000, 800),
+        _model("solarFlow800Pro", "SolarFlow 800 Pro", 1000, 800),
+        _model("solarFlow1600AC+", "SolarFlow 1600 AC+", 1600, 1600),
+        _model("solarFlow2400AC", "SolarFlow 2400 AC", 2400, 2400),
+        _model("solarFlow2400AC+", "SolarFlow 2400 AC+", 2400, 2400),
+        _model("solarFlow2400Pro", "SolarFlow 2400 Pro", 2400, 2400),  # measured
+        _model("solarFlow4000AC+", "SolarFlow 4000 AC+", 2400, 2400),
+    )
 }
 
-PACKS: Final[dict[PackKey, PackInfo]] = {
-    # Built-in battery of the SolarFlow 2400 Pro (measured: packType 500).
-    PackKey("solarFlow2400Pro", 500, "J"): PackInfo("Built-in battery (SolarFlow 2400 Pro)", 2.40),
-    # Built-in battery of the SolarFlow 2400 AC+ (2.4 kWh base capacity, also packType 500).
-    PackKey("solarFlow2400AC+", 500, "J"): PackInfo("Built-in battery (SolarFlow 2400 AC+)", 2.40),
-    # AB3000L add-on battery (measured: packType 350).
-    PackKey("*", 350, "G"): PackInfo("AB3000L", 2.88),
-}
+# Packs are recognised by their serial number (packType is not unique and
+# is "reserved" in the zenSDK documentation). Facts taken from the official
+# Zendure integration (Zendure/Zendure-HA, MIT) and our own measurements.
+_AB1000 = PackInfo("AB1000", 0.96)
+_AB1000S = PackInfo("AB1000S", 0.96)
+_AIO2400 = PackInfo("Built-in battery (AIO 2400)", 2.40)
+_AB3000 = PackInfo("AB3000X", 2.88)
+_AB3000L = PackInfo("AB3000L", 2.88)
+_BUILT_IN_2400 = PackInfo("Built-in battery (2.4 kWh)", 2.40)  # 2400 Pro (JO2A…), 2400 AC+ (JO4A…)
+_BUILT_IN_8000 = PackInfo("Built-in battery (SolarFlow 4000 AC+)", 8.00)
 
 TEMPERATURE_MARGIN: Final = 2.0
 """ZEM stays this many °C inside the model's limits (SPEC-basis §10)."""
@@ -82,16 +82,33 @@ TEMPERATURE_MARGIN: Final = 2.0
 
 def model_info(product: str) -> ModelInfo | None:
     """Limits of a known model, or None."""
-    return MODELS.get(product)
+    return MODELS.get(product.lower())
 
 
 def pack_info(product: str, pack_type: int, serial: str) -> PackInfo | None:
-    """Look up a pack; model-specific entries win over generic ones."""
-    prefix = serial[:1].upper()
-    for key in (PackKey(product, pack_type, prefix), PackKey("*", pack_type, prefix)):
-        info = PACKS.get(key)
-        if info is not None:
-            return info
+    """Recognise a pack by its serial number; None when unknown."""
+    sn = serial.upper()
+    if len(sn) < 4:
+        return None
+    first, fourth = sn[0], sn[3]
+    match first:
+        case "A":
+            return _AIO2400 if fourth == "3" else _AB1000
+        case "B":
+            # packType 70 is the 8 kWh built-in battery only on a SolarFlow 4000;
+            # other sets report 70 for an AB1000S as well.
+            if pack_type == 70 and product.lower().startswith("solarflow4000"):
+                return _BUILT_IN_8000
+            return _AB1000S
+        case "C":
+            suffix = {"F": "S", "E": "X"}.get(fourth, "")
+            return PackInfo(f"AB2000{suffix}", 1.92)  # also built into the 800 Plus/Pro and 1600 AC+
+        case "F":
+            return _AB3000
+        case "G":
+            return _AB3000L
+        case "J":
+            return _BUILT_IN_2400
     return None
 
 

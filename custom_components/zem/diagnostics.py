@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 
 from . import ZemConfigEntry
 from .const import CONF_HOST, CONF_SERIAL
+from .coordinator import unknown_pack_details
 
 TO_REDACT = {"sn", CONF_SERIAL, CONF_HOST, "serial"}
 
@@ -48,6 +49,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZemConf
                 "capacity": {
                     "capacity_kwh": data.capacity.capacity_kwh,
                     "unknown_pack_count": len(data.capacity.unknown_packs),
+                    "unknown_packs": unknown_pack_details(data.report, data.capacity) if data.report else [],
                 }
                 if data and data.capacity
                 else None,
