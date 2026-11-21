@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -17,7 +17,7 @@ from homeassistant.core import Event, EventStateChangedData, EventStateReportedD
 from homeassistant.helpers.event import async_track_state_change_event, async_track_state_report_event, async_track_time_interval
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_P1_ENTITY, LOGGER, SCAN_INTERVAL_ACTIVE, SCAN_INTERVAL_IDLE
+from .const import CONF_MAX_SOC, CONF_MIN_SOC, CONF_P1_ENTITY, LOGGER, SCAN_INTERVAL_ACTIVE, SCAN_INTERVAL_IDLE
 from .core.engine import Mode, SetView, StepResult, ZemEngine
 from .core.settings import Settings
 
@@ -47,7 +47,7 @@ class ZemControl:
         self.entry = entry
         self.runtime = runtime
         self.p1_entity: str | None = entry.options.get(CONF_P1_ENTITY)
-        self.engine = ZemEngine(Settings(), Mode.ZERO_METER)
+        self.engine = ZemEngine(settings_from_options(entry.options), Mode.ZERO_METER)
         self.engine.controller.trust_commands = False  # shadow mode: commands are not carried out
         self.shadow = True
         self.result: StepResult | None = None
@@ -151,3 +151,9 @@ class ZemControl:
         interval = timedelta(seconds=SCAN_INTERVAL_ACTIVE if active else SCAN_INTERVAL_IDLE)
         for coordinator in self.runtime.coordinators.values():
             coordinator.update_interval = interval
+
+
+def settings_from_options(options: Mapping[str, Any]) -> Settings:
+    """Settings with the values the user chose in the options."""
+    changes = {key: float(options[key]) for key in (CONF_MIN_SOC, CONF_MAX_SOC) if key in options}
+    return Settings().with_changes(**changes) if changes else Settings()

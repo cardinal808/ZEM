@@ -168,13 +168,17 @@
   "options": {
     "step": {
       "init": {
-        "title": "Sources",
-        "description": "Choose the sensor of your grid meter (P1) in W, + for import. ZEM runs in shadow mode: it computes what it would do, but does not control the battery yet.",
+        "title": "Sources and battery",
+        "description": "Choose the sensor of your smart meter (P1) in W, + when drawing from the grid. ZEM runs in shadow mode: it calculates what it would do, but does not control the battery yet.",
         "data": {
-          "p1_entity": "P1 meter (power)"
+          "p1_entity": "P1 meter (power)",
+          "min_soc": "Minimum state of charge",
+          "max_soc": "Maximum state of charge"
         },
         "data_description": {
-          "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup."
+          "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
+          "min_soc": "Below this value ZEM stops delivering. Written to the set once ZEM controls it.",
+          "max_soc": "Above this value ZEM stops charging. Written to the set once ZEM controls it."
         }
       }
     }

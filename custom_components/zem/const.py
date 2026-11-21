@@ -24,3 +24,6 @@ SCAN_INTERVAL_ACTIVE: Final = 2.0
 """Seconds between reads while the controller runs."""
 
 MANUFACTURER: Final = "Zendure"
+
+CONF_MIN_SOC = "min_soc"
+CONF_MAX_SOC = "max_soc"
