@@ -161,6 +161,7 @@ class ZemEngine:
         self._p1_at: float | None = None
         self._p1_interval: float | None = None
         self._block_since: float | None = None
+        self._started: float | None = None
 
     # --- inputs ---------------------------------------------------------
 
@@ -194,6 +195,10 @@ class ZemEngine:
         primary = usable[0] if usable else None
 
         blocked = self._blocked(now, discharge_blocked)
+        if self._started is None:
+            self._started = now
+        # Before the first P1 report, count from the start: no standby command right after a restart.
+        waiting_for_p1 = self.mode is Mode.ZERO_METER and self._p1_at is None and now - self._started <= s.p1_lost_after
         p1_age = None if self._p1_at is None else now - self._p1_at
         p1_ok = p1_age is not None and p1_age <= s.p1_stale_after
         total = 0
@@ -210,6 +215,9 @@ class ZemEngine:
             self.controller.reset(now)
         elif self.mode in (Mode.FAST_CHARGE, Mode.FAST_DISCHARGE):
             total, reason, finished = self._fast(primary, blocked)
+            self.controller.reset(now)
+        elif waiting_for_p1:
+            reason = Reason(ReasonCode.P1_MISSING)
             self.controller.reset(now)
         elif p1_age is None:
             all_standby = True
@@ -231,8 +239,9 @@ class ZemEngine:
         targets = {v.key: 0 for v in sets}
         if primary is not None and total:
             targets[primary.key] = total
-        commands = self._commands(now, sets, targets, all_standby)
-        action = self._action(total, reason)
+        # While waiting for the first P1 report, leave the sets as they are.
+        commands = [] if waiting_for_p1 else self._commands(now, sets, targets, all_standby)
+        action = Action.HOLD if waiting_for_p1 else self._action(total, reason)
         return StepResult(
             mode=self.mode,
             action=action,

@@ -14,13 +14,24 @@ def _view(fixture: str = "deliver_760", online: bool = True) -> SetView:
     return SetView("a", 1, parse_report(load_fixture(fixture)), online)
 
 
-def test_without_p1_sets_go_to_standby_with_clear_reason() -> None:
+def test_after_start_wait_for_p1_without_touching_the_sets() -> None:
     e = ZemEngine()
     r = e.step(0, [_view()])
     assert r.reason.code is ReasonCode.P1_MISSING
+    assert r.action is Action.HOLD
+    assert r.commands == ()
+    assert "P1" in r.reason.text("nl")
+    e.p1_reported(5, 300)
+    assert e.step(5, [_view()]).reason.code is not ReasonCode.P1_MISSING
+
+
+def test_without_p1_sets_go_to_standby_with_clear_reason() -> None:
+    e = ZemEngine()
+    e.step(0, [_view()])
+    r = e.step(61, [_view()])
+    assert r.reason.code is ReasonCode.P1_MISSING
     assert r.action is Action.STANDBY
     assert [c.kind for c in r.commands if c.kind != "soc_limits"] == ["standby"]
-    assert "P1" in r.reason.text("nl")
 
 
 def test_soc_limits_are_aligned_once() -> None:
