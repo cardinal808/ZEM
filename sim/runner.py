@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -50,6 +51,10 @@ class Simulation:
     settings: Settings = field(default_factory=Settings)
     mode: Mode = Mode.ZERO_METER
     p1_interval: float = 1.0
+    p1_jitter: float = 0.0
+    """The meter interval varies uniformly by up to ± this many seconds (fixed seed)."""
+    step_interval: float | None = None
+    """How often ZEM steps (Home Assistant: 1 s). None: on every P1 report."""
     p1_outages: list[tuple[float, float]] = field(default_factory=list)
     """(start, end) periods without P1 reports."""
     poll_interval: float = 2.0
@@ -69,7 +74,9 @@ class Simulation:
         self.now = start
         trace = Trace()
         next_p1 = start
+        next_step = start
         next_poll = start
+        rng = random.Random(1)
         reports = {i: s.report(start) for i, s in enumerate(self.sets)}
         pending: list[tuple[float, int, dict[str, int]]] = []
         steps_total = round(duration / self.dt)
@@ -84,10 +91,16 @@ class Simulation:
                     if s.online:
                         reports[i] = s.report(self.now)
                 next_poll += self.poll_interval
+            due_step = False
             if self.now >= next_p1:
-                next_p1 += self.p1_interval
+                next_p1 += self.p1_interval + (rng.uniform(-self.p1_jitter, self.p1_jitter) if self.p1_jitter else 0.0)
                 if not any(a <= self.now < b for a, b in self.p1_outages):
                     self.engine.p1_reported(self.now, self.grid())
+                due_step = self.step_interval is None
+            if self.step_interval is not None and self.now >= next_step:
+                next_step += self.step_interval
+                due_step = True
+            if due_step:
                 views = [SetView(str(i), i + 1, reports[i], self.sets[i].online) for i in range(len(self.sets))]
                 result = self.engine.step(self.now, views, discharge_blocked=self.discharge_blocked(self.now))
                 for cmd in result.commands:

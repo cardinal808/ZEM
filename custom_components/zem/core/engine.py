@@ -223,7 +223,11 @@ class ZemEngine:
         # Before the first P1 report, count from the start: no standby command right after a restart.
         waiting_for_p1 = self.mode is Mode.ZERO_METER and self._p1_at is None and now - self._started <= s.p1_lost_after
         p1_age = None if self._p1_at is None else now - self._p1_at
-        p1_ok = p1_age is not None and p1_age <= s.p1_stale_after
+        meter = self._p1_interval or 0.0
+        # Until the meter's interval is known, only a lost P1 counts (no 0 W after 10 s at start-up).
+        stale_after = max(s.p1_stale_after, 2.5 * meter) if self._p1_interval is not None else s.p1_lost_after
+        lost_after = max(s.p1_lost_after, 6 * meter)
+        p1_ok = p1_age is not None and p1_age <= stale_after
         total = 0
         finished = False
         all_standby = False
@@ -246,7 +250,7 @@ class ZemEngine:
             all_standby = True
             reason = Reason(ReasonCode.P1_MISSING)
             self.controller.reset(now)
-        elif p1_age > s.p1_lost_after:
+        elif p1_age > lost_after:
             all_standby = True
             reason = Reason(ReasonCode.P1_LOST, {"age": round(p1_age)})
             self.controller.reset(now)

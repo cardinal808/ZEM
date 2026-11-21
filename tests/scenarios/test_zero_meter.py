@@ -83,6 +83,16 @@ def test_b7_slow_meter() -> None:
     assert len(set(sps)) <= 2  # no oscillation
 
 
+def test_b7b_dsmr4_meter_with_jitter() -> None:
+    # DSMR 4: a new value about every 10 s (here 8.5-11.5 s), ZEM steps every second as in Home Assistant.
+    load = steps((0, 600), (120, 900), (240, 450), (360, 1500), (480, 700))
+    sim = Simulation(load=load, p1_interval=10.0, p1_jitter=1.5, step_interval=1.0)
+    tr = sim.run(720)
+    assert all(r.reason.code not in (ReasonCode.P1_TOO_SLOW, ReasonCode.P1_STALE) for _, r in tr.results)
+    assert share_within(tr, TARGET, 50, start=30) > 0.9
+    assert sum(len(r.commands) for _, r in tr.results) < 30
+
+
 def test_b8_fast_charge_returns_to_zero_meter() -> None:
     s = SimSet(soc=93.0)
     sim = Simulation(load=constant(300), sets=[s], mode=Mode.FAST_CHARGE)
