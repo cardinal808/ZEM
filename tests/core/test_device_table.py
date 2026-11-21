@@ -22,6 +22,15 @@ def test_capacity_of_own_set() -> None:
     assert result.complete
 
 
+def test_solarflow_2400_ac_plus() -> None:
+    report = parse_report(load_fixture("ac_plus_grid_charge"))
+    assert report.product == "solarFlow2400AC+"
+    result = set_capacity(report)
+    assert result.capacity_kwh == pytest.approx(2.40 + 2 * 2.88)
+    assert result.complete
+    assert report.battery_power_ac == 2386  # charging from the grid
+
+
 def test_pack_type_alone_is_not_enough() -> None:
     assert pack_info("solarFlow2400Pro", 500, "JO2AEXAMPLE0001") is not None
     assert pack_info("solarFlow2400Pro", 500, "XO2AEXAMPLE0001") is None
