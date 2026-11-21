@@ -1,0 +1,27 @@
+[project]
+name = "zem"
+version = "0.0.1"
+description = "ZEM: Home Assistant integration for Zendure home batteries"
+license = "MIT"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 140
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # Dutch/Unicode text in docstrings and messages is intentional
+
+[tool.ruff.lint.isort]
+known-first-party = ["zem_core", "conftest"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
