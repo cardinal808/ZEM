@@ -1,0 +1,127 @@
+{
+  "config": {
+    "flow_title": "{model}",
+    "step": {
+      "user": {
+        "title": "Zendure-set toevoegen",
+        "description": "ZEM leest de set uit via het lokale netwerk. In deze versie wordt niets naar de set geschreven.",
+        "data": {
+          "host": "Adres"
+        },
+        "data_description": {
+          "host": "IP-adres of hostnaam van de Zendure-set. HEMS moet in de Zendure-app uit staan."
+        }
+      },
+      "discovery_confirm": {
+        "title": "Zendure-set gevonden",
+        "description": "{model} met {packs} packs ({capacity} kWh), serienummer {serial}, op {host}. Toevoegen aan ZEM?"
+      }
+    },
+    "error": {
+      "cannot_connect": "De set is niet bereikbaar of het antwoord is onbruikbaar. Controleer het adres; lukt het nog steeds niet, zet HEMS in de Zendure-app één keer aan, verlaat het menu en zet het weer uit."
+    },
+    "abort": {
+      "already_configured": "Deze set hoort al bij ZEM.",
+      "max_sets": "ZEM ondersteunt maximaal 3 sets.",
+      "set_added": "Set {number} is toegevoegd aan ZEM.",
+      "cannot_connect": "De set is niet bereikbaar."
+    }
+  },
+  "config_subentries": {
+    "set": {
+      "initiate_flow": {
+        "user": "Set toevoegen"
+      },
+      "entry_type": "Set",
+      "step": {
+        "user": {
+          "title": "Zendure-set toevoegen",
+          "data": {
+            "host": "Adres"
+          },
+          "data_description": {
+            "host": "IP-adres of hostnaam van de Zendure-set. HEMS moet in de Zendure-app uit staan."
+          }
+        }
+      },
+      "error": {
+        "cannot_connect": "De set is niet bereikbaar of het antwoord is onbruikbaar. Controleer het adres; lukt het nog steeds niet, zet HEMS in de Zendure-app één keer aan, verlaat het menu en zet het weer uit."
+      },
+      "abort": {
+        "already_configured": "Deze set hoort al bij ZEM.",
+        "max_sets": "ZEM ondersteunt maximaal 3 sets."
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "state_of_charge": {
+        "name": "Laadpercentage"
+      },
+      "energy_stored": {
+        "name": "Energie in de accu"
+      },
+      "capacity": {
+        "name": "Capaciteit"
+      },
+      "power": {
+        "name": "Vermogen accu"
+      },
+      "charge_power": {
+        "name": "Laadvermogen"
+      },
+      "discharge_power": {
+        "name": "Leververmogen"
+      },
+      "solar_power": {
+        "name": "Zonnevermogen"
+      },
+      "sets_online": {
+        "name": "Sets online"
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "offline": "Offline",
+          "fault": "Fout",
+          "calibrating": "Kalibratie",
+          "bypass": "Doorvoer",
+          "standby": "Standby",
+          "charging": "Laden",
+          "discharging": "Leveren",
+          "full": "Vol",
+          "empty": "Leeg"
+        }
+      },
+      "temperature": {
+        "name": "Temperatuur"
+      },
+      "offgrid_power": {
+        "name": "Vermogen off-grid-stopcontact"
+      },
+      "device_min_soc": {
+        "name": "Minimale SOC op de set"
+      },
+      "device_max_soc": {
+        "name": "Maximale SOC op de set"
+      },
+      "rssi": {
+        "name": "Wifi-signaal"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
+      "fault": {
+        "name": "Fout"
+      }
+    }
+  },
+  "issues": {
+    "serial_mismatch": {
+      "title": "Andere set op het adres van set {number}",
+      "description": "Het apparaat op {host} meldt een ander serienummer dan set {number}. ZEM gebruikt het niet. Controleer het IP-adres van de set (bijvoorbeeld een vast adres in je router), of verwijder set {number} en voeg hem opnieuw toe."
+    }
+  }
+}

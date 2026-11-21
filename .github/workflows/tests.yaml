@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   core:
+    name: Core (without Home Assistant)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +21,20 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Ruff
         run: ruff check . && ruff format --check .
-      - name: Mypy (core, strict)
-        run: mypy custom_components/zem/core
-      - name: Pytest
-        run: pytest
+      - name: Pytest (core)
+        run: pytest tests/core -p no:homeassistant
+
+  homeassistant:
+    name: Integration (Home Assistant)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: pip install -r requirements_test.txt pytest-homeassistant-custom-component
+      - name: Mypy (strict)
+        run: mypy custom_components/zem
+      - name: Pytest (Home Assistant)
+        run: pytest tests/ha
