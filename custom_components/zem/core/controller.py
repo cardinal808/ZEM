@@ -37,6 +37,8 @@ class ControllerInput:
     """W the battery may deliver now (0 = not allowed)."""
     p1_interval: float
     """Mean interval of the P1 meter in s."""
+    sample: int | None = None
+    """Number of the P1 sample; the controller decides once per sample (None: every step)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +82,7 @@ class ZeroMeterController:
         self._pending_since: float | None = None
         self._start_count = 0
         self._deviation_since: float | None = None
+        self._last_sample: int | None = None
 
     def reset(self, now: float) -> None:
         """Start from zero (mode change, restart, safety stop)."""
@@ -138,6 +141,10 @@ class ZeroMeterController:
 
         if inp.now - self._last_step < s.min_step_interval:
             return self._unchanged(inp, regulated=False)
+        if inp.sample is not None:
+            if inp.sample == self._last_sample:
+                return self._unchanged(inp, regulated=False)  # nothing new measured
+            self._last_sample = inp.sample
 
         settling = inp.now - self._setpoint_at < self._settle_time(inp.p1_interval)
         battery = self._effective_battery(inp, settling)
