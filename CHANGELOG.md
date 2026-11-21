@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.3.2
+- Minimum and maximum state of charge in the options (Configure). Defaults stay 10 % and 95 %.
+
 ### 0.3.1
 - After a (re)start, Zero meter waits up to 60 s for the first P1 report and leaves the sets alone. Before, it would have sent standby immediately (seen in the shadow-mode diagnostics).
 

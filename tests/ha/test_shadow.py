@@ -95,3 +95,14 @@ async def test_decisions_in_diagnostics(hass: HomeAssistant, fake_sets: FakeSets
     assert control["decisions"]
     assert all(d["sent"] is False for d in control["decisions"])
     assert "10.0.0.10" not in str(diag)
+
+
+async def test_soc_limits_in_options(hass: HomeAssistant, fake_sets: FakeSets) -> None:
+    entry = await _install_with_p1(hass, fake_sets)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"p1_entity": P1, "min_soc": 15, "max_soc": 100})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    settings = (await async_get_config_entry_diagnostics(hass, entry))["control"]["settings"]
+    assert (settings["min_soc"], settings["max_soc"]) == (15.0, 100.0)

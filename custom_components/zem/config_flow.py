@@ -23,6 +23,8 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_HOST,
+    CONF_MAX_SOC,
+    CONF_MIN_SOC,
     CONF_NUMBER,
     CONF_P1_ENTITY,
     CONF_PRODUCT,
@@ -34,6 +36,7 @@ from .const import (
 from .core.client import ZendureClient, ZendureError
 from .core.device_table import model_info, set_capacity
 from .core.models import SetReport
+from .core.settings import Settings
 
 HOST_SCHEMA = vol.Schema({vol.Required(CONF_HOST): str})
 
@@ -221,17 +224,28 @@ def suggest_p1_entity(hass: HomeAssistant) -> str | None:
 
 
 class ZemOptionsFlow(OptionsFlow):
-    """Sources (M3: the P1 meter)."""
+    """Sources and battery limits."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        # The ranges (min 5-50 %, max 70-100 %) keep the minimum below the maximum.
         if user_input is not None:
             return self.async_create_entry(data={**self.config_entry.options, **user_input})
-        current = self.config_entry.options.get(CONF_P1_ENTITY) or suggest_p1_entity(self.hass)
+        options = dict(self.config_entry.options)
+        current = options.get(CONF_P1_ENTITY) or suggest_p1_entity(self.hass)
+        defaults = Settings()
         schema = vol.Schema(
             {
                 vol.Required(CONF_P1_ENTITY, default=current) if current else vol.Required(CONF_P1_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER)
                 ),
+                vol.Required(CONF_MIN_SOC, default=options.get(CONF_MIN_SOC, defaults.min_soc)): _percent(5, 50),
+                vol.Required(CONF_MAX_SOC, default=options.get(CONF_MAX_SOC, defaults.max_soc)): _percent(70, 100),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
+
+
+def _percent(low: int, high: int) -> selector.NumberSelector:
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(min=low, max=high, step=1, unit_of_measurement="%", mode=selector.NumberSelectorMode.BOX)
+    )

@@ -168,13 +168,17 @@
   "options": {
     "step": {
       "init": {
-        "title": "Bronnen",
+        "title": "Bronnen en accu",
         "description": "Kies de sensor van je slimme meter (P1) in W, + bij afname. ZEM draait in schaduwmodus: het rekent uit wat het zou doen, maar stuurt de accu nog niet aan.",
         "data": {
-          "p1_entity": "P1-meter (vermogen)"
+          "p1_entity": "P1-meter (vermogen)",
+          "min_soc": "Minimale laadtoestand",
+          "max_soc": "Maximale laadtoestand"
         },
         "data_description": {
-          "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen."
+          "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
+          "min_soc": "Onder deze waarde levert ZEM niet meer. Wordt naar de set geschreven zodra ZEM live stuurt.",
+          "max_soc": "Boven deze waarde laadt ZEM niet meer. Wordt naar de set geschreven zodra ZEM live stuurt."
         }
       }
     }
