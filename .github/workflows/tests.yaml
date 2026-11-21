@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   core:
-    name: Core (without Home Assistant)
+    name: Core and simulator (without Home Assistant)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,8 +21,8 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Ruff
         run: ruff check . && ruff format --check .
-      - name: Pytest (core)
-        run: pytest tests/core -p no:homeassistant
+      - name: Pytest (core and simulator scenarios)
+        run: pytest tests/core tests/scenarios -p no:homeassistant
 
   homeassistant:
     name: Integration (Home Assistant)

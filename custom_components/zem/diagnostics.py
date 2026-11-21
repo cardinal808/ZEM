@@ -54,4 +54,24 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZemConf
                 "report": _redact_report(dict(data.raw)) if data and data.raw else None,
             }
         )
-    return {"totals": dataclasses.asdict(runtime.totals()), "sets": sets}
+    control = runtime.control
+    control_info: dict[str, Any] | None = None
+    if control is not None:
+        result = control.result
+        control_info = {
+            "shadow": control.shadow,
+            "p1_entity": control.p1_entity,
+            "mode": control.engine.mode.value,
+            "settings": dataclasses.asdict(control.engine.settings),
+            "last": {
+                "setpoint": result.setpoint,
+                "action": result.action.value,
+                "reason": result.reason.code.value,
+                "p1_ok": result.p1_ok,
+                "p1_interval": result.p1_interval,
+            }
+            if result
+            else None,
+            "decisions": list(control.log)[-200:],
+        }
+    return {"totals": dataclasses.asdict(runtime.totals()), "sets": sets, "control": control_info}

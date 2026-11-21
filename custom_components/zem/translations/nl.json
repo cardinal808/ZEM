@@ -107,6 +107,33 @@
       },
       "rssi": {
         "name": "Wifi-signaal"
+      },
+      "setpoint": {
+        "name": "Doelvermogen"
+      },
+      "grid_power": {
+        "name": "Netvermogen"
+      },
+      "action": {
+        "name": "Actie nu",
+        "state": {
+          "standby": "Standby",
+          "charge": "Laden",
+          "deliver": "Leveren",
+          "hold": "Vasthouden",
+          "blocked": "Geblokkeerd",
+          "calibration": "Kalibratie"
+        }
+      },
+      "reason": {
+        "name": "Reden"
+      },
+      "control": {
+        "name": "Aansturing",
+        "state": {
+          "shadow": "Schaduwmodus (rekent alleen mee)",
+          "active": "Actief"
+        }
       }
     },
     "binary_sensor": {
@@ -115,6 +142,20 @@
       },
       "fault": {
         "name": "Fout"
+      },
+      "p1_ok": {
+        "name": "P1-meter"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Modus",
+        "state": {
+          "standby": "Standby",
+          "zero_meter": "Nul op de meter",
+          "fast_charge": "Snel opladen",
+          "fast_discharge": "Snel ontladen"
+        }
       }
     }
   },
@@ -122,6 +163,20 @@
     "serial_mismatch": {
       "title": "Andere set op het adres van set {number}",
       "description": "Het apparaat op {host} meldt een ander serienummer dan set {number}. ZEM gebruikt het niet. Controleer het IP-adres van de set (bijvoorbeeld een vast adres in je router), of verwijder set {number} en voeg hem opnieuw toe."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Bronnen",
+        "description": "Kies de sensor van je slimme meter (P1) in W, + bij afname. ZEM draait in schaduwmodus: het rekent uit wat het zou doen, maar stuurt de accu nog niet aan.",
+        "data": {
+          "p1_entity": "P1-meter (vermogen)"
+        },
+        "data_description": {
+          "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen."
+        }
+      }
     }
   }
 }

@@ -67,3 +67,33 @@ class ZemTotalEntity(Entity):
     @callback
     def _handle_update(self) -> None:
         self.async_write_ha_state()
+
+
+class ZemControlEntity(Entity):
+    """Entity of the installation fed by the control loop; writes state only on change."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(self, runtime: ZemRuntime, entry: ZemConfigEntry, key: str, platform: str) -> None:
+        assert runtime.control is not None
+        self._control = runtime.control
+        self._runtime = runtime
+        self._attr_unique_id = f"{entry.entry_id}_{key}"
+        self._attr_translation_key = key
+        self.entity_id = f"{platform}.zem_{key}"
+        self._attr_device_info = installation_device(entry)
+        self._last_written: object = None
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self._control.async_add_listener(self._handle_update))
+
+    def _fingerprint(self) -> object:
+        return (self.state, self.extra_state_attributes)
+
+    @callback
+    def _handle_update(self) -> None:
+        fingerprint = self._fingerprint()
+        if fingerprint != self._last_written:
+            self._last_written = fingerprint
+            self.async_write_ha_state()

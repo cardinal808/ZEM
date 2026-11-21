@@ -16,8 +16,11 @@ CONF_SERIAL: Final = "serial"
 CONF_PRODUCT: Final = "product"
 CONF_NUMBER: Final = "number"
 CONF_CAPACITY_OVERRIDE: Final = "capacity_override"
+CONF_P1_ENTITY: Final = "p1_entity"
 
 SCAN_INTERVAL_IDLE: Final = 5.0
 """Seconds between reads while ZEM is not actively controlling the set."""
+SCAN_INTERVAL_ACTIVE: Final = 2.0
+"""Seconds between reads while the controller runs."""
 
 MANUFACTURER: Final = "Zendure"

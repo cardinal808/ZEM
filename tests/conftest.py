@@ -6,7 +6,6 @@ The core is loaded as the stand-alone package ``zem_core`` straight from
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -19,17 +18,8 @@ CORE_DIR = ROOT / "custom_components" / "zem" / "core"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
-def _load_core() -> None:
-    if "zem_core" in sys.modules:
-        return
-    spec = importlib.util.spec_from_file_location("zem_core", CORE_DIR / "__init__.py", submodule_search_locations=[str(CORE_DIR)])
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["zem_core"] = module
-    spec.loader.exec_module(module)
-
-
-_load_core()
+sys.path.insert(0, str(ROOT))
+import sim  # noqa: E402,F401  (loads the core as zem_core)
 
 
 def load_fixture(name: str) -> dict[str, Any]:
