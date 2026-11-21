@@ -1,0 +1,57 @@
+"""Diagnostics download: state of every set, with serial numbers and IP addresses hidden."""
+
+from __future__ import annotations
+
+import dataclasses
+from typing import Any
+
+from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.core import HomeAssistant
+
+from . import ZemConfigEntry
+from .const import CONF_HOST, CONF_SERIAL
+
+TO_REDACT = {"sn", CONF_SERIAL, CONF_HOST, "serial"}
+
+
+def _redact_report(raw: dict[str, Any]) -> dict[str, Any]:
+    report: dict[str, Any] = async_redact_data(raw, TO_REDACT)
+    packs = report.get("packData")
+    if isinstance(packs, list):
+        # Keep the first letter of pack serials: it identifies the pack type.
+        report["packData"] = [
+            {**async_redact_data(p, TO_REDACT), "sn_prefix": str(p.get("sn", ""))[:1]}
+            for p in raw.get("packData", [])
+            if isinstance(p, dict)
+        ]
+    return report
+
+
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZemConfigEntry) -> dict[str, Any]:
+    runtime = entry.runtime_data
+    sets: list[dict[str, Any]] = []
+    for coordinator in runtime.coordinators.values():
+        data = coordinator.data
+        health = coordinator.health
+        sets.append(
+            {
+                "number": coordinator.number,
+                "product": coordinator.product,
+                "config": async_redact_data(dict(entry.subentries[coordinator.subentry_id].data), TO_REDACT),
+                "online": data.online if data else False,
+                "status": data.status.value if data else None,
+                "health": {
+                    "consecutive_failures": health.consecutive_failures,
+                    "offline_episodes": health.episodes_offline,
+                    "last_error": health.last_error,
+                },
+                "capacity": {
+                    "capacity_kwh": data.capacity.capacity_kwh,
+                    "unknown_pack_count": len(data.capacity.unknown_packs),
+                }
+                if data and data.capacity
+                else None,
+                "report": _redact_report(dict(data.raw)) if data and data.raw else None,
+            }
+        )
+    return {"totals": dataclasses.asdict(runtime.totals()), "sets": sets}

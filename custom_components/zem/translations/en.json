@@ -1,0 +1,127 @@
+{
+  "config": {
+    "flow_title": "{model}",
+    "step": {
+      "user": {
+        "title": "Add a Zendure set",
+        "description": "ZEM reads the set over the local network. Nothing is written to the set in this version.",
+        "data": {
+          "host": "Address"
+        },
+        "data_description": {
+          "host": "IP address or host name of the Zendure set. HEMS must be off in the Zendure app."
+        }
+      },
+      "discovery_confirm": {
+        "title": "Zendure set found",
+        "description": "{model} with {packs} packs ({capacity} kWh), serial number {serial}, at {host}. Add it to ZEM?"
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach the set or its answer is not usable. Check the address; if it still fails, turn HEMS on once in the Zendure app, leave the menu and turn it off again."
+    },
+    "abort": {
+      "already_configured": "This set is already part of ZEM.",
+      "max_sets": "ZEM supports at most 3 sets.",
+      "set_added": "Set {number} has been added to ZEM.",
+      "cannot_connect": "The set could not be reached."
+    }
+  },
+  "config_subentries": {
+    "set": {
+      "initiate_flow": {
+        "user": "Add set"
+      },
+      "entry_type": "Set",
+      "step": {
+        "user": {
+          "title": "Add a Zendure set",
+          "data": {
+            "host": "Address"
+          },
+          "data_description": {
+            "host": "IP address or host name of the Zendure set. HEMS must be off in the Zendure app."
+          }
+        }
+      },
+      "error": {
+        "cannot_connect": "Cannot reach the set or its answer is not usable. Check the address; if it still fails, turn HEMS on once in the Zendure app, leave the menu and turn it off again."
+      },
+      "abort": {
+        "already_configured": "This set is already part of ZEM.",
+        "max_sets": "ZEM supports at most 3 sets."
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "state_of_charge": {
+        "name": "State of charge"
+      },
+      "energy_stored": {
+        "name": "Energy stored"
+      },
+      "capacity": {
+        "name": "Capacity"
+      },
+      "power": {
+        "name": "Battery power"
+      },
+      "charge_power": {
+        "name": "Charge power"
+      },
+      "discharge_power": {
+        "name": "Delivery power"
+      },
+      "solar_power": {
+        "name": "Solar power"
+      },
+      "sets_online": {
+        "name": "Sets online"
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "offline": "Offline",
+          "fault": "Fault",
+          "calibrating": "Calibrating",
+          "bypass": "Bypass",
+          "standby": "Standby",
+          "charging": "Charging",
+          "discharging": "Delivering",
+          "full": "Full",
+          "empty": "Empty"
+        }
+      },
+      "temperature": {
+        "name": "Temperature"
+      },
+      "offgrid_power": {
+        "name": "Off-grid socket power"
+      },
+      "device_min_soc": {
+        "name": "Minimum SOC on the set"
+      },
+      "device_max_soc": {
+        "name": "Maximum SOC on the set"
+      },
+      "rssi": {
+        "name": "Wi-Fi signal"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
+      "fault": {
+        "name": "Fault"
+      }
+    }
+  },
+  "issues": {
+    "serial_mismatch": {
+      "title": "Different set at the address of set {number}",
+      "description": "The device at {host} reports a different serial number than set {number}. ZEM does not use it. Check the IP address of the set (for example a fixed address in your router), or remove set {number} and add it again."
+    }
+  }
+}
