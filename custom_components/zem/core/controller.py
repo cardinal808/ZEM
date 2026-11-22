@@ -83,6 +83,7 @@ class ZeroMeterController:
         self._start_count = 0
         self._deviation_since: float | None = None
         self._last_sample: int | None = None
+        self._last_demand = 0.0
 
     def reset(self, now: float) -> None:
         """Start from zero (mode change, restart, safety stop)."""
@@ -93,6 +94,7 @@ class ZeroMeterController:
         self._pending_since = None
         self._start_count = 0
         self._deviation_since = None
+        self._last_demand = 0.0
 
     # --- helpers -------------------------------------------------------
 
@@ -161,10 +163,12 @@ class ZeroMeterController:
             # Only react during settling when things got clearly worse (export or a new jump).
             worse = abs(error) > abs(self._error_at_command) + 300 or (error < -100 and self.setpoint <= 0)
             if not worse:
-                return self._unchanged(inp, regulated=False, demand=demand)
+                self._last_demand = demand
+            return self._unchanged(inp, regulated=False, demand=demand)
 
         if abs(error) < deadband and self._pending is Direction.NONE:
             self._last_step = inp.now
+            self._last_demand = demand
             return self._unchanged(inp, regulated=False, demand=demand)
 
         gain = gain_import if error > 0 else gain_export
@@ -221,6 +225,7 @@ class ZeroMeterController:
             self._last_direction = Direction.CHARGE
         elif new < 0:
             self._last_direction = Direction.DELIVER
+        self._last_demand = demand
         return ControllerOutput(setpoint=self.setpoint, demand=demand, regulated=True, waiting_for_direction=waiting)
 
     def _unchanged(self, inp: ControllerInput, *, regulated: bool, demand: float | None = None) -> ControllerOutput:
@@ -238,7 +243,8 @@ class ZeroMeterController:
             self._setpoint_at = inp.now
         return ControllerOutput(
             setpoint=self.setpoint,
-            demand=demand if demand is not None else float(self.setpoint),
+            # Without a new evaluation the last known demand still holds (keeps the reason steady).
+            demand=demand if demand is not None else self._last_demand,
             regulated=regulated,
             waiting_for_direction=self._pending is not Direction.NONE,
         )
