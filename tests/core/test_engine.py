@@ -125,3 +125,19 @@ def test_one_decision_per_p1_sample() -> None:
     assert e.step(29.5, [_view_battery(460)]).setpoint == first
     e.p1_reported(30.0, 840)  # new value: now it decides again
     assert e.step(30.0, [_view_battery(460)]).setpoint != first
+
+
+def test_reason_stays_full_between_decisions() -> None:
+    # Seen in shadow mode: a full battery with solar surplus alternated between "full" and "demand too small".
+    data = copy.deepcopy(load_fixture("charge_2400"))
+    data["properties"]["electricLevel"] = 98
+    for pack in data["packData"]:
+        pack["socLevel"] = 98
+    view = SetView("a", 1, parse_report(data), True)
+    e = ZemEngine()
+    e.controller.trust_commands = False
+    reasons = set()
+    for t in range(40):
+        e.p1_reported(t, -1300 + (t % 3) * 10)
+        reasons.add(e.step(t + 0.5, [view]).reason.code)
+    assert reasons == {ReasonCode.FULL}
