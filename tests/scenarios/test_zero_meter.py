@@ -65,14 +65,17 @@ def test_b5_stops_at_minimum_without_flapping() -> None:
 
 
 def test_b6_p1_outage() -> None:
-    sim = Simulation(load=constant(800), p1_outages=[(100, 115)])
-    tr = sim.run(200)
+    # Balanced grid: a short silence holds the setpoint (sensors that only report changes),
+    # a longer one gives 0 W.
+    sim = Simulation(load=constant(800), p1_outages=[(100, 115), (200, 240)])
+    tr = sim.run(320)
     at = {round(t): r for t, r in tr.results}
     assert at[99].setpoint < 0
-    assert at[111].setpoint == 0
-    assert at[111].reason.code is ReasonCode.P1_STALE
-    assert at[150].setpoint < 0
-    assert share_within(tr, TARGET, 50, start=150) > 0.95
+    assert at[111].setpoint == at[99].setpoint
+    assert at[235].setpoint == 0
+    assert at[235].reason.code is ReasonCode.P1_STALE
+    assert at[280].setpoint < 0
+    assert share_within(tr, TARGET, 50, start=280) > 0.95
 
 
 def test_b7_slow_meter() -> None:
