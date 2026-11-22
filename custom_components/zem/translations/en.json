@@ -42,6 +42,16 @@
           "data_description": {
             "host": "IP address or host name of the Zendure set. HEMS must be off in the Zendure app."
           }
+        },
+        "reconfigure": {
+          "title": "Capacity of the set",
+          "description": "ZEM recognises most Zendure batteries by itself. Only enter the total capacity of this set when a pack is not recognised. 0 = automatic.",
+          "data": {
+            "capacity_override": "Capacity (manual)"
+          },
+          "data_description": {
+            "capacity_override": "Total capacity of all batteries of this set together, in kWh. 0 = automatic from the pack table."
+          }
         }
       },
       "error": {
@@ -49,7 +59,8 @@
       },
       "abort": {
         "already_configured": "This set is already part of ZEM.",
-        "max_sets": "ZEM supports at most 3 sets."
+        "max_sets": "ZEM supports at most 3 sets.",
+        "reconfigure_successful": "The capacity has been saved."
       }
     }
   },
@@ -163,6 +174,10 @@
     "serial_mismatch": {
       "title": "Different set at the address of set {number}",
       "description": "The device at {host} reports a different serial number than set {number}. ZEM does not use it. Check the IP address of the set (for example a fixed address in your router), or remove set {number} and add it again."
+    },
+    "unknown_pack": {
+      "title": "Battery of set {number} not recognised",
+      "description": "ZEM does not recognise these batteries: {packs}. The capacity of set {number} is therefore too low. Enter the total capacity via ZEM → Set {number} → Reconfigure. Want to help? Report the model and the line above in a GitHub issue, and we will add the battery."
     }
   },
   "options": {
