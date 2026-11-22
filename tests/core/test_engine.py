@@ -141,3 +141,16 @@ def test_reason_stays_full_between_decisions() -> None:
         e.p1_reported(t, -1300 + (t % 3) * 10)
         reasons.add(e.step(t + 0.5, [view]).reason.code)
     assert reasons == {ReasonCode.FULL}
+
+
+def test_fault_level_without_error_does_not_block() -> None:
+    # A 2400 AC+ at 100 % reported faultLevel 2 with is_error 0; ZEM must still be able to deliver.
+    report = parse_report(load_fixture("ac_plus_full_fault_level"))
+    assert report.fault_level == 2
+    assert not report.fault
+    e = ZemEngine()
+    for t in range(0, 30, 3):
+        e.p1_reported(t, 600 + t)
+        r = e.step(t, [SetView("a", 1, report, True)])
+    assert r.reason.code is not ReasonCode.NO_SET
+    assert r.setpoint < 0

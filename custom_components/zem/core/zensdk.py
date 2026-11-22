@@ -200,7 +200,9 @@ def parse_report(data: Mapping[str, Any]) -> SetReport:
         calibrating=(_int(props, "socStatus") or 0) == 1,
         soc_limit_charge_stopped=bool(soc_limit & 0x1),
         soc_limit_discharge_stopped=bool(soc_limit & 0x2),
-        fault=bool(_int(props, "is_error")) or (_int(props, "faultLevel") or 0) > 0,
+        # Only is_error stops ZEM. faultLevel is not documented; a tester's set reported
+        # faultLevel 2 at 100 % (charging stopped) without an error, so it is shown, not acted on.
+        fault=bool(_int(props, "is_error")),
         fault_level=_int(props, "faultLevel") or 0,
         heating=bool(_int(props, "heatState")),
         enclosure_temperature=temperature_c(_num(props, "hyperTmp")),
