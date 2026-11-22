@@ -11,6 +11,7 @@ distributor of SPEC-meerdere-sets follows in M7.
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -162,6 +163,10 @@ class ZemEngine:
         self._p1_interval: float | None = None
         self._block_since: float | None = None
         self._started: float | None = None
+        self._p1_changed_at: float | None = None
+        self._p1_gaps: deque[float] = deque(maxlen=30)
+        self._p1_seq = 0
+        self._p1_sample_at: float | None = None
 
     # --- inputs ---------------------------------------------------------
 
@@ -177,11 +182,29 @@ class ZemEngine:
             self.controller.reset(now)
 
     def p1_reported(self, now: float, value: float) -> None:
-        """Every report of the P1 entity, also when the value did not change."""
-        if self._p1_at is not None:
-            gap = now - self._p1_at
-            if 0 < gap < 120:
-                self._p1_interval = gap if self._p1_interval is None else 0.8 * self._p1_interval + 0.2 * gap
+        """Every report of the P1 entity, also when the value did not change.
+
+        Any report shows the source is alive (staleness). The meter's real
+        interval is measured between changes of the value: some integrations
+        re-report the same value much more often than the meter sends a new
+        one (seen: every 0.4 s for a meter with a new value every 10 s).
+        """
+        changed = self._p1_value is None or value != self._p1_value
+        if changed:
+            if self._p1_changed_at is not None:
+                gap = now - self._p1_changed_at
+                if 0 < gap < 120:
+                    self._p1_gaps.append(gap)
+                    # A steady value skips changes (gaps of 2x, 3x the interval), so take a low
+                    # quantile of the recent gaps rather than the mean.
+                    ordered = sorted(self._p1_gaps)
+                    self._p1_interval = ordered[len(ordered) // 4]
+            self._p1_changed_at = now
+        # A new sample: a changed value, or the same value after a full meter interval
+        # (the load can really be constant). Repeats in between add nothing.
+        if changed or self._p1_interval is None or self._p1_sample_at is None or now - self._p1_sample_at >= self._p1_interval:
+            self._p1_seq += 1
+            self._p1_sample_at = now
         self._p1_value = value
         self._p1_at = now
 
@@ -200,7 +223,11 @@ class ZemEngine:
         # Before the first P1 report, count from the start: no standby command right after a restart.
         waiting_for_p1 = self.mode is Mode.ZERO_METER and self._p1_at is None and now - self._started <= s.p1_lost_after
         p1_age = None if self._p1_at is None else now - self._p1_at
-        p1_ok = p1_age is not None and p1_age <= s.p1_stale_after
+        meter = self._p1_interval or 0.0
+        # Until the meter's interval is known, only a lost P1 counts (no 0 W after 10 s at start-up).
+        stale_after = max(s.p1_stale_after, 2.5 * meter) if self._p1_interval is not None else s.p1_lost_after
+        lost_after = max(s.p1_lost_after, 6 * meter)
+        p1_ok = p1_age is not None and p1_age <= stale_after
         total = 0
         finished = False
         all_standby = False
@@ -223,7 +250,7 @@ class ZemEngine:
             all_standby = True
             reason = Reason(ReasonCode.P1_MISSING)
             self.controller.reset(now)
-        elif p1_age > s.p1_lost_after:
+        elif p1_age > lost_after:
             all_standby = True
             reason = Reason(ReasonCode.P1_LOST, {"age": round(p1_age)})
             self.controller.reset(now)
@@ -350,6 +377,7 @@ class ZemEngine:
                 max_charge=charge,
                 max_deliver=deliver,
                 p1_interval=self._p1_interval or 1.0,
+                sample=self._p1_seq,
             )
         )
         sp = out.setpoint

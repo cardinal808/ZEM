@@ -63,7 +63,8 @@ async def test_shadow_mode_computes_and_writes_nothing(hass: HomeAssistant, fake
 
 async def test_p1_silence_is_detected(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
     await _install_with_p1(hass, fake_sets)
-    await _p1(hass, freezer, 300)
+    for watts in (300, 310, 305, 300):  # a meter with a new value every second
+        await _p1(hass, freezer, watts)
     for _ in range(12):
         freezer.tick(timedelta(seconds=1))
         async_fire_time_changed(hass)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import copy
+
 import pytest
 
 from conftest import load_fixture
@@ -84,3 +86,58 @@ def test_settings_validation() -> None:
     with pytest.raises(SettingsError):
         Settings().with_changes(unknown=1)
     assert Settings().with_changes(min_soc=20).min_soc == 20
+
+
+def test_p1_interval_measured_on_new_values() -> None:
+    # An integration that re-reports the same value every 0.4 s for a meter with a new value every 10 s.
+    e = ZemEngine()
+    t = 0.0
+    value = 800.0
+    while t < 120:
+        if round(t * 10) % 100 == 0:
+            value = 800.0 + (t % 20)  # new meter value every 10 s
+        e.p1_reported(t, value)
+        t = round(t + 0.4, 1)
+    r = e.step(t, [_view()])
+    assert r.p1_interval is not None and 9.0 <= r.p1_interval <= 11.0
+
+
+def _view_battery(deliver: int) -> SetView:
+    data = copy.deepcopy(load_fixture("deliver_760"))
+    data["properties"]["outputHomePower"] = deliver
+    data["properties"]["packInputPower"] = deliver
+    return SetView("a", 1, parse_report(data), True)
+
+
+def test_one_decision_per_p1_sample() -> None:
+    # Shadow mode: the battery measurement moves between P1 samples, but without a
+    # new P1 value nothing new is known, so the setpoint stays.
+    e = ZemEngine()
+    e.controller.trust_commands = False
+    first = 0
+    for t in range(0, 30, 3):
+        e.p1_reported(t, 800 + t)  # new meter value every 3 s
+        first = e.step(t, [_view_battery(760)]).setpoint
+    # The integration re-reports the same value before the next meter value; the
+    # battery measurement meanwhile moves. Steps 2.5 s later (past the minimum step).
+    e.p1_reported(29.0, 827)
+    e.p1_reported(29.5, 827)
+    assert e.step(29.5, [_view_battery(460)]).setpoint == first
+    e.p1_reported(30.0, 840)  # new value: now it decides again
+    assert e.step(30.0, [_view_battery(460)]).setpoint != first
+
+
+def test_reason_stays_full_between_decisions() -> None:
+    # Seen in shadow mode: a full battery with solar surplus alternated between "full" and "demand too small".
+    data = copy.deepcopy(load_fixture("charge_2400"))
+    data["properties"]["electricLevel"] = 98
+    for pack in data["packData"]:
+        pack["socLevel"] = 98
+    view = SetView("a", 1, parse_report(data), True)
+    e = ZemEngine()
+    e.controller.trust_commands = False
+    reasons = set()
+    for t in range(40):
+        e.p1_reported(t, -1300 + (t % 3) * 10)
+        reasons.add(e.step(t + 0.5, [view]).reason.code)
+    assert reasons == {ReasonCode.FULL}
