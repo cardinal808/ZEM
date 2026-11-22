@@ -1,4 +1,4 @@
-# ZEM
+# Zendure Energy Management
 
 **ZEM** is a Home Assistant integration (HACS) for Zendure home batteries. It controls one to three Zendure sets locally through the zenSDK API, keeps the grid meter at zero, and plans charging and discharging per quarter hour from dynamic prices and solar forecasts.
 
