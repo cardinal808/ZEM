@@ -226,6 +226,11 @@ class ZemEngine:
         meter = self._p1_interval or 0.0
         # Until the meter's interval is known, only a lost P1 counts (no 0 W after 10 s at start-up).
         stale_after = max(s.p1_stale_after, 2.5 * meter) if self._p1_interval is not None else s.p1_lost_after
+        # Many P1 sensors only report a change. A grid that is exactly balanced (often 0 W
+        # when import and export are both 0.000 kW) then stays silent. That is not a stale
+        # meter: hold the setpoint a little longer (p1_balanced_silence).
+        if self._p1_value is not None and abs(self._p1_value) <= s.deadband:
+            stale_after = max(stale_after, s.p1_balanced_silence)
         lost_after = max(s.p1_lost_after, 6 * meter)
         p1_ok = p1_age is not None and p1_age <= stale_after
         total = 0

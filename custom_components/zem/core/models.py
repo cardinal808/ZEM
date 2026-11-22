@@ -122,6 +122,7 @@ class SetReport:
     soc_limit_discharge_stopped: bool
     fault: bool
     fault_level: int
+    """Undocumented severity reported by the set; informative only (see ``fault``)."""
     heating: bool
 
     enclosure_temperature: float | None

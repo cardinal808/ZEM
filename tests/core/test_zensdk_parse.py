@@ -129,8 +129,10 @@ def test_fault_and_calibration_flags() -> None:
     data["properties"]["faultLevel"] = 2
     data["properties"]["socStatus"] = 1
     r = parse_report(data)
-    assert r.fault and r.fault_level == 2
+    assert not r.fault and r.fault_level == 2  # faultLevel alone is informative
     assert r.calibrating
+    data["properties"]["is_error"] = 1
+    assert parse_report(data).fault
 
 
 def test_unusable_reports() -> None:

@@ -62,6 +62,8 @@ class Settings:
     # P1 meter
     p1_stale_after: float = 10.0
     """s without a P1 report before the setpoint goes to 0 (at least 2.5 meter intervals)."""
+    p1_balanced_silence: float = 30.0
+    """s without a P1 report before 0 W while the last value was balanced (within the dead zone)."""
     p1_lost_after: float = 60.0
     """s without a P1 report before the sets go to standby (at least 6 meter intervals)."""
     slow_p1_interval: float = 2.5

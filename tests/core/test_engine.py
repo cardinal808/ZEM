@@ -141,3 +141,39 @@ def test_reason_stays_full_between_decisions() -> None:
         e.p1_reported(t, -1300 + (t % 3) * 10)
         reasons.add(e.step(t + 0.5, [view]).reason.code)
     assert reasons == {ReasonCode.FULL}
+
+
+def test_fault_level_without_error_does_not_block() -> None:
+    # A 2400 AC+ at 100 % reported faultLevel 2 with is_error 0; ZEM must still be able to deliver.
+    report = parse_report(load_fixture("ac_plus_full_fault_level"))
+    assert report.fault_level == 2
+    assert not report.fault
+    e = ZemEngine()
+    for t in range(0, 30, 3):
+        e.p1_reported(t, 600 + t)
+        r = e.step(t, [SetView("a", 1, report, True)])
+    assert r.reason.code is not ReasonCode.NO_SET
+    assert r.setpoint < 0
+
+
+def test_silent_balanced_grid_is_not_stale() -> None:
+    # A P1 sensor that only reports changes stays silent at exactly 0 W; the setpoint holds.
+    e = ZemEngine()
+    for t in range(0, 20):
+        e.p1_reported(t, 600 - t * 30 if t < 20 else 0)
+        e.step(t, [_view()])
+    e.p1_reported(20, 0.0)
+    held = e.step(20, [_view()])
+    for t in range(21, 50):
+        r = e.step(t, [_view()])
+        assert r.reason.code is not ReasonCode.P1_STALE
+        assert r.setpoint == held.setpoint
+    assert e.step(52, [_view()]).reason.code is ReasonCode.P1_STALE
+
+
+def test_silent_unbalanced_grid_is_stale() -> None:
+    e = ZemEngine()
+    for t in range(0, 20):
+        e.p1_reported(t, 600 + t)
+        e.step(t, [_view()])
+    assert e.step(19 + 11, [_view()]).reason.code is ReasonCode.P1_STALE
