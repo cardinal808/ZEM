@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.4.7
+- Product names are recognised with spaces, dashes or underscores and in any case (for example "SolarFlow800 Plus" or "solarflow-800-plus"), B23.
+
 ### 0.4.6
 - **Solar forecast next to the real production** (B31, B32). Two optional sensors in the options:
   - the forecast for tomorrow with half-hour detail (Solcast `…_forecast_tomorrow`);

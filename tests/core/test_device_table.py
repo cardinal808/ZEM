@@ -88,3 +88,11 @@ def test_temperature_limits(temp: float | None, charge: bool, deliver: bool) -> 
 
 def test_unknown_model_does_not_block() -> None:
     assert charging_allowed_by_temperature("unknownModel", 80.0)
+
+
+def test_product_names_with_spaces_and_dashes() -> None:
+    for name in ("solarFlow800Plus", "SolarFlow800 Plus", "solarflow-800-plus", "SOLARFLOW_800_PLUS"):
+        info = model_info(name)
+        assert info is not None and info.name == model_info("solarFlow800Plus").name  # type: ignore[union-attr]
+    assert model_info("solarFlow 2400 Pro") is model_info("solarFlow2400Pro")
+    assert model_info("solarFlow 9999") is None

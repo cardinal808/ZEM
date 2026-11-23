@@ -43,6 +43,15 @@ _CHARGE_T: Final = (0.0, 55.0)
 _DELIVER_T: Final = (-20.0, 55.0)
 
 
+def _key(product: str) -> str:
+    """Product name as a lookup key: lower case, without spaces, dashes and underscores.
+
+    Firmware and apps spell names differently ("solarFlow800Plus", "SolarFlow800 Plus",
+    "SolarFlow-800-Plus"); they are the same model.
+    """
+    return "".join(ch for ch in product.lower() if ch not in " -_")
+
+
 def _model(product: str, name: str, charge: int, deliver: int) -> ModelInfo:
     return ModelInfo(product, name, charge, deliver, _CHARGE_T, _DELIVER_T)
 
@@ -52,7 +61,7 @@ def _model(product: str, name: str, charge: int, deliver: int) -> ModelInfo:
 # integration (Zendure/Zendure-HA, MIT); the set's own chargeMaxLimit and
 # inverseMaxPower in the report always win when ZEPHYR controls it.
 MODELS: Final[dict[str, ModelInfo]] = {
-    m.product.lower(): m
+    _key(m.product): m
     for m in (
         _model("solarFlow800", "SolarFlow 800", 1000, 800),
         _model("solarFlow800Plus", "SolarFlow 800 Plus", 1000, 800),
@@ -82,7 +91,7 @@ TEMPERATURE_MARGIN: Final = 2.0
 
 def model_info(product: str) -> ModelInfo | None:
     """Limits of a known model, or None."""
-    return MODELS.get(product.lower())
+    return MODELS.get(_key(product))
 
 
 def pack_info(product: str, pack_type: int, serial: str) -> PackInfo | None:
@@ -97,7 +106,7 @@ def pack_info(product: str, pack_type: int, serial: str) -> PackInfo | None:
         case "B":
             # packType 70 is the 8 kWh built-in battery only on a SolarFlow 4000;
             # other sets report 70 for an AB1000S as well.
-            if pack_type == 70 and product.lower().startswith("solarflow4000"):
+            if pack_type == 70 and _key(product).startswith("solarflow4000"):
                 return _BUILT_IN_8000
             return _AB1000S
         case "C":
