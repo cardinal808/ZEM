@@ -25,6 +25,8 @@ Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 ## Ondersteunde sets en accu's
 - Sets met de lokale zenSDK-API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro en 4000 AC+. Tot nu toe getest: 2400 Pro en 2400 AC+. Zet HEMS uit in de Zendure-app.
 - Accu's worden herkend aan hun serienummer: AB1000, AB1000S, AB2000(S/X), AB3000X, AB3000L en de ingebouwde accu's van de 2400 Pro, 2400 AC+, 4000 AC+ en AIO 2400.
+- Nieuwere modellen (800 AC+, 800 Pro 2, 3000/4000 Mix) en accu's (AB2000L, AB3000S, B6400) werken waarschijnlijk voor uitlezen, maar staan nog niet in de tabellen; met een diagnose-download kunnen we ze toevoegen.
+- **Niet ondersteund** (geen lokale zenSDK-API): SolarFlow Hub 1200/2000, Hyper 2000, Ace 1500, AIO 2400 en SuperBase. Alleen de ingebouwde accu van een AIO 2400 die als extra pack aan een SolarFlow hangt, wordt herkend.
 - Accu niet herkend? Home Assistant toont een reparatiemelding. Vul de capaciteit in via ZEM → de set → *Opnieuw configureren*, en open graag een issue met de regel uit de melding, dan voegen we hem toe.
 
 ## Geplande functies
