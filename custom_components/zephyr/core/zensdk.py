@@ -189,6 +189,7 @@ def parse_report(data: Mapping[str, Any]) -> SetReport:
         input_limit=_int(props, "inputLimit") or 0,
         output_limit=_int(props, "outputLimit") or 0,
         smart_mode=_int(props, "smartMode"),
+        ac_status=_int(props, "acStatus"),
         pack_state=_enum(PackState, _int(props, "packState")),
         min_soc=per_mille_to_percent(_num(props, "minSoc")),
         max_soc=per_mille_to_percent(_num(props, "socSet")),
