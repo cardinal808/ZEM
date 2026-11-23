@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -213,7 +214,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async
     async_add_entities(ZephyrControlSensor(runtime, entry, d) for d in CONTROL_SENSORS)
     for subentry_id, coordinator in runtime.coordinators.items():
         async_add_entities(
-            [*(ZephyrSetSensor(coordinator, entry, d) for d in SET_SENSORS), ZephyrSetSetpointSensor(coordinator, entry, runtime.control)],
+            [
+                *(ZephyrSetSensor(coordinator, entry, d) for d in SET_SENSORS),
+                ZephyrSetSetpointSensor(coordinator, entry, runtime.control),
+                ZephyrSetCounterSensor(coordinator, entry, runtime.control, "write_count"),
+                ZephyrSetCounterSensor(coordinator, entry, runtime.control, "switch_count"),
+            ],
             config_subentry_id=subentry_id,
         )
 
@@ -344,3 +350,51 @@ class ZephyrSetSetpointSensor(ZephyrSetEntity, SensorEntity):
     def native_value(self) -> int | None:
         self._attr_native_value = self._value()
         return self._attr_native_value
+
+
+class ZephyrSetCounterSensor(ZephyrSetEntity, SensorEntity):
+    """Writes (RAM + flash) or relay switches of this set over the last 24 hours (B33).
+
+    In shadow mode the writes are what ZEPHYR would send; relay switches are what
+    the set really does.
+    """
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: SetCoordinator, entry: ZephyrConfigEntry, control: ZephyrControl, key: str) -> None:
+        super().__init__(coordinator, entry, key, "sensor")
+        self._control = control
+        self._key = key
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(self._control.async_add_listener(self._on_control))
+
+    def _counts(self) -> dict[str, int]:
+        return self._control.engine.counters(time.monotonic()).get(self.coordinator.subentry_id, {})
+
+    @callback
+    def _on_control(self) -> None:
+        if self._attr_native_value != self._value(self._counts()):
+            self.async_write_ha_state()
+
+    def _value(self, counts: dict[str, int]) -> int:
+        if self._key == "write_count":
+            return counts.get("ram_24h", 0) + counts.get("flash_24h", 0)
+        return counts.get("relay_24h", 0)
+
+    @property
+    def native_value(self) -> int:
+        self._attr_native_value = self._value(self._counts())
+        return self._attr_native_value
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        counts = self._counts()
+        if self._key == "write_count":
+            keys: tuple[str, ...] = ("ram_1h", "ram_24h", "flash_1h", "flash_24h", "skipped_1h", "skipped_24h")
+        else:
+            keys = ("relay_1h", "relay_24h")
+        return {k: counts.get(k, 0) for k in keys} | {"sent": not self._control.shadow}

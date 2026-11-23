@@ -145,6 +145,12 @@
           "shadow": "Schaduwmodus (rekent alleen mee)",
           "active": "Actief"
         }
+      },
+      "write_count": {
+        "name": "Schrijfacties (24 uur)"
+      },
+      "switch_count": {
+        "name": "Relaisschakelingen (24 uur)"
       }
     },
     "binary_sensor": {

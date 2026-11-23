@@ -177,3 +177,40 @@ def test_silent_unbalanced_grid_is_stale() -> None:
         e.p1_reported(t, 600 + t)
         e.step(t, [_view()])
     assert e.step(19 + 11, [_view()]).reason.code is ReasonCode.P1_STALE
+
+
+def _deliver_2400(ac_status: int = 1, output_limit: int = 2400) -> SetView:
+    raw = copy.deepcopy(load_fixture("deliver_2400_export_blocked"))
+    raw["properties"].update({"acMode": 2, "outputLimit": output_limit, "inputLimit": 0, "smartMode": 1, "acStatus": ac_status})
+    return SetView("a", 1, parse_report(raw), True)
+
+
+def test_refresh_skipped_when_set_reports_same_command() -> None:
+    e = ZephyrEngine(mode=Mode.FAST_DISCHARGE)
+    assert any(c.kind == "power" for c in e.step(0, [_deliver_2400()]).commands)
+    assert not [c for c in e.step(30, [_deliver_2400()]).commands if c.kind == "power"]
+    # After 60 s a refresh is due, but the set already reports 2400 W delivering.
+    assert not [c for c in e.step(61, [_deliver_2400()]).commands if c.kind == "power"]
+    counts = e.counters(61)["a"]
+    assert counts["ram_24h"] == 1 and counts["skipped_24h"] == 1
+
+
+def test_refresh_sent_when_set_reports_other_limit() -> None:
+    e = ZephyrEngine(mode=Mode.FAST_DISCHARGE)
+    e.step(0, [_deliver_2400(output_limit=760)])
+    r = e.step(61, [_deliver_2400(output_limit=760)])
+    assert [c.props["outputLimit"] for c in r.commands if c.kind == "power"] == [2400]
+    assert e.counters(61)["a"]["ram_24h"] == 2
+
+
+def test_counters_flash_and_relay() -> None:
+    e = ZephyrEngine(mode=Mode.STANDBY)
+    e.step(0, [_deliver_2400(ac_status=1)])
+    e.step(10, [_deliver_2400(ac_status=0)])
+    e.step(20, [_deliver_2400(ac_status=2)])
+    counts = e.counters(20)["a"]
+    assert counts["flash_24h"] >= 1  # standby (and possibly SOC limits)
+    assert counts["relay_24h"] == 2 and counts["relay_1h"] == 2
+    later = e.counters(20 + 2 * 3600)["a"]
+    assert later["relay_1h"] == 0 and later["relay_24h"] == 2
+    assert e.counters(20 + 25 * 3600)["a"]["relay_24h"] == 0

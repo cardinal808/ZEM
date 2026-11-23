@@ -18,6 +18,7 @@ from enum import StrEnum
 from typing import Any
 
 from .controller import ControllerInput, ZeroMeterController
+from .counters import SetCounters
 from .device_table import charging_allowed_by_temperature, delivering_allowed_by_temperature
 from .models import AcMode, SetReport
 from .settings import Settings
@@ -148,6 +149,7 @@ class _SetState:
     full: bool = False
     empty: bool = False
     limits_checked: bool = False
+    counters: SetCounters = field(default_factory=SetCounters)
 
 
 class ZephyrEngine:
@@ -213,7 +215,10 @@ class ZephyrEngine:
     def step(self, now: float, sets: Sequence[SetView], *, discharge_blocked: bool = False) -> StepResult:
         s = self.settings
         for view in sets:
-            self._update_flags(self._sets.setdefault(view.key, _SetState()), view)
+            state = self._sets.setdefault(view.key, _SetState())
+            self._update_flags(state, view)
+            if view.report is not None and view.online:
+                state.counters.observe_ac_status(view.report.ac_status, now)
         usable = [v for v in sorted(sets, key=lambda v: v.number) if self._usable(v)]
         primary = usable[0] if usable else None
 
@@ -418,6 +423,7 @@ class ZephyrEngine:
                 state.limits_checked = True
                 if r.min_soc != s.min_soc or r.max_soc != s.max_soc:
                     commands.append(Command(view.key, soc_limits_command(s.min_soc, s.max_soc), "soc_limits"))
+                    state.counters.record("soc_limits", now)
             target = targets.get(view.key, 0)
             offgrid = r.offgrid_power > 0
             if target == 0:
@@ -428,11 +434,17 @@ class ZephyrEngine:
             if go_standby:
                 if not state.standby:
                     commands.append(Command(view.key, standby_command(), "standby"))
+                    state.counters.record("standby", now)
                     state.standby = True
                     state.last_power = 0
                     state.last_sent_at = now
                 continue
             if not self._should_send(state, target, now):
+                continue
+            if target == state.last_power and _report_matches(r, target):
+                # Refresh due, but the set already reports exactly this command: nothing to send.
+                state.last_sent_at = now
+                state.counters.record("skipped", now)
                 continue
             direction = AcMode.CHARGE if target > 0 else AcMode.DELIVER if target < 0 else None
             include_ac = direction is not None and (direction is not state.last_ac_mode or state.standby or r.ac_mode is not direction)
@@ -443,6 +455,7 @@ class ZephyrEngine:
                     "power",
                 )
             )
+            state.counters.record("power", now)
             if direction is not None:
                 state.last_ac_mode = direction
             state.last_power = target
@@ -464,6 +477,10 @@ class ZephyrEngine:
             return False
         return abs(target - last) >= 20 or abs(target - last) >= 0.05 * abs(last)
 
+    def counters(self, now: float) -> dict[str, dict[str, int]]:
+        """Writes and relay switches per set over the last hour and 24 hours (B33)."""
+        return {key: state.counters.snapshot(now) for key, state in self._sets.items()}
+
     @staticmethod
     def _action(total: int, reason: Reason) -> Action:
         if total > 0:
@@ -477,3 +494,16 @@ class ZephyrEngine:
         if reason.code in (ReasonCode.BLOCKED, ReasonCode.TEMPERATURE, ReasonCode.NO_SET, ReasonCode.P1_STALE, ReasonCode.P1_TOO_SLOW):
             return Action.BLOCKED
         return Action.HOLD
+
+
+def _report_matches(report: SetReport, target: int) -> bool:
+    """True when the set reports exactly the power command ZEPHYR would refresh."""
+    if report.smart_mode != 1:
+        return False
+    if target > 0:
+        sent = min(target, report.charge_max_limit) if report.charge_max_limit else target
+        return report.ac_mode is AcMode.CHARGE and report.input_limit == sent and report.output_limit == 0
+    if target < 0:
+        sent = min(-target, report.inverse_max_power) if report.inverse_max_power else -target
+        return report.ac_mode is AcMode.DELIVER and report.output_limit == sent and report.input_limit == 0
+    return report.input_limit == 0 and report.output_limit == 0

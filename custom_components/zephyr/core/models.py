@@ -104,6 +104,8 @@ class SetReport:
     input_limit: int
     output_limit: int
     smart_mode: int | None
+    ac_status: int | None
+    """0 off, 1 delivering, 2 charging (state of the AC relay)."""
     pack_state: PackState | None
 
     min_soc: float | None

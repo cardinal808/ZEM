@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import time
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
@@ -74,6 +75,11 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
             }
             if result
             else None,
+            "counters": {
+                runtime.coordinators[key].number: counts
+                for key, counts in control.engine.counters(time.monotonic()).items()
+                if key in runtime.coordinators
+            },
             "decisions": list(control.log)[-200:],
         }
     return {"totals": dataclasses.asdict(runtime.totals()), "sets": sets, "control": control_info}

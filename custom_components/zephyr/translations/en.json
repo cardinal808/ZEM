@@ -145,6 +145,12 @@
           "shadow": "Shadow mode (calculates only)",
           "active": "Active"
         }
+      },
+      "write_count": {
+        "name": "Writes (24 h)"
+      },
+      "switch_count": {
+        "name": "Relay switches (24 h)"
       }
     },
     "binary_sensor": {
