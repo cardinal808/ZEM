@@ -174,3 +174,21 @@ async def test_p1_as_import_and_export(hass: HomeAssistant, fake_sets: FakeSets,
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["control"]["p1_entity"] == f"{IMPORT} - {EXPORT}"
     assert fake_sets.writes == []
+
+
+async def test_pair_is_default_and_wins_when_only_pair_given(hass: HomeAssistant, fake_sets: FakeSets) -> None:
+    fake_sets.add("10.0.0.10", "deliver_760")
+    hass.states.async_set(IMPORT, "0.300", KW)
+    hass.states.async_set(EXPORT, "0.000", KW)
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": "10.0.0.10"})
+    await hass.async_block_till_done()
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    default = next(k.default() for k in result["data_schema"].schema if k == "p1_source")
+    assert default == "import_export"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"p1_source": "single", "p1_import_entity": IMPORT, "p1_export_entity": EXPORT}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options["p1_source"] == "import_export"
