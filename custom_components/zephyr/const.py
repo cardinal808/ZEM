@@ -17,6 +17,11 @@ CONF_PRODUCT: Final = "product"
 CONF_NUMBER: Final = "number"
 CONF_CAPACITY_OVERRIDE: Final = "capacity_override"
 CONF_P1_ENTITY: Final = "p1_entity"
+CONF_P1_SOURCE: Final = "p1_source"
+CONF_P1_IMPORT: Final = "p1_import_entity"
+CONF_P1_EXPORT: Final = "p1_export_entity"
+P1_SOURCE_SINGLE: Final = "single"
+P1_SOURCE_PAIR: Final = "import_export"
 
 SCAN_INTERVAL_IDLE: Final = 5.0
 """Seconds between reads while ZEPHYR is not actively controlling the set."""

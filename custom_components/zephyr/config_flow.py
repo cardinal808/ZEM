@@ -28,10 +28,15 @@ from .const import (
     CONF_MIN_SOC,
     CONF_NUMBER,
     CONF_P1_ENTITY,
+    CONF_P1_EXPORT,
+    CONF_P1_IMPORT,
+    CONF_P1_SOURCE,
     CONF_PRODUCT,
     CONF_SERIAL,
     DOMAIN,
     MAX_SETS,
+    P1_SOURCE_PAIR,
+    P1_SOURCE_SINGLE,
     SUBENTRY_SET,
 )
 from .core.client import ZendureClient, ZendureError
@@ -243,26 +248,69 @@ def suggest_p1_entity(hass: HomeAssistant) -> str | None:
     return max(candidates)[1] if candidates else None
 
 
+def suggest_p1_pair(hass: HomeAssistant) -> tuple[str | None, str | None]:
+    """Import and export power sensors of a smart meter (as the DSMR integration names them)."""
+    imports: list[str] = []
+    exports: list[str] = []
+    for state in hass.states.async_all("sensor"):
+        if state.attributes.get("device_class") != SensorDeviceClass.POWER or state.entity_id.startswith("sensor.zephyr_"):
+            continue
+        name = state.entity_id.lower()
+        if name.endswith("power_consumption") and "phase" not in name:
+            imports.append(state.entity_id)
+        elif name.endswith("power_production") and "phase" not in name:
+            exports.append(state.entity_id)
+    for imp in sorted(imports):
+        prefix = imp.removesuffix("power_consumption")
+        if f"{prefix}power_production" in exports:
+            return imp, f"{prefix}power_production"
+    return None, None
+
+
+def _power_sensor() -> selector.EntitySelector:
+    return selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER))
+
+
 class ZephyrOptionsFlow(OptionsFlow):
     """Sources and battery limits."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         # The ranges (min 5-50 %, max 70-100 %) keep the minimum below the maximum.
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+            if user_input.get(CONF_P1_SOURCE) == P1_SOURCE_PAIR:
+                if not user_input.get(CONF_P1_IMPORT) or not user_input.get(CONF_P1_EXPORT):
+                    errors["base"] = "p1_pair_incomplete"
+                elif user_input[CONF_P1_IMPORT] == user_input[CONF_P1_EXPORT]:
+                    errors["base"] = "p1_pair_same"
+            elif not user_input.get(CONF_P1_ENTITY):
+                errors["base"] = "p1_missing"
+            if not errors:
+                data = {**self.config_entry.options, **user_input}
+                for key in (CONF_P1_ENTITY, CONF_P1_IMPORT, CONF_P1_EXPORT):
+                    if not user_input.get(key):
+                        data.pop(key, None)
+                return self.async_create_entry(data=data)
         options = dict(self.config_entry.options)
-        current = options.get(CONF_P1_ENTITY) or suggest_p1_entity(self.hass)
+        if user_input is not None:
+            options.update(user_input)
+        single = options.get(CONF_P1_ENTITY) or suggest_p1_entity(self.hass)
+        pair_import, pair_export = suggest_p1_pair(self.hass)
+        source = options.get(CONF_P1_SOURCE, P1_SOURCE_SINGLE)
         defaults = Settings()
         schema = vol.Schema(
             {
-                vol.Required(CONF_P1_ENTITY, default=current) if current else vol.Required(CONF_P1_ENTITY): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER)
+                vol.Required(CONF_P1_SOURCE, default=source): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=[P1_SOURCE_SINGLE, P1_SOURCE_PAIR], translation_key="p1_source")
                 ),
+                vol.Optional(CONF_P1_ENTITY, description={"suggested_value": single}): _power_sensor(),
+                vol.Optional(CONF_P1_IMPORT, description={"suggested_value": options.get(CONF_P1_IMPORT) or pair_import}): _power_sensor(),
+                vol.Optional(CONF_P1_EXPORT, description={"suggested_value": options.get(CONF_P1_EXPORT) or pair_export}): _power_sensor(),
                 vol.Required(CONF_MIN_SOC, default=options.get(CONF_MIN_SOC, defaults.min_soc)): _percent(5, 50),
                 vol.Required(CONF_MAX_SOC, default=options.get(CONF_MAX_SOC, defaults.max_soc)): _percent(70, 100),
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
 
 
 def _percent(low: int, high: int) -> selector.NumberSelector:

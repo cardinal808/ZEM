@@ -184,23 +184,46 @@
     "unknown_pack": {
       "title": "Accu van set {number} niet herkend",
       "description": "ZEPHYR herkent deze accu('s) niet: {packs}. De capaciteit van set {number} is daardoor te laag. Vul de totale capaciteit in via ZEPHYR → Set {number} → Configureren. Wil je helpen? Meld het model en de regel hierboven in een issue op GitHub, dan voegen we de accu toe."
+    },
+    "p1_missing": {
+      "title": "Geen P1-meter gekozen",
+      "description": "ZEPHYR heeft je slimme meter nodig om te rekenen. Open Instellingen → Apparaten en diensten → ZEPHYR → Configureren en kies de P1-sensor (of de sensoren voor afname en teruglevering)."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Bronnen en accu",
-        "description": "Kies de sensor van je slimme meter (P1) in W, + bij afname. ZEPHYR draait in schaduwmodus: het rekent uit wat het zou doen, maar stuurt de accu nog niet aan.",
+        "description": "Kies je slimme meter (P1) in W: één netto sensor (+ bij afname), of twee sensoren voor afname en teruglevering (zoals de DSMR-integratie levert). ZEPHYR draait in schaduwmodus: het rekent uit wat het zou doen, maar stuurt de accu nog niet aan.",
         "data": {
+          "p1_source": "P1-bron",
           "p1_entity": "P1-meter (vermogen)",
+          "p1_import_entity": "P1 afname (vermogen)",
+          "p1_export_entity": "P1 teruglevering (vermogen)",
           "min_soc": "Minimale laadtoestand",
           "max_soc": "Maximale laadtoestand"
         },
         "data_description": {
           "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
           "min_soc": "Onder deze waarde levert ZEPHYR niet meer. Wordt naar de set geschreven zodra ZEPHYR live stuurt.",
-          "max_soc": "Boven deze waarde laadt ZEPHYR niet meer. Wordt naar de set geschreven zodra ZEPHYR live stuurt."
+          "max_soc": "Boven deze waarde laadt ZEPHYR niet meer. Wordt naar de set geschreven zodra ZEPHYR live stuurt.",
+          "p1_source": "Twee sensoren zien elk telegram van de meter, ook als de waarde gelijk blijft. Beter dan een samengestelde sjabloon-sensor, die alleen wijzigingen meldt.",
+          "p1_import_entity": "Vermogen uit het net, bijvoorbeeld …_power_consumption.",
+          "p1_export_entity": "Vermogen naar het net, bijvoorbeeld …_power_production."
         }
+      }
+    },
+    "error": {
+      "p1_missing": "Kies een P1-sensor.",
+      "p1_pair_incomplete": "Kies zowel de sensor voor afname als die voor teruglevering.",
+      "p1_pair_same": "Afname en teruglevering moeten twee verschillende sensoren zijn."
+    }
+  },
+  "selector": {
+    "p1_source": {
+      "options": {
+        "single": "Eén netto sensor",
+        "import_export": "Afname en teruglevering (twee sensoren)"
       }
     }
   }

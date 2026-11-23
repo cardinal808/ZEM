@@ -14,10 +14,28 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfPower
 from homeassistant.core import Event, EventStateChangedData, EventStateReportedData, HomeAssistant, State, callback
-from homeassistant.helpers.event import async_track_state_change_event, async_track_state_report_event, async_track_time_interval
+from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_state_change_event,
+    async_track_state_report_event,
+    async_track_time_interval,
+)
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_MAX_SOC, CONF_MIN_SOC, CONF_P1_ENTITY, LOGGER, SCAN_INTERVAL_ACTIVE, SCAN_INTERVAL_IDLE
+from .const import (
+    CONF_MAX_SOC,
+    CONF_MIN_SOC,
+    CONF_P1_ENTITY,
+    CONF_P1_EXPORT,
+    CONF_P1_IMPORT,
+    CONF_P1_SOURCE,
+    DOMAIN,
+    LOGGER,
+    P1_SOURCE_PAIR,
+    SCAN_INTERVAL_ACTIVE,
+    SCAN_INTERVAL_IDLE,
+)
 from .core.engine import Mode, SetView, StepResult, ZephyrEngine
 from .core.settings import Settings
 
@@ -46,7 +64,12 @@ class ZephyrControl:
         self.hass = hass
         self.entry = entry
         self.runtime = runtime
-        self.p1_entity: str | None = entry.options.get(CONF_P1_ENTITY)
+        options = entry.options
+        self.p1_pair: tuple[str, str] | None = None
+        if options.get(CONF_P1_SOURCE) == P1_SOURCE_PAIR and options.get(CONF_P1_IMPORT) and options.get(CONF_P1_EXPORT):
+            self.p1_pair = (options[CONF_P1_IMPORT], options[CONF_P1_EXPORT])
+        self.p1_entity: str | None = None if self.p1_pair else options.get(CONF_P1_ENTITY)
+        self._pair_pending: Callable[[], None] | None = None
         self.engine = ZephyrEngine(settings_from_options(entry.options), Mode.ZERO_METER)
         self.engine.controller.trust_commands = False  # shadow mode: commands are not carried out
         self.shadow = True
@@ -60,12 +83,32 @@ class ZephyrControl:
     @callback
     def async_start(self) -> Callable[[], None]:
         unsubs: list[Callable[[], None]] = []
-        if self.p1_entity:
+        issue_id = "p1_missing"
+        if self.p1_pair:
+            unsubs.append(async_track_state_change_event(self.hass, list(self.p1_pair), self._on_pair_event))
+            unsubs.append(async_track_state_report_event(self.hass, list(self.p1_pair), self._on_pair_event))
+            watts = self._pair_watts()
+            if watts is not None:
+                self.engine.p1_reported(time.monotonic(), watts)
+            unsubs.append(self._cancel_pair_pending)
+        elif self.p1_entity:
             unsubs.append(async_track_state_change_event(self.hass, [self.p1_entity], self._on_p1_changed))
             unsubs.append(async_track_state_report_event(self.hass, [self.p1_entity], self._on_p1_reported))
             watts = _p1_watts(self.hass.states.get(self.p1_entity))
             if watts is not None:
                 self.engine.p1_reported(time.monotonic(), watts)
+        if self.p1_pair or self.p1_entity:
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+        else:
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                issue_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="p1_missing",
+            )
+            unsubs.append(lambda: ir.async_delete_issue(self.hass, DOMAIN, issue_id))
         unsubs.append(async_track_time_interval(self.hass, self._on_tick, timedelta(seconds=1)))
         self._apply_poll_interval()
 
@@ -89,6 +132,44 @@ class ZephyrControl:
     @callback
     def _on_p1_reported(self, event: Event[EventStateReportedData]) -> None:
         self._on_p1(event.data["new_state"])
+
+    # Two sensors (import and export, as the DSMR integration gives them). One telegram
+    # updates both, one after the other: wait a moment so we see the pair, not half of it.
+    PAIR_SETTLE = 0.2
+
+    @callback
+    def _on_pair_event(self, _event: Event[Any]) -> None:
+        if self._pair_pending is None:
+            self._pair_pending = async_call_later(self.hass, self.PAIR_SETTLE, self._on_pair_settled)
+
+    @callback
+    def _on_pair_settled(self, _now: datetime) -> None:
+        self._pair_pending = None
+        watts = self._pair_watts()
+        if watts is None:
+            return
+        self.engine.p1_reported(time.monotonic(), watts)
+        self.async_step()
+
+    @callback
+    def _cancel_pair_pending(self) -> None:
+        if self._pair_pending is not None:
+            self._pair_pending()
+            self._pair_pending = None
+
+    def _pair_watts(self) -> float | None:
+        assert self.p1_pair is not None
+        imported = _p1_watts(self.hass.states.get(self.p1_pair[0]))
+        exported = _p1_watts(self.hass.states.get(self.p1_pair[1]))
+        if imported is None or exported is None:
+            return None
+        return imported - exported
+
+    @property
+    def p1_description(self) -> str | None:
+        if self.p1_pair:
+            return f"{self.p1_pair[0]} - {self.p1_pair[1]}"
+        return self.p1_entity
 
     @callback
     def _on_p1(self, state: State | None) -> None:

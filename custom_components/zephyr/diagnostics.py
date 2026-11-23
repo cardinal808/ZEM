@@ -63,7 +63,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
         result = control.result
         control_info = {
             "shadow": control.shadow,
-            "p1_entity": control.p1_entity,
+            "p1_entity": control.p1_description,
             "mode": control.engine.mode.value,
             "settings": dataclasses.asdict(control.engine.settings),
             "last": {
