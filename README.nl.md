@@ -14,7 +14,7 @@
 2. Herstart Home Assistant.
 3. Meestal wordt je set automatisch gevonden (*Instellingen → Apparaten en diensten*). Anders voeg je **ZEPHYR** toe en vul je het IP-adres van de set in.
 4. Meer sets (tot 3): open ZEPHYR en kies *Set toevoegen*.
-5. Open ZEPHYR → *Configureren* en kies je P1-meter (wordt automatisch voorgesteld). De schaduwmodus start in de modus *Nul op de meter*.
+5. Open ZEPHYR → *Configureren* en kies je P1-meter (wordt automatisch voorgesteld): één netto sensor, of de sensoren voor afname en teruglevering van de DSMR-integratie (aanbevolen: die melden elk telegram). De schaduwmodus start in de modus *Nul op de meter*.
 
 Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 

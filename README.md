@@ -14,7 +14,7 @@
 2. Restart Home Assistant.
 3. Your set is usually found automatically (*Settings → Devices & services*). Otherwise add **ZEPHYR** and enter the IP address of the set.
 4. More sets (up to 3): open ZEPHYR and choose *Add set*.
-5. Open ZEPHYR → *Configure* and choose your P1 meter (suggested automatically). Shadow mode starts in the mode *Zero meter*.
+5. Open ZEPHYR → *Configure* and choose your P1 meter (suggested automatically): one net sensor, or the import and export sensors of the DSMR integration (recommended: these report every telegram). Shadow mode starts in the mode *Zero meter*.
 
 Requirements: HEMS turned off in the Zendure app; Home Assistant 2026.1 or newer.
 
