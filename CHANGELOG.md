@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.4.5
+- Step filter: a rise is measured from the lowest P1 value of the last 2.5 s (`step_window`), not only from the previous sample. A meter sample can fall halfway a rise (seen live: −21, 417, 2263 W); the filter then held at 417 W instead of at the level before the peak.
+
 ### 0.4.4
 - **P1 filters before the controller** (B20, B22), both on time so a slow meter is not filtered more:
   - *Noise filter:* within 75 W of the mean of the last 3 s, the controller gets that mean. Replay of recorded days: 17–32 % fewer writes, same accuracy and grid energy.
