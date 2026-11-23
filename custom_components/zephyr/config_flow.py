@@ -278,8 +278,12 @@ class ZephyrOptionsFlow(OptionsFlow):
         # The ranges (min 5-50 %, max 70-100 %) keep the minimum below the maximum.
         errors: dict[str, str] = {}
         if user_input is not None:
+            pair_given = bool(user_input.get(CONF_P1_IMPORT) and user_input.get(CONF_P1_EXPORT))
+            if user_input.get(CONF_P1_SOURCE) != P1_SOURCE_PAIR and not user_input.get(CONF_P1_ENTITY) and pair_given:
+                # Only the pair was filled in: that is clearly the choice.
+                user_input[CONF_P1_SOURCE] = P1_SOURCE_PAIR
             if user_input.get(CONF_P1_SOURCE) == P1_SOURCE_PAIR:
-                if not user_input.get(CONF_P1_IMPORT) or not user_input.get(CONF_P1_EXPORT):
+                if not pair_given:
                     errors["base"] = "p1_pair_incomplete"
                 elif user_input[CONF_P1_IMPORT] == user_input[CONF_P1_EXPORT]:
                     errors["base"] = "p1_pair_same"
@@ -296,7 +300,9 @@ class ZephyrOptionsFlow(OptionsFlow):
             options.update(user_input)
         single = options.get(CONF_P1_ENTITY) or suggest_p1_entity(self.hass)
         pair_import, pair_export = suggest_p1_pair(self.hass)
-        source = options.get(CONF_P1_SOURCE, P1_SOURCE_SINGLE)
+        # Without an earlier choice, prefer the DSMR pair when it exists: it reports every telegram.
+        default_source = P1_SOURCE_PAIR if pair_import and pair_export and not options.get(CONF_P1_ENTITY) else P1_SOURCE_SINGLE
+        source = options.get(CONF_P1_SOURCE, default_source)
         defaults = Settings()
         schema = vol.Schema(
             {
