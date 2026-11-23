@@ -77,6 +77,16 @@ class Settings:
     # Blocks
     discharge_block_delay: float = 10.0
 
+    # P1 filters (core/grid_filter.py)
+    step_threshold: float = 800.0
+    """W; a sudden rise above this is held back (0 = off). Short peaks such as a boiling-water tap."""
+    step_hold: float = 10.0
+    """s; a rise that lasts longer is followed."""
+    noise_band: float = 75.0
+    """W; deviations from the recent mean within this band are smoothed (0 = off)."""
+    noise_window: float = 3.0
+    """s over which the mean is taken."""
+
     def validated(self) -> Settings:
         """Return self when every value is in range; raise otherwise."""
         checks: dict[str, tuple[float, float]] = {
@@ -93,6 +103,10 @@ class Settings:
             "switch_threshold": (0, 500),
             "switch_delay": (0, 120),
             "min_step_interval": (0.5, 30),
+            "step_threshold": (0, 5000),
+            "step_hold": (0, 60),
+            "noise_band": (0, 300),
+            "noise_window": (0, 30),
         }
         for name, (lo, hi) in checks.items():
             value = getattr(self, name)
