@@ -200,6 +200,8 @@
           "p1_entity": "P1-meter (vermogen)",
           "p1_import_entity": "P1 afname (vermogen)",
           "p1_export_entity": "P1 teruglevering (vermogen)",
+          "solar_forecast_entity": "Zonverwachting voor morgen",
+          "solar_energy_entity": "Teller zonne-opbrengst",
           "min_soc": "Minimale laadtoestand",
           "max_soc": "Maximale laadtoestand"
         },
@@ -209,7 +211,9 @@
           "max_soc": "Boven deze waarde laadt ZEPHYR niet meer. Wordt naar de set geschreven zodra ZEPHYR live stuurt.",
           "p1_source": "Twee sensoren zien elk telegram van de meter, ook als de waarde gelijk blijft. Beter dan een samengestelde sjabloon-sensor, die alleen wijzigingen meldt.",
           "p1_import_entity": "Vermogen uit het net, bijvoorbeeld …_power_consumption.",
-          "p1_export_entity": "Vermogen naar het net, bijvoorbeeld …_power_production."
+          "p1_export_entity": "Vermogen naar het net, bijvoorbeeld …_power_production.",
+          "solar_forecast_entity": "Optioneel. Een verwachtingssensor met detail per half uur (Solcast: …_forecast_tomorrow). ZEPHYR bewaart elke avond om 23:00 de verwachting voor morgen, als meetlat voor de planner later.",
+          "solar_energy_entity": "Optioneel. Totale zonne-opbrengst in kWh (bijvoorbeeld de energieteller van de omvormer). Wordt elk uur gelezen om met de verwachting te vergelijken."
         }
       }
     },

@@ -33,6 +33,8 @@ from .const import (
     CONF_P1_SOURCE,
     CONF_PRODUCT,
     CONF_SERIAL,
+    CONF_SOLAR_ENERGY,
+    CONF_SOLAR_FORECAST,
     DOMAIN,
     MAX_SETS,
     P1_SOURCE_PAIR,
@@ -264,7 +266,38 @@ def suggest_p1_pair(hass: HomeAssistant) -> tuple[str | None, str | None]:
         prefix = imp.removesuffix("power_consumption")
         if f"{prefix}power_production" in exports:
             return imp, f"{prefix}power_production"
+    # A single-phase connection: the meter may only offer the per-phase sensors (…_phase_1),
+    # which then equal the total. Not when there are other phases (the total would be wrong).
+    power = [st.entity_id for st in hass.states.async_all("sensor") if st.attributes.get("device_class") == SensorDeviceClass.POWER]
+    if not any(e.endswith(("phase_2", "phase_3", "_l2", "_l3")) for e in power):
+        for imp in sorted(e for e in power if e.endswith("power_consumed_phase_1")):
+            exp = imp.replace("power_consumed_phase_1", "power_produced_phase_1")
+            if exp in power:
+                return imp, exp
     return None, None
+
+
+def suggest_solar(hass: HomeAssistant) -> tuple[str | None, str | None]:
+    """A day-ahead forecast sensor with half-hour detail (Solcast) and a solar production counter."""
+    forecast = next(
+        (
+            st.entity_id
+            for st in sorted(hass.states.async_all("sensor"), key=lambda st: st.entity_id)
+            if st.entity_id.endswith("forecast_tomorrow") and "detailedForecast" in st.attributes
+        ),
+        None,
+    )
+    energy = None
+    for st in sorted(hass.states.async_all("sensor"), key=lambda st: st.entity_id):
+        name = st.entity_id.lower()
+        if st.attributes.get("device_class") != SensorDeviceClass.ENERGY or st.entity_id.startswith("sensor.zephyr_"):
+            continue
+        if st.attributes.get("state_class") != "total_increasing":
+            continue
+        if any(word in name for word in ("solaredge", "solar", "pv", "inverter", "omvormer")) and "forecast" not in name:
+            energy = st.entity_id
+            break
+    return forecast, energy
 
 
 def _power_sensor() -> selector.EntitySelector:
@@ -291,7 +324,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                 errors["base"] = "p1_missing"
             if not errors:
                 data = {**self.config_entry.options, **user_input}
-                for key in (CONF_P1_ENTITY, CONF_P1_IMPORT, CONF_P1_EXPORT):
+                for key in (CONF_P1_ENTITY, CONF_P1_IMPORT, CONF_P1_EXPORT, CONF_SOLAR_FORECAST, CONF_SOLAR_ENERGY):
                     if not user_input.get(key):
                         data.pop(key, None)
                 return self.async_create_entry(data=data)
@@ -300,6 +333,7 @@ class ZephyrOptionsFlow(OptionsFlow):
             options.update(user_input)
         single = options.get(CONF_P1_ENTITY) or suggest_p1_entity(self.hass)
         pair_import, pair_export = suggest_p1_pair(self.hass)
+        solar_forecast, solar_energy = suggest_solar(self.hass)
         # Without an earlier choice, prefer the DSMR pair when it exists: it reports every telegram.
         default_source = P1_SOURCE_PAIR if pair_import and pair_export and not options.get(CONF_P1_ENTITY) else P1_SOURCE_SINGLE
         source = options.get(CONF_P1_SOURCE, default_source)
@@ -312,6 +346,12 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Optional(CONF_P1_ENTITY, description={"suggested_value": single}): _power_sensor(),
                 vol.Optional(CONF_P1_IMPORT, description={"suggested_value": options.get(CONF_P1_IMPORT) or pair_import}): _power_sensor(),
                 vol.Optional(CONF_P1_EXPORT, description={"suggested_value": options.get(CONF_P1_EXPORT) or pair_export}): _power_sensor(),
+                vol.Optional(
+                    CONF_SOLAR_FORECAST, description={"suggested_value": options.get(CONF_SOLAR_FORECAST) or solar_forecast}
+                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+                vol.Optional(
+                    CONF_SOLAR_ENERGY, description={"suggested_value": options.get(CONF_SOLAR_ENERGY) or solar_energy}
+                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.ENERGY)),
                 vol.Required(CONF_MIN_SOC, default=options.get(CONF_MIN_SOC, defaults.min_soc)): _percent(5, 50),
                 vol.Required(CONF_MAX_SOC, default=options.get(CONF_MAX_SOC, defaults.max_soc)): _percent(70, 100),
             }
