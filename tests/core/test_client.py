@@ -13,13 +13,13 @@ from aiohttp import web
 from aiohttp.test_utils import TestServer
 
 from conftest import load_fixture
-from zem_core.client import (
+from zephyr_core.client import (
     ZendureClient,
     ZendureConnectionError,
     ZendureResponseError,
     ZendureTimeout,
 )
-from zem_core.zensdk import ZenSdkError, power_command
+from zephyr_core.zensdk import ZenSdkError, power_command
 
 Handler = Callable[[web.Request], Awaitable[web.StreamResponse]]
 

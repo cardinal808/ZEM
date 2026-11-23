@@ -8,8 +8,8 @@ import dataclasses
 import pytest
 
 from conftest import load_fixture
-from zem_core.models import AcMode, GridReverse, PackState, SetStatus
-from zem_core.zensdk import (
+from zephyr_core.models import AcMode, GridReverse, PackState, SetStatus
+from zephyr_core.zensdk import (
     ZenSdkError,
     conversion_efficiency,
     derive_status,

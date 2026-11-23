@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Zendure-set toevoegen",
-        "description": "ZEM leest de set uit via het lokale netwerk. In deze versie wordt niets naar de set geschreven.",
+        "description": "ZEPHYR leest de set uit via het lokale netwerk. In deze versie wordt niets naar de set geschreven.",
         "data": {
           "host": "Adres"
         },
@@ -14,16 +14,16 @@
       },
       "discovery_confirm": {
         "title": "Zendure-set gevonden",
-        "description": "{model} met {packs} packs ({capacity} kWh), serienummer {serial}, op {host}. Toevoegen aan ZEM?"
+        "description": "{model} met {packs} packs ({capacity} kWh), serienummer {serial}, op {host}. Toevoegen aan ZEPHYR?"
       }
     },
     "error": {
       "cannot_connect": "De set is niet bereikbaar of het antwoord is onbruikbaar. Controleer het adres; lukt het nog steeds niet, zet HEMS in de Zendure-app één keer aan, verlaat het menu en zet het weer uit."
     },
     "abort": {
-      "already_configured": "Deze set hoort al bij ZEM.",
-      "max_sets": "ZEM ondersteunt maximaal 3 sets.",
-      "set_added": "Set {number} is toegevoegd aan ZEM.",
+      "already_configured": "Deze set hoort al bij ZEPHYR.",
+      "max_sets": "ZEPHYR ondersteunt maximaal 3 sets.",
+      "set_added": "Set {number} is toegevoegd aan ZEPHYR.",
       "cannot_connect": "De set is niet bereikbaar."
     }
   },
@@ -45,7 +45,7 @@
         },
         "reconfigure": {
           "title": "Capaciteit van de set",
-          "description": "ZEM herkent de meeste Zendure-accu's zelf. Vul hier alleen de totale capaciteit van deze set in als een pack niet wordt herkend. 0 = automatisch.",
+          "description": "ZEPHYR herkent de meeste Zendure-accu's zelf. Vul hier alleen de totale capaciteit van deze set in als een pack niet wordt herkend. 0 = automatisch.",
           "data": {
             "capacity_override": "Capaciteit (handmatig)"
           },
@@ -58,8 +58,8 @@
         "cannot_connect": "De set is niet bereikbaar of het antwoord is onbruikbaar. Controleer het adres; lukt het nog steeds niet, zet HEMS in de Zendure-app één keer aan, verlaat het menu en zet het weer uit."
       },
       "abort": {
-        "already_configured": "Deze set hoort al bij ZEM.",
-        "max_sets": "ZEM ondersteunt maximaal 3 sets.",
+        "already_configured": "Deze set hoort al bij ZEPHYR.",
+        "max_sets": "ZEPHYR ondersteunt maximaal 3 sets.",
         "reconfigure_successful": "De capaciteit is opgeslagen."
       }
     }
@@ -173,18 +173,18 @@
   "issues": {
     "serial_mismatch": {
       "title": "Andere set op het adres van set {number}",
-      "description": "Het apparaat op {host} meldt een ander serienummer dan set {number}. ZEM gebruikt het niet. Controleer het IP-adres van de set (bijvoorbeeld een vast adres in je router), of verwijder set {number} en voeg hem opnieuw toe."
+      "description": "Het apparaat op {host} meldt een ander serienummer dan set {number}. ZEPHYR gebruikt het niet. Controleer het IP-adres van de set (bijvoorbeeld een vast adres in je router), of verwijder set {number} en voeg hem opnieuw toe."
     },
     "unknown_pack": {
       "title": "Accu van set {number} niet herkend",
-      "description": "ZEM herkent deze accu('s) niet: {packs}. De capaciteit van set {number} is daardoor te laag. Vul de totale capaciteit in via ZEM → Set {number} → Configureren. Wil je helpen? Meld het model en de regel hierboven in een issue op GitHub, dan voegen we de accu toe."
+      "description": "ZEPHYR herkent deze accu('s) niet: {packs}. De capaciteit van set {number} is daardoor te laag. Vul de totale capaciteit in via ZEPHYR → Set {number} → Configureren. Wil je helpen? Meld het model en de regel hierboven in een issue op GitHub, dan voegen we de accu toe."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Bronnen en accu",
-        "description": "Kies de sensor van je slimme meter (P1) in W, + bij afname. ZEM draait in schaduwmodus: het rekent uit wat het zou doen, maar stuurt de accu nog niet aan.",
+        "description": "Kies de sensor van je slimme meter (P1) in W, + bij afname. ZEPHYR draait in schaduwmodus: het rekent uit wat het zou doen, maar stuurt de accu nog niet aan.",
         "data": {
           "p1_entity": "P1-meter (vermogen)",
           "min_soc": "Minimale laadtoestand",
@@ -192,8 +192,8 @@
         },
         "data_description": {
           "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
-          "min_soc": "Onder deze waarde levert ZEM niet meer. Wordt naar de set geschreven zodra ZEM live stuurt.",
-          "max_soc": "Boven deze waarde laadt ZEM niet meer. Wordt naar de set geschreven zodra ZEM live stuurt."
+          "min_soc": "Onder deze waarde levert ZEPHYR niet meer. Wordt naar de set geschreven zodra ZEPHYR live stuurt.",
+          "max_soc": "Boven deze waarde laadt ZEPHYR niet meer. Wordt naar de set geschreven zodra ZEPHYR live stuurt."
         }
       }
     }

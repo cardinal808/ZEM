@@ -1,6 +1,6 @@
-"""ZEM: Home Assistant integration for Zendure home batteries.
+"""ZEPHYR: Home Assistant integration for Zendure home batteries.
 
-Milestone M3: reading and shadow mode. ZEM computes what it would do but
+Milestone M3: reading and shadow mode. ZEPHYR computes what it would do but
 does not write to the sets yet.
 """
 
@@ -22,43 +22,43 @@ from .core.totals import Totals, compute_totals
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT]
 
 if TYPE_CHECKING:
-    from .control import ZemControl
+    from .control import ZephyrControl
 
 
 @dataclass(slots=True)
-class ZemRuntime:
-    """Runtime objects of one ZEM installation."""
+class ZephyrRuntime:
+    """Runtime objects of one ZEPHYR installation."""
 
     coordinators: dict[str, SetCoordinator] = field(default_factory=dict)
-    control: ZemControl | None = None
+    control: ZephyrControl | None = None
 
     def totals(self) -> Totals:
         return compute_totals((c.snapshot() for c in self.coordinators.values()), time.monotonic())
 
 
-type ZemConfigEntry = ConfigEntry[ZemRuntime]
+type ZephyrConfigEntry = ConfigEntry[ZephyrRuntime]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ZemConfigEntry) -> bool:
-    """Set up ZEM: one reader per set, then the entities."""
+async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bool:
+    """Set up ZEPHYR: one reader per set, then the entities."""
     # The installation device must exist before set devices refer to it.
     dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
-        name="ZEM",
-        manufacturer="ZEM",
+        name="ZEPHYR",
+        manufacturer="ZEPHYR",
         model="Installation",
     )
-    runtime = ZemRuntime()
+    runtime = ZephyrRuntime()
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_SET:
             continue
         coordinator = SetCoordinator(hass, entry, subentry)
         await coordinator.async_refresh()  # never raises; an unreachable set starts offline
         runtime.coordinators[subentry.subentry_id] = coordinator
-    from .control import ZemControl
+    from .control import ZephyrControl
 
-    runtime.control = ZemControl(hass, entry, runtime)
+    runtime.control = ZephyrControl(hass, entry, runtime)
     entry.runtime_data = runtime
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -66,9 +66,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZemConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ZemConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def _async_reload(hass: HomeAssistant, entry: ZemConfigEntry) -> None:
+async def _async_reload(hass: HomeAssistant, entry: ZephyrConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)

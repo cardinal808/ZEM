@@ -1,6 +1,6 @@
 """Runs the engine in Home Assistant: P1 events in, decisions out.
 
-M3: shadow mode only. The engine computes what ZEM would do, entities and
+M3: shadow mode only. The engine computes what ZEPHYR would do, entities and
 the decision log show it, but nothing is sent to the sets.
 """
 
@@ -18,11 +18,11 @@ from homeassistant.helpers.event import async_track_state_change_event, async_tr
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_MAX_SOC, CONF_MIN_SOC, CONF_P1_ENTITY, LOGGER, SCAN_INTERVAL_ACTIVE, SCAN_INTERVAL_IDLE
-from .core.engine import Mode, SetView, StepResult, ZemEngine
+from .core.engine import Mode, SetView, StepResult, ZephyrEngine
 from .core.settings import Settings
 
 if TYPE_CHECKING:
-    from . import ZemConfigEntry, ZemRuntime
+    from . import ZephyrConfigEntry, ZephyrRuntime
 
 LOG_SIZE = 500
 
@@ -39,15 +39,15 @@ def _p1_watts(state: State | None) -> float | None:
     return value
 
 
-class ZemControl:
+class ZephyrControl:
     """Owns the engine and feeds it."""
 
-    def __init__(self, hass: HomeAssistant, entry: ZemConfigEntry, runtime: ZemRuntime) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ZephyrConfigEntry, runtime: ZephyrRuntime) -> None:
         self.hass = hass
         self.entry = entry
         self.runtime = runtime
         self.p1_entity: str | None = entry.options.get(CONF_P1_ENTITY)
-        self.engine = ZemEngine(settings_from_options(entry.options), Mode.ZERO_METER)
+        self.engine = ZephyrEngine(settings_from_options(entry.options), Mode.ZERO_METER)
         self.engine.controller.trust_commands = False  # shadow mode: commands are not carried out
         self.shadow = True
         self.result: StepResult | None = None

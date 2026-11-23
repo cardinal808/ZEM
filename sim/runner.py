@@ -1,4 +1,4 @@
-"""Closed-loop simulation: house + P1 meter + ZemEngine + simulated sets."""
+"""Closed-loop simulation: house + P1 meter + ZephyrEngine + simulated sets."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from zem_core.engine import Mode, SetView, StepResult, ZemEngine
-from zem_core.settings import Settings
+from zephyr_core.engine import Mode, SetView, StepResult, ZephyrEngine
+from zephyr_core.settings import Settings
 
 from .device import SimSet
 
@@ -54,17 +54,17 @@ class Simulation:
     p1_jitter: float = 0.0
     """The meter interval varies uniformly by up to ± this many seconds (fixed seed)."""
     step_interval: float | None = None
-    """How often ZEM steps (Home Assistant: 1 s). None: on every P1 report."""
+    """How often ZEPHYR steps (Home Assistant: 1 s). None: on every P1 report."""
     p1_outages: list[tuple[float, float]] = field(default_factory=list)
     """(start, end) periods without P1 reports."""
     poll_interval: float = 2.0
     write_delay: float = 0.2
     dt: float = 0.1
     discharge_blocked: Callable[[float], bool] = field(default_factory=lambda: lambda t: False)
-    engine: ZemEngine = field(init=False)
+    engine: ZephyrEngine = field(init=False)
 
     def __post_init__(self) -> None:
-        self.engine = ZemEngine(self.settings, self.mode)
+        self.engine = ZephyrEngine(self.settings, self.mode)
 
     def grid(self) -> float:
         # + import. Battery power + = charging (takes from the house).

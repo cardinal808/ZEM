@@ -37,10 +37,10 @@ ACTIVE_POWER_THRESHOLD: Final = 20.0
 # --- Write rules ------------------------------------------------------------
 
 WRITABLE_PROPERTIES: Final = frozenset({"acMode", "inputLimit", "outputLimit", "smartMode", "socSet", "minSoc", "gridReverse"})
-"""The only properties ZEM ever writes (SPEC-basis §3.2)."""
+"""The only properties ZEPHYR ever writes (SPEC-basis §3.2)."""
 
 NEVER_WRITE: Final = frozenset({"gridStandard", "gridOffMode", "batCalTime", "inverseMaxPower", "Fanmode", "Fanspeed", "lampSwitch"})
-"""Installation or manufacturer settings; ZEM must never write these."""
+"""Installation or manufacturer settings; ZEPHYR must never write these."""
 
 MIN_SOC_RANGE: Final = (5.0, 50.0)
 """Allowed minimum SOC in % (the app does not go below 5 %)."""
@@ -200,7 +200,7 @@ def parse_report(data: Mapping[str, Any]) -> SetReport:
         calibrating=(_int(props, "socStatus") or 0) == 1,
         soc_limit_charge_stopped=bool(soc_limit & 0x1),
         soc_limit_discharge_stopped=bool(soc_limit & 0x2),
-        # Only is_error stops ZEM. faultLevel is not documented; a tester's set reported
+        # Only is_error stops ZEPHYR. faultLevel is not documented; a tester's set reported
         # faultLevel 2 at 100 % (charging stopped) without an error, so it is shown, not acted on.
         fault=bool(_int(props, "is_error")),
         fault_level=_int(props, "faultLevel") or 0,
@@ -226,7 +226,7 @@ def derive_status(
     """Status of a set that answered (offline is decided by the caller).
 
     Order of precedence: fault, calibration, bypass, full/empty, direction,
-    standby. ``min_soc`` and ``max_soc`` are ZEM's own limits in %.
+    standby. ``min_soc`` and ``max_soc`` are ZEPHYR's own limits in %.
     """
     if report.fault:
         return SetStatus.FAULT
@@ -326,7 +326,7 @@ def grid_reverse_command(allow_export: bool) -> dict[str, int]:
 
 
 def validate_command(props: Mapping[str, int]) -> None:
-    """Refuse anything ZEM is not allowed to write, or values out of range."""
+    """Refuse anything ZEPHYR is not allowed to write, or values out of range."""
     if not props:
         raise ZenSdkError("empty command")
     for key, value in props.items():

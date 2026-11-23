@@ -7,9 +7,9 @@ import dataclasses
 import pytest
 
 from conftest import load_fixture
-from zem_core.health import SetHealth
-from zem_core.totals import SetSnapshot, compute_totals
-from zem_core.zensdk import parse_report
+from zephyr_core.health import SetHealth
+from zephyr_core.totals import SetSnapshot, compute_totals
+from zephyr_core.zensdk import parse_report
 
 
 def test_first_success_brings_set_online() -> None:

@@ -1,4 +1,4 @@
-"""Install ZEM, read sets, entities, offline handling, diagnostics."""
+"""Install ZEPHYR, read sets, entities, offline handling, diagnostics."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
-from custom_components.zem.const import DOMAIN
-from custom_components.zem.diagnostics import async_get_config_entry_diagnostics
+from custom_components.zephyr.const import DOMAIN
+from custom_components.zephyr.diagnostics import async_get_config_entry_diagnostics
 
 from .conftest import FakeSets
 
@@ -41,22 +41,22 @@ async def _tick(hass: HomeAssistant, seconds: float = 5.5) -> None:
 async def test_install_creates_entities(hass: HomeAssistant, fake_sets: FakeSets) -> None:
     fake_sets.add("10.0.0.10", "deliver_760")
     entry = await _install(hass)
-    assert entry.title == "ZEM"
+    assert entry.title == "ZEPHYR"
     assert len(entry.subentries) == 1
 
-    assert float(hass.states.get("sensor.zem_set_1_state_of_charge").state) == 54
-    assert float(hass.states.get("sensor.zem_set_1_power").state) == -760  # + = charging (B16)
-    assert float(hass.states.get("sensor.zem_set_1_discharge_power").state) == 760
-    assert float(hass.states.get("sensor.zem_set_1_charge_power").state) == 0
-    assert hass.states.get("sensor.zem_set_1_status").state == "discharging"
-    assert float(hass.states.get("sensor.zem_set_1_capacity").state) == pytest.approx(11.04)
-    assert hass.states.get("binary_sensor.zem_set_1_online").state == "on"
-    assert hass.states.get("binary_sensor.zem_set_1_fault").state == "off"
+    assert float(hass.states.get("sensor.zephyr_set_1_state_of_charge").state) == 54
+    assert float(hass.states.get("sensor.zephyr_set_1_power").state) == -760  # + = charging (B16)
+    assert float(hass.states.get("sensor.zephyr_set_1_discharge_power").state) == 760
+    assert float(hass.states.get("sensor.zephyr_set_1_charge_power").state) == 0
+    assert hass.states.get("sensor.zephyr_set_1_status").state == "discharging"
+    assert float(hass.states.get("sensor.zephyr_set_1_capacity").state) == pytest.approx(11.04)
+    assert hass.states.get("binary_sensor.zephyr_set_1_online").state == "on"
+    assert hass.states.get("binary_sensor.zephyr_set_1_fault").state == "off"
 
-    assert float(hass.states.get("sensor.zem_state_of_charge").state) == 54
-    assert float(hass.states.get("sensor.zem_capacity").state) == pytest.approx(11.04)
-    assert float(hass.states.get("sensor.zem_power").state) == -760
-    assert hass.states.get("sensor.zem_sets_online").state == "1"
+    assert float(hass.states.get("sensor.zephyr_state_of_charge").state) == 54
+    assert float(hass.states.get("sensor.zephyr_capacity").state) == pytest.approx(11.04)
+    assert float(hass.states.get("sensor.zephyr_power").state) == -760
+    assert hass.states.get("sensor.zephyr_sets_online").state == "1"
 
 
 async def test_nothing_is_written(hass: HomeAssistant, fake_sets: FakeSets) -> None:
@@ -85,11 +85,11 @@ async def test_second_set_via_user_flow_becomes_subentry(hass: HomeAssistant, fa
     assert result["reason"] == "set_added"
     await hass.async_block_till_done()
     assert len(entry.subentries) == 2
-    assert float(hass.states.get("sensor.zem_set_2_state_of_charge").state) == 20
+    assert float(hass.states.get("sensor.zephyr_set_2_state_of_charge").state) == 20
     # Totals: capacity-weighted SOC, net power of both sets.
-    assert float(hass.states.get("sensor.zem_capacity").state) == pytest.approx(22.08)
-    assert float(hass.states.get("sensor.zem_state_of_charge").state) == pytest.approx(37.0)
-    assert float(hass.states.get("sensor.zem_power").state) == pytest.approx(-760 + 2386)
+    assert float(hass.states.get("sensor.zephyr_capacity").state) == pytest.approx(22.08)
+    assert float(hass.states.get("sensor.zephyr_state_of_charge").state) == pytest.approx(37.0)
+    assert float(hass.states.get("sensor.zephyr_power").state) == pytest.approx(-760 + 2386)
 
 
 async def test_subentry_flow_and_limit(hass: HomeAssistant, fake_sets: FakeSets) -> None:
@@ -163,20 +163,20 @@ async def test_offline_after_three_failed_reads(hass: HomeAssistant, fake_sets: 
     fake_sets.fail("10.0.0.10")
     await _tick(hass)
     await _tick(hass)
-    assert hass.states.get("binary_sensor.zem_set_1_online").state == "on"
+    assert hass.states.get("binary_sensor.zephyr_set_1_online").state == "on"
     await _tick(hass)
-    assert hass.states.get("binary_sensor.zem_set_1_online").state == "off"
-    assert hass.states.get("sensor.zem_set_1_status").state == "offline"
-    assert hass.states.get("sensor.zem_set_1_power").state == "unavailable"
+    assert hass.states.get("binary_sensor.zephyr_set_1_online").state == "off"
+    assert hass.states.get("sensor.zephyr_set_1_status").state == "offline"
+    assert hass.states.get("sensor.zephyr_set_1_power").state == "unavailable"
     # Energy totals keep the last known values for five minutes.
-    assert float(hass.states.get("sensor.zem_capacity").state) == pytest.approx(11.04)
-    assert hass.states.get("sensor.zem_sets_online").state == "0"
+    assert float(hass.states.get("sensor.zephyr_capacity").state) == pytest.approx(11.04)
+    assert hass.states.get("sensor.zephyr_sets_online").state == "0"
 
     fake_sets.add("10.0.0.10", "deliver_760")
     await _tick(hass)
-    assert hass.states.get("binary_sensor.zem_set_1_online").state == "off"  # needs two good reads
+    assert hass.states.get("binary_sensor.zephyr_set_1_online").state == "off"  # needs two good reads
     await _tick(hass)
-    assert hass.states.get("binary_sensor.zem_set_1_online").state == "on"
+    assert hass.states.get("binary_sensor.zephyr_set_1_online").state == "on"
 
 
 async def test_unreachable_set_does_not_block_setup(hass: HomeAssistant, fake_sets: FakeSets) -> None:
@@ -186,7 +186,7 @@ async def test_unreachable_set_does_not_block_setup(hass: HomeAssistant, fake_se
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is config_entries.ConfigEntryState.LOADED
-    assert hass.states.get("binary_sensor.zem_set_1_online").state == "off"
+    assert hass.states.get("binary_sensor.zephyr_set_1_online").state == "off"
 
 
 async def test_other_serial_at_address_raises_issue(hass: HomeAssistant, fake_sets: FakeSets) -> None:
@@ -195,7 +195,7 @@ async def test_other_serial_at_address_raises_issue(hass: HomeAssistant, fake_se
     fake_sets.add("10.0.0.10", "standby", serial="OTHERSET0000001")
     for _ in range(3):
         await _tick(hass)
-    assert hass.states.get("binary_sensor.zem_set_1_online").state == "off"
+    assert hass.states.get("binary_sensor.zephyr_set_1_online").state == "off"
     assert ir.async_get(hass).async_get_issue(
         DOMAIN, f"serial_mismatch_{next(iter(hass.config_entries.async_entries(DOMAIN)[0].subentries))}"
     )
@@ -223,7 +223,7 @@ async def test_unknown_pack_gives_repair_and_manual_capacity(hass: HomeAssistant
     issue = ir.async_get(hass).async_get_issue(DOMAIN, f"unknown_pack_{subentry_id}")
     assert issue is not None
     assert issue.translation_placeholders == {"number": "1", "packs": "XO2A… (packType 350)"}
-    assert float(hass.states.get("sensor.zem_set_1_capacity").state) == pytest.approx(11.04 - 2.88)
+    assert float(hass.states.get("sensor.zephyr_set_1_capacity").state) == pytest.approx(11.04 - 2.88)
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["sets"][0]["capacity"]["unknown_packs"] == [{"pack_type": 350, "serial_prefix": "XO2A"}]
     assert "XO2AEXAMPLE0002" not in str(diag)
@@ -235,5 +235,5 @@ async def test_unknown_pack_gives_repair_and_manual_capacity(hass: HomeAssistant
     result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"capacity_override": 11.04})
     assert result["reason"] == "reconfigure_successful"
     await hass.async_block_till_done()
-    assert float(hass.states.get("sensor.zem_set_1_capacity").state) == pytest.approx(11.04)
+    assert float(hass.states.get("sensor.zephyr_set_1_capacity").state) == pytest.approx(11.04)
     assert ir.async_get(hass).async_get_issue(DOMAIN, f"unknown_pack_{subentry_id}") is None

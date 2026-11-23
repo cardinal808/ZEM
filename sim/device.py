@@ -15,8 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from zem_core.models import SetReport
-from zem_core.zensdk import parse_report, validate_command
+from zephyr_core.models import SetReport
+from zephyr_core.zensdk import parse_report, validate_command
 
 TEMPLATE = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "report_standby.json"
 

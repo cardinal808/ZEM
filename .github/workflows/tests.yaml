@@ -35,6 +35,6 @@ jobs:
       - name: Install
         run: pip install -r requirements_test.txt pytest-homeassistant-custom-component
       - name: Mypy (strict)
-        run: mypy custom_components/zem
+        run: mypy custom_components/zephyr
       - name: Pytest (Home Assistant)
         run: pytest tests/ha

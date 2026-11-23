@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Add a Zendure set",
-        "description": "ZEM reads the set over the local network. Nothing is written to the set in this version.",
+        "description": "ZEPHYR reads the set over the local network. Nothing is written to the set in this version.",
         "data": {
           "host": "Address"
         },
@@ -14,16 +14,16 @@
       },
       "discovery_confirm": {
         "title": "Zendure set found",
-        "description": "{model} with {packs} packs ({capacity} kWh), serial number {serial}, at {host}. Add it to ZEM?"
+        "description": "{model} with {packs} packs ({capacity} kWh), serial number {serial}, at {host}. Add it to ZEPHYR?"
       }
     },
     "error": {
       "cannot_connect": "Cannot reach the set or its answer is not usable. Check the address; if it still fails, turn HEMS on once in the Zendure app, leave the menu and turn it off again."
     },
     "abort": {
-      "already_configured": "This set is already part of ZEM.",
-      "max_sets": "ZEM supports at most 3 sets.",
-      "set_added": "Set {number} has been added to ZEM.",
+      "already_configured": "This set is already part of ZEPHYR.",
+      "max_sets": "ZEPHYR supports at most 3 sets.",
+      "set_added": "Set {number} has been added to ZEPHYR.",
       "cannot_connect": "The set could not be reached."
     }
   },
@@ -45,7 +45,7 @@
         },
         "reconfigure": {
           "title": "Capacity of the set",
-          "description": "ZEM recognises most Zendure batteries by itself. Only enter the total capacity of this set when a pack is not recognised. 0 = automatic.",
+          "description": "ZEPHYR recognises most Zendure batteries by itself. Only enter the total capacity of this set when a pack is not recognised. 0 = automatic.",
           "data": {
             "capacity_override": "Capacity (manual)"
           },
@@ -58,8 +58,8 @@
         "cannot_connect": "Cannot reach the set or its answer is not usable. Check the address; if it still fails, turn HEMS on once in the Zendure app, leave the menu and turn it off again."
       },
       "abort": {
-        "already_configured": "This set is already part of ZEM.",
-        "max_sets": "ZEM supports at most 3 sets.",
+        "already_configured": "This set is already part of ZEPHYR.",
+        "max_sets": "ZEPHYR supports at most 3 sets.",
         "reconfigure_successful": "The capacity has been saved."
       }
     }
@@ -173,18 +173,18 @@
   "issues": {
     "serial_mismatch": {
       "title": "Different set at the address of set {number}",
-      "description": "The device at {host} reports a different serial number than set {number}. ZEM does not use it. Check the IP address of the set (for example a fixed address in your router), or remove set {number} and add it again."
+      "description": "The device at {host} reports a different serial number than set {number}. ZEPHYR does not use it. Check the IP address of the set (for example a fixed address in your router), or remove set {number} and add it again."
     },
     "unknown_pack": {
       "title": "Battery of set {number} not recognised",
-      "description": "ZEM does not recognise these batteries: {packs}. The capacity of set {number} is therefore too low. Enter the total capacity via ZEM → Set {number} → Reconfigure. Want to help? Report the model and the line above in a GitHub issue, and we will add the battery."
+      "description": "ZEPHYR does not recognise these batteries: {packs}. The capacity of set {number} is therefore too low. Enter the total capacity via ZEPHYR → Set {number} → Reconfigure. Want to help? Report the model and the line above in a GitHub issue, and we will add the battery."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Sources and battery",
-        "description": "Choose the sensor of your smart meter (P1) in W, + when drawing from the grid. ZEM runs in shadow mode: it calculates what it would do, but does not control the battery yet.",
+        "description": "Choose the sensor of your smart meter (P1) in W, + when drawing from the grid. ZEPHYR runs in shadow mode: it calculates what it would do, but does not control the battery yet.",
         "data": {
           "p1_entity": "P1 meter (power)",
           "min_soc": "Minimum state of charge",
@@ -192,8 +192,8 @@
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
-          "min_soc": "Below this value ZEM stops delivering. Written to the set once ZEM controls it.",
-          "max_soc": "Above this value ZEM stops charging. Written to the set once ZEM controls it."
+          "min_soc": "Below this value ZEPHYR stops delivering. Written to the set once ZEPHYR controls it.",
+          "max_soc": "Above this value ZEPHYR stops charging. Written to the set once ZEPHYR controls it."
         }
       }
     }

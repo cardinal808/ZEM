@@ -1,7 +1,7 @@
 """Test setup.
 
-The core is loaded as the stand-alone package ``zem_core`` straight from
-``custom_components/zem/core``, so the core tests do not need Home Assistant.
+The core is loaded as the stand-alone package ``zephyr_core`` straight from
+``custom_components/zephyr/core``, so the core tests do not need Home Assistant.
 """
 
 from __future__ import annotations
@@ -14,12 +14,12 @@ from typing import Any
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-CORE_DIR = ROOT / "custom_components" / "zem" / "core"
+CORE_DIR = ROOT / "custom_components" / "zephyr" / "core"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 sys.path.insert(0, str(ROOT))
-import sim  # noqa: E402,F401  (loads the core as zem_core)
+import sim  # noqa: E402,F401  (loads the core as zephyr_core)
 
 
 def load_fixture(name: str) -> dict[str, Any]:

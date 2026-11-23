@@ -1,4 +1,4 @@
-"""ZemEngine: one step = modes → safety → controller → per-set targets → write rules.
+"""ZephyrEngine: one step = modes → safety → controller → per-set targets → write rules.
 
 Pure and deterministic: time and measurements come in, commands and state
 go out. The Home Assistant layer decides whether the commands are sent
@@ -64,8 +64,8 @@ class ReasonCode(StrEnum):
 REASON_TEXT: dict[ReasonCode, tuple[str, str]] = {
     ReasonCode.STANDBY_MODE: ("Standby mode.", "Modus Standby."),
     ReasonCode.P1_MISSING: (
-        "No P1 reading yet: choose the P1 meter in the ZEM options.",
-        "Nog geen P1-meting: kies de P1-meter bij de opties van ZEM.",
+        "No P1 reading yet: choose the P1 meter in the ZEPHYR options.",
+        "Nog geen P1-meting: kies de P1-meter bij de opties van ZEPHYR.",
     ),
     ReasonCode.P1_LOST: ("No P1 reading for {age} s: sets in standby.", "Geen P1-meting sinds {age} s: sets in standby."),
     ReasonCode.P1_STALE: ("No fresh P1 reading ({age} s): battery at 0 W.", "Geen verse P1-meting ({age} s): accu op 0 W."),
@@ -150,7 +150,7 @@ class _SetState:
     limits_checked: bool = False
 
 
-class ZemEngine:
+class ZephyrEngine:
     """Decides what every set should do. Keep one instance per installation."""
 
     def __init__(self, settings: Settings | None = None, mode: Mode = Mode.ZERO_METER) -> None:
