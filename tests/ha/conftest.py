@@ -10,12 +10,12 @@ from unittest.mock import patch
 import pytest
 
 from conftest import load_fixture
-from custom_components.zem.core.client import ZendureTimeout
+from custom_components.zephyr.core.client import ZendureTimeout
 
 
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
-    """Allow loading custom_components/zem."""
+    """Allow loading custom_components/zephyr."""
 
 
 class FakeSets:
@@ -56,7 +56,7 @@ def fake_sets() -> Generator[FakeSets]:
         fake.writes.append((serial, dict(props)))
 
     with (
-        patch("custom_components.zem.core.client.ZendureClient.get_report_raw", get_report_raw),
-        patch("custom_components.zem.core.client.ZendureClient.write", write),
+        patch("custom_components.zephyr.core.client.ZendureClient.get_report_raw", get_report_raw),
+        patch("custom_components.zephyr.core.client.ZendureClient.write", write),
     ):
         yield fake

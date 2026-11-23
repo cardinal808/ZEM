@@ -8,7 +8,7 @@ from typing import Any
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
-from . import ZemConfigEntry
+from . import ZephyrConfigEntry
 from .const import CONF_HOST, CONF_SERIAL
 from .coordinator import unknown_pack_details
 
@@ -28,7 +28,7 @@ def _redact_report(raw: dict[str, Any]) -> dict[str, Any]:
     return report
 
 
-async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZemConfigEntry) -> dict[str, Any]:
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
     runtime = entry.runtime_data
     sets: list[dict[str, Any]] = []
     for coordinator in runtime.coordinators.values():

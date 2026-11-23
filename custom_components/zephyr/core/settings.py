@@ -1,6 +1,6 @@
 """Settings with defaults and validation (SPEC-basis §11).
 
-Every setting has a default, so ZEM works without filling anything in.
+Every setting has a default, so ZEPHYR works without filling anything in.
 """
 
 from __future__ import annotations

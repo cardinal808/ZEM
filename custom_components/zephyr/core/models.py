@@ -70,7 +70,7 @@ class SetReport:
     """One report of a set, interpreted and scaled.
 
     All power values are in W. ``battery_power_ac`` and
-    ``battery_power_dc`` follow the ZEM sign convention.
+    ``battery_power_dc`` follow the ZEPHYR sign convention.
     """
 
     serial: str

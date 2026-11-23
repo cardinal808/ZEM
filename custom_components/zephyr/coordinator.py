@@ -70,7 +70,7 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
             hass,
             LOGGER,
             config_entry=entry,
-            name=f"ZEM set {self.number}",
+            name=f"ZEPHYR set {self.number}",
             update_interval=timedelta(seconds=SCAN_INTERVAL_IDLE),
             always_update=True,
         )
@@ -174,6 +174,6 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
 
 
 def unknown_pack_details(report: SetReport, capacity: CapacityResult) -> list[dict[str, Any]]:
-    """Type and serial prefix of the packs ZEM does not recognise (no full serial numbers)."""
+    """Type and serial prefix of the packs ZEPHYR does not recognise (no full serial numbers)."""
     unknown = set(capacity.unknown_packs)
     return [{"pack_type": p.pack_type, "serial_prefix": p.serial[:4]} for p in report.packs if p.serial in unknown]

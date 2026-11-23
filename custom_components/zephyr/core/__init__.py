@@ -1,4 +1,4 @@
-"""ZEM core.
+"""ZEPHYR core.
 
 Pure Python, no Home Assistant imports. The same code runs in the
 integration, the simulator and the tests.

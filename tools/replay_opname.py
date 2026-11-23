@@ -2,7 +2,7 @@
 
 The house load without battery is rebuilt from the recording:
     load = P1 (corrected) + battery delivering − battery charging
-and ZEM controls a simulated set against it. The result is compared with
+and ZEPHYR controls a simulated set against it. The result is compared with
 the recorded grid power of the existing system over the same seconds.
 
 Usage (the CSV stays on your own machine; never commit it):
@@ -78,11 +78,11 @@ def main() -> None:
     tr = sim_.run(t1 - t0)
 
     # Compare only seconds where both systems were delivering (actively regulating).
-    zem_g, rec_g = [], []
+    zephyr_g, rec_g = [], []
     for t, g, b in zip(tr.t, tr.grid, tr.battery, strict=True):
         rec_deliver = at(series[args.deliver], t0 + t)
         if b < -20 and rec_deliver > 20:
-            zem_g.append(g)
+            zephyr_g.append(g)
             rec_g.append(at(series[args.p1], t0 + t))
 
     def stats(name: str, vals: list[float]) -> None:
@@ -100,10 +100,10 @@ def main() -> None:
             f"within ±50 W {within:5.1%}  import>100 {imp:5.1%}  export<-20 {exp:5.1%}"
         )
 
-    print(f"Window {args.start} UTC, {args.hours} h; delivering both: {len(zem_g) * sim_.dt / 3600:.1f} h")
+    print(f"Window {args.start} UTC, {args.hours} h; delivering both: {len(zephyr_g) * sim_.dt / 3600:.1f} h")
     stats("recorded", rec_g)
-    stats("ZEM", zem_g)
-    print(f"ZEM writes: {sum(len(s.writes) for s in sim_.sets)}; overall within ±50 W: {share_within(tr, 15, 50):.1%}")
+    stats("ZEPHYR", zephyr_g)
+    print(f"ZEPHYR writes: {sum(len(s.writes) for s in sim_.sets)}; overall within ±50 W: {share_within(tr, 15, 50):.1%}")
 
 
 if __name__ == "__main__":

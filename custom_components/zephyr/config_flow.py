@@ -1,4 +1,4 @@
-"""Config flow: one ZEM installation with up to three sets as subentries."""
+"""Config flow: one ZEPHYR installation with up to three sets as subentries."""
 
 from __future__ import annotations
 
@@ -84,8 +84,8 @@ def _placeholders(host: str, report: SetReport) -> dict[str, str]:
     }
 
 
-class ZemConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Install ZEM by adding the first set (by hand or via discovery)."""
+class ZephyrConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Install ZEPHYR by adding the first set (by hand or via discovery)."""
 
     VERSION = 1
 
@@ -95,8 +95,8 @@ class ZemConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: ConfigEntry[Any]) -> ZemOptionsFlow:
-        return ZemOptionsFlow()
+    def async_get_options_flow(config_entry: ConfigEntry[Any]) -> ZephyrOptionsFlow:
+        return ZephyrOptionsFlow()
 
     @classmethod
     @callback
@@ -154,7 +154,7 @@ class ZemConfigFlow(ConfigFlow, domain=DOMAIN):
         if entry is None:
             await self.async_set_unique_id(DOMAIN, raise_on_progress=False)
             return self.async_create_entry(
-                title="ZEM",
+                title="ZEPHYR",
                 data={},
                 subentries=[
                     ConfigSubentryData(
@@ -208,7 +208,7 @@ class SetSubentryFlow(ConfigSubentryFlow):
         return self.async_show_form(step_id="user", data_schema=HOST_SCHEMA, errors=errors)
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
-        """Capacity by hand, for packs ZEM does not recognise (0 = automatic)."""
+        """Capacity by hand, for packs ZEPHYR does not recognise (0 = automatic)."""
         entry = self._get_entry()
         subentry = self._get_reconfigure_subentry()
         if user_input is not None:
@@ -234,7 +234,7 @@ def suggest_p1_entity(hass: HomeAssistant) -> str | None:
     """Best guess for the P1 power sensor: a power sensor whose id looks like a grid meter."""
     candidates: list[tuple[int, str]] = []
     for state in hass.states.async_all("sensor"):
-        if state.attributes.get("device_class") != SensorDeviceClass.POWER or state.entity_id.startswith("sensor.zem_"):
+        if state.attributes.get("device_class") != SensorDeviceClass.POWER or state.entity_id.startswith("sensor.zephyr_"):
             continue
         name = state.entity_id.lower()
         score = sum(10 - i for i, hint in enumerate(P1_HINTS) if hint in name)
@@ -243,7 +243,7 @@ def suggest_p1_entity(hass: HomeAssistant) -> str | None:
     return max(candidates)[1] if candidates else None
 
 
-class ZemOptionsFlow(OptionsFlow):
+class ZephyrOptionsFlow(OptionsFlow):
     """Sources and battery limits."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

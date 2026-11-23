@@ -6,8 +6,8 @@ from itertools import pairwise
 
 from sim.device import SimSet
 from sim.runner import Simulation, constant, energy_wh, share_within, steps, time_to_settle, writes
-from zem_core.engine import Mode, ReasonCode
-from zem_core.settings import Settings
+from zephyr_core.engine import Mode, ReasonCode
+from zephyr_core.settings import Settings
 
 TARGET = 15.0  # W on the grid while delivering
 
@@ -87,7 +87,7 @@ def test_b7_slow_meter() -> None:
 
 
 def test_b7b_dsmr4_meter_with_jitter() -> None:
-    # DSMR 4: a new value about every 10 s (here 8.5-11.5 s), ZEM steps every second as in Home Assistant.
+    # DSMR 4: a new value about every 10 s (here 8.5-11.5 s), ZEPHYR steps every second as in Home Assistant.
     load = steps((0, 600), (120, 900), (240, 450), (360, 1500), (480, 700))
     sim = Simulation(load=load, p1_interval=10.0, p1_jitter=1.5, step_interval=1.0)
     tr = sim.run(720)

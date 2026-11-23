@@ -7,14 +7,14 @@ import copy
 import pytest
 
 from conftest import load_fixture
-from zem_core.device_table import (
+from zephyr_core.device_table import (
     charging_allowed_by_temperature,
     delivering_allowed_by_temperature,
     model_info,
     pack_info,
     set_capacity,
 )
-from zem_core.zensdk import parse_report
+from zephyr_core.zensdk import parse_report
 
 
 def test_capacity_of_own_set() -> None:

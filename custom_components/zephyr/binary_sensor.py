@@ -8,26 +8,26 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import ZemConfigEntry, ZemRuntime
+from . import ZephyrConfigEntry, ZephyrRuntime
 from .coordinator import SetCoordinator
-from .entity import ZemControlEntity, ZemSetEntity
+from .entity import ZephyrControlEntity, ZephyrSetEntity
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ZemConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
-    async_add_entities([ZemP1Sensor(entry.runtime_data, entry)])
+async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
+    async_add_entities([ZephyrP1Sensor(entry.runtime_data, entry)])
     for subentry_id, coordinator in entry.runtime_data.coordinators.items():
         async_add_entities(
-            [ZemOnlineSensor(coordinator, entry), ZemFaultSensor(coordinator, entry)],
+            [ZephyrOnlineSensor(coordinator, entry), ZephyrFaultSensor(coordinator, entry)],
             config_subentry_id=subentry_id,
         )
 
 
-class ZemOnlineSensor(ZemSetEntity, BinarySensorEntity):
+class ZephyrOnlineSensor(ZephyrSetEntity, BinarySensorEntity):
     """On when the set answers; always available itself."""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
 
-    def __init__(self, coordinator: SetCoordinator, entry: ZemConfigEntry) -> None:
+    def __init__(self, coordinator: SetCoordinator, entry: ZephyrConfigEntry) -> None:
         super().__init__(coordinator, entry, "online", "binary_sensor")
 
     @property
@@ -44,10 +44,10 @@ class ZemOnlineSensor(ZemSetEntity, BinarySensorEntity):
         return {"offline_episodes": h.episodes_offline, "last_error": h.last_error}
 
 
-class ZemFaultSensor(ZemSetEntity, BinarySensorEntity):
+class ZephyrFaultSensor(ZephyrSetEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
-    def __init__(self, coordinator: SetCoordinator, entry: ZemConfigEntry) -> None:
+    def __init__(self, coordinator: SetCoordinator, entry: ZephyrConfigEntry) -> None:
         super().__init__(coordinator, entry, "fault", "binary_sensor")
 
     @property
@@ -56,12 +56,12 @@ class ZemFaultSensor(ZemSetEntity, BinarySensorEntity):
         return bool(data and data.report and data.report.fault)
 
 
-class ZemP1Sensor(ZemControlEntity, BinarySensorEntity):
+class ZephyrP1Sensor(ZephyrControlEntity, BinarySensorEntity):
     """On when the P1 meter reports fresh values."""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
 
-    def __init__(self, runtime: ZemRuntime, entry: ZemConfigEntry) -> None:
+    def __init__(self, runtime: ZephyrRuntime, entry: ZephyrConfigEntry) -> None:
         super().__init__(runtime, entry, "p1_ok", "binary_sensor")
 
     @property

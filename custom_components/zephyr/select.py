@@ -7,22 +7,22 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from . import ZemConfigEntry, ZemRuntime
+from . import ZephyrConfigEntry, ZephyrRuntime
 from .core.engine import Mode
-from .entity import ZemControlEntity
+from .entity import ZephyrControlEntity
 
 # Dynamic Forecasting follows with the planner (M5).
 MODES = [Mode.STANDBY, Mode.ZERO_METER, Mode.FAST_CHARGE, Mode.FAST_DISCHARGE]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ZemConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
-    async_add_entities([ZemModeSelect(entry.runtime_data, entry)])
+async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
+    async_add_entities([ZephyrModeSelect(entry.runtime_data, entry)])
 
 
-class ZemModeSelect(ZemControlEntity, SelectEntity, RestoreEntity):
+class ZephyrModeSelect(ZephyrControlEntity, SelectEntity, RestoreEntity):
     _attr_options: list[str] = [m.value for m in MODES]  # noqa: RUF012
 
-    def __init__(self, runtime: ZemRuntime, entry: ZemConfigEntry) -> None:
+    def __init__(self, runtime: ZephyrRuntime, entry: ZephyrConfigEntry) -> None:
         super().__init__(runtime, entry, "mode", "select")
 
     async def async_added_to_hass(self) -> None:

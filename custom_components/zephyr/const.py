@@ -1,11 +1,11 @@
-"""Constants for the ZEM integration."""
+"""Constants for the ZEPHYR integration."""
 
 from __future__ import annotations
 
 import logging
 from typing import Final
 
-DOMAIN: Final = "zem"
+DOMAIN: Final = "zephyr"
 LOGGER = logging.getLogger(__package__)
 
 SUBENTRY_SET: Final = "set"
@@ -19,7 +19,7 @@ CONF_CAPACITY_OVERRIDE: Final = "capacity_override"
 CONF_P1_ENTITY: Final = "p1_entity"
 
 SCAN_INTERVAL_IDLE: Final = 5.0
-"""Seconds between reads while ZEM is not actively controlling the set."""
+"""Seconds between reads while ZEPHYR is not actively controlling the set."""
 SCAN_INTERVAL_ACTIVE: Final = 2.0
 """Seconds between reads while the controller runs."""
 

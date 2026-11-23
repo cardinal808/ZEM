@@ -50,7 +50,7 @@ def _model(product: str, name: str, charge: int, deliver: int) -> ModelInfo:
 # Models with the local zenSDK API. Keys are the `product` of the report in
 # lower case. Power: product specifications and the official Zendure
 # integration (Zendure/Zendure-HA, MIT); the set's own chargeMaxLimit and
-# inverseMaxPower in the report always win when ZEM controls it.
+# inverseMaxPower in the report always win when ZEPHYR controls it.
 MODELS: Final[dict[str, ModelInfo]] = {
     m.product.lower(): m
     for m in (
@@ -77,7 +77,7 @@ _BUILT_IN_2400 = PackInfo("Built-in battery (2.4 kWh)", 2.40)  # 2400 Pro (JO2A�
 _BUILT_IN_8000 = PackInfo("Built-in battery (SolarFlow 4000 AC+)", 8.00)
 
 TEMPERATURE_MARGIN: Final = 2.0
-"""ZEM stays this many °C inside the model's limits (SPEC-basis §10)."""
+"""ZEPHYR stays this many °C inside the model's limits (SPEC-basis §10)."""
 
 
 def model_info(product: str) -> ModelInfo | None:

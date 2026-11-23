@@ -1,4 +1,4 @@
-"""Commands ZEM writes, and what it refuses to write."""
+"""Commands ZEPHYR writes, and what it refuses to write."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from zem_core.zensdk import (
+from zephyr_core.zensdk import (
     MAX_REQUEST_BYTES,
     ZenSdkError,
     encode_write_request,

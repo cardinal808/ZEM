@@ -1,7 +1,7 @@
 [project]
-name = "zem"
+name = "zephyr"
 version = "0.0.1"
-description = "ZEM: Home Assistant integration for Zendure home batteries"
+description = "ZEPHYR: Home Assistant integration for Zendure home batteries"
 license = "MIT"
 requires-python = ">=3.13"
 
@@ -20,7 +20,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 ignore = ["RUF001", "RUF002", "RUF003"]  # Dutch/Unicode text in docstrings and messages is intentional
 
 [tool.ruff.lint.isort]
-known-first-party = ["zem_core", "conftest"]
+known-first-party = ["zephyr_core", "conftest"]
 
 [tool.mypy]
 python_version = "3.13"
