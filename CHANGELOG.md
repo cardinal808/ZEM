@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.4.4
+- **P1 filters before the controller** (B20, B22), both on time so a slow meter is not filtered more:
+  - *Noise filter:* within 75 W of the mean of the last 3 s, the controller gets that mean. Replay of recorded days: 17–32 % fewer writes, same accuracy and grid energy.
+  - *Step filter:* a sudden rise of more than 800 W (above max(previous value, 0)) is held back for at most 10 s; a drop is never held. Short peaks such as a boiling-water tap heating its tank (every ~34 min, ~2 kW for 4–10 s) are no longer chased. A longer load is followed after 10 s (scenario B2 now allows step hold + 8 s).
+  - The number of held steps is in the diagnostics (`p1_filter`).
+- Replay tool: `--battery` for one signed battery sensor and `--compare-filters` to compare filter settings on a recording.
+
 ### 0.4.3
 - P1 options: when the DSMR import and export sensors are found and no P1 sensor was chosen before, *Import and export* is the default. When only the two sensors are filled in, they are used even if the choice was left on *One net sensor*.
 

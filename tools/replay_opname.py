@@ -18,12 +18,13 @@ import bisect
 import csv
 import datetime as dt
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import sim  # noqa: F401
 from sim.device import SimSet
-from sim.runner import Simulation, share_within
+from sim.runner import Simulation, energy_wh, share_within, writes
 
 
 def load_series(path: Path, entities: set[str]) -> dict[str, tuple[list[float], list[float]]]:
@@ -61,15 +62,28 @@ def main() -> None:
     ap.add_argument("--deliver", default="sensor.zendure_2400_ac_vermogen_naar_huis")
     ap.add_argument("--charge", default="sensor.zendure_2400_ac_vermogen_van_huis")
     ap.add_argument("--soc", default="sensor.zendure_2400_ac_laadpercentage")
+    ap.add_argument("--battery", help="one signed battery sensor (+ charging) instead of --deliver/--charge")
     ap.add_argument("--max-deliver", type=int, default=2400)
+    ap.add_argument("--compare-filters", action="store_true", help="run without filters, step filter only, both, and hold times")
     args = ap.parse_args()
 
-    series = load_series(args.csv, {args.p1, args.deliver, args.charge, args.soc})
+    wanted = {args.p1, args.soc} | ({args.battery} if args.battery else {args.deliver, args.charge})
+    series = load_series(args.csv, wanted)
     t0 = dt.datetime.fromisoformat(args.start).replace(tzinfo=dt.UTC).timestamp()
     t1 = t0 + args.hours * 3600
 
+    def battery_rec(t: float) -> float:
+        """Recorded battery power, + charging."""
+        if args.battery:
+            return at(series[args.battery], t0 + t)
+        return at(series[args.charge], t0 + t) - at(series[args.deliver], t0 + t)
+
     def load(t: float) -> float:
-        return at(series[args.p1], t0 + t) + at(series[args.deliver], t0 + t) - at(series[args.charge], t0 + t)
+        return at(series[args.p1], t0 + t) - battery_rec(t)
+
+    if args.compare_filters:
+        compare_filters(load, at(series[args.soc], t0) or 50.0, t1 - t0, args.max_deliver)
+        return
 
     soc0 = at(series[args.soc], t0) or 50.0
     sim_ = Simulation(load=load, sets=[SimSet(soc=soc0)], dt=0.25)
@@ -80,7 +94,7 @@ def main() -> None:
     # Compare only seconds where both systems were delivering (actively regulating).
     zephyr_g, rec_g = [], []
     for t, g, b in zip(tr.t, tr.grid, tr.battery, strict=True):
-        rec_deliver = at(series[args.deliver], t0 + t)
+        rec_deliver = -battery_rec(t)
         if b < -20 and rec_deliver > 20:
             zephyr_g.append(g)
             rec_g.append(at(series[args.p1], t0 + t))
@@ -104,6 +118,29 @@ def main() -> None:
     stats("recorded", rec_g)
     stats("ZEPHYR", zephyr_g)
     print(f"ZEPHYR writes: {sum(len(s.writes) for s in sim_.sets)}; overall within ±50 W: {share_within(tr, 15, 50):.1%}")
+
+
+def compare_filters(load: Callable[[float], float], soc0: float, duration: float, max_deliver: int) -> None:
+    """Same recording, different P1 filter settings: grid energy, writes and accuracy."""
+    variants = [
+        ("no filters", {"step_threshold": 0, "noise_band": 0}),
+        ("noise only", {"step_threshold": 0}),
+        ("step 10 s only", {"noise_band": 0}),
+        ("both, step 10 s", {}),
+        ("both, step 6 s", {"step_hold": 6}),
+        ("both, step 15 s", {"step_hold": 15}),
+        ("both, step 1200 W", {"step_threshold": 1200}),
+    ]
+    print(f"{'variant':>18} {'import Wh':>10} {'export Wh':>10} {'writes':>7} {'±50 W':>7} {'holds':>6}")
+    for name, changes in variants:
+        sim_ = Simulation(load=load, sets=[SimSet(soc=soc0)], dt=0.25)
+        sim_.settings = sim_.settings.with_changes(max_deliver_power=max_deliver, **changes)
+        sim_.engine.update_settings(sim_.settings)
+        tr = sim_.run(duration)
+        print(
+            f"{name:>18} {energy_wh(tr, 1):10.0f} {energy_wh(tr, -1):10.0f} {writes(sim_):7d} "
+            f"{share_within(tr, 15, 50):7.1%} {sim_.engine.grid_filter.holds:6d}"
+        )
 
 
 if __name__ == "__main__":

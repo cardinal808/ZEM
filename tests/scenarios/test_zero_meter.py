@@ -27,10 +27,11 @@ def test_b1_constant_load() -> None:
 
 
 def test_b2_kettle() -> None:
+    # A rise of 2 kW is first held back as a possible short peak (step filter, 10 s), then followed.
     sim = Simulation(load=steps((0, 400), (60, 2400), (240, 400)))
     tr = sim.run(300)
     up = time_to_settle(tr, 60, TARGET, 50)
-    assert up is not None and up <= 8
+    assert up is not None and up <= sim.settings.step_hold + 8
     export_s = sum(0.1 for t, g in zip(tr.t, tr.grid, strict=True) if 240 <= t < 270 and g < -100)
     assert export_s < 3
 
@@ -154,3 +155,21 @@ def test_write_count_stays_low() -> None:
     sim = Simulation(load=steps((0, 400), (60, 900), (120, 1500), (180, 600), (240, 300)))
     sim.run(600)
     assert writes(sim) <= 40
+
+
+def test_b2_kettle_without_step_filter() -> None:
+    sim = Simulation(load=steps((0, 400), (60, 2400), (240, 400)))
+    sim.settings = sim.settings.with_changes(step_threshold=0)
+    sim.engine.update_settings(sim.settings)
+    tr = sim.run(300)
+    up = time_to_settle(tr, 60, TARGET, 50)
+    assert up is not None and up <= 8
+
+
+def test_short_peak_is_not_chased() -> None:
+    """A boiling-water tap heating its tank: ~2.2 kW for 7 s, every half hour."""
+    sim = Simulation(load=steps((0, 400), (60, 2600), (67, 400)))
+    tr = sim.run(120)
+    # No command for the peak: the battery keeps delivering ~400 W, and nothing is exported after it.
+    assert not [w for w in sim.sets[0].writes if 60 <= w[0] < 120]
+    assert energy_wh(tr, -1, 60, 120) < 0.1

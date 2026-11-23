@@ -20,6 +20,7 @@ from typing import Any
 from .controller import ControllerInput, ZeroMeterController
 from .counters import SetCounters
 from .device_table import charging_allowed_by_temperature, delivering_allowed_by_temperature
+from .grid_filter import GridFilter
 from .models import AcMode, SetReport
 from .settings import Settings
 from .zensdk import power_command, soc_limits_command, standby_command
@@ -159,6 +160,7 @@ class ZephyrEngine:
         self.settings = (settings or Settings()).validated()
         self.mode = mode
         self.controller = ZeroMeterController(self.settings)
+        self.grid_filter = GridFilter(self.settings)
         self._sets: dict[str, _SetState] = {}
         self._p1_value: float | None = None
         self._p1_at: float | None = None
@@ -175,6 +177,7 @@ class ZephyrEngine:
     def update_settings(self, settings: Settings) -> None:
         self.settings = settings.validated()
         self.controller.settings = self.settings
+        self.grid_filter.settings = self.settings
         for state in self._sets.values():
             state.limits_checked = False
 
@@ -207,6 +210,7 @@ class ZephyrEngine:
         if changed or self._p1_interval is None or self._p1_sample_at is None or now - self._p1_sample_at >= self._p1_interval:
             self._p1_seq += 1
             self._p1_sample_at = now
+            self.grid_filter.update(now, value)
         self._p1_value = value
         self._p1_at = now
 
@@ -382,7 +386,7 @@ class ZephyrEngine:
         out = self.controller.step(
             ControllerInput(
                 now=now,
-                grid_power=self._p1_value,
+                grid_power=self._controller_grid(now),
                 battery_power=battery,
                 max_charge=charge,
                 max_deliver=deliver,
@@ -476,6 +480,12 @@ class ZephyrEngine:
         if since < 2:
             return False
         return abs(target - last) >= 20 or abs(target - last) >= 0.05 * abs(last)
+
+    def _controller_grid(self, now: float) -> float:
+        """P1 for the controller: filtered (short peaks held back, small noise smoothed)."""
+        filtered = self.grid_filter.value(now)
+        assert self._p1_value is not None
+        return self._p1_value if filtered is None else filtered
 
     def counters(self, now: float) -> dict[str, dict[str, int]]:
         """Writes and relay switches per set over the last hour and 24 hours (B33)."""
