@@ -22,6 +22,8 @@ CONF_P1_IMPORT: Final = "p1_import_entity"
 CONF_P1_EXPORT: Final = "p1_export_entity"
 P1_SOURCE_SINGLE: Final = "single"
 P1_SOURCE_PAIR: Final = "import_export"
+CONF_SOLAR_FORECAST: Final = "solar_forecast_entity"
+CONF_SOLAR_ENERGY: Final = "solar_energy_entity"
 
 SCAN_INTERVAL_IDLE: Final = 5.0
 """Seconds between reads while ZEPHYR is not actively controlling the set."""

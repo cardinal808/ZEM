@@ -200,6 +200,8 @@
           "p1_entity": "P1 meter (power)",
           "p1_import_entity": "P1 import (power)",
           "p1_export_entity": "P1 export (power)",
+          "solar_forecast_entity": "Solar forecast for tomorrow",
+          "solar_energy_entity": "Solar production counter",
           "min_soc": "Minimum state of charge",
           "max_soc": "Maximum state of charge"
         },
@@ -209,7 +211,9 @@
           "max_soc": "Above this value ZEPHYR stops charging. Written to the set once ZEPHYR controls it.",
           "p1_source": "Two sensors see every meter telegram, also when the value stays the same. Better than a combined template sensor, which only reports changes.",
           "p1_import_entity": "Power drawn from the grid, for example …_power_consumption.",
-          "p1_export_entity": "Power returned to the grid, for example …_power_production."
+          "p1_export_entity": "Power returned to the grid, for example …_power_production.",
+          "solar_forecast_entity": "Optional. A forecast sensor with half-hour detail (Solcast: …_forecast_tomorrow). ZEPHYR stores tomorrow's forecast every evening at 23:00, as a yardstick for the planner later.",
+          "solar_energy_entity": "Optional. Total solar production in kWh (for example the inverter's energy counter). Read every hour to compare with the forecast."
         }
       }
     },

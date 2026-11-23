@@ -23,6 +23,7 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.S
 
 if TYPE_CHECKING:
     from .control import ZephyrControl
+    from .solar_recorder import SolarRecorder
 
 
 @dataclass(slots=True)
@@ -31,6 +32,7 @@ class ZephyrRuntime:
 
     coordinators: dict[str, SetCoordinator] = field(default_factory=dict)
     control: ZephyrControl | None = None
+    solar: SolarRecorder | None = None
 
     def totals(self) -> Totals:
         return compute_totals((c.snapshot() for c in self.coordinators.values()), time.monotonic())
@@ -63,6 +65,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(runtime.control.async_start())
+    from .solar_recorder import SolarRecorder
+
+    runtime.solar = SolarRecorder(hass, entry.entry_id, dict(entry.options))
+    if runtime.solar.enabled:
+        entry.async_on_unload(await runtime.solar.async_start())
     return True
 
 

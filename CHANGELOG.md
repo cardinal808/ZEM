@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.4.6
+- **Solar forecast next to the real production** (B31, B32). Two optional sensors in the options:
+  - the forecast for tomorrow with half-hour detail (Solcast `…_forecast_tomorrow`);
+  - the solar production counter in kWh.
+- Every evening at 23:00 ZEPHYR stores tomorrow's forecast (mid, low and high estimate per half hour) and every hour the counter. Kept for 400 days in ZEPHYR's own storage.
+- The diagnostics show the last 60 days (forecast against production) and the raw data of the last 3 days.
+- This is the yardstick for the planner's forecast correction and uncertainty (M5). The data cannot be recovered later, so collection starts now.
+- P1 options: on a single-phase connection whose meter only offers per-phase sensors (`…_power_consumed_phase_1` / `…_power_produced_phase_1`), that pair is suggested. Not when other phases exist.
+
 ### 0.4.5
 - Step filter: a rise is measured from the lowest P1 value of the last 2.5 s (`step_window`), not only from the previous sample. A meter sample can fall halfway a rise (seen live: −21, 417, 2263 W); the filter then held at 417 W instead of at the level before the peak.
 

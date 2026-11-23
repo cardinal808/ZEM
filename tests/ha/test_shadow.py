@@ -192,3 +192,31 @@ async def test_pair_is_default_and_wins_when_only_pair_given(hass: HomeAssistant
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options["p1_source"] == "import_export"
+
+
+async def test_single_phase_pair_is_suggested(hass: HomeAssistant, fake_sets: FakeSets) -> None:
+    fake_sets.add("10.0.0.10", "deliver_760")
+    imp, exp = "sensor.power_consumed_phase_1", "sensor.power_produced_phase_1"
+    hass.states.async_set(imp, "0.3", KW)
+    hass.states.async_set(exp, "0.0", KW)
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": "10.0.0.10"})
+    await hass.async_block_till_done()
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    suggested = {
+        str(k): k.description["suggested_value"] for k in result["data_schema"].schema if k in ("p1_import_entity", "p1_export_entity")
+    }
+    assert suggested == {"p1_import_entity": imp, "p1_export_entity": exp}
+    # With a second phase the per-phase sensors are not the total: no suggestion.
+    hass.states.async_set("sensor.power_consumed_phase_2", "0.1", KW)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    suggested = {
+        str(k): k.description["suggested_value"] for k in result["data_schema"].schema if k in ("p1_import_entity", "p1_export_entity")
+    }
+    assert suggested == {"p1_import_entity": None, "p1_export_entity": None}
+
+
+def _pair_suggestion(result: Any) -> dict[str, Any]:
+    keys = ("p1_import_entity", "p1_export_entity")
+    return {str(k): k.description["suggested_value"] for k in result["data_schema"].schema if k in keys}
