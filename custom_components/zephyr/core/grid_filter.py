@@ -30,6 +30,8 @@ class GridFilter:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self._last_raw: float | None = None
+        self._recent: deque[tuple[float, float]] = deque()
+        """Raw samples of the last ``step_window`` seconds: a rise can span two meter samples."""
         self._hold_value: float | None = None
         self._hold_since: float | None = None
         self._samples: deque[tuple[float, float]] = deque()
@@ -41,6 +43,7 @@ class GridFilter:
         self._hold_value = None
         self._hold_since = None
         self._samples.clear()
+        self._recent.clear()
 
     @property
     def holding(self) -> bool:
@@ -49,7 +52,13 @@ class GridFilter:
     def update(self, now: float, raw: float) -> float:
         """A new P1 sample. Returns the value for the controller."""
         s = self.settings
-        previous = self._last_raw
+        # Baseline before a possible rise: the lowest value of the last few seconds. A meter
+        # sample can fall halfway a rise (seen: -21, 417, 2263 W), so the previous sample alone
+        # would let the first part through and hold at the wrong level.
+        while self._recent and now - self._recent[0][0] > s.step_window:
+            self._recent.popleft()
+        previous = min((v for _, v in self._recent), default=None)
+        self._recent.append((now, raw))
         self._last_raw = raw
 
         # --- step filter ---

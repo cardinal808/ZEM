@@ -44,3 +44,12 @@ def test_noise_is_smoothed_and_jumps_pass() -> None:
     out = _feed(f, [0, 30, -30, 30, -30])
     assert all(abs(v) <= 15 for v in out[1:])
     assert _feed(f, [400], start=5)[0] == 400
+
+
+def test_rise_over_two_samples_is_held_at_the_start() -> None:
+    """Seen live 23-11: -21, 417, 2263 W (the meter sampled halfway the rise)."""
+    f = GridFilter(Settings(noise_band=0))
+    out = _feed(f, [-20, -21, 417, 2263, 2251, 2173, 1988, -10])
+    assert out[2] == 417  # 438 W alone is no step yet
+    assert out[3:7] == [-21, -21, -21, -21]
+    assert out[7] == -10
