@@ -243,3 +243,33 @@ def test_step_filter_does_not_hold_while_charging() -> None:
     r = e.step(22.0, [view])
     assert e.grid_filter.holding  # the filter saw a step ...
     assert r.setpoint < 1200  # ... but charging goes down right away (held: ~1670 W, from the grid)
+
+
+def test_shadow_setpoint_follows_battery_when_balanced() -> None:
+    # Seen at a tester: another system kept the grid at +25 W with the set delivering 150 W,
+    # while ZEPHYR (shadow) kept showing -410 W from an earlier step.
+    e = ZephyrEngine()
+    e.controller.trust_commands = False
+    for t in range(0, 12, 2):
+        e.p1_reported(t, 300.0 + t)  # grid +300 W, set delivers 150 W: ZEPHYR wants more
+        e.step(t, [_view_battery(150)])
+    assert e.step(12, [_view_battery(150)]).setpoint <= -400
+    r = None
+    for t in range(14, 40, 2):
+        e.p1_reported(t, 25.0 + (t % 4))  # the other system balanced the grid
+        r = e.step(t, [_view_battery(150)])
+    assert r is not None
+    assert r.setpoint == -150
+    assert not [c for c in r.commands if c.kind == "power"]
+
+
+def test_no_relay_count_without_ac_status() -> None:
+    # The SolarFlow 2400 AC+ does not report acStatus: unknown, not 0.
+    raw = copy.deepcopy(load_fixture("deliver_760"))
+    raw["properties"].pop("acStatus", None)
+    view = SetView("a", 1, parse_report(raw), True)
+    e = ZephyrEngine()
+    e.p1_reported(0, 100.0)
+    e.step(0, [view])
+    counts = e.counters(1)["a"]
+    assert "relay_24h" not in counts and "ram_24h" in counts

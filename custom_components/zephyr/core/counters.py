@@ -38,14 +38,16 @@ class SetCounters:
 
     def observe_ac_status(self, value: int | None, now: float) -> None:
         if value is None:
-            return
+            return  # not every model reports it (SolarFlow 2400 AC+ does not)
         if self.last_ac_status is not None and value != self.last_ac_status:
             self.relay.append(now)
         self.last_ac_status = value
 
     def snapshot(self, now: float) -> dict[str, int]:
+        """Counts per hour and 24 hours. Without ``acStatus`` from the set, no relay counts."""
         out: dict[str, int] = {}
-        for name in ("ram", "flash", "skipped", "relay"):
+        names = ("ram", "flash", "skipped", "relay") if self.last_ac_status is not None else ("ram", "flash", "skipped")
+        for name in names:
             events: deque[float] = getattr(self, name)
             while events and now - events[0] > DAY:
                 events.popleft()

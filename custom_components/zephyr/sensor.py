@@ -380,13 +380,13 @@ class ZephyrSetCounterSensor(ZephyrSetEntity, SensorEntity):
         if self._attr_native_value != self._value(self._counts()):
             self.async_write_ha_state()
 
-    def _value(self, counts: dict[str, int]) -> int:
+    def _value(self, counts: dict[str, int]) -> int | None:
         if self._key == "write_count":
             return counts.get("ram_24h", 0) + counts.get("flash_24h", 0)
-        return counts.get("relay_24h", 0)
+        return counts.get("relay_24h")  # None (unknown) when the set does not report acStatus
 
     @property
-    def native_value(self) -> int:
+    def native_value(self) -> int | None:
         self._attr_native_value = self._value(self._counts())
         return self._attr_native_value
 
@@ -397,4 +397,6 @@ class ZephyrSetCounterSensor(ZephyrSetEntity, SensorEntity):
             keys: tuple[str, ...] = ("ram_1h", "ram_24h", "flash_1h", "flash_24h", "skipped_1h", "skipped_24h")
         else:
             keys = ("relay_1h", "relay_24h")
+            if "relay_24h" not in counts:
+                return {"relay_reported": False, "sent": not self._control.shadow}
         return {k: counts.get(k, 0) for k in keys} | {"sent": not self._control.shadow}
