@@ -273,3 +273,13 @@ def test_no_relay_count_without_ac_status() -> None:
     e.step(0, [view])
     counts = e.counters(1)["a"]
     assert "relay_24h" not in counts and "ram_24h" in counts
+
+
+def test_refresh_tolerates_unrounded_limit_of_other_system() -> None:
+    # Shadow mode at a tester: the current system wrote 296 W, ZEPHYR's setpoint was 300 W.
+    from zephyr_core.engine import _report_matches
+
+    report = _deliver_2400(output_limit=296).report
+    assert report is not None
+    assert _report_matches(report, -300)
+    assert not _report_matches(report, -320)

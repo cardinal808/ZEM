@@ -518,14 +518,20 @@ class ZephyrEngine:
         return Action.HOLD
 
 
+REFRESH_TOLERANCE = 10
+"""W: a reported limit this close to the command counts as the same. ZEPHYR rounds to 10 W;
+another system (shadow mode) writes exact values such as 296 W, which otherwise caused a
+refresh every minute (seen at a tester: ~60 of 68 writes per hour)."""
+
+
 def _report_matches(report: SetReport, target: int) -> bool:
-    """True when the set reports exactly the power command ZEPHYR would refresh."""
+    """True when the set reports the power command ZEPHYR would refresh (within 10 W)."""
     if report.smart_mode != 1:
         return False
     if target > 0:
         sent = min(target, report.charge_max_limit) if report.charge_max_limit else target
-        return report.ac_mode is AcMode.CHARGE and report.input_limit == sent and report.output_limit == 0
+        return report.ac_mode is AcMode.CHARGE and abs(report.input_limit - sent) < REFRESH_TOLERANCE and report.output_limit == 0
     if target < 0:
         sent = min(-target, report.inverse_max_power) if report.inverse_max_power else -target
-        return report.ac_mode is AcMode.DELIVER and report.output_limit == sent and report.input_limit == 0
+        return report.ac_mode is AcMode.DELIVER and abs(report.output_limit - sent) < REFRESH_TOLERANCE and report.input_limit == 0
     return report.input_limit == 0 and report.output_limit == 0
