@@ -71,6 +71,8 @@ class ZeroMeterController:
     def __init__(self, settings: Settings, *, trust_commands: bool = True) -> None:
         self.settings = settings
         self.trust_commands = trust_commands
+        self.followed_battery = False
+        """Shadow mode: the last step took over the measured battery power (no write needed)."""
         """False in shadow mode: commands are not carried out."""
         self.setpoint = 0
         self._prev_setpoint = 0
@@ -136,6 +138,7 @@ class ZeroMeterController:
 
     def step(self, inp: ControllerInput) -> ControllerOutput:
         s = self.settings
+        self.followed_battery = False
         slow = inp.p1_interval > s.slow_p1_interval
         gain_import = s.slow_gain if slow else s.gain_import
         gain_export = s.slow_gain if slow else s.gain_export
@@ -169,6 +172,8 @@ class ZeroMeterController:
         if abs(error) < deadband and self._pending is Direction.NONE:
             self._last_step = inp.now
             self._last_demand = demand
+            if not self.trust_commands:
+                self._follow_battery(battery)
             return self._unchanged(inp, regulated=False, demand=demand)
 
         gain = gain_import if error > 0 else gain_export
@@ -227,6 +232,19 @@ class ZeroMeterController:
             self._last_direction = Direction.DELIVER
         self._last_demand = demand
         return ControllerOutput(setpoint=self.setpoint, demand=demand, regulated=True, waiting_for_direction=waiting)
+
+    def _follow_battery(self, battery: float) -> None:
+        """Shadow mode, grid in balance: the set already does the right thing (decided by another
+        system), so that is what ZEPHYR would ask too. Without this the setpoint of an earlier
+        step stayed visible (seen: -410 W while the set delivered 150 W with the grid at +25 W)."""
+        follow = round(battery / 10) * 10
+        if abs(follow) < self.settings.min_power:
+            follow = 0
+        self.followed_battery = follow != self.setpoint
+        if self.followed_battery:
+            self._prev_setpoint = self.setpoint
+            self.setpoint = follow
+            self._last_direction = Direction.CHARGE if follow > 0 else Direction.DELIVER if follow < 0 else self._last_direction
 
     def _unchanged(self, inp: ControllerInput, *, regulated: bool, demand: float | None = None) -> ControllerOutput:
         # Limits may have changed (full/empty/blocked): respect them immediately.

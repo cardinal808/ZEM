@@ -280,6 +280,10 @@ class ZephyrEngine:
         targets = {v.key: 0 for v in sets}
         if primary is not None and total:
             targets[primary.key] = total
+        if self.controller.followed_battery and primary is not None:
+            # Shadow mode: the set already runs at this power, so nothing would be written.
+            self._sets.setdefault(primary.key, _SetState()).last_power = targets[primary.key]
+            self.controller.followed_battery = False
         # While waiting for the first P1 report, leave the sets as they are.
         commands = [] if waiting_for_p1 else self._commands(now, sets, targets, all_standby)
         action = Action.HOLD if waiting_for_p1 else self._action(total, reason)
