@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.4.11
+- ZEPHYR logo and icon. From Home Assistant 2026.3 they show on the integrations page and in HACS (light and dark variants, in `brand/`). Also at the top of the README.
+
 ### 0.4.10
 - The refresh after 60 s is also skipped when the set reports a limit within 10 W of ZEPHYR's setpoint. In shadow mode the current system writes exact values (such as 296 W) while ZEPHYR rounds to 10 W; that caused a "write" every minute (seen at a tester: about 60 of 68 writes per hour).
 

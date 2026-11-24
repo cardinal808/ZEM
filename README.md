@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.png">
+    <img src="docs/logo.png" alt="ZEPHYR" width="280">
+  </picture>
+</p>
+
 # ZEPHYR
 
 *Zendure Energy Planning, Home Yield & Regulation*  
