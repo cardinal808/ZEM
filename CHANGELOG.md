@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.4.8
+- Step filter only while delivering or idle. While the battery charges from solar, a rise of the grid power (a cloud over the panels or a load switching on) now lowers the charging at once. Before, the rise was held for up to 10 s and the charge setpoint could even go up, charging from the grid (seen in shadow mode at noon: +2.2 kW import with the charge setpoint raised).
+
 ### 0.4.7
 - Product names are recognised with spaces, dashes or underscores and in any case (for example "SolarFlow800 Plus" or "solarflow-800-plus"), B23.
 

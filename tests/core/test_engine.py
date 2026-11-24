@@ -214,3 +214,32 @@ def test_counters_flash_and_relay() -> None:
     later = e.counters(20 + 2 * 3600)["a"]
     assert later["relay_1h"] == 0 and later["relay_24h"] == 2
     assert e.counters(20 + 25 * 3600)["a"]["relay_24h"] == 0
+
+
+def _view_charging(charge: int) -> SetView:
+    data = copy.deepcopy(load_fixture("charge_2400"))
+    data["properties"]["gridInputPower"] = charge
+    data["properties"]["outputPackPower"] = charge
+    data["properties"]["outputHomePower"] = 0
+    data["properties"]["electricLevel"] = 60
+    for pack in data["packData"]:
+        pack["socLevel"] = 60
+    return SetView("a", 1, parse_report(data), True)
+
+
+def test_step_filter_does_not_hold_while_charging() -> None:
+    # Seen live at noon: a cloud (or a load) turned -1.3 kW export into +2.2 kW import while
+    # the battery charged from solar. Holding the step would raise the charge setpoint and
+    # charge from the grid; while charging the controller must see the rise at once.
+    e = ZephyrEngine()
+    e.controller.trust_commands = False
+    view = _view_charging(1200)
+    before = 0
+    for t in range(0, 21):
+        e.p1_reported(t, -500.0 - (t % 2) * 10)  # a meter that reports every second
+        before = e.step(t, [view]).setpoint
+    assert before > 1200  # charging more with the export
+    e.p1_reported(22.0, 1500.0)  # past the minimum step interval
+    r = e.step(22.0, [view])
+    assert e.grid_filter.holding  # the filter saw a step ...
+    assert r.setpoint < 1200  # ... but charging goes down right away (held: ~1670 W, from the grid)

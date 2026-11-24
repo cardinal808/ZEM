@@ -386,7 +386,7 @@ class ZephyrEngine:
         out = self.controller.step(
             ControllerInput(
                 now=now,
-                grid_power=self._controller_grid(now),
+                grid_power=self._controller_grid(now, battery),
                 battery_power=battery,
                 max_charge=charge,
                 max_deliver=deliver,
@@ -481,11 +481,19 @@ class ZephyrEngine:
             return False
         return abs(target - last) >= 20 or abs(target - last) >= 0.05 * abs(last)
 
-    def _controller_grid(self, now: float) -> float:
-        """P1 for the controller: filtered (short peaks held back, small noise smoothed)."""
+    def _controller_grid(self, now: float, battery: float = 0.0) -> float:
+        """P1 for the controller: filtered (short peaks held back, small noise smoothed).
+
+        The step filter only applies while delivering or idle. While the battery charges,
+        a rise (a load switching on, or a cloud over the panels) must lower the charging at
+        once; holding it would charge the battery from the grid for up to ``step_hold``
+        seconds (seen live: +2.2 kW import while the charge setpoint went up).
+        """
         filtered = self.grid_filter.value(now)
         assert self._p1_value is not None
-        return self._p1_value if filtered is None else filtered
+        if filtered is None or (battery > 0 and self.grid_filter.holding):
+            return self._p1_value
+        return filtered
 
     def counters(self, now: float) -> dict[str, dict[str, int]]:
         """Writes and relay switches per set over the last hour and 24 hours (B33)."""
