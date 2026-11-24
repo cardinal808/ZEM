@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.4.10
+- The refresh after 60 s is also skipped when the set reports a limit within 10 W of ZEPHYR's setpoint. In shadow mode the current system writes exact values (such as 296 W) while ZEPHYR rounds to 10 W; that caused a "write" every minute (seen at a tester: about 60 of 68 writes per hour).
+
 ### 0.4.9
 - Shadow mode: when the grid is in balance, ZEPHYR's setpoint follows what the set really does (decided by the current system) and counts no write. Before, the setpoint of an earlier step stayed visible (seen at a tester: −410 W while the set delivered 150 W with the grid at +25 W). Live control is unchanged.
 - Relay switches: sets that do not report `acStatus` (SolarFlow 2400 AC+) show *unknown* instead of 0, with the attribute `relay_reported: false`.
