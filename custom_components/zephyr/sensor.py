@@ -360,7 +360,6 @@ class ZephyrSetCounterSensor(ZephyrSetEntity, SensorEntity):
     """
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_entity_registry_enabled_default = False
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: SetCoordinator, entry: ZephyrConfigEntry, control: ZephyrControl, key: str) -> None:
@@ -394,7 +393,9 @@ class ZephyrSetCounterSensor(ZephyrSetEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         counts = self._counts()
         if self._key == "write_count":
-            keys: tuple[str, ...] = ("ram_1h", "ram_24h", "flash_1h", "flash_24h", "skipped_1h", "skipped_24h")
+            keys: tuple[str, ...] = ("ram_1h", "ram_24h", "flash_1h", "flash_24h", "skipped_1h", "skipped_24h", "flash_paused")
+            causes = {k: v for k, v in counts.items() if k.startswith("flash_") and k.endswith("_24h") and k != "flash_24h"}
+            return {k: counts.get(k, 0) for k in keys} | causes | {"sent": not self._control.shadow}
         else:
             keys = ("relay_1h", "relay_24h")
             if "relay_24h" not in counts:
