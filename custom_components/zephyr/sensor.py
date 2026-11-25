@@ -451,4 +451,4 @@ class ZephyrCostSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {**self._costs.summary(self._period).as_dict(), "tariffs": self._costs.tariffs.source}
+        return {**self._costs.summary(self._period).as_dict(), "tariffs": self._costs.tariffs.tariffs_for(dt_util.now().date()).source}

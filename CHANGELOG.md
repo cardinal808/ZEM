@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.6.1 — M5, step 2: tariff table (B28)
+- **Choose your energy supplier** in the options instead of entering tariffs: ZEPHYR then takes the supplier's margins, solar bonus and VAT on export after net metering, plus the country's energy tax and VAT per date, from its **tariff table** (`custom_components/zephyr/data/tariffs.json`). "Own tariffs" stays possible; the fixed costs per month apply in both cases.
+- **Only checked amounts:** a supplier is listed once a user of that supplier has checked the amounts against an invoice (`verified`). The first entry, Zonneplan, waits for that check.
+- **Kept up to date:** the table ships with every version; ZEPHYR fetches the newest one from GitHub once a month, when the supplier choice changes, and at startup when due (at most one attempt a day). Without a connection: the newest of the stored and the shipped table. No scraping of supplier websites.
+- **Maintained with pull requests:** a format check runs in CI (`tests/core/test_tariff_table.py`): dates ascending, amounts in range, a link to the supplier's tariff page and the date it was checked.
+- The tariffs in use and their source (supplier, period, date checked, table date) are in the cost sensors' attributes and in the diagnostics (`costs.tariffs`: origin of the table, last fetch, last error).
+
 ### 0.6.0 — M5, step 1: cost log with own tariffs (B38)
 - **Cost log per quarter:** grid import and export, battery charged and delivered (AC), solar and the Nord Pool price at the start of the quarter. Costs in three situations: **actual**, **without battery** (the battery's exchange removed, netted per quarter) and **without battery and solar** (needs the solar counter). Savings split into solar (direct / exported) and battery, the battery part again into **solar via the battery** (two pools, solar and grid, conversion losses included) and the **price difference** (trade). Also in shadow mode: then it shows the costs of the current system.
 - **Own tariffs** in the options: energy tax (default €0.09161, NL 2026), supplier margin on import and on export, VAT (21 %), fixed costs per month (optional, shown next to the totals). All-in import = (market + margin + energy tax) × (1 + VAT). **Net metering** for quarters before 1-1-2027: export at market incl. VAT plus energy tax incl. VAT; export above the year's import loses that part (yearly correction in the year total). **Solar bonus** (optional, %): extra over (market + export margin) for export between sunrise and sunset when that amount is positive, as Zonneplan's Zonnebonus (10 %); not part of net metering. The supplier table (B28) follows.

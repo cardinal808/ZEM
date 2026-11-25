@@ -250,7 +250,8 @@
           "tariff_fixed_month": "Vaste kosten per maand (incl. btw)",
           "cost_import_counters": "Metertellers afname",
           "cost_export_counters": "Metertellers teruglevering",
-          "tariff_solar_bonus": "Zonnebonus op teruglevering"
+          "tariff_solar_bonus": "Zonnebonus op teruglevering",
+          "tariff_supplier": "Energieleverancier"
         },
         "data_description": {
           "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
@@ -273,7 +274,8 @@
           "tariff_fixed_month": "Optioneel: vastrecht + netbeheer − vermindering energiebelasting. Alleen naast de totalen getoond, om met de jaarafrekening te vergelijken.",
           "cost_import_counters": "Optioneel: de kWh-tellers van de meter voor afname (tarief 1 en 2, opgeteld). Zonder tellers integreert ZEPHYR het P1-vermogen.",
           "cost_export_counters": "Optioneel: de kWh-tellers van de meter voor teruglevering (tarief 1 en 2).",
-          "tariff_solar_bonus": "Optioneel: extra % over (marktprijs + opslag teruglevering) bij teruglevering tussen zonsopkomst en zonsondergang, alleen als dat bedrag positief is. Zonneplan: 10 %."
+          "tariff_solar_bonus": "Optioneel: extra % over (marktprijs + opslag teruglevering) bij teruglevering tussen zonsopkomst en zonsondergang, alleen als dat bedrag positief is. Zonneplan: 10 %.",
+          "tariff_supplier": "Kies je leverancier: ZEPHYR neemt dan de opslagen, zonnebonus, energiebelasting en btw uit zijn tarieventabel (één keer per maand opgehaald van GitHub). Alleen leveranciers waarvan een gebruiker de bedragen heeft gecontroleerd staan erin. Met \"Eigen tarieven\" gelden de velden hieronder; de vaste kosten per maand gelden in beide gevallen."
         }
       }
     },

@@ -38,6 +38,20 @@ class FakeSets:
         self.answers[host] = ZendureTimeout("simulated timeout")
 
 
+@pytest.fixture(autouse=True)
+def no_tariff_fetch() -> Generator[list[int]]:
+    """No network in tests: fetching the tariff table fails like an offline installation."""
+    calls: list[int] = []
+
+    async def fetch(self: Any) -> bool:
+        calls.append(1)
+        self.last_error = "offline (test)"
+        return False
+
+    with patch("custom_components.zephyr.tariff_provider.TariffProvider.async_fetch", fetch):
+        yield calls
+
+
 @pytest.fixture
 def fake_sets() -> Generator[FakeSets]:
     fake = FakeSets()

@@ -43,7 +43,7 @@ Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 
 ## Kostenlogboek (0.6)
 - Per kwartier: afname, teruglevering, accu geladen/geleverd, zon en de Nord Pool-prijs, met de kosten **werkelijk**, **zonder accu** en **zonder accu en zon**. Werkt ook in de schaduwmodus (dan: de kosten van je huidige systeem).
-- Vul in de opties je **eigen tarieven** in: energiebelasting (2026: €0,09161), opslag inkoop en teruglevering, btw, een zonnebonus (Zonneplan: 10 %) en eventueel de vaste kosten per maand. Een lijst met leveranciers volgt. Saldering (t/m 2026) wordt meegerekend en per jaar verrekend.
+- Vul in de opties je **eigen tarieven** in: energiebelasting (2026: €0,09161), opslag inkoop en teruglevering, btw, een zonnebonus (Zonneplan: 10 %) en eventueel de vaste kosten per maand. Of kies je **leverancier** (0.6.1): dan komen de tarieven uit de tarieventabel in deze repository, die ZEPHYR maandelijks ophaalt. Alleen leveranciers waarvan een gebruiker de bedragen met een factuur heeft gecontroleerd staan erin; aanvullingen graag als pull request op `custom_components/zephyr/data/tariffs.json` met een link naar de tariefpagina. Saldering (t/m 2026) wordt meegerekend en per jaar verrekend.
 - Optioneel de kWh-tellers van je meter (tarief 1 en 2) voor afname en teruglevering; zonder tellers integreert ZEPHYR het P1-vermogen. Met een zonteller ook de besparing door de zon.
 - Entiteiten: `sensor.zephyr_costs_today|month|year` en `sensor.zephyr_savings_today|month|year` (€), met de uitsplitsing als attributen. Actie `zephyr.export_costs` schrijft de kwartieren als CSV naar `config/zephyr/`.
 
