@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.5.3 — fix: live control doubled every start
+- **Seen in the first live test (25-11):** house ~530 W, ZEPHYR commanded 520 W, then 1030 W, then 1290 W; the set exported ~700 W, ZEPHYR went to 0 W, the relay opened and the cycle started again about every 25 s.
+- **Cause:** live control trusted its last command once the settle time (~5.6 s) had passed. A set starting from 0 W with the relay open needs 9–11 s before power shows in the report, so P1 still showed the full demand and ZEPHYR added it a second time. When stopping, the report still showed the old power while P1 already showed the export, so ZEPHYR stopped completely.
+- **Fix:** live control now works from the **measured** power of the set, with P1 taken 1.5 s earlier so both describe the same moment (as the twin does), and after a command it **waits until the set has reached it** (or 15 s, `reach_timeout`) before correcting again, unless things get clearly worse (export).
+- Simulator: a set model with a slow start after the relay opened (`relay_off_on_zero`); scenarios `tests/scenarios/test_live_start.py` (the first fails without the fix). With a realistic slow set the simulator shows no doubling and no on/off cycle; accuracy and grid energy are as before, with fewer writes.
+
 ### 0.5.2 — M4b, step 3: test dashboard
 - **Test dashboard** `dashboards/zephyr-test.yaml` (standard cards only): the switch "ZEPHYR controls the battery", the mode, write-test buttons (deliver 300 W, charge 300 W, stop; shown only in Standby with the switch off), a graph of grid, battery and ZEPHYR's target, the current state and the counters. How to add it: see the README.
 - **`binary_sensor.zephyr_expensive_hour`**: on in one of the most expensive hours; attributes: price now, next expensive hour, charging for the reserve now and in which slots. Unavailable without a price sensor.

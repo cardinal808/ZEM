@@ -36,6 +36,9 @@ class SimSet:
     max_soc: float = 100.0
     fault: bool = False
     online: bool = True
+    relay_off_on_zero: bool = False
+    """Seen live (2400 Pro, 25-11): with both limits 0 in RAM the relay opens (acStatus 0) and the
+    next start takes ``startup`` seconds again, as from standby."""
 
     power: float = 0.0
     """Actual AC power, + charging."""
@@ -59,7 +62,7 @@ class SimSet:
         self.input_limit = props.get("inputLimit", self.input_limit)
         self.output_limit = props.get("outputLimit", self.output_limit)
         self.smart_mode = props.get("smartMode", self.smart_mode)
-        if self.input_limit == 0 and self.output_limit == 0 and self.smart_mode == 0:
+        if self.input_limit == 0 and self.output_limit == 0 and (self.smart_mode == 0 or self.relay_off_on_zero):
             self.standby = True
             self._wake_at = None
         elif self.standby and (self.input_limit or self.output_limit):
