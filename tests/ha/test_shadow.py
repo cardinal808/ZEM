@@ -96,6 +96,9 @@ async def test_decisions_in_diagnostics(hass: HomeAssistant, fake_sets: FakeSets
     assert control["p1_entity"] == P1
     assert control["decisions"]
     assert all(d["sent"] is False for d in control["decisions"])
+    # The twin: the virtual grid next to the measured one, and its energy tally.
+    assert control["twin"] is not None
+    assert {"p1_measured", "battery_real"} <= set(control["decisions"][-1])
     assert "10.0.0.10" not in str(diag)
 
 

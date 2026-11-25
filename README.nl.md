@@ -26,7 +26,7 @@
 Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 
 ## Wat 0.3 biedt
-- Schaduwmodus: `sensor.zephyr_setpoint` (wat ZEPHYR van de accu zou vragen, + laden, − leveren), `sensor.zephyr_action`, `sensor.zephyr_reason` (in gewone taal), `select.zephyr_mode`, `binary_sensor.zephyr_p1_ok`, en per set `sensor.zephyr_set_1_setpoint`. Er wordt niets naar de accu gestuurd.
+- Schaduwmodus: `sensor.zephyr_setpoint` (wat ZEPHYR van de accu zou vragen, + laden, − leveren), `sensor.zephyr_action`, `sensor.zephyr_reason` (in gewone taal), `select.zephyr_mode`, `binary_sensor.zephyr_p1_ok`, en per set `sensor.zephyr_set_1_setpoint`. Er wordt niets naar de accu gestuurd. ZEPHYR rekent met een virtuele set die zijn eigen commando's uitvoert, in plaats van de echte set die je huidige systeem aanstuurt; de diagnostiek vergelijkt afname en teruglevering van beide (`control.twin`).
 - Het beslislog staat in de diagnose-download.
 - Per set: laadpercentage, accuvermogen (+ laden, − leveren), laad- en leververmogen, zonnevermogen, status, capaciteit (uit de packs), temperatuur, online en fout.
 - Totalen over alle sets: laadpercentage (gewogen naar capaciteit), energie in de accu, capaciteit, vermogen, sets online.

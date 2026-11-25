@@ -173,3 +173,42 @@ def test_short_peak_is_not_chased() -> None:
     # No command for the peak: the battery keeps delivering ~400 W, and nothing is exported after it.
     assert not [w for w in sim.sets[0].writes if 60 <= w[0] < 120]
     assert energy_wh(tr, -1, 60, 120) < 0.1
+
+
+def _first(trace, start, pred):  # type: ignore[no-untyped-def]
+    return next((t for t, r in trace.results if t >= start and pred(r.setpoint)), None)
+
+
+def test_short_load_while_charging_does_not_swap_direction() -> None:
+    """Seen in shadow mode: charging ~1.9 kW from solar, a 2.1 kW load for ~40 s. Stopping the
+    charging leaves ~150 W import; that is not worth delivering (two relay switches for ~1 Wh)."""
+    sim = Simulation(load=steps((0, 400), (60, 2550), (100, 400)), solar=constant(2400))
+    tr = sim.run(180)
+    assert max(_setpoints_after(tr, 30)) > 1500  # it charged
+    assert all(sp >= 0 for sp in _setpoints_after(tr, 0))  # never delivered
+    back = _first(tr, 100, lambda sp: sp > 0)
+    assert back is not None and back - 100 <= 6  # charging again at once, no switch_delay
+    assert energy_wh(tr, +1, 60, 100) < 3
+
+
+def test_real_demand_still_swaps_after_switch_delay() -> None:
+    """A load that needs ~800 W after the charging stopped: deliver after switch_delay, not later
+    (the start hysteresis used to restart the delay one sample after it began)."""
+    sim = Simulation(load=steps((0, 400), (60, 3200)), solar=constant(2400))
+    tr = sim.run(120)
+    stopped = _first(tr, 60, lambda sp: sp == 0)
+    delivering = _first(tr, 60, lambda sp: sp < 0)
+    assert stopped is not None and stopped - 60 <= 2
+    assert delivering is not None
+    assert delivering - stopped <= sim.settings.switch_delay + 2
+
+
+def test_small_demand_after_idle_window_is_delivered() -> None:
+    """After sunset: once the set was idle for reverse_window, a small demand is delivered again."""
+    sim = Simulation(load=constant(400), solar=steps((0, 1200), (60, 220)))
+    tr = sim.run(300)
+    at = {round(t): r for t, r in tr.results}
+    assert at[50].setpoint > 0
+    assert at[120].setpoint == 0  # within the window: idle, ~180 W import
+    assert at[120].reason.code is ReasonCode.IDLE_SMALL
+    assert at[290].setpoint < 0  # after the window: delivering

@@ -71,7 +71,7 @@ class ZephyrControl:
         self.p1_entity: str | None = None if self.p1_pair else options.get(CONF_P1_ENTITY)
         self._pair_pending: Callable[[], None] | None = None
         self.engine = ZephyrEngine(settings_from_options(entry.options), Mode.ZERO_METER)
-        self.engine.controller.trust_commands = False  # shadow mode: commands are not carried out
+        self.engine.enable_twin()  # shadow mode: a virtual set carries out the commands (core/twin.py)
         self.shadow = True
         self.result: StepResult | None = None
         self.log: deque[dict[str, Any]] = deque(maxlen=LOG_SIZE)
@@ -216,8 +216,16 @@ class ZephyrControl:
                 {
                     "time": dt_util.utcnow().isoformat(timespec="seconds"),
                     "mode": result.mode.value,
-                    "p1": result.grid_power,
-                    "battery": sum(v.report.battery_power_ac for v in views if v.report and v.online),
+                    "p1": None if result.grid_power is None else round(result.grid_power),
+                    "battery": None if result.battery_power is None else round(result.battery_power),
+                    **(
+                        {
+                            "p1_measured": None if result.measured_grid_power is None else round(result.measured_grid_power),
+                            "battery_real": round(sum(v.report.battery_power_ac for v in views if v.report and v.online)),
+                        }
+                        if self.engine.twin_enabled
+                        else {}
+                    ),
                     "setpoint": result.setpoint,
                     "reason": result.reason.code.value,
                     "commands": [{"set": self.runtime.coordinators[c.key].number, "kind": c.kind, **c.props} for c in result.commands],

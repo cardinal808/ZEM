@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Any
 
@@ -23,6 +23,7 @@ from .device_table import charging_allowed_by_temperature, delivering_allowed_by
 from .grid_filter import GridFilter
 from .models import AcMode, SetReport
 from .settings import Settings
+from .twin import GridTally, TwinSet
 from .zensdk import power_command, soc_limits_command, standby_command
 
 
@@ -138,6 +139,10 @@ class StepResult:
     p1_interval: float | None
     mode_finished: bool
     """Fast charge/discharge reached its goal; the caller returns to the previous mode."""
+    battery_power: float | None = None
+    """Battery power the engine worked with (the twin's in shadow mode)."""
+    measured_grid_power: float | None = None
+    """P1 as measured; differs from ``grid_power`` only in shadow mode with the twin."""
 
 
 @dataclass(slots=True)
@@ -171,6 +176,43 @@ class ZephyrEngine:
         self._p1_gaps: deque[float] = deque(maxlen=30)
         self._p1_seq = 0
         self._p1_sample_at: float | None = None
+        self._p1_measured: float | None = None
+        self._twins: dict[str, TwinSet] | None = None
+        self._real_battery: float | None = None
+        self._p1_history: deque[tuple[float, float]] = deque(maxlen=200)
+        self.tally_measured = GridTally()
+        self.tally_virtual = GridTally()
+
+    def enable_twin(self) -> None:
+        """Shadow mode: work with a virtual set that follows ZEPHYR's commands (core/twin.py)."""
+        self._twins = {}
+        self.controller.trust_commands = True
+
+    @property
+    def twin_enabled(self) -> bool:
+        return self._twins is not None
+
+    def _virtual_p1(self, now: float, measured: float) -> float:
+        """The grid with the twin instead of the real set, at the moment the real report shows."""
+        assert self._twins is not None
+        self._p1_history.append((now, measured))
+        if self._real_battery is None:
+            return measured
+        at = now - self.settings.twin_delay
+        p1 = self._p1_history[0][1]
+        for t, value in self._p1_history:
+            if t <= at:
+                p1 = value
+            else:
+                break
+        # The controller waits this much longer after a command: the effect shows that much later.
+        self.controller.extra_settle = self.settings.twin_delay
+        twin = sum(t.power_at(now, at) for t in self._twins.values())
+        return p1 - self._real_battery + twin
+
+    def _twin_power(self, now: float) -> float:
+        assert self._twins is not None
+        return sum(t.advance(now) for t in self._twins.values())
 
     # --- inputs ---------------------------------------------------------
 
@@ -194,7 +236,13 @@ class ZephyrEngine:
         re-report the same value much more often than the meter sends a new
         one (seen: every 0.4 s for a meter with a new value every 10 s).
         """
-        changed = self._p1_value is None or value != self._p1_value
+        measured = value
+        if self._twins is not None:
+            self.tally_measured.add(now, measured)
+            value = self._virtual_p1(now, measured)
+            self.tally_virtual.add(now, value)
+        # The meter's interval comes from the measured value: the twin changes the virtual one.
+        changed = self._p1_measured is None or measured != self._p1_measured
         if changed:
             if self._p1_changed_at is not None:
                 gap = now - self._p1_changed_at
@@ -212,12 +260,15 @@ class ZephyrEngine:
             self._p1_sample_at = now
             self.grid_filter.update(now, value)
         self._p1_value = value
+        self._p1_measured = measured
         self._p1_at = now
 
     # --- the step ---------------------------------------------------------
 
     def step(self, now: float, sets: Sequence[SetView], *, discharge_blocked: bool = False) -> StepResult:
         s = self.settings
+        if self._twins is not None:
+            sets = self._twin_views(now, sets)
         for view in sets:
             state = self._sets.setdefault(view.key, _SetState())
             self._update_flags(state, view)
@@ -238,7 +289,7 @@ class ZephyrEngine:
         # Many P1 sensors only report a change. A grid that is exactly balanced (often 0 W
         # when import and export are both 0.000 kW) then stays silent. That is not a stale
         # meter: hold the setpoint a little longer (p1_balanced_silence).
-        if self._p1_value is not None and abs(self._p1_value) <= s.deadband:
+        if self._p1_measured is not None and abs(self._p1_measured) <= s.deadband:
             stale_after = max(stale_after, s.p1_balanced_silence)
         lost_after = max(s.p1_lost_after, 6 * meter)
         p1_ok = p1_age is not None and p1_age <= stale_after
@@ -286,6 +337,10 @@ class ZephyrEngine:
             self.controller.followed_battery = False
         # While waiting for the first P1 report, leave the sets as they are.
         commands = [] if waiting_for_p1 else self._commands(now, sets, targets, all_standby)
+        if self._twins is not None:
+            for cmd in commands:
+                if cmd.key in self._twins:
+                    self._twins[cmd.key].apply(now, cmd.props)
         action = Action.HOLD if waiting_for_p1 else self._action(total, reason)
         return StepResult(
             mode=self.mode,
@@ -298,7 +353,36 @@ class ZephyrEngine:
             p1_ok=p1_ok,
             p1_interval=None if self._p1_interval is None else round(self._p1_interval, 1),
             mode_finished=finished,
+            battery_power=sum(v.report.battery_power_ac for v in sets if v.report is not None and v.online),
+            measured_grid_power=self._p1_measured,
         )
+
+    def _twin_views(self, now: float, sets: Sequence[SetView]) -> list[SetView]:
+        """The real sets with their battery swapped for the twin; remembers the real power."""
+        assert self._twins is not None
+        self._real_battery = sum(v.report.battery_power_ac for v in sets if v.report is not None and v.online)
+        out: list[SetView] = []
+        for v in sets:
+            if v.report is None or not v.online:
+                out.append(v)
+                continue
+            twin = self._twins.setdefault(v.key, TwinSet(self.settings))
+            twin.settings = self.settings
+            out.append(replace(v, report=twin.view(v.report, now)))
+        return out
+
+    def twin_summary(self) -> dict[str, float] | None:
+        """Grid import/export since the start: measured (current system) and virtual (ZEPHYR)."""
+        if self._twins is None:
+            return None
+        return {
+            "import_wh_measured": round(self.tally_measured.import_wh, 1),
+            "export_wh_measured": round(self.tally_measured.export_wh, 1),
+            "import_wh_zephyr": round(self.tally_virtual.import_wh, 1),
+            "export_wh_zephyr": round(self.tally_virtual.export_wh, 1),
+            "battery_w_real": round(self._real_battery or 0.0),
+            "battery_w_twin": round(sum(t.power for t in self._twins.values())),
+        }
 
     # --- parts --------------------------------------------------------------
 
@@ -483,7 +567,9 @@ class ZephyrEngine:
             return target == 0 or since >= 2
         if since < 2:
             return False
-        return abs(target - last) >= 20 or abs(target - last) >= 0.05 * abs(last)
+        # A small change is meter noise more often than a real one (seen in shadow mode:
+        # -180, -170, -180, -190 W within 10 s). It waits for the refresh.
+        return abs(target - last) >= self.settings.min_command_step or since >= 60
 
     def _controller_grid(self, now: float, battery: float = 0.0) -> float:
         """P1 for the controller: filtered (short peaks held back, small noise smoothed).
@@ -492,10 +578,16 @@ class ZephyrEngine:
         a rise (a load switching on, or a cloud over the panels) must lower the charging at
         once; holding it would charge the battery from the grid for up to ``step_hold``
         seconds (seen live: +2.2 kW import while the charge setpoint went up).
+
+        The same holds just after the charging stopped: the rise then comes partly from ZEPHYR
+        itself (the set no longer takes the surplus). Holding it made the controller see "idle"
+        and restart ``switch_delay`` (simulation: delivering after 21 s instead of 10 s). A short
+        peak is still not delivered for, because swapping direction waits ``switch_delay``.
         """
         filtered = self.grid_filter.value(now)
         assert self._p1_value is not None
-        if filtered is None or (battery > 0 and self.grid_filter.holding):
+        charging_side = battery > 0 or self.controller.charging_side
+        if filtered is None or (charging_side and self.grid_filter.holding):
             return self._p1_value
         return filtered
 
