@@ -140,6 +140,11 @@ async def _options(hass: HomeAssistant, entry, **extra: object) -> None:  # type
 
 
 async def test_delivers_only_in_expensive_hours(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # Mid-day: the test ticks forward a minute or two and must not cross midnight
+    # (it failed in CI when run at 23:59, because "today's" prices no longer covered now).
+    from homeassistant.util import dt as dt_util
+
+    freezer.move_to(dt_util.now().replace(hour=12, minute=10, second=0, microsecond=0))
     entry = await _install_with_p1(hass, fake_sets)
     await _set_prices(hass, expensive_now=False)
     await _options(hass, entry, price_entity=PRICE, expensive_hours=1, reserve_soc=0)

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.7.0 — M5, step 3: planner core and backtest (no change in Home Assistant yet)
+- **Planner core** `core/planner.py` (SPEC-planner §1, §3): per price slot one action — charge from the grid (L), hold (H), deliver (N) or, when allowed, export at full power (X, off by default, B12) — with the lowest total cost over the horizon. Dynamic programming backwards over the energy in the battery (40 steps, linear interpolation) and the previous action (switching costs €0.02 per charge start, €0.005 per hold start), then a forward pass from the real energy. End value: the cheapest price in the horizon × discharge efficiency. Solar surplus goes into the battery first; with a negative export price surplus solar earns nothing and X is not used. Load margin steers the choice only.
+- Tests: within €0.005 of brute force on random scenarios (with and without X), cheap charging / expensive delivering, no charging when the spread does not cover the losses, holding for the evening peak, 192 quarters in well under a second.
+- **Backtest** `tools/backtest.py` (§12.2): real quarter prices, P1 per hour, a solar counter and (optional) battery counters; house consumption derived per hour; strategies no battery, zero meter, planner, planner + X, with 2026 rules (net metering) and 2027 rules, using the tariff table (default Zonneplan). Price horizon as in practice (tomorrow from 13:00, before that today's pattern). Data stays private (B18). Smoke test on synthetic files.
+- Not yet: the planner in Home Assistant (mode Dynamic Forecasting), consumption profile and solar forecast (perfect knowledge in the backtest for now), efficiency per power band, calibration penalty, PU1–PU6.
+
 ### 0.6.3 — tuning: aim for 5 W import while delivering (was 15 W)
 - **Seen in the live test of 25-11 (0.5.4) next to the previous system:** ZEPHYR averaged +13 W on the grid while delivering; the previous system ±0 W (alternating import and export). Within the dead zone of ±25 W around the target, ZEPHYR does not correct, so with a target of 15 W the grid stayed between −10 and +40 W, mostly on the import side.
 - **Change:** `target_grid_deliver` 15 → 5 W. With net metering (saldering) a little export costs nothing; smaller than 5 W makes little sense with commands in steps of 30 W.
