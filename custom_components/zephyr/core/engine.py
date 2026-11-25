@@ -185,6 +185,8 @@ class ZephyrEngine:
         self._p1_interval: float | None = None
         self._block_since: float | None = None
         self._price_block: Reason | None = None
+        self._align_p1 = False
+        self._grid_history: deque[tuple[float, float]] = deque(maxlen=100)
         self._reserve_charge: tuple[int, float] | None = None
         self._started: float | None = None
         self._p1_changed_at: float | None = None
@@ -216,10 +218,20 @@ class ZephyrEngine:
         if live:
             self._twins = None
             self._real_battery = None
-            self.controller.extra_settle = 0.0
-            self.controller.trust_commands = True
+            # Live: work from the measured power of the set, with P1 taken ``twin_delay`` earlier so
+            # both describe the same moment (the report lags 1-3 s). Trusting the last command
+            # instead doubled every start: a set starting from 0 W needs ~9 s before power flows,
+            # so after the settle time P1 still showed the full demand and ZEPHYR added it again
+            # (seen live 25-11: 520 -> 1030 -> 1290 W, export, then 0 W and the relay off).
+            self._align_p1 = True
+            self._grid_history.clear()
+            self.controller.extra_settle = self.settings.twin_delay
+            self.controller.trust_commands = False
+            self.controller.wait_for_reach = True
             self.controller.take_over(measured, now)
         else:
+            self._align_p1 = False
+            self.controller.wait_for_reach = False
             self.enable_twin()
             self.controller.reset(now)
 
@@ -652,9 +664,19 @@ class ZephyrEngine:
         filtered = self.grid_filter.value(now)
         assert self._p1_value is not None
         charging_side = battery > 0 or self.controller.charging_side
-        if filtered is None or (charging_side and self.grid_filter.holding):
-            return self._p1_value
-        return filtered
+        value = self._p1_value if filtered is None or (charging_side and self.grid_filter.holding) else filtered
+        if not self._align_p1:
+            return value
+        # Live: the grid as it was when the set's report was made (see ``set_live``).
+        self._grid_history.append((now, value))
+        at = now - self.settings.twin_delay
+        aligned = self._grid_history[0][1]
+        for t, v in self._grid_history:
+            if t <= at:
+                aligned = v
+            else:
+                break
+        return aligned
 
     def counters_record(self, key: str, kind: str, now: float) -> None:
         """Count a write made outside the engine (the write test)."""

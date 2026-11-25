@@ -74,6 +74,8 @@ class ZeroMeterController:
         self.extra_settle = 0.0
         """s added to the settling time (shadow mode with the twin: the virtual grid lags)."""
         self.followed_battery = False
+        self.wait_for_reach = False
+        """Live control from the measurement: settle until the set reached the command."""
         """Shadow mode: the last step took over the measured battery power (no write needed)."""
         """False in shadow mode: commands are not carried out."""
         self.setpoint = 0
@@ -177,6 +179,12 @@ class ZeroMeterController:
             self._last_sample = inp.sample
 
         settling = inp.now - self._setpoint_at < self._settle_time(inp.p1_interval)
+        if not settling and self.wait_for_reach and self.setpoint != 0:
+            # Working from the measurement (live): wait until the set has really reached the
+            # command, or ``reach_timeout`` passed. A start from 0 W can take ~9 s (relay).
+            gap = abs(inp.battery_power - self.setpoint)
+            if gap > max(60.0, 0.15 * abs(self.setpoint)) and inp.now - self._setpoint_at < s.reach_timeout:
+                settling = True
         battery = self._effective_battery(inp, settling)
 
         # Target on the grid depends on whether we would charge or deliver.

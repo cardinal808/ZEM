@@ -65,8 +65,12 @@ class Settings:
     """W/s the set needs to ramp up (measured)."""
     min_settle: float = 3.0
     startup_time: float = 2.5
-    """s a set needs to start from 0 W / standby (measured)."""
+    """s a set needs to start from 0 W / standby. Live on a 2400 Pro (25-11) 9-11 s passed from the
+    command to the first report with power when the relay was open; live control therefore waits
+    for the measurement (``reach_timeout``). The twin still uses this value (to calibrate)."""
     report_lag: float = 1.5
+    reach_timeout: float = 15.0
+    """s after a command during which live control waits for the set to reach it (measured)."""
     """s the report lags behind the set."""
     deviation_limit: float = 200.0
     """W between command and measurement that counts as "set cannot follow" ..."""
@@ -136,6 +140,7 @@ class Settings:
             "noise_band": (0, 300),
             "noise_window": (0, 30),
             "twin_delay": (0, 5),
+            "reach_timeout": (0, 60),
         }
         for name, (lo, hi) in checks.items():
             value = getattr(self, name)
