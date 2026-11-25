@@ -218,14 +218,15 @@ class ZephyrEngine:
         if live:
             self._twins = None
             self._real_battery = None
-            # Live: work from the measured power of the set, with P1 taken ``twin_delay`` earlier so
-            # both describe the same moment (the report lags 1-3 s). Trusting the last command
-            # instead doubled every start: a set starting from 0 W needs ~9 s before power flows,
-            # so after the settle time P1 still showed the full demand and ZEPHYR added it again
-            # (seen live 25-11: 520 -> 1030 -> 1290 W, export, then 0 W and the relay off).
-            self._align_p1 = True
+            # Live: work from the measured power of the set and wait until it has reached each
+            # command (controller ``wait_for_reach``). Trusting the last command instead doubled
+            # every start: a set starting from 0 W needs ~9 s before power flows, so after the
+            # settle time P1 still showed the full demand and ZEPHYR added it again (seen live
+            # 25-11: 520 -> 1030 -> 1290 W, export, then 0 W). Shifting P1 by a fixed 1.5 s to
+            # match the report (0.5.3) did not fit either: the report lag varies (0-3 s).
+            self._align_p1 = False
             self._grid_history.clear()
-            self.controller.extra_settle = self.settings.twin_delay
+            self.controller.extra_settle = 0.0
             self.controller.trust_commands = False
             self.controller.wait_for_reach = True
             self.controller.take_over(measured, now)
