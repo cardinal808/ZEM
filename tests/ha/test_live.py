@@ -162,6 +162,48 @@ async def test_delivers_only_in_expensive_hours(hass: HomeAssistant, fake_sets: 
     assert float(hass.states.get("sensor.zephyr_setpoint").state) < 0
 
 
+async def _slow_start(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, seconds: int) -> None:
+    """The set keeps reporting its old limits (0 W, smartMode 0) while the house asks 750 W."""
+    answer = fake_sets.answers["10.0.0.10"]
+    for _ in range(seconds):
+        answer["timestamp"] += 1
+        await _p1(hass, freezer, 750)
+
+
+async def test_slow_start_is_not_a_second_controller(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # Seen 26-11 (0.6.2): from standby the set showed outputLimit 0 / smartMode 0 for more than 6 s
+    # after ZEPHYR wrote 730 W (relay start 9-17 s); ZEPHYR took that for a second controller
+    # and went back to shadow mode three times in a row.
+    await _install_with_p1(hass, fake_sets, "standby")
+    for _ in range(3):
+        await _p1(hass, freezer, 750)
+    await _switch(hass, True)
+    await _slow_start(hass, fake_sets, freezer, 15)
+    assert hass.states.get("switch.zephyr_control").state == "on"
+    sent = [p for _, p in fake_sets.writes if p.get("outputLimit")]
+    assert sent, fake_sets.writes
+    # Now the set has started: it reports the command.
+    answer = fake_sets.answers["10.0.0.10"]
+    answer["properties"].update({"outputLimit": sent[-1]["outputLimit"], "smartMode": 1, "outputHomePower": sent[-1]["outputLimit"]})
+    for _ in range(10):
+        answer["timestamp"] += 1
+        await _p1(hass, freezer, 10)
+    assert hass.states.get("switch.zephyr_control").state == "on"
+    diag = await async_get_config_entry_diagnostics(hass, hass.config_entries.async_entries(DOMAIN)[0])
+    assert next(iter(diag["control"]["live"]["writes"].values()))["smartmode_reverted_24h"] == 0
+
+
+async def test_set_that_never_applies_counts_as_second_controller(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    await _install_with_p1(hass, fake_sets, "standby")
+    for _ in range(3):
+        await _p1(hass, freezer, 750)
+    await _switch(hass, True)
+    await _slow_start(hass, fake_sets, freezer, 45)
+    assert hass.states.get("switch.zephyr_control").state == "off"
+
+
 async def test_second_controller_stops_live(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
     await _install_with_p1(hass, fake_sets)
     await _p1(hass, freezer, 20)

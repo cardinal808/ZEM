@@ -56,6 +56,9 @@ class SetWriter:
         self.last_props: dict[str, int] | None = None
         """The last command written successfully, and when (for checks against the reports)."""
         self.last_at: float | None = None
+        self.limits_before: tuple[int, int] | None = None
+        """The limits (in, out) the set reported when the last command was written: while the set
+        still shows these, it has not applied the command yet (a start from 0 W takes 9-17 s)."""
         self._task: asyncio.Task[None] | None = None
         self._on_done = on_done
 
@@ -79,6 +82,9 @@ class SetWriter:
 
     async def _write(self, props: dict[str, int]) -> bool:
         started = time.monotonic()
+        data = self.coordinator.data
+        report = data.report if data is not None else None
+        before = (report.input_limit, report.output_limit) if report is not None else None
         try:
             await self.coordinator.client.write(self.coordinator.serial, props)
         except (ZendureError, ValueError) as err:
@@ -89,6 +95,8 @@ class SetWriter:
         else:
             self.stats.ok.append(time.monotonic())
             self.stats.last_error = None
+            if props != self.last_props:
+                self.limits_before = before
             self.last_props = props
             self.last_at = time.monotonic()
             ok = True
