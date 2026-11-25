@@ -63,6 +63,14 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
         result = control.result
         control_info = {
             "shadow": control.shadow,
+            "live": {
+                "since_s": None if control.live_since is None else round(time.monotonic() - control.live_since),
+                "blockers": control.live_blockers() if control.shadow else [],
+                "writes": {
+                    str(control.runtime.coordinators[key].number): w.stats.snapshot(time.monotonic()) for key, w in control.writers.items()
+                },
+                "test": control.test,
+            },
             "p1_entity": control.p1_description,
             "mode": control.engine.mode.value,
             "settings": dataclasses.asdict(control.engine.settings),

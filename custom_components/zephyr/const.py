@@ -24,6 +24,8 @@ P1_SOURCE_SINGLE: Final = "single"
 P1_SOURCE_PAIR: Final = "import_export"
 CONF_SOLAR_FORECAST: Final = "solar_forecast_entity"
 CONF_SOLAR_ENERGY: Final = "solar_energy_entity"
+CONF_LIVE_OFF_AFTER_RESTART: Final = "live_off_after_restart"
+"""Test phase (PLAN-M4b L5): live control stays off after a restart until the user switches it on."""
 
 SCAN_INTERVAL_IDLE: Final = 5.0
 """Seconds between reads while ZEPHYR is not actively controlling the set."""

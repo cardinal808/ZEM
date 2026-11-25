@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.5.0 — M4b, step 1: live control
+- **`switch.zephyr_control` ("ZEPHYR controls the battery")**, off by default. Switching it on is refused (with the reason) when the P1 is not reporting, a set is offline, reports an error or a different serial number, or a write test runs. Switching it off writes 0 W once (RAM) and then nothing more, so the current system can take over.
+- **Taking over without a dip** (B35): going live, ZEPHYR continues from the power the set delivers or charges now, not from 0 W.
+- **Writer**: per set one request at a time; a newer command replaces one that waits; a failed write is not retried (the next step sends the current setpoint). Successful and failed writes, the last error and the duration are in the diagnostics (`control.live.writes`).
+- **After a restart** (test phase, option *Live control off after a restart*, on by default): the switch stays off and a repair notice says so. With the option off, the switch comes back as it was.
+- **Home Assistant stops, or ZEPHYR is reloaded while live**: all sets get 0 W first.
+- **Write test**: action `zephyr.test_command` (power in W, + charging / − delivering; duration ≤ 60 s). Only in shadow mode with the mode Standby; writes the command in RAM, then standby (flash). The reports during the test are in the diagnostics (`control.live.test`).
+- Not yet in this step (PLAN-M4b): detecting a second controlling system, the flash safety net, "only the N most expensive hours" with a reserve, and the test dashboard.
+
 ### 0.4.12
 - **Shadow mode with a virtual set (twin).** Until now ZEPHYR computed from the real set's power, which the current system decides. Its loop never closed: every step corrected an error it did not cause, so the shadow counters said little about live control (seen at a tester: ~400 writes per hour). Now a virtual set carries out ZEPHYR's commands (start-up, ramp and report lag as measured) and ZEPHYR works with a virtual grid: measured P1 − real set + twin. The house and the solar panels stay real.
   - The real set's power is known from a report 1–3 s old, so P1 and the twin are taken `twin_delay` (1.5 s) earlier to match it. Without that, every change by the other system showed as a short spike that ZEPHYR chased.
