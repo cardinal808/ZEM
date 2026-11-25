@@ -188,6 +188,26 @@ class ZephyrEngine:
         self._twins = {}
         self.controller.trust_commands = True
 
+    def set_live(self, live: bool, now: float, sets: Sequence[SetView]) -> None:
+        """Switch between shadow mode (twin) and live control (PLAN-M4b §2.2).
+
+        Going live: the controller continues from the measured power of the sets (B35) and the
+        write bookkeeping starts over, so the first real command is not suppressed by what the
+        twin was told. Back to shadow: a fresh twin.
+        """
+        measured = sum(v.report.battery_power_ac for v in sets if v.report is not None and v.online)
+        self._sets = {}
+        self.tally_virtual = GridTally()
+        if live:
+            self._twins = None
+            self._real_battery = None
+            self.controller.extra_settle = 0.0
+            self.controller.trust_commands = True
+            self.controller.take_over(measured, now)
+        else:
+            self.enable_twin()
+            self.controller.reset(now)
+
     @property
     def twin_enabled(self) -> bool:
         return self._twins is not None
@@ -590,6 +610,10 @@ class ZephyrEngine:
         if filtered is None or (charging_side and self.grid_filter.holding):
             return self._p1_value
         return filtered
+
+    def counters_record(self, key: str, kind: str, now: float) -> None:
+        """Count a write made outside the engine (the write test)."""
+        self._sets.setdefault(key, _SetState()).counters.record(kind, now)
 
     def counters(self, now: float) -> dict[str, dict[str, int]]:
         """Writes and relay switches per set over the last hour and 24 hours (B33)."""

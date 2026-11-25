@@ -174,6 +174,11 @@
           "fast_discharge": "Fast discharge"
         }
       }
+    },
+    "switch": {
+      "control": {
+        "name": "ZEPHYR controls the battery"
+      }
     }
   },
   "issues": {
@@ -188,6 +193,10 @@
     "p1_missing": {
       "title": "No P1 meter chosen",
       "description": "ZEPHYR needs your smart meter to calculate. Open Settings → Devices & services → ZEPHYR → Configure and choose the P1 sensor (or the import and export sensors)."
+    },
+    "live_off_after_restart": {
+      "title": "ZEPHYR no longer controls the battery",
+      "description": "After a restart live control is off (option \"Live control off after a restart\"). The set keeps its last power until your current control or you take over. Switch \"ZEPHYR controls the battery\" on again, or let your current control take over."
     }
   },
   "options": {
@@ -203,7 +212,8 @@
           "solar_forecast_entity": "Solar forecast for tomorrow",
           "solar_energy_entity": "Solar production counter",
           "min_soc": "Minimum state of charge",
-          "max_soc": "Maximum state of charge"
+          "max_soc": "Maximum state of charge",
+          "live_off_after_restart": "Live control off after a restart (test phase)"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -213,7 +223,8 @@
           "p1_import_entity": "Power drawn from the grid, for example …_power_consumption.",
           "p1_export_entity": "Power returned to the grid, for example …_power_production.",
           "solar_forecast_entity": "Optional. A forecast sensor with half-hour detail (Solcast: …_forecast_tomorrow). ZEPHYR stores tomorrow's forecast every evening at 23:00, as a yardstick for the planner later.",
-          "solar_energy_entity": "Optional. Total solar production in kWh (for example the inverter's energy counter). Read every hour to compare with the forecast."
+          "solar_energy_entity": "Optional. Total solar production in kWh (for example the inverter's energy counter). Read every hour to compare with the forecast.",
+          "live_off_after_restart": "After a restart of Home Assistant or a reload, \"ZEPHYR controls the battery\" is off and you switch it on yourself. Keep this on during the test week."
         }
       }
     },
@@ -228,6 +239,36 @@
       "options": {
         "single": "One net sensor",
         "import_export": "Import and export (two sensors)"
+      }
+    }
+  },
+  "exceptions": {
+    "live_not_possible": {
+      "message": "ZEPHYR cannot control the battery now: {reasons}."
+    },
+    "test_live": {
+      "message": "The write test only works in shadow mode (\"ZEPHYR controls the battery\" off)."
+    },
+    "test_not_standby": {
+      "message": "Set ZEPHYR to the mode Standby first for the write test."
+    },
+    "not_loaded": {
+      "message": "ZEPHYR is not loaded."
+    }
+  },
+  "services": {
+    "test_command": {
+      "name": "Write test",
+      "description": "Sends one fixed command to the set(s) and puts them back in standby after the chosen duration. Only in shadow mode with the mode Standby.",
+      "fields": {
+        "power": {
+          "name": "Power",
+          "description": "In W: + charging, − delivering."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "In seconds, at most 60."
+        }
       }
     }
   }

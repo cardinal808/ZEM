@@ -1,19 +1,23 @@
 """Runs the engine in Home Assistant: P1 events in, decisions out.
 
-M3: shadow mode only. The engine computes what ZEPHYR would do, entities and
-the decision log show it, but nothing is sent to the sets.
+Shadow mode (default): the engine computes what ZEPHYR would do with a virtual
+set; nothing is sent. Live mode (``switch.zephyr_control``, M4b): the commands
+go to the sets through one writer per set.
 """
 
 from __future__ import annotations
 
+import asyncio
+import math
 import time
 from collections import deque
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfPower
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfPower
 from homeassistant.core import Event, EventStateChangedData, EventStateReportedData, HomeAssistant, State, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import (
     async_call_later,
@@ -38,6 +42,8 @@ from .const import (
 )
 from .core.engine import Mode, SetView, StepResult, ZephyrEngine
 from .core.settings import Settings
+from .core.zensdk import power_command, standby_command
+from .writer import SetWriter
 
 if TYPE_CHECKING:
     from . import ZephyrConfigEntry, ZephyrRuntime
@@ -77,6 +83,10 @@ class ZephyrControl:
         self.log: deque[dict[str, Any]] = deque(maxlen=LOG_SIZE)
         self._listeners: list[Callable[[], None]] = []
         self._previous_mode = Mode.ZERO_METER
+        self.writers = {key: SetWriter(hass, c) for key, c in runtime.coordinators.items()}
+        self.live_since: float | None = None
+        self.test: dict[str, Any] | None = None
+        self._test_task: asyncio.Task[None] | None = None
 
     # --- lifecycle ----------------------------------------------------------
 
@@ -110,11 +120,18 @@ class ZephyrControl:
             )
             unsubs.append(lambda: ir.async_delete_issue(self.hass, DOMAIN, issue_id))
         unsubs.append(async_track_time_interval(self.hass, self._on_tick, timedelta(seconds=1)))
+        unsubs.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_stop))
         self._apply_poll_interval()
 
         def stop() -> None:
             for unsub in unsubs:
                 unsub()
+            if self._test_task is not None and not self._test_task.done():
+                self._test_task.cancel()
+            if not self.shadow:
+                # Unload or reload while live: leave the sets at 0 W, not at the last power.
+                self.shadow = True
+                self.hass.async_create_background_task(self._all_to_zero(), "zephyr stop: sets to 0 W")
 
         return stop
 
@@ -191,12 +208,10 @@ class ZephyrControl:
         self._apply_poll_interval()
         self.async_step()
 
-    # --- the step ---------------------------------------------------------------
+    # --- live mode (PLAN-M4b §2.2) ---------------------------------------------
 
-    @callback
-    def async_step(self) -> None:
-        now = time.monotonic()
-        views = [
+    def _views(self) -> list[SetView]:
+        return [
             SetView(
                 key=key,
                 number=c.number,
@@ -205,7 +220,143 @@ class ZephyrControl:
             )
             for key, c in self.runtime.coordinators.items()
         ]
+
+    def live_blockers(self) -> list[str]:
+        """Why live control cannot start now (empty: it can)."""
+        reasons: list[str] = []
+        if not (self.p1_pair or self.p1_entity):
+            reasons.append("no P1 sensor chosen")
+        elif self.result is None or not self.result.p1_ok:
+            reasons.append("P1 is not reporting")
+        if not self.runtime.coordinators:
+            reasons.append("no sets")
+        for c in self.runtime.coordinators.values():
+            data = c.data
+            if data is None or not data.online or data.report is None:
+                reasons.append(f"set {c.number} is offline")
+            elif data.serial_mismatch:
+                reasons.append(f"set {c.number} reports a different serial number")
+            elif data.report.fault:
+                reasons.append(f"set {c.number} reports an error")
+        if self._test_task is not None and not self._test_task.done():
+            reasons.append("a write test is running")
+        return reasons
+
+    async def async_set_live(self, live: bool) -> None:
+        if live == (not self.shadow):
+            return
+        now = time.monotonic()
+        if live:
+            blockers = self.live_blockers()
+            if blockers:
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="live_not_possible",
+                    translation_placeholders={"reasons": "; ".join(blockers)},
+                )
+            self.engine.set_live(True, now, self._views())
+            self.shadow = False
+            self.live_since = now
+            LOGGER.info("ZEPHYR now controls the sets")
+        else:
+            self.shadow = True
+            self.live_since = None
+            self.engine.set_live(False, now, self._views())
+            # Once 0 W in RAM, then nothing more: the current system can take over (PLAN-M4b §4).
+            await self._all_to_zero()
+            LOGGER.info("ZEPHYR back in shadow mode")
+        self._log_event("live" if live else "shadow")
+        self.async_step()
+
+    async def _all_to_zero(self) -> None:
+        await asyncio.gather(
+            *(w.send_now(power_command(0, include_ac_mode=False)) for key, w in self.writers.items() if self._online(key)),
+        )
+
+    def _online(self, key: str) -> bool:
+        data = self.runtime.coordinators[key].data
+        return bool(data and data.online)
+
+    async def _on_stop(self, _event: Event) -> None:
+        if not self.shadow:
+            await self._all_to_zero()
+
+    # --- write test (PLAN-M4b §2.8) ---------------------------------------------
+
+    async def async_test_command(self, power: int, duration: float) -> None:
+        if not self.shadow:
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="test_live")
+        if self.engine.mode is not Mode.STANDBY:
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="test_not_standby")
+        if self._test_task is not None and not self._test_task.done():
+            self._test_task.cancel()
+            await asyncio.wait([self._test_task])
+        self._test_task = self.hass.async_create_background_task(self._run_test(int(power), float(duration)), "zephyr write test")
+
+    async def _run_test(self, power: int, duration: float) -> None:
+        self.test = {"power": power, "duration": duration, "started": dt_util.utcnow().isoformat(timespec="seconds"), "reports": []}
+        try:
+            if power != 0:
+                for key, writer in self.writers.items():
+                    data = self.runtime.coordinators[key].data
+                    if not self._online(key) or data is None or data.report is None:
+                        continue
+                    r = data.report
+                    await writer.send_now(
+                        power_command(power, include_ac_mode=True, charge_max=r.charge_max_limit, deliver_max=r.inverse_max_power)
+                    )
+                    self.engine.counters_record(key, "power", time.monotonic())
+                self._log_event("test", power=power)
+                steps = max(1, math.ceil(duration / 2))
+                for _ in range(steps):  # counted, not clocked: robust against clock jumps
+                    await asyncio.sleep(duration / steps)
+                    self._record_test_reports()
+        except asyncio.CancelledError:
+            pass
+        finally:
+            for key, writer in self.writers.items():
+                if self._online(key):
+                    await writer.send_now(standby_command())
+                    self.engine.counters_record(key, "standby", time.monotonic())
+            self._log_event("test_end")
+            if self.test is not None:
+                self.test["finished"] = dt_util.utcnow().isoformat(timespec="seconds")
+            self.async_step()
+
+    def _record_test_reports(self) -> None:
+        if self.test is None:
+            return
+        for c in self.runtime.coordinators.values():
+            r = c.data.report if c.data else None
+            if r is None:
+                continue
+            self.test["reports"].append(
+                {
+                    "set": c.number,
+                    "battery": round(r.battery_power_ac),
+                    "smartMode": r.smart_mode,
+                    "acMode": None if r.ac_mode is None else int(r.ac_mode),
+                    "inputLimit": r.input_limit,
+                    "outputLimit": r.output_limit,
+                }
+            )
+        del self.test["reports"][:-60]
+
+    def _log_event(self, event: str, **extra: Any) -> None:
+        self.log.append({"time": dt_util.utcnow().isoformat(timespec="seconds"), "event": event, **extra})
+
+    # --- the step ---------------------------------------------------------------
+
+    @callback
+    def async_step(self) -> None:
+        now = time.monotonic()
+        views = self._views()
         result = self.engine.step(now, views)
+        if not self.shadow:
+            for command in result.commands:
+                writer = self.writers.get(command.key)
+                if writer is not None:
+                    writer.send(command.props)
         if result.mode_finished:
             LOGGER.debug("Fast mode finished, back to %s", self._previous_mode)
             self.engine.set_mode(self._previous_mode, now)
@@ -229,7 +380,7 @@ class ZephyrControl:
                     "setpoint": result.setpoint,
                     "reason": result.reason.code.value,
                     "commands": [{"set": self.runtime.coordinators[c.key].number, "kind": c.kind, **c.props} for c in result.commands],
-                    "sent": False if self.shadow else None,
+                    "sent": not self.shadow,
                 }
             )
         for listener in list(self._listeners):

@@ -1,7 +1,7 @@
 """ZEPHYR: Home Assistant integration for Zendure home batteries.
 
-Milestone M3: reading and shadow mode. ZEPHYR computes what it would do but
-does not write to the sets yet.
+Shadow mode by default (ZEPHYR computes what it would do); live control with
+``switch.zephyr_control`` (M4b).
 """
 
 from __future__ import annotations
@@ -10,16 +10,20 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN, SUBENTRY_SET
 from .coordinator import SetCoordinator
 from .core.totals import Totals, compute_totals
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT, Platform.SWITCH]
 
 if TYPE_CHECKING:
     from .control import ZephyrControl
@@ -39,6 +43,32 @@ class ZephyrRuntime:
 
 
 type ZephyrConfigEntry = ConfigEntry[ZephyrRuntime]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+SERVICE_TEST_COMMAND = "test_command"
+TEST_COMMAND_SCHEMA = vol.Schema(
+    {
+        vol.Required("power"): vol.All(vol.Coerce(int), vol.Range(min=-2400, max=2400)),
+        vol.Optional("duration", default=60): vol.All(vol.Coerce(float), vol.Range(min=1, max=60)),
+    }
+)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Actions of ZEPHYR (registered once, act on the loaded installation)."""
+
+    async def test_command(call: ServiceCall) -> None:
+        entries = [e for e in hass.config_entries.async_loaded_entries(DOMAIN) if e.runtime_data.control is not None]
+        if not entries:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="not_loaded")
+        for entry in entries:
+            control = entry.runtime_data.control
+            assert control is not None
+            await control.async_test_command(call.data["power"], call.data["duration"])
+
+    hass.services.async_register(DOMAIN, SERVICE_TEST_COMMAND, test_command, schema=TEST_COMMAND_SCHEMA)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bool:

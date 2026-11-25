@@ -24,6 +24,7 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from .const import (
     CONF_CAPACITY_OVERRIDE,
     CONF_HOST,
+    CONF_LIVE_OFF_AFTER_RESTART,
     CONF_MAX_SOC,
     CONF_MIN_SOC,
     CONF_NUMBER,
@@ -354,6 +355,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                 ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.ENERGY)),
                 vol.Required(CONF_MIN_SOC, default=options.get(CONF_MIN_SOC, defaults.min_soc)): _percent(5, 50),
                 vol.Required(CONF_MAX_SOC, default=options.get(CONF_MAX_SOC, defaults.max_soc)): _percent(70, 100),
+                vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, True)): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

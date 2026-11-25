@@ -1,0 +1,20 @@
+test_command:
+  fields:
+    power:
+      required: true
+      example: -300
+      selector:
+        number:
+          min: -2400
+          max: 2400
+          step: 10
+          unit_of_measurement: W
+          mode: box
+    duration:
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: s
+          mode: box

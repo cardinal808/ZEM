@@ -295,3 +295,19 @@ def test_small_changes_wait_for_the_refresh() -> None:
     assert e._should_send(state, -210, 5)  # 30 W
     assert e._should_send(state, -170, 60)  # refresh carries the latest setpoint
     assert e._should_send(state, 0, 0.5)  # stopping is never held back
+
+
+def test_going_live_takes_over_without_step_to_zero() -> None:
+    # B35 / PLAN-M4b §2.3: the set delivers 760 W; going live must not first write 0 W.
+    e = ZephyrEngine()
+    e.enable_twin()
+    for t in range(0, 6, 2):
+        e.p1_reported(t, 20.0 + t)
+        e.step(t, [_view()])
+    e.set_live(True, 6, [_view()])
+    assert not e.twin_enabled
+    e.p1_reported(7, 25.0)
+    r = e.step(7, [_view()])
+    powers = [c.props for c in r.commands if c.kind == "power"]
+    assert r.setpoint <= -700
+    assert all(p.get("outputLimit", 0) >= 700 for p in powers)

@@ -96,6 +96,19 @@ class ZeroMeterController:
         """The last direction was charging (also while the setpoint is 0 on the way to delivering)."""
         return self._last_direction is Direction.CHARGE
 
+    def take_over(self, power: float, now: float) -> None:
+        """Continue from what the set does now (going live, B35): no step to 0 W."""
+        self.reset(now)
+        follow = round(power / 10) * 10
+        if abs(follow) < self.settings.min_power:
+            follow = 0
+        self.setpoint = follow
+        self._prev_setpoint = follow
+        self._setpoint_at = -1e9  # nothing to settle: the set already runs at this power
+        if follow:
+            self._last_direction = Direction.CHARGE if follow > 0 else Direction.DELIVER
+            self._active_at = now
+
     def reset(self, now: float) -> None:
         """Start from zero (mode change, restart, safety stop)."""
         self.setpoint = 0
