@@ -9,7 +9,7 @@ from sim.runner import Simulation, constant, energy_wh, share_within, steps, tim
 from zephyr_core.engine import Mode, ReasonCode
 from zephyr_core.settings import Settings
 
-TARGET = 15.0  # W on the grid while delivering
+TARGET = 5.0  # W on the grid while delivering
 
 
 def _setpoints_after(trace, start):  # type: ignore[no-untyped-def]

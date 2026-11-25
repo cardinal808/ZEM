@@ -30,7 +30,7 @@ class Settings:
     """W used to recharge when the SOC dropped below the minimum."""
 
     # Controller (advanced)
-    target_grid_deliver: float = 15.0
+    target_grid_deliver: float = 5.0
     """W on the grid while delivering (+ = import)."""
     target_grid_charge: float = -30.0
     """W on the grid while charging from solar surplus (− = export)."""

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.6.3 — tuning: aim for 5 W import while delivering (was 15 W)
+- **Seen in the live test of 25-11 (0.5.4) next to the previous system:** ZEPHYR averaged +13 W on the grid while delivering; the previous system ±0 W (alternating import and export). Within the dead zone of ±25 W around the target, ZEPHYR does not correct, so with a target of 15 W the grid stayed between −10 and +40 W, mostly on the import side.
+- **Change:** `target_grid_deliver` 15 → 5 W. With net metering (saldering) a little export costs nothing; smaller than 5 W makes little sense with commands in steps of 30 W.
+- Simulator (slow-starting set, varying load with meter noise, 5 × 30 min): average grid +20 → +10 W, import 12.3 → 8.7 Wh, export 2.6 → 3.9 Wh, the same number of writes, within ±50 W 96 → 97 %.
+
 ### 0.6.2 — fix: counters emptied when switching live/shadow
 - **Seen in the third live test (25-11, 0.5.4):** 33 successful live writes, but the counter showed 5 RAM writes after switching back to shadow mode.
 - **Cause:** switching between live and shadow mode started the per-set bookkeeping over, and the write and relay counters with it. The flash safety net (PLAN-M4b §2.7) lost its history too, so after a switch it could allow more flash writes than 10 per hour / 50 per 24 hours.
