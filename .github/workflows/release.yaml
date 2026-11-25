@@ -1,0 +1,43 @@
+name: Release
+
+# After every merge to main: if the version in manifest.json has no release yet,
+# create release v<version> with its CHANGELOG section as notes. HACS then shows
+# "0.6.2" instead of a commit hash.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release if the version is new
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('custom_components/zephyr/manifest.json'))['version'])")
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists"
+            exit 0
+          fi
+          # Notes: the CHANGELOG section of this version (until the next heading).
+          python3 - "$version" > notes.md <<'EOF'
+          import re, sys
+          version = sys.argv[1]
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(rf"^### {re.escape(version)}\b.*?$(.*?)(?=^##)", text, re.S | re.M)
+          print(m.group(1).strip() if m else f"Version {version}.")
+          EOF
+          title=$(grep -m1 -E "^### ${version//./\\.}\b" CHANGELOG.md | sed 's/^### //')
+          gh release create "$tag" --target "$GITHUB_SHA" --title "${title:-$tag}" --notes-file notes.md
