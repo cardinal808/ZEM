@@ -31,3 +31,22 @@ def test_no_on_off_cycle_on_a_steady_load() -> None:
     sim.run(300)
     zeros_after_start = [t for t, w in sim.sets[0].writes if t > 5 and w.get("outputLimit") == 0 and w.get("inputLimit") == 0]
     assert zeros_after_start == []
+
+
+def test_fresh_reports_do_not_cause_overshoot() -> None:
+    # Seen live 25-11 on 0.5.3: the report was fresher than the fixed 1.5 s shift assumed, so
+    # ZEPHYR compared a new battery value with an old P1 value and overshot (510 -> 940 W),
+    # then undershot (390 -> 140 W). Varying load, a report only 0.2 s behind.
+    import random
+
+    from sim.runner import steps
+
+    rng = random.Random(3)
+    points = [(0.0, 500.0)] + [(float(t), float(rng.choice([300, 500, 800, 1500, 2200, 400]))) for t in range(40, 600, 25)]
+    sim = Simulation(load=steps(*points), sets=[SimSet(startup=8.0, report_lag=0.2, relay_off_on_zero=True, ramp_down=600)])
+    sim.engine.set_live(True, 0.0, [])
+    tr = sim.run(600)
+    writes = [w for t, w in sim.sets[0].writes if t > 30]
+    zeros = [w for w in writes if w.get("outputLimit") == 0 and w.get("inputLimit") == 0]
+    assert len(writes) <= 25 and not zeros
+    assert share_within(tr, 15, 50, start=30) > 0.72

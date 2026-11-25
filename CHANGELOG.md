@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.5.4 — fix: live control over- and undershot
+- **Seen in the second live test (25-11, 0.5.3):** the start was right (no doubling), but then 510 → 940 W (export ~440 W), back to 390 W, 140 W (import ~340 W), and so on.
+- **Cause:** 0.5.3 compared the set's report with the P1 value of 1.5 s earlier, assuming the report always lags that much. Here the report was nearly fresh, so a new battery value was set against an old P1 value from before the set had started.
+- **Fix:** no fixed shift any more. After each command live control waits until the set has reached it (as in 0.5.3) **and then 2 s longer** (`after_reach`), so P1 and the report show the same state, whatever the report lag. Clearly-worse cases (export) still react at once.
+- Simulator, varying load: with a report lag of 0.2 s 19 writes instead of 37, no stop to 0 W (was 2), 76 % within ±50 W (was 62 %); the same with lags of 1.5 and 3 s. New scenario `test_fresh_reports_do_not_cause_overshoot` (fails on 0.5.3).
+
 ### 0.5.3 — fix: live control doubled every start
 - **Seen in the first live test (25-11):** house ~530 W, ZEPHYR commanded 520 W, then 1030 W, then 1290 W; the set exported ~700 W, ZEPHYR went to 0 W, the relay opened and the cycle started again about every 25 s.
 - **Cause:** live control trusted its last command once the settle time (~5.6 s) had passed. A set starting from 0 W with the relay open needs 9–11 s before power shows in the report, so P1 still showed the full demand and ZEPHYR added it a second time. When stopping, the report still showed the old power while P1 already showed the export, so ZEPHYR stopped completely.

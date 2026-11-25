@@ -70,6 +70,8 @@ class Settings:
     for the measurement (``reach_timeout``). The twin still uses this value (to calibrate)."""
     report_lag: float = 1.5
     reach_timeout: float = 15.0
+    after_reach: float = 2.0
+    """s live control waits after the set reached a command, so P1 and the report agree."""
     """s after a command during which live control waits for the set to reach it (measured)."""
     """s the report lags behind the set."""
     deviation_limit: float = 200.0
@@ -141,6 +143,7 @@ class Settings:
             "noise_window": (0, 30),
             "twin_delay": (0, 5),
             "reach_timeout": (0, 60),
+            "after_reach": (0, 10),
         }
         for name, (lo, hi) in checks.items():
             value = getattr(self, name)
