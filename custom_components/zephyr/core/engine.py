@@ -210,10 +210,11 @@ class ZephyrEngine:
 
         Going live: the controller continues from the measured power of the sets (B35) and the
         write bookkeeping starts over, so the first real command is not suppressed by what the
-        twin was told. Back to shadow: a fresh twin.
+        twin was told. Back to shadow: a fresh twin. The counters stay (B33): they cover the
+        last hour and 24 hours whatever the mode, and the flash safety net needs them.
         """
         measured = sum(v.report.battery_power_ac for v in sets if v.report is not None and v.online)
-        self._sets = {}
+        self._sets = {key: _SetState(counters=state.counters) for key, state in self._sets.items()}
         self.tally_virtual = GridTally()
         if live:
             self._twins = None

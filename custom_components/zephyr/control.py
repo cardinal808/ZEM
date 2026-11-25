@@ -297,9 +297,11 @@ class ZephyrControl:
         self.async_step()
 
     async def _all_to_zero(self) -> None:
-        await asyncio.gather(
-            *(w.send_now(power_command(0, include_ac_mode=False)) for key, w in self.writers.items() if self._online(key)),
-        )
+        keys = [key for key in self.writers if self._online(key)]
+        now = time.monotonic()
+        for key in keys:
+            self.engine.counters_record(key, "power", now)
+        await asyncio.gather(*(self.writers[key].send_now(power_command(0, include_ac_mode=False)) for key in keys))
 
     def _online(self, key: str) -> bool:
         data = self.runtime.coordinators[key].data

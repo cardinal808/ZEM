@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.6.2 — fix: counters emptied when switching live/shadow
+- **Seen in the third live test (25-11, 0.5.4):** 33 successful live writes, but the counter showed 5 RAM writes after switching back to shadow mode.
+- **Cause:** switching between live and shadow mode started the per-set bookkeeping over, and the write and relay counters with it. The flash safety net (PLAN-M4b §2.7) lost its history too, so after a switch it could allow more flash writes than 10 per hour / 50 per 24 hours.
+- **Fix:** the counters (RAM, flash per cause, skipped, relay) now survive the switch; only the write bookkeeping starts over. The 0 W written when switching off (or when HA stops) now counts as a RAM write.
+- Tests: `test_counters_survive_switching_live_and_back` (core) and `test_counters_keep_live_writes_after_switching_off` (HA); both fail on 0.5.4.
 ### 0.6.1 — M5, step 2: tariff table (B28)
 - **Choose your energy supplier** in the options instead of entering tariffs: ZEPHYR then takes the supplier's margins, solar bonus and VAT on export after net metering, plus the country's energy tax and VAT per date, from its **tariff table** (`custom_components/zephyr/data/tariffs.json`). "Own tariffs" stays possible; the fixed costs per month apply in both cases.
 - **Only checked amounts:** a supplier is listed once a user of that supplier has checked the amounts against an invoice (`verified`). The first entry is Zonneplan (checked against an invoice on 25-11-2026): margin €0.02 incl. VAT on import and export, 10 % solar bonus.

@@ -60,6 +60,23 @@ async def test_leaving_live_sends_zero_once(hass: HomeAssistant, fake_sets: Fake
     assert len(fake_sets.writes) == count  # shadow again: nothing more
 
 
+async def test_counters_keep_live_writes_after_switching_off(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    # Seen 25-11 (0.5.4): 33 live writes, but the counter said 5 after switching back to shadow.
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    for _ in range(4):
+        await _p1(hass, freezer, 300)
+    await _switch(hass, False)
+    ram_written = sum(1 for _, p in fake_sets.writes if p.get("smartMode") == 1)
+    assert ram_written >= 2  # at least one command while live and the 0 W when leaving
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    counts = next(iter(diag["control"]["counters"].values()))
+    assert counts["ram_24h"] >= ram_written
+
+
 async def test_live_refused_without_p1(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
     await _install_with_p1(hass, fake_sets)
     for watts in (300, 310, 305, 300):
