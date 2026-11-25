@@ -47,8 +47,14 @@ async def _supplier_options(hass: HomeAssistant, entry: Any) -> list[str]:
 
 
 async def test_unverified_supplier_is_not_offered(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    with patch("custom_components.zephyr.tariff_provider.load_shipped", return_value=parse_table(_data(False))):
+        entry = await _setup(hass, fake_sets, freezer)
+        assert await _supplier_options(hass, entry) == ["own"]
+
+
+async def test_shipped_zonneplan_is_offered(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
     entry = await _setup(hass, fake_sets, freezer)
-    assert await _supplier_options(hass, entry) == ["own"]
+    assert await _supplier_options(hass, entry) == ["own", "zonneplan"]
 
 
 async def test_supplier_from_table_is_used(

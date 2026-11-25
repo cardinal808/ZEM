@@ -4,10 +4,18 @@
   "countries": {
     "NL": {
       "vat": [
-        {"from": "2012-10-01", "value": 21.0, "source": "https://www.belastingdienst.nl"}
+        {
+          "from": "2012-10-01",
+          "value": 21.0,
+          "source": "https://www.belastingdienst.nl"
+        }
       ],
       "energy_tax": [
-        {"from": "2026-01-01", "value": 0.09161, "source": "https://www.belastingdienst.nl (tarieven milieubelastingen 2026, schijf 1, excl. btw)"}
+        {
+          "from": "2026-01-01",
+          "value": 0.09161,
+          "source": "https://www.belastingdienst.nl (tarieven milieubelastingen 2026, schijf 1, excl. btw)"
+        }
       ],
       "saldering_until": "2027-01-01"
     }
@@ -25,8 +33,8 @@
           "export_vat_after_saldering": true,
           "source": "https://www.zonneplan.nl/energie/zonnebonus/",
           "checked": "2026-11-25",
-          "verified": false,
-          "note": "Inkoopvergoeding EUR 0,02 incl. btw, ook uitgekeerd bij teruglevering (1-op-1 dynamisch salderen). Zonnebonus 10 % over (marktprijs + EUR 0,02), overdag, alleen als positief; max. 7 500 kWh per jaar (niet gemodelleerd)."
+          "verified": true,
+          "note": "Inkoopvergoeding EUR 0,02 incl. btw bij afname en bij teruglevering (netto verrekend op de factuur; bij teruglevering onderdeel van de Zonnebonus). 10 % Zonnebonus over (marktprijs + EUR 0,02), overdag, alleen als positief; max. 7 500 kWh per jaar (niet gemodelleerd). Gecontroleerd met een factuur door een gebruiker op 2026-11-25."
         }
       ]
     }
