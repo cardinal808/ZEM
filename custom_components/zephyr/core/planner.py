@@ -14,7 +14,8 @@ Actions (§1):
 * ``X`` deliver at full power, the rest to the grid (only when allowed).
 
 Not yet in this version: calibration penalty (§3.5), efficiency per power band
-(§6, a fixed efficiency per direction is used), PU1–PU6 (§12).
+(§6, a fixed efficiency per direction is used), PU1, PU2, PU4–PU6 (§12). PU3 (wear
+cost per kWh) is a setting, off by default until the backtest justifies a value.
 """
 
 from __future__ import annotations
@@ -72,6 +73,9 @@ class PlannerSettings:
     """Action X (B12: off by default)."""
     load_margin: float = 0.0
     """Plan with this share more consumption when choosing (not in the costs)."""
+    wear_cost: float = 0.0
+    """€ per kWh delivered by the battery (PU3): weighs wear in the choice, not in the grid costs.
+    Keeps the planner from cycling the battery for a few cents (especially with X)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,7 +181,7 @@ def plan(
             row = []
             for a in options:
                 r = step(slot, battery, e, a, cfg.load_margin)
-                row.append((a, r.cost + _interp(future[_group(a)], r.energy_after, cap, n)))
+                row.append((a, r.cost + cfg.wear_cost * r.delivered + _interp(future[_group(a)], r.energy_after, cap, n)))
             after.append(row)
         current = {prev: [min(v + switch(prev, a) for a, v in row) for row in after] for prev in GROUPS}
         tables.append(current)
@@ -191,7 +195,7 @@ def plan(
         best: tuple[float, Action, Step] | None = None
         for a in options:
             r = step(slot, battery, energy, a, cfg.load_margin)
-            total = r.cost + switch(prev, a) + _interp(tables[t + 1][_group(a)], r.energy_after, cap, n)
+            total = r.cost + cfg.wear_cost * r.delivered + switch(prev, a) + _interp(tables[t + 1][_group(a)], r.energy_after, cap, n)
             if best is None or total < best[0] - 1e-12:
                 best = (total, a, r)
         assert best is not None

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.7.1 — planner: wear cost per kWh (PU3), backtest with wear
+- **`PlannerSettings.wear_cost`** (€ per kWh delivered by the battery, default 0): weighs battery wear in the choice, not in the grid costs, so the planner does not cycle the battery for a few cents (SPEC-planner §12.3, PU3). Not yet in Home Assistant.
+- **Backtest:** option `--wear` (default €0.03/kWh); runs the planner and planner + X with and without wear and shows the cost including wear for every strategy.
+- Measured on 9.5 months of own data (perfect knowledge): with wear €0.03 or €0.06 in the choice, the cost including wear is lower in both years (2026 and 2027 rules) than without, for the planner and for planner + X, at a slightly higher grid cost. Details in the project (BACKTEST-1).
+
 ### 0.7.0 — M5, step 3: planner core and backtest (no change in Home Assistant yet)
 - **Planner core** `core/planner.py` (SPEC-planner §1, §3): per price slot one action — charge from the grid (L), hold (H), deliver (N) or, when allowed, export at full power (X, off by default, B12) — with the lowest total cost over the horizon. Dynamic programming backwards over the energy in the battery (40 steps, linear interpolation) and the previous action (switching costs €0.02 per charge start, €0.005 per hold start), then a forward pass from the real energy. End value: the cheapest price in the horizon × discharge efficiency. Solar surplus goes into the battery first; with a negative export price surplus solar earns nothing and X is not used. Load margin steers the choice only.
 - Tests: within €0.005 of brute force on random scenarios (with and without X), cheap charging / expensive delivering, no charging when the spread does not cover the losses, holding for the evening peak, 192 quarters in well under a second.
