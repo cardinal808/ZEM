@@ -52,6 +52,10 @@ class Settings:
     reverse_window: float = 120.0
     """s after the last non-zero setpoint during which ``reverse_min_power`` applies. After that
     the set counts as idle and the normal ``min_power`` holds again (evening: delivering after charging)."""
+    flash_limit_hour: int = 10
+    """Flash writes (standby, SOC limits) per set in the last hour above which flash is paused (PLAN-M4b §2.7)."""
+    flash_limit_day: int = 50
+    """The same over 24 hours."""
     min_command_step: int = 30
     """W a new power command must differ from the last one sent. Smaller changes (10-20 W steps
     on meter noise) are not written; the 60 s refresh still sends the latest setpoint."""
@@ -123,6 +127,8 @@ class Settings:
             "reverse_min_power": (0, 1000),
             "reverse_window": (0, 3600),
             "min_command_step": (10, 200),
+            "flash_limit_hour": (1, 100),
+            "flash_limit_day": (1, 1000),
             "min_step_interval": (0.5, 30),
             "step_threshold": (0, 5000),
             "step_hold": (0, 60),

@@ -96,3 +96,67 @@ async def test_write_test_only_in_standby(hass: HomeAssistant, fake_sets: FakeSe
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["control"]["live"]["test"]["power"] == -300
     assert diag["control"]["live"]["writes"]["1"]["ok_24h"] == 2
+
+
+PRICE = "sensor.nordpool_test"
+
+
+async def _set_prices(hass: HomeAssistant, expensive_now: bool) -> None:
+    from homeassistant.util import dt as dt_util
+
+    now = dt_util.now().replace(minute=0, second=0, microsecond=0)
+    start = now.replace(hour=0)
+    raw = []
+    for h in range(24):
+        t = start + timedelta(hours=h)
+        price = 0.10
+        if (t == now) == expensive_now and t.hour in ((now.hour,) if expensive_now else ((now.hour + 3) % 24,)):
+            price = 0.50
+        raw.append({"start": t, "end": t + timedelta(hours=1), "value": price})
+    hass.states.async_set(PRICE, "0.1", {"raw_today": raw, "raw_tomorrow": []})
+
+
+async def _options(hass: HomeAssistant, entry, **extra: object) -> None:  # type: ignore[no-untyped-def]
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"p1_entity": "sensor.p1_meter_power", **extra})
+    await hass.async_block_till_done()
+
+
+async def test_delivers_only_in_expensive_hours(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    entry = await _install_with_p1(hass, fake_sets)
+    await _set_prices(hass, expensive_now=False)
+    await _options(hass, entry, price_entity=PRICE, expensive_hours=1, reserve_soc=0)
+    for _ in range(15):
+        await _p1(hass, freezer, 300)
+    assert hass.states.get("sensor.zephyr_setpoint").state == "0"
+    assert hass.states.get("sensor.zephyr_reason").attributes["code"] == "not_expensive"
+    diag = await async_get_config_entry_diagnostics(hass, hass.config_entries.async_entries(DOMAIN)[0])
+    assert diag["control"]["price"]["decision"]["expensive"] is False
+
+    await _set_prices(hass, expensive_now=True)
+    freezer.tick(timedelta(seconds=31))  # the price decision is refreshed every 30 s
+    for _ in range(4):
+        await _p1(hass, freezer, 300)
+    assert float(hass.states.get("sensor.zephyr_setpoint").state) < 0
+
+
+async def test_second_controller_stops_live(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 20)
+    await _switch(hass, True)
+    for _ in range(3):
+        await _p1(hass, freezer, 20)
+    assert fake_sets.writes, "ZEPHYR should have written its take-over command"
+    # Another system writes 1500 W; the reports show it, twice, after ZEPHYR's command settled.
+    for i in range(2):
+        fake_sets.answers["10.0.0.10"]["properties"].update({"outputLimit": 1500, "inputLimit": 0})
+        fake_sets.answers["10.0.0.10"]["timestamp"] = 1795500000 + i
+        freezer.tick(timedelta(seconds=10))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+        await _p1(hass, freezer, 20)
+    await hass.async_block_till_done()
+    assert hass.states.get("switch.zephyr_control").state == "off"
+    from homeassistant.helpers import issue_registry as ir
+
+    assert ir.async_get(hass).async_get_issue(DOMAIN, "second_controller") is not None

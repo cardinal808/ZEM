@@ -24,6 +24,12 @@ P1_SOURCE_SINGLE: Final = "single"
 P1_SOURCE_PAIR: Final = "import_export"
 CONF_SOLAR_FORECAST: Final = "solar_forecast_entity"
 CONF_SOLAR_ENERGY: Final = "solar_energy_entity"
+CONF_PRICE_ENTITY: Final = "price_entity"
+CONF_EXPENSIVE_HOURS: Final = "expensive_hours"
+CONF_RESERVE_SOC: Final = "reserve_soc"
+CONF_MIN_PRICE: Final = "min_price"
+DEFAULT_EXPENSIVE_HOURS: Final = 4
+DEFAULT_RESERVE_SOC: Final = 20
 CONF_LIVE_OFF_AFTER_RESTART: Final = "live_off_after_restart"
 """Test phase (PLAN-M4b L5): live control stays off after a restart until the user switches it on."""
 

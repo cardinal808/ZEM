@@ -71,6 +71,15 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
                 },
                 "test": control.test,
             },
+            "price": None
+            if control.price_entity is None
+            else {
+                "entity": control.price_entity,
+                "expensive_hours": control.expensive_hours,
+                "reserve_soc": control.reserve_soc,
+                "min_price": control.min_price,
+                "decision": None if control.price is None else control.price.as_dict(),
+            },
             "p1_entity": control.p1_description,
             "mode": control.engine.mode.value,
             "settings": dataclasses.asdict(control.engine.settings),

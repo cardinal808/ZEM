@@ -28,19 +28,26 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_EXPENSIVE_HOURS,
     CONF_MAX_SOC,
+    CONF_MIN_PRICE,
     CONF_MIN_SOC,
     CONF_P1_ENTITY,
     CONF_P1_EXPORT,
     CONF_P1_IMPORT,
     CONF_P1_SOURCE,
+    CONF_PRICE_ENTITY,
+    CONF_RESERVE_SOC,
+    DEFAULT_EXPENSIVE_HOURS,
+    DEFAULT_RESERVE_SOC,
     DOMAIN,
     LOGGER,
     P1_SOURCE_PAIR,
     SCAN_INTERVAL_ACTIVE,
     SCAN_INTERVAL_IDLE,
 )
-from .core.engine import Mode, SetView, StepResult, ZephyrEngine
+from .core.engine import Mode, Reason, ReasonCode, SetView, StepResult, ZephyrEngine
+from .core.price_window import NO_PRICES, PriceDecision, decide, parse_nordpool_raw
 from .core.settings import Settings
 from .core.zensdk import power_command, standby_command
 from .writer import SetWriter
@@ -85,6 +92,14 @@ class ZephyrControl:
         self._previous_mode = Mode.ZERO_METER
         self.writers = {key: SetWriter(hass, c) for key, c in runtime.coordinators.items()}
         self.live_since: float | None = None
+        self.price_entity: str | None = options.get(CONF_PRICE_ENTITY)
+        self.expensive_hours = int(options.get(CONF_EXPENSIVE_HOURS, DEFAULT_EXPENSIVE_HOURS))
+        self.reserve_soc = float(options.get(CONF_RESERVE_SOC, DEFAULT_RESERVE_SOC))
+        self.min_price: float | None = options.get(CONF_MIN_PRICE)
+        self.price: PriceDecision | None = None
+        self._price_at = -1e9
+        self._foreign: deque[float] = deque(maxlen=20)
+        self._checked_report: dict[str, int | None] = {}
         self.test: dict[str, Any] | None = None
         self._test_task: asyncio.Task[None] | None = None
 
@@ -254,6 +269,11 @@ class ZephyrControl:
                     translation_key="live_not_possible",
                     translation_placeholders={"reasons": "; ".join(blockers)},
                 )
+            ir.async_delete_issue(self.hass, DOMAIN, "second_controller")
+            self._foreign.clear()
+            for writer in self.writers.values():
+                writer.last_props = None
+                writer.last_at = None
             self.engine.set_live(True, now, self._views())
             self.shadow = False
             self.live_since = now
@@ -317,7 +337,7 @@ class ZephyrControl:
             for key, writer in self.writers.items():
                 if self._online(key):
                     await writer.send_now(standby_command())
-                    self.engine.counters_record(key, "standby", time.monotonic())
+                    self.engine.counters_record(key, "test", time.monotonic())
             self._log_event("test_end")
             if self.test is not None:
                 self.test["finished"] = dt_util.utcnow().isoformat(timespec="seconds")
@@ -351,7 +371,10 @@ class ZephyrControl:
     def async_step(self) -> None:
         now = time.monotonic()
         views = self._views()
-        result = self.engine.step(now, views)
+        price_block, reserve_charge = self._price_inputs(now, views)
+        result = self.engine.step(now, views, price_block=price_block, reserve_charge=reserve_charge)
+        if not self.shadow:
+            self._check_reports(now)
         if not self.shadow:
             for command in result.commands:
                 writer = self.writers.get(command.key)
@@ -385,6 +408,100 @@ class ZephyrControl:
             )
         for listener in list(self._listeners):
             listener()
+
+    # --- prices: deliver in the most expensive hours, reserve (PLAN-M4b §2.6) ----------
+
+    def _price_inputs(self, now: float, views: list[SetView]) -> tuple[Reason | None, tuple[int, float] | None]:
+        if not self.price_entity:
+            self.price = None
+            return None, None
+        if now - self._price_at >= 30 or self.price is None:
+            self._price_at = now
+            self.price = self._decide_prices(views)
+        decision = self.price
+        if not decision.have_prices:
+            return Reason(ReasonCode.NO_PRICES), None
+        block = None
+        if not decision.expensive:
+            nxt = "-" if decision.next_expensive is None else dt_util.as_local(decision.next_expensive).strftime("%H:%M")
+            block = Reason(ReasonCode.NOT_EXPENSIVE, {"next": nxt})
+        charge = None
+        if decision.reserve_charge:
+            charge = (int(self._charge_kw(views) * 1000), self.reserve_soc)
+        return block, charge
+
+    def _charge_kw(self, views: list[SetView]) -> float:
+        limits = [v.report.charge_max_limit or 2400 for v in views if v.report is not None and v.online]
+        settings_max = self.engine.settings.max_charge_power
+        total = float(sum(limits))
+        if settings_max is not None:
+            total = min(total, float(settings_max))
+        return total / 1000
+
+    def _decide_prices(self, views: list[SetView]) -> PriceDecision:
+        assert self.price_entity is not None
+        state = self.hass.states.get(self.price_entity)
+        if state is None:
+            return NO_PRICES
+        slots = parse_nordpool_raw(state.attributes.get("raw_today")) + parse_nordpool_raw(state.attributes.get("raw_tomorrow"))
+        totals = self.runtime.totals()
+        return decide(
+            slots,
+            dt_util.now(),
+            hours=self.expensive_hours,
+            min_price=self.min_price,
+            soc=totals.soc,
+            reserve_soc=self.reserve_soc,
+            capacity_kwh=totals.capacity_kwh or 0.0,
+            charge_kw=self._charge_kw(views),
+        )
+
+    # --- checks while live: a second controller, smartMode (PLAN-M4b §2.2, §2.7) ---------
+
+    SETTLE_FOR_CHECK = 6.0
+    FOREIGN_WINDOW = 300.0
+
+    def _check_reports(self, now: float) -> None:
+        for key, writer in self.writers.items():
+            data = self.runtime.coordinators[key].data
+            report = data.report if data and data.online else None
+            if report is None or writer.last_props is None or writer.last_at is None:
+                continue
+            if now - writer.last_at < self.SETTLE_FOR_CHECK or self._checked_report.get(key) == report.timestamp:
+                continue
+            self._checked_report[key] = report.timestamp
+            sent = writer.last_props
+            if sent.get("smartMode") == 1 and report.smart_mode == 0:
+                writer.stats.smartmode_reverted.append(now)
+            limits_sent = "inputLimit" in sent and "outputLimit" in sent
+            if limits_sent and (abs(report.input_limit - sent["inputLimit"]) > 20 or abs(report.output_limit - sent["outputLimit"]) > 20):
+                self._foreign.append(now)
+                LOGGER.warning(
+                    "Set %s reports limits ZEPHYR did not write (in %s / out %s, sent %s / %s)",
+                    self.runtime.coordinators[key].number,
+                    report.input_limit,
+                    report.output_limit,
+                    sent["inputLimit"],
+                    sent["outputLimit"],
+                )
+        recent = [t for t in self._foreign if now - t <= self.FOREIGN_WINDOW]
+        if len(recent) >= 2:
+            self._foreign.clear()
+            self.hass.async_create_task(self._stop_for_second_controller())
+
+    async def _stop_for_second_controller(self) -> None:
+        """Another system writes to the set: stop writing, back to shadow, tell the user (L4)."""
+        if self.shadow:
+            return
+        self.shadow = True
+        self.live_since = None
+        self.engine.set_live(False, time.monotonic(), self._views())
+        self._log_event("second_controller")
+        ir.async_create_issue(
+            self.hass, DOMAIN, "second_controller", is_fixable=False, severity=ir.IssueSeverity.ERROR, translation_key="second_controller"
+        )
+        LOGGER.error("Another system controls the set: ZEPHYR stopped writing and is back in shadow mode")
+        self.async_step()
 
     def _apply_poll_interval(self) -> None:
         active = self.engine.mode is not Mode.STANDBY

@@ -197,6 +197,10 @@
     "live_off_after_restart": {
       "title": "ZEPHYR stuurt de accu niet meer",
       "description": "Na een herstart staat live sturen uit (optie \"Live sturen uit na herstart\"). De set houdt het laatste vermogen tot je huidige aansturing of jij ingrijpt. Zet \"ZEPHYR stuurt de accu\" weer aan, of laat je huidige aansturing het overnemen."
+    },
+    "second_controller": {
+      "title": "Een ander systeem stuurt de accu",
+      "description": "De set meldde twee keer binnen 5 minuten grenzen die ZEPHYR niet heeft geschreven. ZEPHYR is gestopt met schrijven en staat weer in de schaduwmodus. Zet je oude aansturing (Gielz, automations, de Zendure-app) uit en zet daarna \"ZEPHYR stuurt de accu\" weer aan."
     }
   },
   "options": {
@@ -213,7 +217,11 @@
           "solar_energy_entity": "Teller zonne-opbrengst",
           "min_soc": "Minimale laadtoestand",
           "max_soc": "Maximale laadtoestand",
-          "live_off_after_restart": "Live sturen uit na herstart (testfase)"
+          "live_off_after_restart": "Live sturen uit na herstart (testfase)",
+          "price_entity": "Prijssensor (Nord Pool)",
+          "expensive_hours": "Leveren in de duurste uren",
+          "reserve_soc": "Reserve",
+          "min_price": "Minimumprijs om te leveren"
         },
         "data_description": {
           "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
@@ -224,7 +232,11 @@
           "p1_export_entity": "Vermogen naar het net, bijvoorbeeld …_power_production.",
           "solar_forecast_entity": "Optioneel. Een verwachtingssensor met detail per half uur (Solcast: …_forecast_tomorrow). ZEPHYR bewaart elke avond om 23:00 de verwachting voor morgen, als meetlat voor de planner later.",
           "solar_energy_entity": "Optioneel. Totale zonne-opbrengst in kWh (bijvoorbeeld de energieteller van de omvormer). Wordt elk uur gelezen om met de verwachting te vergelijken.",
-          "live_off_after_restart": "Na een herstart van Home Assistant of een herlaad staat \"ZEPHYR stuurt de accu\" uit en zet je hem zelf weer aan. Laat dit aan tijdens de testweek."
+          "live_off_after_restart": "Na een herstart van Home Assistant of een herlaad staat \"ZEPHYR stuurt de accu\" uit en zet je hem zelf weer aan. Laat dit aan tijdens de testweek.",
+          "price_entity": "Optioneel. Met een Nord Pool-sensor (met de prijzen van vandaag in de attributen) levert Nul op de meter alleen in de duurste uren van de dag. Zonder sensor levert ZEPHYR zodra het huis vraagt.",
+          "expensive_hours": "Aantal uren per dag waarin ZEPHYR mag leveren: de duurste volgens Nord Pool.",
+          "reserve_soc": "Extra lading die vrij gebruikt mag worden: zit de accu eronder, dan laadt ZEPHYR bij in de goedkoopste uren vóór het volgende dure blok. In de dure uren levert hij door tot de minimale laadtoestand. 0 = uit.",
+          "min_price": "Optioneel, kale Nord Pool-prijs: daaronder nooit leveren, ook niet in de duurste uren."
         }
       }
     },

@@ -31,10 +31,20 @@ class SetCounters:
     relay: deque[float] = field(default_factory=_events)
     """Changes of ``acStatus`` (0 off, 1 delivering, 2 charging): relay switches."""
     last_ac_status: int | None = None
+    flash_causes: dict[str, deque[float]] = field(default_factory=dict)
+    """Flash writes per cause: standby, soc_limits, test (PLAN-M4b §2.7)."""
 
     def record(self, kind: str, now: float) -> None:
-        target = self.ram if kind == "power" else self.skipped if kind == "skipped" else self.flash
-        target.append(now)
+        if kind == "power":
+            self.ram.append(now)
+        elif kind == "skipped":
+            self.skipped.append(now)
+        else:
+            self.flash.append(now)
+            self.flash_causes.setdefault(kind, _events()).append(now)
+
+    def flash_count(self, now: float, window: float) -> int:
+        return sum(1 for t in self.flash if now - t <= window)
 
     def observe_ac_status(self, value: int | None, now: float) -> None:
         if value is None:
@@ -53,4 +63,8 @@ class SetCounters:
                 events.popleft()
             out[f"{name}_24h"] = len(events)
             out[f"{name}_1h"] = sum(1 for t in events if now - t <= HOUR)
+        for cause, events in self.flash_causes.items():
+            while events and now - events[0] > DAY:
+                events.popleft()
+            out[f"flash_{cause}_24h"] = len(events)
         return out

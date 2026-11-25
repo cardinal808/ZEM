@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.5.1 — M4b, step 2: expensive hours, reserve, safety
+- **Deliver only in the most expensive hours** (zero-meter control, optional). Choose a Nord Pool price sensor in the options (the custom integration with `raw_today` / `raw_tomorrow`; suggested automatically). ZEPHYR then delivers only in the N most expensive hours of the day (default 4; quarter-hour prices count as N × 4 quarters), optionally only above a minimum price. Outside those hours the battery stays at 0 W in RAM and charges from solar as usual. Without prices: no delivering, and the reason says so. Without a price sensor nothing changes.
+- **Reserve** (default 20 %, soft like the buffer of B37): below the reserve ZEPHYR charges from the grid in the cheapest hours before the next expensive block, just enough to reach it. In the expensive hours the reserve may be used down to the minimum SOC; it never stops delivering. 0 = off.
+- **A second controller is detected**: while live, if the set twice in 5 minutes reports limits ZEPHYR did not write, ZEPHYR stops writing, switches back to shadow mode and raises a repair notice.
+- **Flash safety net**: more than 10 flash writes per set in an hour (or 50 in 24 hours) and standby becomes 0 W in RAM until the count drops. Flash writes per cause (standby, SOC limits, write test) and `flash_paused` in the diagnostics.
+- **smartMode check**: reports with `smartMode` 0 while ZEPHYR's last command was in RAM are counted (`control.live.writes.*.smartmode_reverted_24h`).
+- Diagnostics: `control.price` with the decision (expensive now, next expensive hour, reserve charging slots).
+
 ### 0.5.0 — M4b, step 1: live control
 - **`switch.zephyr_control` ("ZEPHYR controls the battery")**, off by default. Switching it on is refused (with the reason) when the P1 is not reporting, a set is offline, reports an error or a different serial number, or a write test runs. Switching it off writes 0 W once (RAM) and then nothing more, so the current system can take over.
 - **Taking over without a dip** (B35): going live, ZEPHYR continues from the power the set delivers or charges now, not from 0 W.

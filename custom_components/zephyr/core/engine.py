@@ -62,6 +62,9 @@ class ReasonCode(StrEnum):
     RECHARGE_MIN = "recharge_min"
     TEMPERATURE = "temperature"
     CALIBRATING = "calibrating"
+    NOT_EXPENSIVE = "not_expensive"
+    NO_PRICES = "no_prices"
+    RESERVE_CHARGE = "reserve_charge"
 
 
 REASON_TEXT: dict[ReasonCode, tuple[str, str]] = {
@@ -92,6 +95,15 @@ REASON_TEXT: dict[ReasonCode, tuple[str, str]] = {
     ReasonCode.RECHARGE_MIN: ("Below the minimum SOC: recharging with {power} W.", "Onder het minimum: bijladen met {power} W."),
     ReasonCode.TEMPERATURE: ("Temperature outside the safe range ({temp} °C).", "Temperatuur buiten het veilige bereik ({temp} °C)."),
     ReasonCode.CALIBRATING: ("The set is calibrating itself.", "De set kalibreert zichzelf."),
+    ReasonCode.NOT_EXPENSIVE: (
+        "Delivering only in the most expensive hours (next from {next}).",
+        "Levert alleen in de duurste uren (volgende vanaf {next}).",
+    ),
+    ReasonCode.NO_PRICES: ("No prices: delivering paused.", "Geen prijzen: leveren staat stil."),
+    ReasonCode.RESERVE_CHARGE: (
+        "Charging {power} W from the grid to the reserve of {reserve} % (cheap hour).",
+        "Laadt {power} W uit het net tot de reserve van {reserve} % (goedkoop uur).",
+    ),
 }
 
 
@@ -155,6 +167,7 @@ class _SetState:
     full: bool = False
     empty: bool = False
     limits_checked: bool = False
+    flash_paused: bool = False
     counters: SetCounters = field(default_factory=SetCounters)
 
 
@@ -171,6 +184,8 @@ class ZephyrEngine:
         self._p1_at: float | None = None
         self._p1_interval: float | None = None
         self._block_since: float | None = None
+        self._price_block: Reason | None = None
+        self._reserve_charge: tuple[int, float] | None = None
         self._started: float | None = None
         self._p1_changed_at: float | None = None
         self._p1_gaps: deque[float] = deque(maxlen=30)
@@ -285,8 +300,24 @@ class ZephyrEngine:
 
     # --- the step ---------------------------------------------------------
 
-    def step(self, now: float, sets: Sequence[SetView], *, discharge_blocked: bool = False) -> StepResult:
+    def step(
+        self,
+        now: float,
+        sets: Sequence[SetView],
+        *,
+        discharge_blocked: bool = False,
+        price_block: Reason | None = None,
+        reserve_charge: tuple[int, float] | None = None,
+    ) -> StepResult:
+        """One control step.
+
+        ``price_block``: delivering is not allowed now because of the prices (PLAN-M4b §2.6), with
+        the reason to show. ``reserve_charge``: (power W, reserve %) to charge from the grid now.
+        Both only apply to zero-meter control.
+        """
         s = self.settings
+        self._price_block = price_block if self.mode is Mode.ZERO_METER else None
+        self._reserve_charge = reserve_charge if self.mode is Mode.ZERO_METER else None
         if self._twins is not None:
             sets = self._twin_views(now, sets)
         for view in sets:
@@ -297,7 +328,7 @@ class ZephyrEngine:
         usable = [v for v in sorted(sets, key=lambda v: v.number) if self._usable(v)]
         primary = usable[0] if usable else None
 
-        blocked = self._blocked(now, discharge_blocked)
+        blocked = self._blocked(now, discharge_blocked or self._price_block is not None)
         if self._started is None:
             self._started = now
         # Before the first P1 report, count from the start: no standby command right after a restart.
@@ -490,6 +521,12 @@ class ZephyrEngine:
             self.controller.reset(now)
             return power, Reason(ReasonCode.RECHARGE_MIN, {"power": power})
 
+        # Reserve (soft): charge from the grid in a cheap hour, up to the reserve (PLAN-M4b §2.6).
+        if self._reserve_charge is not None and charge > 0 and r.soc < self._reserve_charge[1]:
+            power = min(self._reserve_charge[0], int(charge)) // 10 * 10
+            self.controller.reset(now)
+            return power, Reason(ReasonCode.RESERVE_CHARGE, {"power": power, "reserve": round(self._reserve_charge[1])})
+
         battery = sum(v.report.battery_power_ac for v in usable if v.report is not None)
         out = self.controller.step(
             ControllerInput(
@@ -511,7 +548,7 @@ class ZephyrEngine:
             return 0, Reason(ReasonCode.SWITCHING)
         if out.demand < 0 and deliver <= 0:
             if blocked:
-                return 0, Reason(ReasonCode.BLOCKED)
+                return 0, self._price_block or Reason(ReasonCode.BLOCKED)
             if self._sets[primary.key].empty:
                 return 0, Reason(ReasonCode.EMPTY, {"soc": round(r.soc)})
             return 0, why or Reason(ReasonCode.BLOCKED)
@@ -531,7 +568,11 @@ class ZephyrEngine:
             if r is None or not view.online:
                 continue
             # First time we see the set (or settings changed): its SOC limits must match ours.
-            if not state.limits_checked:
+            flash_ok = (
+                state.counters.flash_count(now, 3600) < s.flash_limit_hour and state.counters.flash_count(now, 86400) < s.flash_limit_day
+            )
+            state.flash_paused = not flash_ok
+            if not state.limits_checked and flash_ok:
                 state.limits_checked = True
                 if r.min_soc != s.min_soc or r.max_soc != s.max_soc:
                     commands.append(Command(view.key, soc_limits_command(s.min_soc, s.max_soc), "soc_limits"))
@@ -543,6 +584,10 @@ class ZephyrEngine:
             else:
                 state.zero_since = None
             go_standby = (all_standby or (state.zero_since is not None and now - state.zero_since >= s.standby_after)) and not offgrid
+            if go_standby and not flash_ok:
+                # Flash safety net (PLAN-M4b §2.7): 0 W in RAM instead of standby in flash.
+                go_standby = False
+                target = 0
             if go_standby:
                 if not state.standby:
                     commands.append(Command(view.key, standby_command(), "standby"))
@@ -617,7 +662,7 @@ class ZephyrEngine:
 
     def counters(self, now: float) -> dict[str, dict[str, int]]:
         """Writes and relay switches per set over the last hour and 24 hours (B33)."""
-        return {key: state.counters.snapshot(now) for key, state in self._sets.items()}
+        return {key: state.counters.snapshot(now) | {"flash_paused": int(state.flash_paused)} for key, state in self._sets.items()}
 
     @staticmethod
     def _action(total: int, reason: Reason) -> Action:

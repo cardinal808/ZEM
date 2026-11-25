@@ -311,3 +311,18 @@ def test_going_live_takes_over_without_step_to_zero() -> None:
     powers = [c.props for c in r.commands if c.kind == "power"]
     assert r.setpoint <= -700
     assert all(p.get("outputLimit", 0) >= 700 for p in powers)
+
+
+def test_flash_safety_net_uses_ram_instead_of_standby() -> None:
+    # PLAN-M4b §2.7: after the flash limit, standby becomes 0 W in RAM.
+    from zephyr_core.settings import Settings
+
+    e = ZephyrEngine(Settings().with_changes(flash_limit_hour=2), mode=Mode.STANDBY)
+    for i in range(2):
+        e.counters_record("a", "standby", float(i))
+    r = e.step(10, [_view()])
+    kinds = [c.kind for c in r.commands]
+    assert "standby" not in kinds
+    assert any(c.kind == "power" and c.props.get("smartMode") == 1 for c in r.commands)
+    assert e.counters(10)["a"]["flash_paused"] == 1
+    assert e.counters(10)["a"]["flash_standby_24h"] == 2
