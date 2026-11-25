@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.6.0 — M5, step 1: cost log with own tariffs (B38)
+- **Cost log per quarter:** grid import and export, battery charged and delivered (AC), solar and the Nord Pool price at the start of the quarter. Costs in three situations: **actual**, **without battery** (the battery's exchange removed, netted per quarter) and **without battery and solar** (needs the solar counter). Savings split into solar (direct / exported) and battery, the battery part again into **solar via the battery** (two pools, solar and grid, conversion losses included) and the **price difference** (trade). Also in shadow mode: then it shows the costs of the current system.
+- **Own tariffs** in the options: energy tax (default €0.0916, NL 2026), supplier margin on import and on export, VAT (21 %), fixed costs per month (optional, shown next to the totals). All-in import = (market + margin + energy tax) × (1 + VAT). **Net metering** for quarters before 1-1-2027: export at market incl. VAT plus energy tax incl. VAT; export above the year's import loses that part (yearly correction in the year total). The supplier table (B28) follows.
+- **Energy:** the P1 power integrated every second (a P1 older than 10 s is a gap), or optionally the meter's kWh counters (tariff 1 + 2, suggested for DSMR), which then win. A quarter is complete when ≥ 95 % of it was measured.
+- **Entities** `sensor.zephyr_costs_today|month|year` and `sensor.zephyr_savings_today|month|year` (€, `state_class: total`, `last_reset`), with the breakdown, kWh, effective price per kWh, mean import price and quarters without price or incomplete as attributes.
+- **Action `zephyr.export_costs`** (start, end; default this month): all stored quarters as CSV in `config/zephyr/`; returns the path and the number of rows.
+- Storage: quarters per month (24 months), day totals without limit; written at unload/reload too. Diagnostics: tariffs, pools, today, this month, the last 8 quarters. Test dashboard: a cost card.
+- Specification: `SPEC-kosten` (replaces SPEC-planner §8). Plan fields (planned action and cost) are stored empty until the planner.
+
 ### 0.5.4 — fix: live control over- and undershot
 - **Seen in the second live test (25-11, 0.5.3):** the start was right (no doubling), but then 510 → 940 W (export ~440 W), back to 390 W, 140 W (import ~340 W), and so on.
 - **Cause:** 0.5.3 compared the set's report with the P1 value of 1.5 s earlier, assuming the report always lags that much. Here the report was nearly fresh, so a new battery value was set against an old P1 value from before the set had started.

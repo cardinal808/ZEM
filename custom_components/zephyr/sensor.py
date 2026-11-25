@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -23,6 +24,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from . import ZephyrConfigEntry, ZephyrRuntime
 from .control import ZephyrControl
@@ -30,7 +32,8 @@ from .coordinator import SetCoordinator, SetData
 from .core.engine import Action
 from .core.models import SetStatus
 from .core.totals import Totals
-from .entity import ZephyrControlEntity, ZephyrSetEntity, ZephyrTotalEntity
+from .cost_recorder import CostRecorder
+from .entity import ZephyrControlEntity, ZephyrSetEntity, ZephyrTotalEntity, installation_device
 
 StateValue = float | int | str | None
 
@@ -212,6 +215,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async
     async_add_entities(ZephyrTotalSensor(runtime, entry, d) for d in TOTAL_SENSORS)
     assert runtime.control is not None
     async_add_entities(ZephyrControlSensor(runtime, entry, d) for d in CONTROL_SENSORS)
+    if runtime.costs is not None:
+        async_add_entities(ZephyrCostSensor(runtime.costs, entry, kind, period) for kind in ("costs", "savings") for period in COST_PERIODS)
     for subentry_id, coordinator in runtime.coordinators.items():
         async_add_entities(
             [
@@ -401,3 +406,49 @@ class ZephyrSetCounterSensor(ZephyrSetEntity, SensorEntity):
             if "relay_24h" not in counts:
                 return {"relay_reported": False, "sent": not self._control.shadow}
         return {k: counts.get(k, 0) for k in keys} | {"sent": not self._control.shadow}
+
+
+COST_PERIODS = ("today", "month", "year")
+
+
+class ZephyrCostSensor(SensorEntity):
+    """Costs or savings of today, this month or this year (B38). € incl. VAT, without fixed costs."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_native_unit_of_measurement = "EUR"
+    _attr_state_class = SensorStateClass.TOTAL
+    _attr_suggested_display_precision = 2
+
+    def __init__(self, costs: CostRecorder, entry: ZephyrConfigEntry, kind: str, period: str) -> None:
+        self._costs = costs
+        self._kind = kind
+        self._period = period
+        key = f"{kind}_{period}"
+        self._attr_unique_id = f"{entry.entry_id}_{key}"
+        self._attr_translation_key = key
+        self.entity_id = f"sensor.zephyr_{key}"
+        self._attr_device_info = installation_device(entry)
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self._costs.async_add_listener(self._handle_update))
+
+    @callback
+    def _handle_update(self) -> None:
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self) -> float | None:
+        summary = self._costs.summary(self._period)
+        value = summary.cost if self._kind == "costs" else summary.savings
+        return None if value is None else round(value, 2)
+
+    @property
+    def last_reset(self) -> datetime:
+        first, _ = self._costs.period(self._period)
+        return dt_util.start_of_local_day(first)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {**self._costs.summary(self._period).as_dict(), "tariffs": self._costs.tariffs.source}

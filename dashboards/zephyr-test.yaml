@@ -132,3 +132,23 @@ views:
             name: Flash-vangnet actief
           - entity: sensor.zephyr_set_1_switch_count
             name: Relaisschakelingen
+
+      - type: entities
+        title: Kosten (B38)
+        entities:
+          - entity: sensor.zephyr_costs_today
+            name: Kosten vandaag
+          - entity: sensor.zephyr_savings_today
+            name: Besparing vandaag
+          - type: attribute
+            entity: sensor.zephyr_savings_today
+            attribute: savings_battery
+            name: waarvan accu
+          - type: attribute
+            entity: sensor.zephyr_savings_today
+            attribute: savings_trade
+            name: waarvan prijsverschil
+          - entity: sensor.zephyr_costs_month
+            name: Kosten deze maand
+          - entity: sensor.zephyr_savings_month
+            name: Besparing deze maand

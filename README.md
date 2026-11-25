@@ -42,6 +42,12 @@ Requirements: HEMS turned off in the Zendure app; Home Assistant 2026.1 or newer
 - **Write test:** action `zephyr.test_command` (for example `power: -300` = deliver 300 W for 60 s, then standby), only in shadow mode with the mode Standby.
 - **Test dashboard:** [`dashboards/zephyr-test.yaml`](dashboards/zephyr-test.yaml) with the switch, the mode, write-test buttons, a graph and the counters. Add it: *Settings → Dashboards → Add dashboard*, open it, ⋮ → *Edit dashboard* → ⋮ → *Raw configuration editor*, and paste the file. Counters missing? Enable `sensor.zephyr_set_1_write_count` and `…_switch_count` (off by default in installations from before 0.5.2).
 
+## Cost log (0.6)
+- Per quarter: import, export, battery charged/delivered, solar and the Nord Pool price, with the costs **actual**, **without battery** and **without battery and solar**. Also in shadow mode (then: the costs of your current setup).
+- Enter your **own tariffs** in the options: energy tax (Netherlands 2026: €0.0916), supplier margins for import and export, VAT and optionally the fixed costs per month. A list of suppliers follows. Net metering (until the end of 2026) is included and settled per year.
+- Optionally the meter's kWh counters (tariff 1 and 2) for import and export; without them ZEPHYR integrates the P1 power. With a solar counter also the savings from solar.
+- Entities: `sensor.zephyr_costs_today|month|year` and `sensor.zephyr_savings_today|month|year` (€), with the breakdown as attributes. Action `zephyr.export_costs` writes the quarters as CSV to `config/zephyr/`.
+
 ## Supported sets and batteries
 - Sets with the local zenSDK API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro and 4000 AC+. Tested so far: 2400 Pro and 2400 AC+. Turn HEMS off in the Zendure app.
 - Batteries are recognised by their serial number: AB1000, AB1000S, AB2000(S/X), AB3000X, AB3000L and the built-in batteries of the 2400 Pro, 2400 AC+, 4000 AC+ and AIO 2400.

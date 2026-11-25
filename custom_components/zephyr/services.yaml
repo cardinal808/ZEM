@@ -18,3 +18,13 @@ test_command:
           max: 60
           unit_of_measurement: s
           mode: box
+export_costs:
+  fields:
+    start:
+      required: false
+      selector:
+        date:
+    end:
+      required: false
+      selector:
+        date:

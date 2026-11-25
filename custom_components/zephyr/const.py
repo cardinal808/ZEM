@@ -42,3 +42,12 @@ MANUFACTURER: Final = "Zendure"
 
 CONF_MIN_SOC = "min_soc"
 CONF_MAX_SOC = "max_soc"
+
+# Cost log (B38): own tariffs, €/kWh excl. VAT. The tariff table (B28) follows.
+CONF_TARIFF_ENERGY_TAX: Final = "tariff_energy_tax"
+CONF_TARIFF_VAT: Final = "tariff_vat"
+CONF_TARIFF_MARKUP_IMPORT: Final = "tariff_markup_import"
+CONF_TARIFF_MARKUP_EXPORT: Final = "tariff_markup_export"
+CONF_TARIFF_FIXED_MONTH: Final = "tariff_fixed_month"
+CONF_COST_IMPORT_COUNTERS: Final = "cost_import_counters"
+CONF_COST_EXPORT_COUNTERS: Final = "cost_export_counters"

@@ -41,6 +41,12 @@ Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 - **Schrijftest:** actie `zephyr.test_command` (bijvoorbeeld `power: -300` = 60 s 300 W leveren, daarna standby), alleen in de schaduwmodus met de modus Standby.
 - **Testdashboard:** [`dashboards/zephyr-test.yaml`](dashboards/zephyr-test.yaml) met de schakelaar, de modus, knoppen voor de schrijftest, een grafiek en de tellers. Toevoegen: *Instellingen → Dashboards → Dashboard toevoegen*, openen, ⋮ → *Dashboard bewerken* → ⋮ → *Ruwe configuratie-editor*, en het bestand plakken. Tellers niet zichtbaar? Schakel `sensor.zephyr_set_1_write_count` en `…_switch_count` in (bij installaties van vóór 0.5.2 staan ze standaard uit).
 
+## Kostenlogboek (0.6)
+- Per kwartier: afname, teruglevering, accu geladen/geleverd, zon en de Nord Pool-prijs, met de kosten **werkelijk**, **zonder accu** en **zonder accu en zon**. Werkt ook in de schaduwmodus (dan: de kosten van je huidige systeem).
+- Vul in de opties je **eigen tarieven** in: energiebelasting (2026: €0,0916), opslag inkoop en teruglevering, btw en eventueel de vaste kosten per maand. Een lijst met leveranciers volgt. Saldering (t/m 2026) wordt meegerekend en per jaar verrekend.
+- Optioneel de kWh-tellers van je meter (tarief 1 en 2) voor afname en teruglevering; zonder tellers integreert ZEPHYR het P1-vermogen. Met een zonteller ook de besparing door de zon.
+- Entiteiten: `sensor.zephyr_costs_today|month|year` en `sensor.zephyr_savings_today|month|year` (€), met de uitsplitsing als attributen. Actie `zephyr.export_costs` schrijft de kwartieren als CSV naar `config/zephyr/`.
+
 ## Ondersteunde sets en accu's
 - Sets met de lokale zenSDK-API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro en 4000 AC+. Tot nu toe getest: 2400 Pro en 2400 AC+. Zet HEMS uit in de Zendure-app.
 - Accu's worden herkend aan hun serienummer: AB1000, AB1000S, AB2000(S/X), AB3000X, AB3000L en de ingebouwde accu's van de 2400 Pro, 2400 AC+, 4000 AC+ en AIO 2400.
