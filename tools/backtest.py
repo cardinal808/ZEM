@@ -38,6 +38,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import sim  # noqa: E402,F401  (loads the core as zephyr_core)
 from zephyr_core.costs import Tariffs  # noqa: E402
+from zephyr_core.load_profile import WEEKEND, WORKDAY, LoadProfile  # noqa: E402
 from zephyr_core.planner import Action, Battery, PlannerSettings, Slot, plan, step  # noqa: E402
 from zephyr_core.tariff_table import parse_table  # noqa: E402
 
@@ -179,37 +180,100 @@ def simulate(name: str, quarters: list[Quarter], tariffs: Tariffs, battery: Batt
     return res
 
 
-def planner_strategy(tariffs: Tariffs, battery: Battery, cfg: PlannerSettings) -> Strategy:
-    """Replans when new prices come (13:00 local) and when the plan runs out."""
+class Forecaster:
+    """What the planner knows about consumption and solar (SPEC-planner §2.2, §2.3).
+
+    * ``perfect``: the real values (yardstick);
+    * ``learned`` load: the learned profile per hour (workday/weekend) with steering, learned online;
+    * ``yesterday`` solar: the solar of the same quarter one day earlier (a simple, pessimistic stand-in
+      for a forecast; a real forecast such as Solcast should do better).
+    """
+
+    def __init__(self, quarters: list[Quarter], load: str, solar: str) -> None:
+        self.quarters = quarters
+        self.load_mode, self.solar_mode = load, solar
+        self.profile = LoadProfile()
+        self.by_start = {q.start: q for q in quarters}
+        self._learned_until = 0
+        self._hour_kwh = 0.0
+
+    @property
+    def perfect(self) -> bool:
+        return self.load_mode == "perfect" and self.solar_mode == "perfect"
+
+    @staticmethod
+    def day_type(local: datetime) -> str:
+        return WEEKEND if local.weekday() >= 5 else WORKDAY
+
+    def learn_until(self, i: int) -> None:
+        """Feed the measured quarters before ``i`` into the profile (per full hour)."""
+        while self._learned_until < i:
+            q = self.quarters[self._learned_until]
+            self._hour_kwh += q.load
+            local = q.start.astimezone(TZ)
+            if local.minute == 45:
+                self.profile.learn(self.day_type(local), local.hour, self._hour_kwh)
+                self._hour_kwh = 0.0
+            self._learned_until += 1
+
+    def load(self, i: int, j: int) -> float:
+        q = self.quarters[j]
+        if self.load_mode == "perfect":
+            return q.load
+        local = q.start.astimezone(TZ)
+        ahead = (q.start - self.quarters[i].start).total_seconds() / 3600
+        return self.profile.forecast(self.day_type(local), local.hour, ahead) / 4
+
+    def solar(self, i: int, j: int) -> float:
+        q = self.quarters[j]
+        if self.solar_mode == "perfect" or j == i:
+            return q.solar  # the running quarter: the controller follows the real solar
+        yesterday = self.by_start.get(q.start - timedelta(days=1))
+        return yesterday.solar if yesterday else q.solar
+
+
+def planner_strategy(tariffs: Tariffs, battery: Battery, cfg: PlannerSettings, forecaster: Forecaster | None = None) -> Strategy:
+    """Replans when new prices come (13:00 local), when the plan runs out and, with forecasts, every hour."""
     cache: dict[str, object] = {"start": -1, "actions": []}
 
     def horizon(quarters: list[Quarter], i: int) -> list[Slot]:
         now = quarters[i].start.astimezone(TZ)
         known_until = now.date() + timedelta(days=2 if now.hour >= 13 else 1)
         slots: list[Slot] = []
-        by_start = {q.start: q for q in quarters[i : i + 200]}
+        by_start = {q.start: q for q in quarters[max(i - 100, 0) : i + 200]}
+
+        def known(j: int) -> tuple[float, float]:
+            if forecaster is None:
+                return quarters[j].load, quarters[j].solar
+            return forecaster.load(i, j), forecaster.solar(i, j)
+
         j = i
         while j < len(quarters) and quarters[j].start.astimezone(TZ).date() < known_until:
             q = quarters[j]
-            sell, _ = tariffs.sell(q.market, q.start, q.solar > 0)
-            slots.append(Slot(0.25, tariffs.buy(q.market), sell, q.load, q.solar))
+            load, sun = known(j)
+            sell, _ = tariffs.sell(q.market, q.start, sun > 0)
+            slots.append(Slot(0.25, tariffs.buy(q.market), sell, load, sun))
             j += 1
         if now.hour < 13:
-            # Tomorrow unknown: today's pattern as indicative prices, real consumption and solar.
+            # Tomorrow unknown: today's pattern as indicative prices.
             while j < len(quarters) and quarters[j].start.astimezone(TZ).date() < known_until + timedelta(days=1):
                 q = quarters[j]
                 same = by_start.get(q.start - timedelta(days=1))
                 market = same.market if same else q.market
-                sell, _ = tariffs.sell(market, q.start, q.solar > 0)
-                slots.append(Slot(0.25, tariffs.buy(market), sell, q.load, q.solar))
+                load, sun = known(j)
+                sell, _ = tariffs.sell(market, q.start, sun > 0)
+                slots.append(Slot(0.25, tariffs.buy(market), sell, load, sun))
                 j += 1
         return slots
 
     def choose(quarters: list[Quarter], i: int, energy: float, prev: Action) -> Action:
         local = quarters[i].start.astimezone(TZ)
+        if forecaster is not None:
+            forecaster.learn_until(i)
         start = int(cache["start"])  # type: ignore[call-overload]
         actions: list[Action] = cache["actions"]  # type: ignore[assignment]
-        if start < 0 or i - start >= len(actions) or (local.hour == 13 and local.minute == 0):
+        hourly = forecaster is not None and not forecaster.perfect and local.minute == 0
+        if start < 0 or i - start >= len(actions) or (local.hour == 13 and local.minute == 0) or hourly:
             result = plan(horizon(quarters, i), battery, energy, cfg, prev)
             cache["start"], cache["actions"] = i, result.actions
             start, actions = i, result.actions
@@ -228,6 +292,10 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--power", type=float, default=2.4, help="kW charge and deliver")
     ap.add_argument("--eta", type=float, default=0.93, help="efficiency per direction")
     ap.add_argument("--supplier", default="zonneplan")
+    ap.add_argument("--load", choices=["perfect", "learned"], default="perfect", help="consumption the planner knows")
+    ap.add_argument("--sun", choices=["perfect", "yesterday"], default="perfect", help="solar the planner knows")
+    ap.add_argument("--rules", choices=["both", "2026", "2027"], default="both")
+    ap.add_argument("--quick", action="store_true", help="only no battery, zero meter and the planner with wear")
     ap.add_argument(
         "--wear", type=float, default=0.03, help="€ per kWh out of the battery (PU3), for the 'incl. wear' column and the wear runs"
     )
@@ -246,23 +314,27 @@ def main(argv: list[str] | None = None) -> None:
         f"house {load:.0f} kWh, solar {solar:.0f} kWh, battery {args.capacity} kWh / {args.power} kW, η {args.eta}"
     )
     rules = {"2026 (net metering)": base, "2027 (no net metering)": replace(base, saldering_until=date(2000, 1, 1))}
+    if args.rules != "both":
+        rules = {k: v for k, v in rules.items() if k.startswith(args.rules)}
+    print(f"planner knows: consumption {args.load}, solar {args.sun}")
     for label, tariffs in rules.items():
         print(f"\n{label}, {base.source}")
         w = args.wear
+
+        def run(name: str, cfg: PlannerSettings, tariffs: Tariffs = tariffs) -> Result:
+            forecaster = Forecaster(quarters, args.load, args.sun)
+            return simulate(name, quarters, tariffs, battery, planner_strategy(tariffs, battery, cfg, forecaster))
+
         runs = [
             simulate("no battery", quarters, tariffs, None, None),
             simulate("zero meter (N always)", quarters, tariffs, battery, lambda *_: Action.DELIVER),
-            simulate("planner", quarters, tariffs, battery, planner_strategy(tariffs, battery, PlannerSettings())),
-            simulate(f"planner, wear {w}", quarters, tariffs, battery, planner_strategy(tariffs, battery, PlannerSettings(wear_cost=w))),
-            simulate("planner + X", quarters, tariffs, battery, planner_strategy(tariffs, battery, PlannerSettings(allow_export=True))),
-            simulate(
-                f"planner + X, wear {w}",
-                quarters,
-                tariffs,
-                battery,
-                planner_strategy(tariffs, battery, PlannerSettings(allow_export=True, wear_cost=w)),
-            ),
         ]
+        if not args.quick:
+            runs.append(run("planner", PlannerSettings()))
+        runs.append(run(f"planner, wear {w}", PlannerSettings(wear_cost=w)))
+        if not args.quick:
+            runs.append(run("planner + X", PlannerSettings(allow_export=True)))
+            runs.append(run(f"planner + X, wear {w}", PlannerSettings(allow_export=True, wear_cost=w)))
         ref = runs[0].total()
         print(
             f"  {'strategy':24} {'cost €':>9} {'saving €':>9} {'+wear €':>9} {'import':>8} {'export':>8} "
