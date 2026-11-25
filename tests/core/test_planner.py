@@ -26,7 +26,7 @@ def objective(slots: list[Slot], actions: tuple[Action, ...], battery: Battery, 
         if group is Action.HOLD and prev is not Action.HOLD:
             total += cfg.hold_start_cost
         r = step(slot, battery, energy, a)
-        total += r.cost
+        total += r.cost + cfg.wear_cost * r.delivered
         energy, prev = r.energy_after, group
     end_price = min(s.buy for s in slots) * (1.0 if cfg.allow_export else battery.eta_out)
     return total - energy * end_price
@@ -46,10 +46,10 @@ def _random_slots(rng: random.Random, n: int) -> list[Slot]:
     return out
 
 
-@pytest.mark.parametrize("allow_export", [False, True])
-def test_within_half_a_cent_of_brute_force(allow_export: bool) -> None:
+@pytest.mark.parametrize(("allow_export", "wear"), [(False, 0.0), (True, 0.0), (True, 0.04)])
+def test_within_half_a_cent_of_brute_force(allow_export: bool, wear: float) -> None:
     rng = random.Random(7)
-    cfg = PlannerSettings(steps=100, allow_export=allow_export)
+    cfg = PlannerSettings(steps=100, allow_export=allow_export, wear_cost=wear)
     for _ in range(12):
         slots = _random_slots(rng, 6 if allow_export else 7)
         energy = rng.uniform(0, BAT.capacity_kwh)
@@ -93,3 +93,10 @@ def test_two_days_of_quarters_in_under_a_second() -> None:
     start = time.perf_counter()
     plan(slots, Battery(9.4, 2.4, 2.4), 5.0, PlannerSettings(steps=40))
     assert time.perf_counter() - start < 1.0
+
+
+def test_wear_cost_stops_cycling_for_a_small_spread() -> None:
+    # Spread 0.10 → 0.30: worth cycling without wear, not with €0.25/kWh wear.
+    slots = [Slot(1.0, 0.10, 0.0, 0.3, 0.0)] * 4 + [Slot(1.0, 0.30, 0.15, 0.8, 0.0)] * 4
+    assert Action.CHARGE in plan(slots, Battery(4.0, 2.4, 2.4), 0.0).actions
+    assert Action.CHARGE not in plan(slots, Battery(4.0, 2.4, 2.4), 0.0, PlannerSettings(wear_cost=0.25)).actions

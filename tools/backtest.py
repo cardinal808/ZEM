@@ -228,6 +228,9 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--power", type=float, default=2.4, help="kW charge and deliver")
     ap.add_argument("--eta", type=float, default=0.93, help="efficiency per direction")
     ap.add_argument("--supplier", default="zonneplan")
+    ap.add_argument(
+        "--wear", type=float, default=0.03, help="€ per kWh out of the battery (PU3), for the 'incl. wear' column and the wear runs"
+    )
     args = ap.parse_args(argv)
 
     quarters = build_quarters(args.prices, args.p1, args.solar, args.battery)
@@ -245,18 +248,30 @@ def main(argv: list[str] | None = None) -> None:
     rules = {"2026 (net metering)": base, "2027 (no net metering)": replace(base, saldering_until=date(2000, 1, 1))}
     for label, tariffs in rules.items():
         print(f"\n{label}, {base.source}")
-        with_x = PlannerSettings(allow_export=True)
+        w = args.wear
         runs = [
             simulate("no battery", quarters, tariffs, None, None),
             simulate("zero meter (N always)", quarters, tariffs, battery, lambda *_: Action.DELIVER),
             simulate("planner", quarters, tariffs, battery, planner_strategy(tariffs, battery, PlannerSettings())),
-            simulate("planner + export (X)", quarters, tariffs, battery, planner_strategy(tariffs, battery, with_x)),
+            simulate(f"planner, wear {w}", quarters, tariffs, battery, planner_strategy(tariffs, battery, PlannerSettings(wear_cost=w))),
+            simulate("planner + X", quarters, tariffs, battery, planner_strategy(tariffs, battery, PlannerSettings(allow_export=True))),
+            simulate(
+                f"planner + X, wear {w}",
+                quarters,
+                tariffs,
+                battery,
+                planner_strategy(tariffs, battery, PlannerSettings(allow_export=True, wear_cost=w)),
+            ),
         ]
         ref = runs[0].total()
-        print(f"  {'strategy':24} {'cost €':>9} {'saving €':>9} {'import':>8} {'export':>8} {'grid→bat':>9} {'bat out':>8} {'starts':>7}")
+        print(
+            f"  {'strategy':24} {'cost €':>9} {'saving €':>9} {'+wear €':>9} {'import':>8} {'export':>8} "
+            f"{'grid→bat':>9} {'bat out':>8} {'starts':>7}"
+        )
         for r in runs:
             print(
-                f"  {r.name:24} {r.total():9.2f} {ref - r.total():9.2f} {r.grid_import:8.0f} {r.grid_export:8.0f} "
+                f"  {r.name:24} {r.total():9.2f} {ref - r.total():9.2f} {r.total() + w * r.battery_out:9.2f} "
+                f"{r.grid_import:8.0f} {r.grid_export:8.0f} "
                 f"{r.grid_charged:9.0f} {r.battery_out:8.0f} {r.charge_starts:7d}"
             )
 
