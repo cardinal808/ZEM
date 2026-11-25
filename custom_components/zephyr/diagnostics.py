@@ -76,6 +76,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
             if result
             else None,
             "p1_filter": {"step_holds": control.engine.grid_filter.holds},
+            "twin": control.engine.twin_summary(),
             "counters": {
                 runtime.coordinators[key].number: counts
                 for key, counts in control.engine.counters(time.monotonic()).items()

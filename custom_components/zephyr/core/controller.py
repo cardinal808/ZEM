@@ -71,6 +71,8 @@ class ZeroMeterController:
     def __init__(self, settings: Settings, *, trust_commands: bool = True) -> None:
         self.settings = settings
         self.trust_commands = trust_commands
+        self.extra_settle = 0.0
+        """s added to the settling time (shadow mode with the twin: the virtual grid lags)."""
         self.followed_battery = False
         """Shadow mode: the last step took over the measured battery power (no write needed)."""
         """False in shadow mode: commands are not carried out."""
@@ -115,7 +117,9 @@ class ZeroMeterController:
         if self._prev_setpoint * self.setpoint < 0:
             ramp = abs(self.setpoint)
         settle = ramp / s.ramp_up_rate + s.report_lag + (s.startup_time if starting and self.setpoint != 0 else 0.0)
-        return max(s.min_settle, settle, p1_interval)
+        # The extra lag only matters after a real change (not after a reset to 0).
+        extra = self.extra_settle if self.setpoint != self._prev_setpoint else 0.0
+        return max(s.min_settle, settle, p1_interval) + extra
 
     def _effective_battery(self, inp: ControllerInput, settling: bool) -> float:
         """The battery power the controller starts from.

@@ -27,7 +27,7 @@
 Requirements: HEMS turned off in the Zendure app; Home Assistant 2026.1 or newer.
 
 ## What you get in 0.3
-- Shadow mode: `sensor.zephyr_setpoint` (what ZEPHYR would ask of the battery, + charging, − delivering), `sensor.zephyr_action`, `sensor.zephyr_reason` (in plain language), `select.zephyr_mode`, `binary_sensor.zephyr_p1_ok`, and per set `sensor.zephyr_set_1_setpoint`. Nothing is sent to the battery.
+- Shadow mode: `sensor.zephyr_setpoint` (what ZEPHYR would ask of the battery, + charging, − delivering), `sensor.zephyr_action`, `sensor.zephyr_reason` (in plain language), `select.zephyr_mode`, `binary_sensor.zephyr_p1_ok`, and per set `sensor.zephyr_set_1_setpoint`. Nothing is sent to the battery. ZEPHYR computes with a virtual set that carries out its own commands, in place of the real set that your current system drives; the diagnostics compare grid import and export of both (`control.twin`).
 - The decision log is in the diagnostics download.
 - Per set: state of charge, battery power (+ charging, − delivering), charge and delivery power, solar power, status, capacity (from the packs), temperature, online and fault.
 - Totals over all sets: state of charge (weighted by capacity), energy stored, capacity, power, sets online.

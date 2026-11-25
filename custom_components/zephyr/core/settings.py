@@ -69,6 +69,12 @@ class Settings:
     deviation_time: float = 15.0
     """... when it lasts this many seconds."""
 
+    # Shadow mode
+    twin_delay: float = 1.5
+    """s the virtual grid of the twin lags (core/twin.py). The real set's power is known from a
+    report 1-3 s old; P1 and the twin are taken this much earlier to match it. Simulation with
+    another controller driving the set: 0 s gave 166-303 writes against 98 live, 1.5 s 86-110."""
+
     # P1 meter
     p1_stale_after: float = 10.0
     """s without a P1 report before the setpoint goes to 0 (at least 2.5 meter intervals)."""
@@ -123,6 +129,7 @@ class Settings:
             "step_window": (0, 10),
             "noise_band": (0, 300),
             "noise_window": (0, 30),
+            "twin_delay": (0, 5),
         }
         for name, (lo, hi) in checks.items():
             value = getattr(self, name)

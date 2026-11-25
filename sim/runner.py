@@ -41,6 +41,8 @@ class Trace:
     setpoint: list[int] = field(default_factory=list)
     soc: list[float] = field(default_factory=list)
     results: list[tuple[float, StepResult]] = field(default_factory=list)
+    shadow: list[tuple[float, StepResult]] = field(default_factory=list)
+    """Results of the observer (shadow mode), when there is one."""
 
 
 @dataclass
@@ -61,6 +63,8 @@ class Simulation:
     write_delay: float = 0.2
     dt: float = 0.1
     discharge_blocked: Callable[[float], bool] = field(default_factory=lambda: lambda t: False)
+    observer: ZephyrEngine | None = None
+    """A second engine in shadow mode: sees the same P1 and reports, its commands go nowhere."""
     engine: ZephyrEngine = field(init=False)
 
     def __post_init__(self) -> None:
@@ -96,6 +100,8 @@ class Simulation:
                 next_p1 += self.p1_interval + (rng.uniform(-self.p1_jitter, self.p1_jitter) if self.p1_jitter else 0.0)
                 if not any(a <= self.now < b for a, b in self.p1_outages):
                     self.engine.p1_reported(self.now, self.grid())
+                    if self.observer is not None:
+                        self.observer.p1_reported(self.now, self.grid())
                 due_step = self.step_interval is None
             if self.step_interval is not None and self.now >= next_step:
                 next_step += self.step_interval
@@ -106,6 +112,8 @@ class Simulation:
                 for cmd in result.commands:
                     pending.append((self.now + self.write_delay, int(cmd.key), cmd.props))
                 trace.results.append((self.now, result))
+                if self.observer is not None:
+                    trace.shadow.append((self.now, self.observer.step(self.now, views)))
                 trace.setpoint.append(result.setpoint)
                 if result.mode_finished:
                     self.engine.set_mode(Mode.ZERO_METER, self.now)
