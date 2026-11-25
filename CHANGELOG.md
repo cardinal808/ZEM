@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.7.3 — learned consumption profile; backtest with forecasts
+- **`core/load_profile.py`** (SPEC-planner §2.3): consumption per hour of the day, separately for workdays and weekends, as a running mean (memory about 4 working weeks / 5 weekends); an hour value counts after 3 (workday) or 2 (weekend) measurements, before that the daily mean / 24; steering on the last 3 hours (ratio bounded 0.6–1.6, half of it left after 2 hours). Stored as a plain dict, so a reset is immediate. Not yet in Home Assistant.
+- **Backtest:** `--load learned` (profile learned online, replanning every hour) and `--sun yesterday` (yesterday's solar as a simple, pessimistic forecast); `--rules`, `--quick`.
+- Measured (2-2 to 18-11, wear €0.03, cost incl. wear): the planner stays ahead of zero meter with forecasts — 2026: perfect €149.82, learned consumption €152.69, plus yesterday's solar €159.14 (zero meter €204.84); 2027: €230.15 / €234.96 / €243.78 (zero meter €265.41). Details in the project (BACKTEST-1).
+
 ### 0.7.2 — fix: a slow start was taken for a second controller
 - **Seen 26-11 (0.6.2):** with the previous system off, ZEPHYR went live three times and was back in shadow mode within 9 s each time ("another system controls the set"), before the set delivered anything.
 - **Cause:** the set was in standby. After ZEPHYR's command (730 W) it kept reporting its old limits (output 0 W, `smartMode` 0) until the relay had closed, which takes 9–17 s from 0 W. The check for a second controller looked at the reports 6 s after a write and counted two such reports as someone else writing; the same reports were also counted as "smartMode reverted".
