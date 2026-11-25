@@ -162,6 +162,9 @@
       },
       "p1_ok": {
         "name": "P1 meter"
+      },
+      "expensive_hour": {
+        "name": "Expensive hour (delivering allowed)"
       }
     },
     "select": {

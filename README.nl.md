@@ -12,7 +12,7 @@
 
 **ZEPHYR** is een Home Assistant-integratie (HACS) voor thuisaccu's van Zendure. ZEPHYR stuurt één tot drie Zendure-sets lokaal aan via de zenSDK-API, houdt de P1-meter op nul en plant per kwartier laden en leveren op basis van dynamische prijzen en de zonverwachting.
 
-> **Status: in ontwikkeling (0.4, schaduwmodus).** ZEPHYR leest je Zendure-sets uit en rekent elke seconde uit wat het zou doen om je meter op nul te houden, maar stuurt de accu **nog niet** aan. Het kan veilig naast een bestaand systeem draaien, zodat je kunt vergelijken.
+> **Status: in ontwikkeling (0.5, testfase live sturen).** Standaard draait ZEPHYR in de schaduwmodus: het leest je Zendure-sets uit en rekent elke seconde uit wat het zou doen, zonder de accu aan te sturen, zodat je veilig kunt vergelijken met je huidige systeem. Met de schakelaar **"ZEPHYR stuurt de accu"** (`switch.zephyr_control`) stuurt ZEPHYR de accu echt aan in de modus Nul op de meter. Zet dan eerst je huidige aansturing uit.
 
 > **Overstappen van ZEM (0.3.x)?** De integratie heeft een nieuwe naam en het domein is veranderd van `zem` naar `zephyr`. Verwijder in HACS de integratie ZEM en de oude custom repository, voeg `https://github.com/cardinal808/ZEPHYR` toe, installeer ZEPHYR, herstart Home Assistant en voeg ZEPHYR opnieuw toe. De entiteiten heten nu `sensor.zephyr_…`.
 
@@ -33,6 +33,13 @@ Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 - Diagnose-download met verborgen serienummers en IP-adressen.
 
 [English](README.md)
+
+## Live sturen (0.5, testfase)
+- **Schakelaar** `switch.zephyr_control`, standaard uit. Aanzetten lukt alleen als de P1 meldt en de set online is zonder fout; ZEPHYR gaat verder vanaf wat de set nu doet (geen dip). Uitzetten: één keer 0 W, daarna neemt je huidige systeem het weer over. Na een herstart blijft de schakelaar uit (optie *Live sturen uit na herstart*, standaard aan tijdens de testfase).
+- **Alleen leveren in de duurste uren** (optioneel): kies in de opties een Nord Pool-prijssensor. ZEPHYR levert dan alleen in de N duurste uren van de dag (standaard 4) en laadt verder alleen met zon. **Reserve** (standaard 20 %): zit de accu eronder, dan laadt ZEPHYR bij in de goedkoopste uren vóór het volgende dure blok; in de dure uren mag de reserve gewoon gebruikt worden.
+- **Veiligheid:** stuurt een ander systeem de set, dan stopt ZEPHYR met schrijven en meldt dat. Te veel schrijfacties naar flash: standby wordt 0 W in RAM. HA stopt: eerst alle sets 0 W.
+- **Schrijftest:** actie `zephyr.test_command` (bijvoorbeeld `power: -300` = 60 s 300 W leveren, daarna standby), alleen in de schaduwmodus met de modus Standby.
+- **Testdashboard:** [`dashboards/zephyr-test.yaml`](dashboards/zephyr-test.yaml) met de schakelaar, de modus, knoppen voor de schrijftest, een grafiek en de tellers. Toevoegen: *Instellingen → Dashboards → Dashboard toevoegen*, openen, ⋮ → *Dashboard bewerken* → ⋮ → *Ruwe configuratie-editor*, en het bestand plakken. Tellers niet zichtbaar? Schakel `sensor.zephyr_set_1_write_count` en `…_switch_count` in (bij installaties van vóór 0.5.2 staan ze standaard uit).
 
 ## Ondersteunde sets en accu's
 - Sets met de lokale zenSDK-API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro en 4000 AC+. Tot nu toe getest: 2400 Pro en 2400 AC+. Zet HEMS uit in de Zendure-app.

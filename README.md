@@ -12,7 +12,7 @@
 
 **ZEPHYR** is a Home Assistant integration (HACS) for Zendure home batteries. It controls one to three Zendure sets locally through the zenSDK API, keeps the grid meter at zero, and plans charging and discharging per quarter hour from dynamic prices and solar forecasts.
 
-> **Status: in development (0.4, shadow mode).** ZEPHYR reads your Zendure sets and calculates, second by second, what it would do to keep your grid meter at zero, but it does **not** control the battery yet. It can safely run next to an existing setup, so you can compare.
+> **Status: in development (0.5, live control in test).** By default ZEPHYR runs in shadow mode: it reads your Zendure sets and computes every second what it would do, without controlling the battery, so you can compare safely with your current system. With the switch **"ZEPHYR controls the battery"** (`switch.zephyr_control`) ZEPHYR really controls the battery in zero-meter mode. Switch off your current control first.
 
 > **Upgrading from ZEM (0.3.x)?** The integration was renamed and its domain changed from `zem` to `zephyr`. Remove the ZEM integration and the old custom repository in HACS, add `https://github.com/cardinal808/ZEPHYR`, install ZEPHYR, restart Home Assistant and add it again. Entities are now `sensor.zephyr_…`.
 
@@ -34,6 +34,13 @@ Requirements: HEMS turned off in the Zendure app; Home Assistant 2026.1 or newer
 - Diagnostics download with serial numbers and IP addresses hidden.
 
 [Nederlands](README.nl.md)
+
+## Live control (0.5, test phase)
+- **Switch** `switch.zephyr_control`, off by default. It only switches on when the P1 reports and the set is online without a fault; ZEPHYR continues from what the set does now (no dip). Off: 0 W once, then your current system takes over again. After a restart the switch stays off (option *Live control off after a restart*, on by default during the test phase).
+- **Deliver only in the most expensive hours** (optional): choose a Nord Pool price sensor in the options. ZEPHYR then delivers only in the N most expensive hours of the day (default 4) and otherwise only charges from solar. **Reserve** (default 20 %): below it ZEPHYR charges in the cheapest hours before the next expensive block; in the expensive hours the reserve may be used.
+- **Safety:** if another system controls the set, ZEPHYR stops writing and says so. Too many flash writes: standby becomes 0 W in RAM. Home Assistant stops: all sets 0 W first.
+- **Write test:** action `zephyr.test_command` (for example `power: -300` = deliver 300 W for 60 s, then standby), only in shadow mode with the mode Standby.
+- **Test dashboard:** [`dashboards/zephyr-test.yaml`](dashboards/zephyr-test.yaml) with the switch, the mode, write-test buttons, a graph and the counters. Add it: *Settings → Dashboards → Add dashboard*, open it, ⋮ → *Edit dashboard* → ⋮ → *Raw configuration editor*, and paste the file. Counters missing? Enable `sensor.zephyr_set_1_write_count` and `…_switch_count` (off by default in installations from before 0.5.2).
 
 ## Supported sets and batteries
 - Sets with the local zenSDK API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro and 4000 AC+. Tested so far: 2400 Pro and 2400 AC+. Turn HEMS off in the Zendure app.

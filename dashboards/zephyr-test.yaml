@@ -1,0 +1,134 @@
+# ZEPHYR test dashboard (M4b) — standard Home Assistant cards only.
+# Add it: Settings → Dashboards → Add dashboard → New dashboard from scratch,
+# open it, ⋮ → Edit dashboard → ⋮ → Raw configuration editor, paste this file.
+# Entity ids are ZEPHYR's defaults for set 1; adjust them if yours differ.
+title: ZEPHYR test
+views:
+  - title: Test
+    path: zephyr-test
+    icon: mdi:battery-sync
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: tile
+            entity: switch.zephyr_control
+            name: ZEPHYR stuurt de accu
+            features_position: bottom
+            vertical: false
+            features:
+              - type: toggle
+          - type: tile
+            entity: select.zephyr_mode
+            features_position: bottom
+            vertical: false
+            features:
+              - type: select-options
+          - type: markdown
+            content: >-
+              **Reden:** {{ states('sensor.zephyr_reason') }}
+
+              **Aansturing:** {{ states('sensor.zephyr_control') }}
+              {%- set b = state_attr('switch.zephyr_control', 'blockers') %}
+              {%- if b %} — niet mogelijk: {{ b | join('; ') }}{% endif %}
+
+      - type: grid
+        columns: 3
+        square: false
+        visibility:
+          - condition: state
+            entity: select.zephyr_mode
+            state: standby
+          - condition: state
+            entity: switch.zephyr_control
+            state: "off"
+        cards:
+          - type: button
+            name: Lever 300 W
+            icon: mdi:home-export-outline
+            tap_action:
+              action: perform-action
+              perform_action: zephyr.test_command
+              data:
+                power: -300
+                duration: 60
+              confirmation:
+                text: 60 s 300 W leveren en daarna standby?
+          - type: button
+            name: Laad 300 W
+            icon: mdi:home-import-outline
+            tap_action:
+              action: perform-action
+              perform_action: zephyr.test_command
+              data:
+                power: 300
+                duration: 60
+              confirmation:
+                text: 60 s 300 W laden en daarna standby?
+          - type: button
+            name: Stop test
+            icon: mdi:stop-circle-outline
+            tap_action:
+              action: perform-action
+              perform_action: zephyr.test_command
+              data:
+                power: 0
+                duration: 1
+
+      - type: history-graph
+        title: Net, accu en doel
+        hours_to_show: 1
+        entities:
+          - entity: sensor.zephyr_grid_power
+            name: Net (P1)
+          - entity: sensor.zephyr_power
+            name: Accu
+          - entity: sensor.zephyr_setpoint
+            name: Doel ZEPHYR
+
+      - type: entities
+        title: Nu
+        entities:
+          - entity: sensor.zephyr_state_of_charge
+            name: Laadtoestand
+          - entity: sensor.zephyr_action
+            name: Actie
+          - entity: binary_sensor.zephyr_expensive_hour
+            name: Duur uur
+          - type: attribute
+            entity: binary_sensor.zephyr_expensive_hour
+            attribute: next_expensive
+            name: Volgende dure uur
+          - type: attribute
+            entity: binary_sensor.zephyr_expensive_hour
+            attribute: reserve_charge
+            name: Nu bijladen voor de reserve
+          - entity: binary_sensor.zephyr_p1_ok
+            name: P1 meldt
+          - entity: binary_sensor.zephyr_set_1_online
+            name: Set 1 online
+          - entity: binary_sensor.zephyr_set_1_fault
+            name: Set 1 storing
+
+      - type: entities
+        title: Tellers set 1 (24 uur)
+        entities:
+          - entity: sensor.zephyr_set_1_write_count
+            name: Schrijfacties
+          - type: attribute
+            entity: sensor.zephyr_set_1_write_count
+            attribute: ram_1h
+            name: RAM laatste uur
+          - type: attribute
+            entity: sensor.zephyr_set_1_write_count
+            attribute: flash_24h
+            name: Flash
+          - type: attribute
+            entity: sensor.zephyr_set_1_write_count
+            attribute: flash_standby_24h
+            name: Flash door standby
+          - type: attribute
+            entity: sensor.zephyr_set_1_write_count
+            attribute: flash_paused
+            name: Flash-vangnet actief
+          - entity: sensor.zephyr_set_1_switch_count
+            name: Relaisschakelingen
