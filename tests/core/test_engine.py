@@ -313,6 +313,27 @@ def test_going_live_takes_over_without_step_to_zero() -> None:
     assert all(p.get("outputLimit", 0) >= 700 for p in powers)
 
 
+def test_counters_survive_switching_live_and_back() -> None:
+    # Seen 25-11 (0.5.4): every switch emptied the counters (33 writes, counter said 5), and with
+    # them the flash safety net forgot its history.
+    from zephyr_core.settings import Settings
+
+    e = ZephyrEngine(Settings().with_changes(flash_limit_hour=2))
+    e.enable_twin()
+    e.counters_record("a", "power", 1.0)
+    e.counters_record("a", "standby", 2.0)
+    e.counters_record("a", "standby", 3.0)
+    e.set_live(True, 4, [_view()])
+    e.set_live(False, 5, [_view()])
+    c = e.counters(6)["a"]
+    assert c["ram_24h"] == 1
+    assert c["flash_24h"] == 2
+    assert c["flash_standby_24h"] == 2
+    e.set_mode(Mode.STANDBY, 9)
+    r = e.step(10, [_view()])
+    assert "standby" not in [cmd.kind for cmd in r.commands]  # still over the hourly flash limit
+
+
 def test_flash_safety_net_uses_ram_instead_of_standby() -> None:
     # PLAN-M4b §2.7: after the flash limit, standby becomes 0 W in RAM.
     from zephyr_core.settings import Settings
