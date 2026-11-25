@@ -101,6 +101,9 @@ class ZephyrControl:
         self._foreign: deque[float] = deque(maxlen=20)
         self._checked_report: dict[str, int | None] = {}
         self.test: dict[str, Any] | None = None
+        self.p1_watts: float | None = None
+        """Last P1 value (W, + import) and when it came (monotonic); read by the cost log."""
+        self.p1_at: float | None = None
         self._test_task: asyncio.Task[None] | None = None
 
     # --- lifecycle ----------------------------------------------------------
@@ -114,14 +117,14 @@ class ZephyrControl:
             unsubs.append(async_track_state_report_event(self.hass, list(self.p1_pair), self._on_pair_event))
             watts = self._pair_watts()
             if watts is not None:
-                self.engine.p1_reported(time.monotonic(), watts)
+                self._p1_value(watts)
             unsubs.append(self._cancel_pair_pending)
         elif self.p1_entity:
             unsubs.append(async_track_state_change_event(self.hass, [self.p1_entity], self._on_p1_changed))
             unsubs.append(async_track_state_report_event(self.hass, [self.p1_entity], self._on_p1_reported))
             watts = _p1_watts(self.hass.states.get(self.p1_entity))
             if watts is not None:
-                self.engine.p1_reported(time.monotonic(), watts)
+                self._p1_value(watts)
         if self.p1_pair or self.p1_entity:
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
         else:
@@ -180,7 +183,7 @@ class ZephyrControl:
         watts = self._pair_watts()
         if watts is None:
             return
-        self.engine.p1_reported(time.monotonic(), watts)
+        self._p1_value(watts)
         self.async_step()
 
     @callback
@@ -208,8 +211,13 @@ class ZephyrControl:
         watts = _p1_watts(state)
         if watts is None:
             return
-        self.engine.p1_reported(time.monotonic(), watts)
+        self._p1_value(watts)
         self.async_step()
+
+    def _p1_value(self, watts: float) -> None:
+        now = time.monotonic()
+        self.p1_watts, self.p1_at = watts, now
+        self.engine.p1_reported(now, watts)
 
     @callback
     def _on_tick(self, _now: datetime) -> None:

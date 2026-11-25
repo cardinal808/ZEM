@@ -102,4 +102,5 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
             "decisions": list(control.log)[-200:],
         }
     solar = runtime.solar.diagnostics() if runtime.solar is not None and runtime.solar.enabled else None
-    return {"totals": dataclasses.asdict(runtime.totals()), "sets": sets, "control": control_info, "solar": solar}
+    costs = runtime.costs.diagnostics() if runtime.costs is not None else None
+    return {"totals": dataclasses.asdict(runtime.totals()), "sets": sets, "control": control_info, "solar": solar, "costs": costs}

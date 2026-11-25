@@ -151,6 +151,24 @@
       },
       "switch_count": {
         "name": "Relay switches (24 h)"
+      },
+      "costs_today": {
+        "name": "Costs today"
+      },
+      "costs_month": {
+        "name": "Costs this month"
+      },
+      "costs_year": {
+        "name": "Costs this year"
+      },
+      "savings_today": {
+        "name": "Savings today"
+      },
+      "savings_month": {
+        "name": "Savings this month"
+      },
+      "savings_year": {
+        "name": "Savings this year"
       }
     },
     "binary_sensor": {
@@ -224,7 +242,15 @@
           "price_entity": "Price sensor (Nord Pool)",
           "expensive_hours": "Deliver in the most expensive hours",
           "reserve_soc": "Reserve",
-          "min_price": "Minimum price to deliver"
+          "min_price": "Minimum price to deliver",
+          "tariff_energy_tax": "Energy tax (excl. VAT)",
+          "tariff_markup_import": "Supplier margin on import (excl. VAT)",
+          "tariff_markup_export": "Supplier margin on export (excl. VAT)",
+          "tariff_vat": "VAT",
+          "tariff_fixed_month": "Fixed costs per month (incl. VAT)",
+          "cost_import_counters": "Meter counters import",
+          "cost_export_counters": "Meter counters export",
+          "tariff_solar_bonus": "Solar bonus on export"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -239,7 +265,15 @@
           "price_entity": "Optional. With a Nord Pool sensor (today's prices in its attributes) zero-meter control delivers only in the most expensive hours of the day. Without it ZEPHYR delivers whenever the house asks.",
           "expensive_hours": "Hours per day in which ZEPHYR may deliver: the most expensive according to Nord Pool.",
           "reserve_soc": "Extra charge that may be used freely: below it ZEPHYR charges in the cheapest hours before the next expensive block. In the expensive hours it delivers down to the minimum SOC. 0 = off.",
-          "min_price": "Optional, bare Nord Pool price: never deliver below it, not even in the most expensive hours."
+          "min_price": "Optional, bare Nord Pool price: never deliver below it, not even in the most expensive hours.",
+          "tariff_energy_tax": "Cost log: per kWh, Netherlands 2026 €0.09161. The all-in price is (market + margin + energy tax) × (1 + VAT).",
+          "tariff_markup_import": "Added to the Nord Pool price for every kWh you draw.",
+          "tariff_markup_export": "Added to the Nord Pool price for every kWh you return; negative for a fee. Until 2027 net metering also credits energy tax and VAT on export.",
+          "tariff_vat": "Usually 21 %.",
+          "tariff_fixed_month": "Optional: standing charges + grid operator − energy tax reduction. Only shown next to the totals, to compare with your annual bill.",
+          "cost_import_counters": "Optional: the meter's kWh counters for import (tariff 1 and 2, summed). Without them ZEPHYR integrates the P1 power.",
+          "cost_export_counters": "Optional: the meter's kWh counters for export (tariff 1 and 2).",
+          "tariff_solar_bonus": "Optional: extra % on (market + export margin) for export between sunrise and sunset, only when that amount is positive. Zonneplan: 10 %."
         }
       }
     },
@@ -269,6 +303,9 @@
     },
     "not_loaded": {
       "message": "ZEPHYR is not loaded."
+    },
+    "export_period": {
+      "message": "The start date must not be after the end date."
     }
   },
   "services": {
@@ -283,6 +320,20 @@
         "duration": {
           "name": "Duration",
           "description": "In seconds, at most 60."
+        }
+      }
+    },
+    "export_costs": {
+      "name": "Export costs",
+      "description": "Writes every stored quarter of the period (costs, energy, prices) as CSV to config/zephyr/. Without dates: this month.",
+      "fields": {
+        "start": {
+          "name": "Start",
+          "description": "First day (default: the first of the month of the end date)."
+        },
+        "end": {
+          "name": "End",
+          "description": "Last day (default: today)."
         }
       }
     }

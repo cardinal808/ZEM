@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import voluptuous as vol
 from homeassistant.components.sensor import SensorDeviceClass
@@ -23,6 +23,8 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_CAPACITY_OVERRIDE,
+    CONF_COST_EXPORT_COUNTERS,
+    CONF_COST_IMPORT_COUNTERS,
     CONF_EXPENSIVE_HOURS,
     CONF_HOST,
     CONF_LIVE_OFF_AFTER_RESTART,
@@ -40,6 +42,12 @@ from .const import (
     CONF_SERIAL,
     CONF_SOLAR_ENERGY,
     CONF_SOLAR_FORECAST,
+    CONF_TARIFF_ENERGY_TAX,
+    CONF_TARIFF_FIXED_MONTH,
+    CONF_TARIFF_MARKUP_EXPORT,
+    CONF_TARIFF_MARKUP_IMPORT,
+    CONF_TARIFF_SOLAR_BONUS,
+    CONF_TARIFF_VAT,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_RESERVE_SOC,
     DOMAIN,
@@ -49,6 +57,7 @@ from .const import (
     SUBENTRY_SET,
 )
 from .core.client import ZendureClient, ZendureError
+from .core.costs import Tariffs
 from .core.device_table import model_info, set_capacity
 from .core.models import SetReport
 from .core.settings import Settings
@@ -315,6 +324,18 @@ def suggest_solar(hass: HomeAssistant) -> tuple[str | None, str | None]:
     return forecast, energy
 
 
+def suggest_meter_counters(hass: HomeAssistant) -> tuple[list[str], list[str]]:
+    """The smart meter's energy counters per tariff (DSMR: ``…energy_consumed_tariff_1/2``, ``…energy_produced_tariff_1/2``)."""
+    names = sorted(st.entity_id for st in hass.states.async_all("sensor") if st.attributes.get("device_class") == SensorDeviceClass.ENERGY)
+    imports = [n for n in names if "energy_consumed_tariff_" in n or "energy_import_tariff_" in n]
+    exports = [n for n in names if "energy_produced_tariff_" in n or "energy_export_tariff_" in n]
+    return (imports, exports) if imports and exports else ([], [])
+
+
+def _energy_sensors() -> selector.EntitySelector:
+    return selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.ENERGY, multiple=True))
+
+
 def _power_sensor() -> selector.EntitySelector:
     return selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER))
 
@@ -339,11 +360,21 @@ class ZephyrOptionsFlow(OptionsFlow):
                 errors["base"] = "p1_missing"
             if not errors:
                 data = {**self.config_entry.options, **user_input}
-                for key in (CONF_P1_ENTITY, CONF_P1_IMPORT, CONF_P1_EXPORT, CONF_SOLAR_FORECAST, CONF_SOLAR_ENERGY, CONF_PRICE_ENTITY):
+                for key in (
+                    CONF_P1_ENTITY,
+                    CONF_P1_IMPORT,
+                    CONF_P1_EXPORT,
+                    CONF_SOLAR_FORECAST,
+                    CONF_SOLAR_ENERGY,
+                    CONF_PRICE_ENTITY,
+                    CONF_COST_IMPORT_COUNTERS,
+                    CONF_COST_EXPORT_COUNTERS,
+                ):
                     if not user_input.get(key):
                         data.pop(key, None)
-                if user_input.get(CONF_MIN_PRICE) is None:
-                    data.pop(CONF_MIN_PRICE, None)
+                for key in (CONF_MIN_PRICE, CONF_TARIFF_FIXED_MONTH):
+                    if user_input.get(key) is None:
+                        data.pop(key, None)
                 return self.async_create_entry(data=data)
         options = dict(self.config_entry.options)
         if user_input is not None:
@@ -356,6 +387,8 @@ class ZephyrOptionsFlow(OptionsFlow):
         default_source = P1_SOURCE_PAIR if pair_import and pair_export and not options.get(CONF_P1_ENTITY) else P1_SOURCE_SINGLE
         source = options.get(CONF_P1_SOURCE, default_source)
         defaults = Settings()
+        tariffs = Tariffs()
+        counters_import, counters_export = suggest_meter_counters(self.hass)
         schema = vol.Schema(
             {
                 vol.Required(CONF_P1_SOURCE, default=source): selector.SelectSelector(
@@ -386,13 +419,35 @@ class ZephyrOptionsFlow(OptionsFlow):
                         min=-1, max=2, step=0.01, unit_of_measurement="€/kWh", mode=selector.NumberSelectorMode.BOX
                     )
                 ),
+                vol.Required(CONF_TARIFF_ENERGY_TAX, default=options.get(CONF_TARIFF_ENERGY_TAX, tariffs.energy_tax)): _box(
+                    0, 1, "any", "€/kWh"
+                ),
+                vol.Required(CONF_TARIFF_MARKUP_IMPORT, default=options.get(CONF_TARIFF_MARKUP_IMPORT, tariffs.markup_import)): _box(
+                    -1, 1, "any", "€/kWh"
+                ),
+                vol.Required(CONF_TARIFF_MARKUP_EXPORT, default=options.get(CONF_TARIFF_MARKUP_EXPORT, tariffs.markup_export)): _box(
+                    -1, 1, "any", "€/kWh"
+                ),
+                vol.Required(CONF_TARIFF_VAT, default=options.get(CONF_TARIFF_VAT, tariffs.vat)): _box(0, 30, 0.1, "%"),
+                vol.Required(CONF_TARIFF_SOLAR_BONUS, default=options.get(CONF_TARIFF_SOLAR_BONUS, tariffs.solar_bonus)): _box(
+                    0, 50, 0.1, "%"
+                ),
+                vol.Optional(CONF_TARIFF_FIXED_MONTH, description={"suggested_value": options.get(CONF_TARIFF_FIXED_MONTH)}): _box(
+                    -200, 500, 0.01, "€"
+                ),
+                vol.Optional(
+                    CONF_COST_IMPORT_COUNTERS, description={"suggested_value": options.get(CONF_COST_IMPORT_COUNTERS) or counters_import}
+                ): _energy_sensors(),
+                vol.Optional(
+                    CONF_COST_EXPORT_COUNTERS, description={"suggested_value": options.get(CONF_COST_EXPORT_COUNTERS) or counters_export}
+                ): _energy_sensors(),
                 vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, True)): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
 
 
-def _box(low: float, high: float, step: float, unit: str) -> selector.NumberSelector:
+def _box(low: float, high: float, step: float | Literal["any"], unit: str) -> selector.NumberSelector:
     return selector.NumberSelector(
         selector.NumberSelectorConfig(min=low, max=high, step=step, unit_of_measurement=unit, mode=selector.NumberSelectorMode.BOX)
     )
