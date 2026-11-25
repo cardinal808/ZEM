@@ -63,7 +63,7 @@ async def test_quarter_costs_and_sensors(hass: HomeAssistant, fake_sets: FakeSet
     # House imports 400 W while the set (fixture) delivers 760 W.
     assert record["import_kwh"] == pytest.approx(0.1, abs=0.002)
     assert record["discharge_kwh"] == pytest.approx(0.19, abs=0.003)
-    buy = (0.10 + 0.0165 + 0.0916) * 1.21
+    buy = (0.10 + 0.0165 + 0.09161) * 1.21
     assert record["buy"] == pytest.approx(buy, abs=1e-5)
     assert record["cost"] == pytest.approx(record["import_kwh"] * buy, abs=1e-4)
     # Without the battery the house would have drawn 400 + 760 W.

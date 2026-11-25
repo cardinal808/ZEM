@@ -19,7 +19,7 @@ from zephyr_core.costs import (
 )
 
 UTC = dt.UTC
-T = Tariffs(energy_tax=0.0916, vat=21.0, markup_import=0.0165, markup_export=0.0)
+T = Tariffs(energy_tax=0.09161, vat=21.0, markup_import=0.0165, markup_export=0.0)
 T2026 = dt.datetime(2026, 11, 25, 12, 0, tzinfo=UTC)
 T2027 = dt.datetime(2027, 3, 1, 12, 0, tzinfo=UTC)
 
@@ -38,9 +38,9 @@ def q(start: dt.datetime = T2026, **kw: float | None) -> QuarterInput:
 
 
 def test_prices_with_and_without_saldering() -> None:
-    assert T.buy(0.10) == pytest.approx((0.10 + 0.0165 + 0.0916) * 1.21)
+    assert T.buy(0.10) == pytest.approx((0.10 + 0.0165 + 0.09161) * 1.21)
     sell, part = T.sell(0.10, T2026)
-    assert sell == pytest.approx(0.10 * 1.21 + 0.0916 * 1.21)
+    assert sell == pytest.approx(0.10 * 1.21 + 0.09161 * 1.21)
     assert part == pytest.approx(sell - 0.10)
     assert T.sell(0.10, T2027) == (pytest.approx(0.10), 0.0)
     # Negative market price: import still costs the tax, export costs money without saldering.
@@ -177,3 +177,18 @@ def test_csv_has_header_and_rows() -> None:
     lines = text.strip().split("\n")
     assert lines[0].startswith("start,minutes,import_kwh")
     assert len(lines) == 2
+
+
+def test_solar_bonus_only_in_daylight_and_when_positive() -> None:
+    zp = Tariffs(markup_import=0.0165, markup_export=0.0165, solar_bonus=10.0)
+    # Net metering 2026: export at the import price (1-to-1), plus 10 % over (market + margin) by day.
+    night, _ = zp.sell(0.10, T2026)
+    day, part = zp.sell(0.10, T2026, daylight=True)
+    assert night == pytest.approx(zp.buy(0.10))
+    assert day == pytest.approx(night + 0.1 * (0.10 + 0.0165))
+    assert part == pytest.approx(night - (0.10 + 0.0165))  # the bonus is not part of net metering
+    assert zp.sell(-0.05, T2026, daylight=True)[0] == pytest.approx(zp.sell(-0.05, T2026)[0])
+    # 2027: market + margin, VAT only when the supplier pays it, plus the bonus.
+    assert zp.sell(0.10, T2027, daylight=True)[0] == pytest.approx(0.1165 * 1.1)
+    with_vat = Tariffs(markup_export=0.02, solar_bonus=10.0, export_vat_after_saldering=True)
+    assert with_vat.sell(0.10, T2027)[0] == pytest.approx(0.12 * 1.21)

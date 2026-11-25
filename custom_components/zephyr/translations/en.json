@@ -249,7 +249,8 @@
           "tariff_vat": "VAT",
           "tariff_fixed_month": "Fixed costs per month (incl. VAT)",
           "cost_import_counters": "Meter counters import",
-          "cost_export_counters": "Meter counters export"
+          "cost_export_counters": "Meter counters export",
+          "tariff_solar_bonus": "Solar bonus on export"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -265,13 +266,14 @@
           "expensive_hours": "Hours per day in which ZEPHYR may deliver: the most expensive according to Nord Pool.",
           "reserve_soc": "Extra charge that may be used freely: below it ZEPHYR charges in the cheapest hours before the next expensive block. In the expensive hours it delivers down to the minimum SOC. 0 = off.",
           "min_price": "Optional, bare Nord Pool price: never deliver below it, not even in the most expensive hours.",
-          "tariff_energy_tax": "Cost log: per kWh, Netherlands 2026 €0.0916. The all-in price is (market + margin + energy tax) × (1 + VAT).",
+          "tariff_energy_tax": "Cost log: per kWh, Netherlands 2026 €0.09161. The all-in price is (market + margin + energy tax) × (1 + VAT).",
           "tariff_markup_import": "Added to the Nord Pool price for every kWh you draw.",
           "tariff_markup_export": "Added to the Nord Pool price for every kWh you return; negative for a fee. Until 2027 net metering also credits energy tax and VAT on export.",
           "tariff_vat": "Usually 21 %.",
           "tariff_fixed_month": "Optional: standing charges + grid operator − energy tax reduction. Only shown next to the totals, to compare with your annual bill.",
           "cost_import_counters": "Optional: the meter's kWh counters for import (tariff 1 and 2, summed). Without them ZEPHYR integrates the P1 power.",
-          "cost_export_counters": "Optional: the meter's kWh counters for export (tariff 1 and 2)."
+          "cost_export_counters": "Optional: the meter's kWh counters for export (tariff 1 and 2).",
+          "tariff_solar_bonus": "Optional: extra % on (market + export margin) for export between sunrise and sunset, only when that amount is positive. Zonneplan: 10 %."
         }
       }
     },

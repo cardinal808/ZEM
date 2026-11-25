@@ -39,14 +39,19 @@ MAX_SAMPLE_GAP: Final = 10.0
 class Tariffs:
     """Own tariffs (B38); the tariff table of B28 fills the same fields later. €/kWh excl. VAT."""
 
-    energy_tax: float = 0.0916
-    """Energy tax (energiebelasting), Netherlands 2026, excl. VAT."""
+    energy_tax: float = 0.09161
+    """Energy tax (energiebelasting), Netherlands 2026, excl. VAT (€0.11085 incl.)."""
     vat: float = 21.0
     """%."""
     markup_import: float = 0.0
     """Supplier margin on import (opslag inkoop), excl. VAT."""
     markup_export: float = 0.0
     """Added to the market price for export (negative = a fee), excl. VAT."""
+    solar_bonus: float = 0.0
+    """% extra on (market + export margin) for export between sunrise and sunset, only when that
+    amount is positive (Zonneplan's Zonnebonus: 10 %). Not part of net metering."""
+    export_vat_after_saldering: bool = False
+    """Without net metering: VAT on the export price too (some suppliers pay market incl. VAT)."""
     fixed_month: float = 0.0
     """Fixed costs per month incl. VAT (net: standing charges + grid operator − energy tax reduction)."""
     saldering_until: date = date(2027, 1, 1)
@@ -61,13 +66,14 @@ class Tariffs:
         """All-in import price."""
         return (market + self.markup_import + self.energy_tax) * self.vat_factor
 
-    def sell(self, market: float, start: datetime) -> tuple[float, float]:
+    def sell(self, market: float, start: datetime, daylight: bool = False) -> tuple[float, float]:
         """Export price and the part of it that exists only through net metering."""
         base = market + self.markup_export
+        bonus = self.solar_bonus / 100 * base if daylight and base > 0 else 0.0
         if start.date() < self.saldering_until:
             price = base * self.vat_factor + self.energy_tax * self.vat_factor
-            return price, price - base
-        return base, 0.0
+            return price + bonus, price - base
+        return (base * self.vat_factor if self.export_vat_after_saldering else base) + bonus, 0.0
 
     def as_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -148,6 +154,8 @@ class QuarterInput:
     """Share of the quarter that was measured (0–1)."""
     stored_kwh: float | None = None
     """Energy in the battery at the end of the quarter (caps the pools)."""
+    daylight: bool = False
+    """Between sunrise and sunset (for the solar bonus)."""
 
 
 @dataclass(slots=True)
@@ -212,7 +220,7 @@ def evaluate(q: QuarterInput, tariffs: Tariffs, pools: Pools, days_in_month: int
     buy = sell = sal_part = None
     if q.market is not None:
         buy = tariffs.buy(q.market)
-        sell, sal_part = tariffs.sell(q.market, q.start)
+        sell, sal_part = tariffs.sell(q.market, q.start, q.daylight)
 
     # Pools: charged from solar = what would otherwise have been exported.
     from_solar_charge = min(chg, exp_nb)

@@ -19,6 +19,7 @@ from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, State, callback
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.sun import is_up
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -30,6 +31,7 @@ from .const import (
     CONF_TARIFF_FIXED_MONTH,
     CONF_TARIFF_MARKUP_EXPORT,
     CONF_TARIFF_MARKUP_IMPORT,
+    CONF_TARIFF_SOLAR_BONUS,
     CONF_TARIFF_VAT,
     DOMAIN,
     LOGGER,
@@ -66,6 +68,7 @@ def tariffs_from_options(options: Mapping[str, Any]) -> Tariffs:
         vat=float(options.get(CONF_TARIFF_VAT, defaults.vat)),
         markup_import=float(options.get(CONF_TARIFF_MARKUP_IMPORT, defaults.markup_import)),
         markup_export=float(options.get(CONF_TARIFF_MARKUP_EXPORT, defaults.markup_export)),
+        solar_bonus=float(options.get(CONF_TARIFF_SOLAR_BONUS) or 0.0),
         fixed_month=float(options.get(CONF_TARIFF_FIXED_MONTH) or 0.0),
     )
 
@@ -273,6 +276,7 @@ class CostRecorder:
                 market=market,
                 coverage=coverage,
                 stored_kwh=totals.energy_kwh,
+                daylight=is_up(self.hass, start + timedelta(seconds=QUARTER_SECONDS / 2)),
             ),
             self.tariffs,
             self.pools,

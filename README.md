@@ -44,7 +44,7 @@ Requirements: HEMS turned off in the Zendure app; Home Assistant 2026.1 or newer
 
 ## Cost log (0.6)
 - Per quarter: import, export, battery charged/delivered, solar and the Nord Pool price, with the costs **actual**, **without battery** and **without battery and solar**. Also in shadow mode (then: the costs of your current setup).
-- Enter your **own tariffs** in the options: energy tax (Netherlands 2026: €0.0916), supplier margins for import and export, VAT and optionally the fixed costs per month. A list of suppliers follows. Net metering (until the end of 2026) is included and settled per year.
+- Enter your **own tariffs** in the options: energy tax (Netherlands 2026: €0.09161), supplier margins for import and export, VAT, a solar bonus (Zonneplan: 10 %) and optionally the fixed costs per month. A list of suppliers follows. Net metering (until the end of 2026) is included and settled per year.
 - Optionally the meter's kWh counters (tariff 1 and 2) for import and export; without them ZEPHYR integrates the P1 power. With a solar counter also the savings from solar.
 - Entities: `sensor.zephyr_costs_today|month|year` and `sensor.zephyr_savings_today|month|year` (€), with the breakdown as attributes. Action `zephyr.export_costs` writes the quarters as CSV to `config/zephyr/`.
 

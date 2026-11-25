@@ -46,6 +46,7 @@ from .const import (
     CONF_TARIFF_FIXED_MONTH,
     CONF_TARIFF_MARKUP_EXPORT,
     CONF_TARIFF_MARKUP_IMPORT,
+    CONF_TARIFF_SOLAR_BONUS,
     CONF_TARIFF_VAT,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_RESERVE_SOC,
@@ -428,6 +429,9 @@ class ZephyrOptionsFlow(OptionsFlow):
                     -1, 1, "any", "€/kWh"
                 ),
                 vol.Required(CONF_TARIFF_VAT, default=options.get(CONF_TARIFF_VAT, tariffs.vat)): _box(0, 30, 0.1, "%"),
+                vol.Required(CONF_TARIFF_SOLAR_BONUS, default=options.get(CONF_TARIFF_SOLAR_BONUS, tariffs.solar_bonus)): _box(
+                    0, 50, 0.1, "%"
+                ),
                 vol.Optional(CONF_TARIFF_FIXED_MONTH, description={"suggested_value": options.get(CONF_TARIFF_FIXED_MONTH)}): _box(
                     -200, 500, 0.01, "€"
                 ),

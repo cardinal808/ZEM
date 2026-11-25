@@ -249,7 +249,8 @@
           "tariff_vat": "Btw",
           "tariff_fixed_month": "Vaste kosten per maand (incl. btw)",
           "cost_import_counters": "Metertellers afname",
-          "cost_export_counters": "Metertellers teruglevering"
+          "cost_export_counters": "Metertellers teruglevering",
+          "tariff_solar_bonus": "Zonnebonus op teruglevering"
         },
         "data_description": {
           "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
@@ -265,13 +266,14 @@
           "expensive_hours": "Aantal uren per dag waarin ZEPHYR mag leveren: de duurste volgens Nord Pool.",
           "reserve_soc": "Extra lading die vrij gebruikt mag worden: zit de accu eronder, dan laadt ZEPHYR bij in de goedkoopste uren vóór het volgende dure blok. In de dure uren levert hij door tot de minimale laadtoestand. 0 = uit.",
           "min_price": "Optioneel, kale Nord Pool-prijs: daaronder nooit leveren, ook niet in de duurste uren.",
-          "tariff_energy_tax": "Kostenlogboek: per kWh, Nederland 2026 €0,0916. De all-in prijs is (markt + opslag + energiebelasting) × (1 + btw).",
+          "tariff_energy_tax": "Kostenlogboek: per kWh, Nederland 2026 €0,09161. De all-in prijs is (markt + opslag + energiebelasting) × (1 + btw).",
           "tariff_markup_import": "Komt bij de Nord Pool-prijs voor elke kWh die je afneemt.",
           "tariff_markup_export": "Komt bij de Nord Pool-prijs voor elke kWh die je teruglevert; negatief bij terugleverkosten. Tot 2027 verrekent de saldering ook energiebelasting en btw over teruglevering.",
           "tariff_vat": "Meestal 21 %.",
           "tariff_fixed_month": "Optioneel: vastrecht + netbeheer − vermindering energiebelasting. Alleen naast de totalen getoond, om met de jaarafrekening te vergelijken.",
           "cost_import_counters": "Optioneel: de kWh-tellers van de meter voor afname (tarief 1 en 2, opgeteld). Zonder tellers integreert ZEPHYR het P1-vermogen.",
-          "cost_export_counters": "Optioneel: de kWh-tellers van de meter voor teruglevering (tarief 1 en 2)."
+          "cost_export_counters": "Optioneel: de kWh-tellers van de meter voor teruglevering (tarief 1 en 2).",
+          "tariff_solar_bonus": "Optioneel: extra % over (marktprijs + opslag teruglevering) bij teruglevering tussen zonsopkomst en zonsondergang, alleen als dat bedrag positief is. Zonneplan: 10 %."
         }
       }
     },
