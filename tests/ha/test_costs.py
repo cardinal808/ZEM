@@ -80,7 +80,8 @@ async def test_quarter_costs_and_sensors(hass: HomeAssistant, fake_sets: FakeSet
     assert hass.states.get("sensor.zephyr_costs_year").state == today.state
 
     diag = await async_get_config_entry_diagnostics(hass, entry)
-    assert diag["costs"]["tariffs"]["markup_import"] == 0.0165
+    assert diag["costs"]["tariffs"]["in_use"]["markup_import"] == 0.0165
+    assert diag["costs"]["tariffs"]["supplier"] == "own"
     assert len(diag["costs"]["last_quarters"]) == 2
 
     hass.config.config_dir = str(tmp_path)

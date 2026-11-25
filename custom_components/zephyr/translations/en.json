@@ -250,7 +250,8 @@
           "tariff_fixed_month": "Fixed costs per month (incl. VAT)",
           "cost_import_counters": "Meter counters import",
           "cost_export_counters": "Meter counters export",
-          "tariff_solar_bonus": "Solar bonus on export"
+          "tariff_solar_bonus": "Solar bonus on export",
+          "tariff_supplier": "Energy supplier"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -273,7 +274,8 @@
           "tariff_fixed_month": "Optional: standing charges + grid operator − energy tax reduction. Only shown next to the totals, to compare with your annual bill.",
           "cost_import_counters": "Optional: the meter's kWh counters for import (tariff 1 and 2, summed). Without them ZEPHYR integrates the P1 power.",
           "cost_export_counters": "Optional: the meter's kWh counters for export (tariff 1 and 2).",
-          "tariff_solar_bonus": "Optional: extra % on (market + export margin) for export between sunrise and sunset, only when that amount is positive. Zonneplan: 10 %."
+          "tariff_solar_bonus": "Optional: extra % on (market + export margin) for export between sunrise and sunset, only when that amount is positive. Zonneplan: 10 %.",
+          "tariff_supplier": "Choose your supplier: ZEPHYR then takes the margins, solar bonus, energy tax and VAT from its tariff table (fetched from GitHub once a month). Only suppliers whose amounts a user has checked are listed. With \"Own tariffs\" the fields below apply; the fixed costs per month apply in both cases."
         }
       }
     },

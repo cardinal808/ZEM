@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from .control import ZephyrControl
     from .cost_recorder import CostRecorder
     from .solar_recorder import SolarRecorder
+    from .tariff_provider import TariffProvider
 
 
 @dataclass(slots=True)
@@ -40,6 +41,7 @@ class ZephyrRuntime:
     control: ZephyrControl | None = None
     solar: SolarRecorder | None = None
     costs: CostRecorder | None = None
+    tariffs: TariffProvider | None = None
 
     def totals(self) -> Totals:
         return compute_totals((c.snapshot() for c in self.coordinators.values()), time.monotonic())
@@ -116,12 +118,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
 
     runtime.control = ZephyrControl(hass, entry, runtime)
     from .cost_recorder import CostRecorder
+    from .tariff_provider import TariffProvider
 
-    runtime.costs = CostRecorder(hass, entry.entry_id, dict(entry.options), runtime)
+    runtime.tariffs = TariffProvider(hass, entry.entry_id, dict(entry.options))
+    runtime.costs = CostRecorder(hass, entry.entry_id, dict(entry.options), runtime, runtime.tariffs)
     entry.runtime_data = runtime
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(runtime.control.async_start())
+    entry.async_on_unload(await runtime.tariffs.async_start())
     entry.async_on_unload(await runtime.costs.async_start())
     from .solar_recorder import SolarRecorder
 

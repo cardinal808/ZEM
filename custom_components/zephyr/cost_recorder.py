@@ -27,12 +27,6 @@ from .const import (
     CONF_COST_IMPORT_COUNTERS,
     CONF_PRICE_ENTITY,
     CONF_SOLAR_ENERGY,
-    CONF_TARIFF_ENERGY_TAX,
-    CONF_TARIFF_FIXED_MONTH,
-    CONF_TARIFF_MARKUP_EXPORT,
-    CONF_TARIFF_MARKUP_IMPORT,
-    CONF_TARIFF_SOLAR_BONUS,
-    CONF_TARIFF_VAT,
     DOMAIN,
     LOGGER,
 )
@@ -42,7 +36,6 @@ from .core.costs import (
     QuarterInput,
     QuarterMeter,
     Summary,
-    Tariffs,
     add_to_day,
     counter_delta,
     evaluate,
@@ -54,23 +47,12 @@ from .core.solar_history import energy_kwh
 
 if TYPE_CHECKING:
     from . import ZephyrRuntime
+    from .tariff_provider import TariffProvider
 
 STORAGE_VERSION = 1
 KEEP_MONTHS = 24
 P1_FRESH = 10.0
 """s; an older P1 value is not integrated (a gap in the quarter)."""
-
-
-def tariffs_from_options(options: Mapping[str, Any]) -> Tariffs:
-    defaults = Tariffs()
-    return Tariffs(
-        energy_tax=float(options.get(CONF_TARIFF_ENERGY_TAX, defaults.energy_tax)),
-        vat=float(options.get(CONF_TARIFF_VAT, defaults.vat)),
-        markup_import=float(options.get(CONF_TARIFF_MARKUP_IMPORT, defaults.markup_import)),
-        markup_export=float(options.get(CONF_TARIFF_MARKUP_EXPORT, defaults.markup_export)),
-        solar_bonus=float(options.get(CONF_TARIFF_SOLAR_BONUS) or 0.0),
-        fixed_month=float(options.get(CONF_TARIFF_FIXED_MONTH) or 0.0),
-    )
 
 
 def _number(state: State | None) -> float | None:
@@ -127,11 +109,13 @@ def _days_in_month(day: date) -> int:
 
 
 class CostRecorder:
-    def __init__(self, hass: HomeAssistant, entry_id: str, options: Mapping[str, Any], runtime: ZephyrRuntime) -> None:
+    def __init__(
+        self, hass: HomeAssistant, entry_id: str, options: Mapping[str, Any], runtime: ZephyrRuntime, tariffs: TariffProvider
+    ) -> None:
         self.hass = hass
         self.entry_id = entry_id
         self.runtime = runtime
-        self.tariffs = tariffs_from_options(options)
+        self.tariffs = tariffs
         self.price_entity: str | None = options.get(CONF_PRICE_ENTITY)
         self.solar_entity: str | None = options.get(CONF_SOLAR_ENERGY)
         self.import_counters: list[str] = list(options.get(CONF_COST_IMPORT_COUNTERS) or [])
@@ -278,7 +262,7 @@ class CostRecorder:
                 stored_kwh=totals.energy_kwh,
                 daylight=is_up(self.hass, start + timedelta(seconds=QUARTER_SECONDS / 2)),
             ),
-            self.tariffs,
+            self.tariffs.tariffs_for(local_start.date()),
             self.pools,
             _days_in_month(local_start.date()),
         )
@@ -312,7 +296,7 @@ class CostRecorder:
     def summary(self, name: str) -> Summary:
         if name not in self._summaries:
             first, last = self.period(name)
-            self._summaries[name] = summarize(self.days, first, last, self.tariffs)
+            self._summaries[name] = summarize(self.days, first, last, self.tariffs.tariffs_for(first))
         return self._summaries[name]
 
     async def async_records(self, first: date, last: date) -> list[dict[str, Any]]:
@@ -344,7 +328,7 @@ class CostRecorder:
 
     def diagnostics(self) -> dict[str, Any]:
         return {
-            "tariffs": self.tariffs.as_dict(),
+            "tariffs": self.tariffs.diagnostics(),
             "price_entity": self.price_entity,
             "solar_entity": self.solar_entity,
             "import_counters": self.import_counters,

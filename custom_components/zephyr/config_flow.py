@@ -47,6 +47,7 @@ from .const import (
     CONF_TARIFF_MARKUP_EXPORT,
     CONF_TARIFF_MARKUP_IMPORT,
     CONF_TARIFF_SOLAR_BONUS,
+    CONF_TARIFF_SUPPLIER,
     CONF_TARIFF_VAT,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_RESERVE_SOC,
@@ -55,6 +56,7 @@ from .const import (
     P1_SOURCE_PAIR,
     P1_SOURCE_SINGLE,
     SUBENTRY_SET,
+    TARIFF_OWN,
 )
 from .core.client import ZendureClient, ZendureError
 from .core.costs import Tariffs
@@ -340,6 +342,20 @@ def _power_sensor() -> selector.EntitySelector:
     return selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER))
 
 
+async def supplier_choices(hass: HomeAssistant, entry: ConfigEntry[Any]) -> list[selector.SelectOptionDict]:
+    """Own tariffs plus the verified suppliers of the newest tariff table (B28)."""
+    from .tariff_provider import load_shipped
+
+    runtime = getattr(entry, "runtime_data", None)
+    provider = getattr(runtime, "tariffs", None)
+    table = provider.table if provider is not None else await hass.async_add_executor_job(load_shipped)
+    own = "Eigen tarieven (hieronder)" if hass.config.language.startswith("nl") else "Own tariffs (below)"
+    choices = [selector.SelectOptionDict(value=TARIFF_OWN, label=own)]
+    if table is not None:
+        choices += [selector.SelectOptionDict(value=key, label=name) for key, name in table.choices()]
+    return choices
+
+
 class ZephyrOptionsFlow(OptionsFlow):
     """Sources and battery limits."""
 
@@ -389,6 +405,10 @@ class ZephyrOptionsFlow(OptionsFlow):
         defaults = Settings()
         tariffs = Tariffs()
         counters_import, counters_export = suggest_meter_counters(self.hass)
+        suppliers = await supplier_choices(self.hass, self.config_entry)
+        supplier = options.get(CONF_TARIFF_SUPPLIER, TARIFF_OWN)
+        if supplier not in {c["value"] for c in suppliers}:
+            supplier = TARIFF_OWN
         schema = vol.Schema(
             {
                 vol.Required(CONF_P1_SOURCE, default=source): selector.SelectSelector(
@@ -418,6 +438,9 @@ class ZephyrOptionsFlow(OptionsFlow):
                     selector.NumberSelectorConfig(
                         min=-1, max=2, step=0.01, unit_of_measurement="€/kWh", mode=selector.NumberSelectorMode.BOX
                     )
+                ),
+                vol.Required(CONF_TARIFF_SUPPLIER, default=supplier): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=suppliers, mode=selector.SelectSelectorMode.DROPDOWN)
                 ),
                 vol.Required(CONF_TARIFF_ENERGY_TAX, default=options.get(CONF_TARIFF_ENERGY_TAX, tariffs.energy_tax)): _box(
                     0, 1, "any", "€/kWh"
