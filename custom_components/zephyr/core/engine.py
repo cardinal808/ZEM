@@ -483,7 +483,9 @@ class ZephyrEngine:
             return target == 0 or since >= 2
         if since < 2:
             return False
-        return abs(target - last) >= 20 or abs(target - last) >= 0.05 * abs(last)
+        # A small change is meter noise more often than a real one (seen in shadow mode:
+        # -180, -170, -180, -190 W within 10 s). It waits for the refresh.
+        return abs(target - last) >= self.settings.min_command_step or since >= 60
 
     def _controller_grid(self, now: float, battery: float = 0.0) -> float:
         """P1 for the controller: filtered (short peaks held back, small noise smoothed).
@@ -492,10 +494,16 @@ class ZephyrEngine:
         a rise (a load switching on, or a cloud over the panels) must lower the charging at
         once; holding it would charge the battery from the grid for up to ``step_hold``
         seconds (seen live: +2.2 kW import while the charge setpoint went up).
+
+        The same holds just after the charging stopped: the rise then comes partly from ZEPHYR
+        itself (the set no longer takes the surplus). Holding it made the controller see "idle"
+        and restart ``switch_delay`` (simulation: delivering after 21 s instead of 10 s). A short
+        peak is still not delivered for, because swapping direction waits ``switch_delay``.
         """
         filtered = self.grid_filter.value(now)
         assert self._p1_value is not None
-        if filtered is None or (battery > 0 and self.grid_filter.holding):
+        charging_side = battery > 0 or self.controller.charging_side
+        if filtered is None or (charging_side and self.grid_filter.holding):
             return self._p1_value
         return filtered
 

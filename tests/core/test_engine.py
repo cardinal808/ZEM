@@ -283,3 +283,15 @@ def test_refresh_tolerates_unrounded_limit_of_other_system() -> None:
     assert report is not None
     assert _report_matches(report, -300)
     assert not _report_matches(report, -320)
+
+
+def test_small_changes_wait_for_the_refresh() -> None:
+    from zephyr_core.engine import _SetState
+
+    e = ZephyrEngine()
+    state = _SetState(last_power=-180, last_sent_at=0.0)
+    assert not e._should_send(state, -170, 5)  # 10 W: meter noise
+    assert not e._should_send(state, -200, 5)  # 20 W
+    assert e._should_send(state, -210, 5)  # 30 W
+    assert e._should_send(state, -170, 60)  # refresh carries the latest setpoint
+    assert e._should_send(state, 0, 0.5)  # stopping is never held back

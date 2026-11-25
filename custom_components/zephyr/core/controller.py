@@ -86,6 +86,13 @@ class ZeroMeterController:
         self._deviation_since: float | None = None
         self._last_sample: int | None = None
         self._last_demand = 0.0
+        self._active_at = -1e9
+        """Last time the setpoint was not 0 (for ``reverse_window``)."""
+
+    @property
+    def charging_side(self) -> bool:
+        """The last direction was charging (also while the setpoint is 0 on the way to delivering)."""
+        return self._last_direction is Direction.CHARGE
 
     def reset(self, now: float) -> None:
         """Start from zero (mode change, restart, safety stop)."""
@@ -97,6 +104,7 @@ class ZeroMeterController:
         self._start_count = 0
         self._deviation_since = None
         self._last_demand = 0.0
+        self._active_at = -1e9
 
     # --- helpers -------------------------------------------------------
 
@@ -173,7 +181,7 @@ class ZeroMeterController:
             self._last_step = inp.now
             self._last_demand = demand
             if not self.trust_commands:
-                self._follow_battery(battery)
+                self._follow_battery(battery, inp.now)
             return self._unchanged(inp, regulated=False, demand=demand)
 
         gain = gain_import if error > 0 else gain_export
@@ -183,20 +191,35 @@ class ZeroMeterController:
 
         # Minimum power with start hysteresis: start only after two samples above it.
         wanted = _sign_direction(demand_limited, s.switch_threshold)
-        if abs(demand_limited) < s.min_power:
+        small = abs(demand_limited) < s.min_power
+        if small and (abs(demand_limited) < 0.8 * s.min_power or self.setpoint == 0):
+            raw = 0.0
+            wanted = Direction.NONE
+
+        # A recently active set only swaps direction for a real demand. A short load while
+        # charging from solar asks ~100-200 W of delivering once the charging stopped; idling
+        # at 0 W costs a few Wh of import, swapping costs two relay switches and the way back.
+        recently_active = inp.now - self._active_at < s.reverse_window
+        if (
+            s.reverse_min_power > 0
+            and recently_active
+            and wanted is not Direction.NONE
+            and self._last_direction is not Direction.NONE
+            and wanted is not self._last_direction
+            and abs(demand_limited) < s.reverse_min_power
+        ):
+            raw = 0.0
+            wanted = Direction.NONE
+
+        if small or wanted is Direction.NONE:
             self._start_count = 0
-            if abs(demand_limited) < 0.8 * s.min_power or self.setpoint == 0:
-                raw = 0.0
-                wanted = Direction.NONE
         elif self.setpoint == 0:
             self._start_count += 1
-            if self._start_count < 2:
-                raw = 0.0
-                wanted = Direction.NONE
-            else:
-                raw = max(abs(raw), s.min_power) * (1 if raw > 0 else -1)
         else:
             self._start_count = 0
+        # The start hysteresis must not clear a pending change of direction: that restarted
+        # switch_delay one sample later (seen: 16 s instead of 10 s from charging to delivering).
+        start_hold = self.setpoint == 0 and wanted is not Direction.NONE and self._start_count < 2
 
         # Change of direction only after it persisted (SPEC-basis §5.4).
         waiting = False
@@ -215,6 +238,11 @@ class ZeroMeterController:
             self._pending = Direction.NONE
             self._pending_since = None
 
+        if start_hold:
+            raw = 0.0
+        elif self.setpoint == 0 and wanted is not Direction.NONE and not waiting:
+            raw = max(abs(raw), s.min_power) * (1 if raw > 0 else -1)
+
         new = _round10(raw)
         if 0 < abs(new) < s.min_power:
             # Hysteresis: an active set stays at the minimum while demand ≥ 80 % of it.
@@ -230,16 +258,20 @@ class ZeroMeterController:
             self._last_direction = Direction.CHARGE
         elif new < 0:
             self._last_direction = Direction.DELIVER
+        if new != 0:
+            self._active_at = inp.now
         self._last_demand = demand
         return ControllerOutput(setpoint=self.setpoint, demand=demand, regulated=True, waiting_for_direction=waiting)
 
-    def _follow_battery(self, battery: float) -> None:
+    def _follow_battery(self, battery: float, now: float) -> None:
         """Shadow mode, grid in balance: the set already does the right thing (decided by another
         system), so that is what ZEPHYR would ask too. Without this the setpoint of an earlier
         step stayed visible (seen: -410 W while the set delivered 150 W with the grid at +25 W)."""
         follow = round(battery / 10) * 10
         if abs(follow) < self.settings.min_power:
             follow = 0
+        if follow != 0:
+            self._active_at = now
         self.followed_battery = follow != self.setpoint
         if self.followed_battery:
             self._prev_setpoint = self.setpoint
@@ -259,6 +291,8 @@ class ZeroMeterController:
             self._prev_setpoint = self.setpoint
             self.setpoint = limited
             self._setpoint_at = inp.now
+        if self.setpoint != 0:
+            self._active_at = inp.now
         return ControllerOutput(
             setpoint=self.setpoint,
             # Without a new evaluation the last known demand still holds (keeps the reason steady).

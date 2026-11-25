@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.4.12
+- **No direction swap for a small demand** (`reverse_min_power` 250 W, `reverse_window` 120 s). A set that was charging or delivering in the last 2 minutes only swaps for at least 250 W; below that it idles at 0 W. Seen in shadow mode: charging ~1.9 kW from solar, a 2.1 kW load for ~40 s. ZEPHYR stopped the charging (right), then delivered 110–190 W for 20 s and swapped back (two relay switches for ~1 Wh, and 16 s of exported solar on the way back). Now the charging stops and resumes at once. After 2 minutes idle the normal minimum of 100 W holds again (evening: delivering after a day of charging).
+- **Swapping direction takes `switch_delay`, not longer.** Two things restarted the 10 s wait one sample after it began: the start hysteresis (two samples above `min_power`) and the step filter, which held the rise of the grid caused by ZEPHYR's own stop of the charging. Simulation: delivering 21 s after a large load instead of 11 s. The step filter now also lets the rise through while the last direction was charging; a short peak is still not delivered for, because the swap waits `switch_delay`.
+- **Minimum change per power command** (`min_command_step` 30 W, was 20 W or 5 %). Changes of 10–20 W wait for the 60 s refresh, which now sends the latest setpoint. In live control the dead zone already keeps steps at ≥ 30 W; in shadow mode this removes the 10 W writes on meter noise (seen: −180, −170, −180, −190 W within 10 s), so the shadow counters come closer to what live control would write.
+
 ### 0.4.11
 - ZEPHYR logo and icon. From Home Assistant 2026.3 they show on the integrations page and in HACS (light and dark variants, in `brand/`). Also at the top of the README.
 
