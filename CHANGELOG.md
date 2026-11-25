@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.7.2 — fix: a slow start was taken for a second controller
+- **Seen 26-11 (0.6.2):** with the previous system off, ZEPHYR went live three times and was back in shadow mode within 9 s each time ("another system controls the set"), before the set delivered anything.
+- **Cause:** the set was in standby. After ZEPHYR's command (730 W) it kept reporting its old limits (output 0 W, `smartMode` 0) until the relay had closed, which takes 9–17 s from 0 W. The check for a second controller looked at the reports 6 s after a write and counted two such reports as someone else writing; the same reports were also counted as "smartMode reverted".
+- **Fix:** a report that still shows the limits the set had when ZEPHYR wrote counts as "not applied yet" for up to 20 s; only a different value, or the old value after 20 s, counts as a second controller. The smartMode check waits the same way.
+- Tests: `test_slow_start_is_not_a_second_controller` (fails on 0.7.0) and `test_set_that_never_applies_counts_as_second_controller`.
 ### 0.7.1 — planner: wear cost per kWh (PU3), backtest with wear
 - **`PlannerSettings.wear_cost`** (€ per kWh delivered by the battery, default 0): weighs battery wear in the choice, not in the grid costs, so the planner does not cycle the battery for a few cents (SPEC-planner §12.3, PU3). Not yet in Home Assistant.
 - **Backtest:** option `--wear` (default €0.03/kWh); runs the planner and planner + X with and without wear and shows the cost including wear for every strategy.

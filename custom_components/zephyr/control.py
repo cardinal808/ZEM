@@ -469,6 +469,9 @@ class ZephyrControl:
     # --- checks while live: a second controller, smartMode (PLAN-M4b §2.2, §2.7) ---------
 
     SETTLE_FOR_CHECK = 6.0
+    NOT_APPLIED_AFTER = 20.0
+    """A set that still reports its old limits is starting, not controlled by someone else, until
+    this long after the write (start from 0 W with the relay open: 9-17 s, seen 25-11)."""
     FOREIGN_WINDOW = 300.0
 
     def _check_reports(self, now: float) -> None:
@@ -479,12 +482,19 @@ class ZephyrControl:
                 continue
             if now - writer.last_at < self.SETTLE_FOR_CHECK or self._checked_report.get(key) == report.timestamp:
                 continue
-            self._checked_report[key] = report.timestamp
             sent = writer.last_props
+            limits_sent = "inputLimit" in sent and "outputLimit" in sent
+            mismatch = limits_sent and (
+                abs(report.input_limit - sent["inputLimit"]) > 20 or abs(report.output_limit - sent["outputLimit"]) > 20
+            )
+            before = writer.limits_before
+            still_old = before is not None and abs(report.input_limit - before[0]) <= 20 and abs(report.output_limit - before[1]) <= 20
+            if mismatch and still_old and now - writer.last_at < self.NOT_APPLIED_AFTER:
+                continue  # the set has not applied the command yet (starting): check the next report
+            self._checked_report[key] = report.timestamp
             if sent.get("smartMode") == 1 and report.smart_mode == 0:
                 writer.stats.smartmode_reverted.append(now)
-            limits_sent = "inputLimit" in sent and "outputLimit" in sent
-            if limits_sent and (abs(report.input_limit - sent["inputLimit"]) > 20 or abs(report.output_limit - sent["outputLimit"]) > 20):
+            if mismatch:
                 self._foreign.append(now)
                 LOGGER.warning(
                     "Set %s reports limits ZEPHYR did not write (in %s / out %s, sent %s / %s)",
