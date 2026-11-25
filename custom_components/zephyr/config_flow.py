@@ -23,19 +23,25 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_CAPACITY_OVERRIDE,
+    CONF_EXPENSIVE_HOURS,
     CONF_HOST,
     CONF_LIVE_OFF_AFTER_RESTART,
     CONF_MAX_SOC,
+    CONF_MIN_PRICE,
     CONF_MIN_SOC,
     CONF_NUMBER,
     CONF_P1_ENTITY,
     CONF_P1_EXPORT,
     CONF_P1_IMPORT,
     CONF_P1_SOURCE,
+    CONF_PRICE_ENTITY,
     CONF_PRODUCT,
+    CONF_RESERVE_SOC,
     CONF_SERIAL,
     CONF_SOLAR_ENERGY,
     CONF_SOLAR_FORECAST,
+    DEFAULT_EXPENSIVE_HOURS,
+    DEFAULT_RESERVE_SOC,
     DOMAIN,
     MAX_SETS,
     P1_SOURCE_PAIR,
@@ -278,6 +284,14 @@ def suggest_p1_pair(hass: HomeAssistant) -> tuple[str | None, str | None]:
     return None, None
 
 
+def suggest_price(hass: HomeAssistant) -> str | None:
+    """A Nord Pool price sensor with the day's prices in its attributes (``raw_today``)."""
+    return next(
+        (st.entity_id for st in sorted(hass.states.async_all("sensor"), key=lambda st: st.entity_id) if "raw_today" in st.attributes),
+        None,
+    )
+
+
 def suggest_solar(hass: HomeAssistant) -> tuple[str | None, str | None]:
     """A day-ahead forecast sensor with half-hour detail (Solcast) and a solar production counter."""
     forecast = next(
@@ -325,9 +339,11 @@ class ZephyrOptionsFlow(OptionsFlow):
                 errors["base"] = "p1_missing"
             if not errors:
                 data = {**self.config_entry.options, **user_input}
-                for key in (CONF_P1_ENTITY, CONF_P1_IMPORT, CONF_P1_EXPORT, CONF_SOLAR_FORECAST, CONF_SOLAR_ENERGY):
+                for key in (CONF_P1_ENTITY, CONF_P1_IMPORT, CONF_P1_EXPORT, CONF_SOLAR_FORECAST, CONF_SOLAR_ENERGY, CONF_PRICE_ENTITY):
                     if not user_input.get(key):
                         data.pop(key, None)
+                if user_input.get(CONF_MIN_PRICE) is None:
+                    data.pop(CONF_MIN_PRICE, None)
                 return self.async_create_entry(data=data)
         options = dict(self.config_entry.options)
         if user_input is not None:
@@ -335,6 +351,7 @@ class ZephyrOptionsFlow(OptionsFlow):
         single = options.get(CONF_P1_ENTITY) or suggest_p1_entity(self.hass)
         pair_import, pair_export = suggest_p1_pair(self.hass)
         solar_forecast, solar_energy = suggest_solar(self.hass)
+        price = options.get(CONF_PRICE_ENTITY) or suggest_price(self.hass)
         # Without an earlier choice, prefer the DSMR pair when it exists: it reports every telegram.
         default_source = P1_SOURCE_PAIR if pair_import and pair_export and not options.get(CONF_P1_ENTITY) else P1_SOURCE_SINGLE
         source = options.get(CONF_P1_SOURCE, default_source)
@@ -355,10 +372,30 @@ class ZephyrOptionsFlow(OptionsFlow):
                 ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.ENERGY)),
                 vol.Required(CONF_MIN_SOC, default=options.get(CONF_MIN_SOC, defaults.min_soc)): _percent(5, 50),
                 vol.Required(CONF_MAX_SOC, default=options.get(CONF_MAX_SOC, defaults.max_soc)): _percent(70, 100),
+                vol.Optional(CONF_PRICE_ENTITY, description={"suggested_value": price}): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor")
+                ),
+                vol.Required(
+                    CONF_EXPENSIVE_HOURS, default=options.get(CONF_EXPENSIVE_HOURS, DEFAULT_EXPENSIVE_HOURS)
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=1, max=12, step=1, unit_of_measurement="h", mode=selector.NumberSelectorMode.BOX)
+                ),
+                vol.Required(CONF_RESERVE_SOC, default=options.get(CONF_RESERVE_SOC, DEFAULT_RESERVE_SOC)): _percent(0, 80),
+                vol.Optional(CONF_MIN_PRICE, description={"suggested_value": options.get(CONF_MIN_PRICE)}): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=-1, max=2, step=0.01, unit_of_measurement="€/kWh", mode=selector.NumberSelectorMode.BOX
+                    )
+                ),
                 vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, True)): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+
+
+def _box(low: float, high: float, step: float, unit: str) -> selector.NumberSelector:
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(min=low, max=high, step=step, unit_of_measurement=unit, mode=selector.NumberSelectorMode.BOX)
+    )
 
 
 def _percent(low: int, high: int) -> selector.NumberSelector:

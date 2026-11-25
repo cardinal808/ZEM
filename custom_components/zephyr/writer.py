@@ -28,6 +28,8 @@ class WriteStats:
     failed: deque[float] = field(default_factory=deque)
     last_error: str | None = None
     last_duration: float | None = None
+    smartmode_reverted: deque[float] = field(default_factory=deque)
+    """Reports with ``smartMode`` 0 while ZEPHYR's last command was in RAM (PLAN-M4b §2.7)."""
 
     def snapshot(self, now: float) -> dict[str, object]:
         for events in (self.ok, self.failed):
@@ -39,6 +41,7 @@ class WriteStats:
             "failed_1h": sum(1 for t in self.failed if now - t <= HOUR),
             "last_error": self.last_error,
             "last_duration_s": None if self.last_duration is None else round(self.last_duration, 2),
+            "smartmode_reverted_24h": sum(1 for t in self.smartmode_reverted if now - t <= 24 * HOUR),
         }
 
 
@@ -50,6 +53,9 @@ class SetWriter:
         self.coordinator = coordinator
         self.stats = WriteStats()
         self._pending: dict[str, int] | None = None
+        self.last_props: dict[str, int] | None = None
+        """The last command written successfully, and when (for checks against the reports)."""
+        self.last_at: float | None = None
         self._task: asyncio.Task[None] | None = None
         self._on_done = on_done
 
@@ -83,6 +89,8 @@ class SetWriter:
         else:
             self.stats.ok.append(time.monotonic())
             self.stats.last_error = None
+            self.last_props = props
+            self.last_at = time.monotonic()
             ok = True
         self.stats.last_duration = time.monotonic() - started
         if self._on_done is not None:
