@@ -193,3 +193,50 @@ async def test_mode_dynamic_forecasting_follows_the_plan_in_shadow(
 async def test_no_forecast_mode_without_price_sensor(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
     await _setup(hass, fake_sets, freezer, (10, 0))
     assert "dynamic_forecasting" not in hass.states.get("select.zephyr_mode").attributes["options"]
+
+
+async def test_profile_first_fill_from_the_recorder(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With meter counters the profile starts from the recorder's hourly statistics, not from a few night hours."""
+    from custom_components.zephyr import planner_runner
+
+    imp, exp, solar = "sensor.meter_import", "sensor.meter_export", "sensor.solar_energy"
+    asked: list[list[str]] = []
+
+    async def fake_stats(hass: HomeAssistant, start: datetime, end: datetime, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+        asked.append(ids)
+        rows: dict[str, list[dict[str, Any]]] = {i: [] for i in ids}
+        t = start
+        while t < end:
+            local = dt_util.as_local(t)
+            evening = 17 <= local.hour < 22
+            ts = dt_util.as_utc(t).timestamp()
+            rows[imp].append({"start": ts, "change": 0.2 if evening else 0.3})
+            rows[exp].append({"start": ts, "change": 0.0})
+            rows[solar].append({"start": ts, "change": 0.0})
+            rows["sensor.zephyr_power"].append({"start": ts, "mean": -1000.0 if evening else 0.0})
+            t += timedelta(hours=1)
+        return rows
+
+    monkeypatch.setattr(planner_runner, "hourly_statistics", fake_stats)
+    hass.config.components.add("recorder")
+    _set_prices(hass)
+    entry = await _setup(
+        hass,
+        fake_sets,
+        freezer,
+        (7, 30),
+        price_entity=PRICE,
+        cost_import_counters=[imp],
+        cost_export_counters=[exp],
+        solar_energy_entity=solar,
+    )
+    planner = entry.runtime_data.planner
+    assert asked and set(asked[-1]) == {imp, exp, solar, "sensor.zephyr_power"}
+    assert planner.profile_source.startswith("recorder")
+    assert planner.profile.expected("workday", 18) == pytest.approx(1.2)
+    assert planner.profile.expected("workday", 3) == pytest.approx(0.3)
+    await _tick(hass, freezer, 10)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["planner"]["inputs"]["profile_source"].startswith("recorder")
