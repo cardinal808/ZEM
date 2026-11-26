@@ -55,3 +55,24 @@ async def test_counters_follow_the_pack_power(hass: HomeAssistant, fake_sets: Fa
     assert float(hass.states.get(CHARGED).state) == pytest.approx(value, abs=0.01)
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["energy_counters"]["sets"][0]["set"] == 1
+
+
+async def test_gap_is_filled_when_the_set_returns(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    entry = await _install_with_p1(hass, fake_sets, "charge_2400")
+    await _wait(hass, freezer, 60)
+    before = float(hass.states.get(CHARGED).state)
+    answer = fake_sets.answers["10.0.0.10"]
+    fake_sets.fail("10.0.0.10")
+    await _wait(hass, freezer, 300)  # 5 minutes unreadable while charging at 2.4 kW
+    assert float(hass.states.get(CHARGED).state) == pytest.approx(before + 2.386 * 60 / 3600, abs=0.01)  # only the hold
+    assert isinstance(answer, dict)
+    for pack in answer["packData"]:
+        pack["socLevel"] += 2  # the packs filled meanwhile (≈ 0.22 kWh)
+    fake_sets.answers["10.0.0.10"] = answer
+    await _wait(hass, freezer, 5)
+    state = hass.states.get(CHARGED)
+    assert float(state.state) == pytest.approx(before + 2.386 * 305 / 3600, abs=0.02)
+    assert state.attributes["last_gap"]["method"] == "interpolate"
+    assert state.attributes["estimated_kwh"] > 0.1
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["energy_counters"]["sets"][0]["gaps"][-1]["method"] == "interpolate"

@@ -1,4 +1,4 @@
-"""Own energy counters per set in Home Assistant (SPEC-tellers, T1).
+"""Own energy counters per set in Home Assistant (SPEC-tellers, T1 and T2).
 
 Listens to every read of every set, feeds ``core.energy_counters`` and keeps the counter
 states in a store (``zephyr.<entry>.counters``), saved at most every 5 minutes and on unload.
@@ -6,17 +6,17 @@ states in a store (``zephyr.<entry>.counters``), saved at most every 5 minutes a
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.sun import is_up
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, LOGGER
 from .core.device_table import pack_info
 from .core.energy_counters import EnergyCounters
 from .core.models import SetReport
@@ -81,17 +81,23 @@ class EnergyRecorder:
         last = coordinator.health.last_success
         good = report is not None and last is not None and last != self._seen.get(coordinator.serial)
         self._seen[coordinator.serial] = last
-        now = time.monotonic()
-        self.counters.observe(
+        gap = self.counters.observe(
             coordinator.serial,
             report if good else None,
-            last if good and last is not None else now,
+            dt_util.utcnow().timestamp(),
             good=good,
-            wall=dt_util.utcnow().isoformat(timespec="seconds"),
             capacities=capacities(report) if good and report is not None else None,
+            daylight=self._daylight,
         )
+        if gap is not None:
+            LOGGER.debug("Set %s: gap of %s s filled (%s): %s", coordinator.number, gap["seconds"], gap["method"], gap["kwh"])
+            self._save()
         for listener in list(self._listeners):
             listener()
+
+    def _daylight(self, start: float, end: float) -> bool:
+        """Sun above the horizon in the middle of a gap."""
+        return is_up(self.hass, datetime.fromtimestamp((start + end) / 2, UTC))
 
     def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
         self._listeners.append(listener)

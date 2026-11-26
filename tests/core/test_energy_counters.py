@@ -47,25 +47,24 @@ def test_failed_reads_within_hold_keep_counting() -> None:
     assert c.sets["A"].gap is None and c.sets["A"].gaps == []
 
 
-def test_beyond_hold_a_gap_starts_and_nothing_is_counted() -> None:
+def test_beyond_hold_a_gap_starts() -> None:
     c = EnergyCounters()
     c.observe("A", _charging(), 0.0, good=True)
-    c.observe("A", None, 100.0, good=False, wall="2026-11-26T01:00:00+00:00")
+    c.observe("A", None, 100.0, good=False)
     assert c.sets["A"].gap is not None
+    assert c.sets["A"].kwh["charged"] == pytest.approx(2.4 * HOLD / 3600)  # held, then nothing
     c.observe("A", None, 200.0, good=False)
-    c.observe("A", _charging(), 300.0, good=True, wall="2026-11-26T01:05:00+00:00")
-    assert c.sets["A"].kwh["charged"] == pytest.approx(2.4 * HOLD / 3600)
-    gap = c.sets["A"].gaps[-1]
-    assert gap["seconds"] == 300 - HOLD and gap["powers"]["charged"] == 2400.0
-    assert gap["start"] == "2026-11-26T01:00:00+00:00" and gap["end"] == "2026-11-26T01:05:00+00:00"
+    gap = c.observe("A", _charging(), 300.0, good=True)
+    assert gap is not None and gap["seconds"] == 300 - HOLD
+    assert gap["start"] == "1970-01-01T00:01:00+00:00" and gap["end"] == "1970-01-01T00:05:00+00:00"
 
 
 def test_long_pause_between_good_reports_is_a_gap() -> None:
     c = EnergyCounters()
     c.observe("A", _charging(), 0.0, good=True)
-    c.observe("A", _charging(), 600.0, good=True)  # HA hung for 10 minutes
-    assert c.sets["A"].kwh["charged"] == pytest.approx(2.4 * HOLD / 3600)
-    assert len(c.sets["A"].gaps) == 1
+    c.observe("A", _charging(), 600.0, good=True)  # HA hung for 10 minutes: interpolated
+    assert c.sets["A"].kwh["charged"] == pytest.approx(2.4 * 600 / 3600)
+    assert len(c.sets["A"].gaps) == 1 and c.sets["A"].gaps[0]["method"] == "interpolate"
 
 
 def test_set_pv_counts_as_solar_not_battery() -> None:
@@ -95,8 +94,9 @@ def test_restore_keeps_states_and_holds_nothing() -> None:
     again = EnergyCounters()
     again.restore(stored)
     assert again.sets["A"].kwh["charged"] == pytest.approx(1.2) and again.totals["charged"] == pytest.approx(1.2)
-    again.observe("A", _charging(), 50_000.0, good=True)  # first report after the restart: no jump
-    assert again.sets["A"].kwh["charged"] == pytest.approx(1.2)
+    again.observe("A", _charging(), 1810.0, good=True)  # a quick restart: just counts on
+    assert again.sets["A"].kwh["charged"] == pytest.approx(1.2 + 2.4 * 10 / 3600)
+    assert again.sets["A"].gaps == []
 
 
 def test_pack_energy() -> None:
@@ -105,3 +105,115 @@ def test_pack_energy() -> None:
     expected = sum(2.88 * p.soc / 100 for p in report.packs)
     assert pack_energy(report, capacities) == pytest.approx(expected)
     assert pack_energy(report, {}) is None
+
+
+# --- T2: filling gaps ------------------------------------------------------------------
+
+CAPACITY = {"JO2A": 2.40, "GO2A": 2.88}
+
+
+def _caps(report: SetReport) -> dict[str, float]:
+    return {p.serial: CAPACITY[p.serial[:4]] for p in report.packs}
+
+
+def _with_soc(report: SetReport, soc: float) -> SetReport:
+    return dataclasses.replace(report, packs=tuple(dataclasses.replace(p, soc=soc) for p in report.packs))
+
+
+def _energy(report: SetReport) -> float:
+    return sum(_caps(report)[p.serial] * p.soc / 100 for p in report.packs)
+
+
+def test_short_gap_at_the_same_power_is_interpolated() -> None:
+    c = EnergyCounters()
+    before = _with_soc(_charging(), 50.0)
+    _run_caps(c, before, 0.0, 60.0)
+    c.observe("A", None, 70.0, good=False)
+    # 5 min later: 2.4 kW all the time → ≈ 0.2 kWh in, ≈ 0.18 kWh in the packs (2 % of 11.04 kWh ≈ 0.22).
+    after = _with_soc(_charging(), 52.0)
+    gap = c.observe("A", after, 360.0, good=True, capacities=_caps(after), daylight=lambda a, b: False)
+    assert gap is not None and gap["method"] == "interpolate"
+    assert c.sets["A"].kwh["charged"] == pytest.approx(2.4 * 360 / 3600)
+    assert c.sets["A"].estimated["charged"] == pytest.approx(2.4 * (360 - 120) / 3600)
+    assert c.sets["A"].kwh["solar"] == 0.0
+
+
+def _run_caps(c: EnergyCounters, report: SetReport, start: float, end: float) -> None:
+    t = start
+    while t <= end:
+        c.observe("A", report, t, good=True, capacities=_caps(report))
+        t += 5.0
+
+
+def test_different_power_fills_from_the_soc() -> None:
+    c = EnergyCounters()
+    before = _with_soc(_charging(2400.0), 50.0)
+    _run_caps(c, before, 0.0, 0.0)
+    after = _with_soc(_charging(600.0), 55.0)  # +5 % of 11.04 kWh
+    gap = c.observe("A", after, 300.0, good=True, capacities=_caps(after))
+    assert gap is not None and gap["method"] == "soc"
+    delta = _energy(after) - _energy(before)
+    assert delta == pytest.approx(0.552)
+    # In total the packs' gain divided by the efficiency (the held minute included).
+    assert c.sets["A"].kwh["charged"] == pytest.approx(delta / 0.92)
+
+
+def test_soc_drop_fills_delivered() -> None:
+    c = EnergyCounters()
+    deliver = _report("deliver_760")
+    before = _with_soc(deliver, 60.0)
+    c.observe("A", before, 0.0, good=True, capacities=_caps(before))
+    after = _with_soc(dataclasses.replace(deliver, deliver_power_ac=200.0), 56.0)
+    gap = c.observe("A", after, 3600.0, good=True, capacities=_caps(after))
+    assert gap is not None and gap["method"] == "soc"
+    delta = _energy(before) - _energy(after)
+    assert c.sets["A"].kwh["discharged"] == pytest.approx(delta * 0.88)
+    assert c.sets["A"].kwh["charged"] == 0.0
+
+
+def test_interpolation_that_disagrees_with_the_packs_falls_back_to_the_soc() -> None:
+    c = EnergyCounters()
+    before = _with_soc(_charging(), 50.0)
+    c.observe("A", before, 0.0, good=True, capacities=_caps(before))
+    after = _with_soc(_charging(), 50.0)  # power said 2.4 kW, but the packs did not fill
+    gap = c.observe("A", after, 600.0, good=True, capacities=_caps(after))
+    assert gap is not None and gap["method"] == "soc" and gap["kwh"] == {}
+
+
+def test_long_gap_is_never_interpolated() -> None:
+    c = EnergyCounters()
+    before = _with_soc(_charging(), 20.0)
+    c.observe("A", before, 0.0, good=True, capacities=_caps(before))
+    after = _with_soc(_charging(), 40.0)
+    gap = c.observe("A", after, 3600.0, good=True, capacities=_caps(after))
+    assert gap is not None and gap["method"] == "soc"
+
+
+def test_set_pv_in_a_gap_by_day_and_by_night() -> None:
+    pv = _with_soc(_report("standby", solar_power=400.0, solar_power_inputs=(200.0, 200.0), charge_power_ac=0.0), 50.0)
+    for light, expected in ((True, 0.4 * (3600 - HOLD) / 3600), (False, 0.0)):
+        c = EnergyCounters()
+        c.observe("A", pv, 0.0, good=True, capacities=_caps(pv))
+        after = _with_soc(pv, 50.0)
+        c.observe("A", after, 3600.0, good=True, capacities=_caps(after), daylight=lambda a, b, light=light: light)
+        assert c.sets["A"].kwh["solar"] == pytest.approx(0.4 * HOLD / 3600 + expected)
+
+
+def test_restart_fills_the_downtime() -> None:
+    c = EnergyCounters()
+    before = _with_soc(_charging(), 30.0)
+    _run_caps(c, before, 0.0, 600.0)
+    again = EnergyCounters()
+    again.restore(c.as_dict())
+    after = _with_soc(_charging(600.0), 40.0)
+    gap = again.observe("A", after, 600.0 + 3600.0, good=True, capacities=_caps(after))
+    assert gap is not None and gap["restart"] and gap["method"] == "soc"
+    assert again.sets["A"].estimated["charged"] == pytest.approx((_energy(after) - _energy(before)) / 0.92)  # no hold after a restart
+    assert again.totals["charged"] == pytest.approx(again.sets["A"].kwh["charged"])
+
+
+def test_unknown_pack_capacity_leaves_a_long_gap_empty() -> None:
+    c = EnergyCounters()
+    c.observe("A", _charging(), 0.0, good=True)
+    gap = c.observe("A", _charging(600.0), 3600.0, good=True)
+    assert gap is not None and gap["method"] == "none" and gap["kwh"] == {}
