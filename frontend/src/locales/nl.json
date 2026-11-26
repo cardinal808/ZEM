@@ -1,0 +1,73 @@
+{
+  "menu": {
+    "label": "Hoofdmenu",
+    "plan": "Plan",
+    "sets": "Sets",
+    "battery": "Accu",
+    "settings": "Instellingen",
+    "diagnostics": "Diagnose"
+  },
+  "header": {
+    "live": "Stuurt",
+    "shadow": "Rekent mee",
+    "live_title": "ZEPHYR stuurt de accu",
+    "shadow_title": "Schaduwmodus: ZEPHYR rekent mee maar stuurt niets"
+  },
+  "mode": {
+    "standby": "Standby",
+    "zero_meter": "Nul op de meter",
+    "fast_charge": "Snel opladen",
+    "fast_discharge": "Snel ontladen",
+    "dynamic_forecasting": "Dynamische Forecasting"
+  },
+  "action": {
+    "standby": "Standby",
+    "charge": "Laden",
+    "deliver": "Leveren",
+    "hold": "Vasthouden",
+    "export": "Terugleveren",
+    "blocked": "Geblokkeerd",
+    "calibration": "Kalibratie"
+  },
+  "now": {
+    "title": "Nu",
+    "waiting": "Wacht op de eerste meting…",
+    "grid": "Net {value}",
+    "shadow_note": "Zo zou ZEPHYR het doen (schaduwmodus)."
+  },
+  "battery": {
+    "title": "Accu",
+    "of": "{energy} van {capacity}",
+    "limits": "Grenzen {min}–{max} %",
+    "buffer": "buffer {value} %",
+    "sets": "{online} van {total} sets online",
+    "set": "1 set",
+    "set_offline": "set offline",
+    "unknown": "Nog geen gegevens van de set"
+  },
+  "next": {
+    "title": "Volgende stap",
+    "in": "over {time}",
+    "now": "nu",
+    "hours": "{h} u {m} min",
+    "minutes": "{m} min",
+    "at": "{time} · {action}",
+    "tomorrow": "morgen {time} · {action}",
+    "charge": "{kwh} uit het net, gemiddeld {price}.",
+    "deliver": "{kwh} uit de accu; stroom kost dan gemiddeld {price}.",
+    "export": "{kwh} terugleveren voor gemiddeld {price}.",
+    "hold": "Accu houdt de lading vast; stroom kost dan gemiddeld {price}.",
+    "indicative": "Indicatief: de prijzen van morgen zijn nog niet bekend.",
+    "none": "Geen wissel meer in het plan.",
+    "no_price_source": "Kies een prijsbron in de opties om een plan te maken.",
+    "no_prices": "Geen prijzen sinds {time}; ZEPHYR houdt het net op nul.",
+    "price_now": "Stroom kost nu {price}"
+  },
+  "status": {
+    "loading": "ZEPHYR laden…",
+    "not_loaded": "ZEPHYR is niet geladen. Controleer de integratie onder Instellingen → Apparaten en diensten.",
+    "disconnected": "Geen verbinding met Home Assistant. De waarden hieronder zijn van {time}.",
+    "reloading": "ZEPHYR wordt opnieuw geladen…",
+    "coming": "Dit scherm komt in een volgende versie van het paneel."
+  }
+}

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### 0.8.0 — M6: own panel in the sidebar, step 1 (SPEC-ui, UI-1)
+- **Panel *ZEPHYR*** in the Home Assistant sidebar (`/zephyr`), for every user. Header with logo, menu (Plan, Sets — *Accu* with one set —, Settings, Diagnostics), the mode and whether ZEPHYR controls (*In control*) or only calculates (*Shadow*). The Plan screen shows three cards:
+  - **Now:** the action with power and the reason in one sentence, the grid power, and in shadow mode a note that this is what ZEPHYR would do.
+  - **Battery:** state of charge, kWh of capacity, a bar with the min/max limits and the planning buffer, sets online.
+  - **Next step:** the next block of the plan with time, countdown, kWh and average price; *indicative* while tomorrow's prices are unknown; clear texts without a price source and with *No prices*.
+  - The other screens follow in UI-2 … UI-8 and show *comes in a later version* for now.
+- **Websocket `zephyr/subscribe`:** a snapshot of now, then an update at most every 2 s (P1, sets, new plan). On a reload the panel gets `unloaded` and subscribes again; the panel stays in the sidebar during a reload and is removed when the installation is removed or disabled.
+- Light and dark follow Home Assistant; Dutch or English follows the user's language; numbers and times in the user's notation and Home Assistant's time zone. Without connection the last values stay visible (grey) with the time.
+- **Frontend:** TypeScript + Lit, built with Vite to one module `custom_components/zephyr/frontend/zephyr-panel.js` (44 kB), plus the logo and the fonts Inter and Space Grotesk (SIL OFL, latin only). Source in `frontend/`; CI builds it and fails when the committed build differs.
+- Manifest: `after_dependencies` frontend, http, panel_custom, websocket_api. Without Home Assistant's frontend the integration loads as before, without panel.
+- Tests: panel registration (also over a reload and removal), the subscription (snapshot, update, unsubscribe, reload), without installation and without price source; frontend: number/time formatting (incl. DST) and texts.
+
 ### 0.7.10 — Planner: no "charge" with a full battery
 - A planned charge slot (L) that takes nothing from the grid — the battery is already full, so it costs the same as holding — is now shown and carried out as **hold** (H). The plan, the blocks, the timeline and `sensor.zephyr_plan_action` no longer say *charge* while nothing charges; the state is *Battery full* when that is the case now. Seen at a tester: a "charge" block of 14 hours of which only the first 45 minutes charged.
 

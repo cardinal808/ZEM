@@ -47,6 +47,11 @@ Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 - Optioneel de kWh-tellers van je meter (tarief 1 en 2) voor afname en teruglevering; zonder tellers integreert ZEPHYR het P1-vermogen. Met een zonteller ook de besparing door de zon.
 - Entiteiten: `sensor.zephyr_costs_today|month|year` en `sensor.zephyr_savings_today|month|year` (€), met de uitsplitsing als attributen. Actie `zephyr.export_costs` schrijft de kwartieren als CSV naar `config/zephyr/`.
 
+## Paneel (0.8, in opbouw)
+- **ZEPHYR** in de zijbalk van Home Assistant: wat de accu nu doet en waarom, het laadpercentage met de grenzen, en de volgende stap van het plan. Licht en donker volgen Home Assistant; Nederlands of Engels volgt je profiel.
+- Wordt stap voor stap gebouwd: het plan met de prijzen van vandaag, de sets en de instellingen volgen in de volgende versies. Tot die tijd blijft het testdashboard beschikbaar.
+- Broncode in `frontend/` (TypeScript + Lit); het gebouwde paneel staat in `custom_components/zephyr/frontend/`. Bouwen: `cd frontend && npm ci && npm run build`. Lettertypen: Inter en Space Grotesk (SIL Open Font License).
+
 ## Ondersteunde sets en accu's
 - Sets met de lokale zenSDK-API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro en 4000 AC+. Tot nu toe getest: 2400 Pro en 2400 AC+. Zet HEMS uit in de Zendure-app.
 - Accu's worden herkend aan hun serienummer: AB1000, AB1000S, AB2000(S/X), AB3000X, AB3000L en de ingebouwde accu's van de 2400 Pro, 2400 AC+, 4000 AC+ en AIO 2400.
@@ -59,7 +64,6 @@ Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 - Eén tot drie sets, met de vraag van het huis verdeeld over de sets.
 - Planner voor vandaag en morgen (dynamische prijzen, zonverwachting, geleerd verbruik).
 - Rendement per set gemeten, zonder invulveld.
-- Eigen paneel in de zijbalk van Home Assistant.
 - Schaduwmodus: ZEPHYR rekent mee naast een bestaand systeem zonder de accu aan te sturen.
 
 ## Herkomst

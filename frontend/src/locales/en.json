@@ -1,0 +1,73 @@
+{
+  "menu": {
+    "label": "Main menu",
+    "plan": "Plan",
+    "sets": "Sets",
+    "battery": "Battery",
+    "settings": "Settings",
+    "diagnostics": "Diagnostics"
+  },
+  "header": {
+    "live": "In control",
+    "shadow": "Shadow",
+    "live_title": "ZEPHYR controls the battery",
+    "shadow_title": "Shadow mode: ZEPHYR calculates but does not control"
+  },
+  "mode": {
+    "standby": "Standby",
+    "zero_meter": "Zero on the meter",
+    "fast_charge": "Fast charge",
+    "fast_discharge": "Fast discharge",
+    "dynamic_forecasting": "Dynamic Forecasting"
+  },
+  "action": {
+    "standby": "Standby",
+    "charge": "Charging",
+    "deliver": "Delivering",
+    "hold": "Holding",
+    "export": "Exporting",
+    "blocked": "Blocked",
+    "calibration": "Calibration"
+  },
+  "now": {
+    "title": "Now",
+    "waiting": "Waiting for the first measurement…",
+    "grid": "Grid {value}",
+    "shadow_note": "What ZEPHYR would do (shadow mode)."
+  },
+  "battery": {
+    "title": "Battery",
+    "of": "{energy} of {capacity}",
+    "limits": "Limits {min}–{max} %",
+    "buffer": "buffer {value} %",
+    "sets": "{online} of {total} sets online",
+    "set": "1 set",
+    "set_offline": "set offline",
+    "unknown": "No data from the set yet"
+  },
+  "next": {
+    "title": "Next step",
+    "in": "in {time}",
+    "now": "now",
+    "hours": "{h} h {m} min",
+    "minutes": "{m} min",
+    "at": "{time} · {action}",
+    "tomorrow": "tomorrow {time} · {action}",
+    "charge": "{kwh} from the grid, {price} on average.",
+    "deliver": "{kwh} from the battery; power then costs {price} on average.",
+    "export": "{kwh} exported for {price} on average.",
+    "hold": "The battery keeps its charge; power then costs {price} on average.",
+    "indicative": "Indicative: tomorrow's prices are not known yet.",
+    "none": "No more changes in the plan.",
+    "no_price_source": "Choose a price source in the options to get a plan.",
+    "no_prices": "No prices since {time}; ZEPHYR keeps the grid at zero.",
+    "price_now": "Power costs {price} now"
+  },
+  "status": {
+    "loading": "Loading ZEPHYR…",
+    "not_loaded": "ZEPHYR is not loaded. Check the integration under Settings → Devices & services.",
+    "disconnected": "No connection to Home Assistant. The values below are from {time}.",
+    "reloading": "ZEPHYR is reloading…",
+    "coming": "This screen comes in a later version of the panel."
+  }
+}
