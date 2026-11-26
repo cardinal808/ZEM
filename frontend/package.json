@@ -1,7 +1,7 @@
 {
   "name": "zephyr-panel",
   "private": true,
-  "version": "0.8.20",
+  "version": "0.8.22",
   "description": "ZEPHYR panel for Home Assistant (built into custom_components/zephyr/frontend)",
   "license": "MIT",
   "type": "module",

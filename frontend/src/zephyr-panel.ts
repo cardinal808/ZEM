@@ -16,7 +16,7 @@ import type { SetResult } from "./settings-edit";
 import { blockerText, fastButtons, type EventsView } from "./diag";
 import "./diagnostics";
 import "./savings";
-import type { SavingsView } from "./savings";
+import type { BackfillRequest, BackfillResult, SavingsView } from "./savings";
 import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
 import type { HomeAssistant, Now, PanelInfo, PlanNow, SubscribeEvent } from "./types";
@@ -208,6 +208,15 @@ export class ZephyrPanel extends LitElement {
       // Not loaded: the banner says so.
     }
   }
+
+  private backfillSavings = async (req: BackfillRequest | null): Promise<BackfillResult> => {
+    if (!this.hass) return { ok: false, error: "no_connection" };
+    const result = await this.hass.callWS<BackfillResult>(
+      req ? { type: "zephyr/savings/backfill", ...req } : { type: "zephyr/savings/backfill", clear: true },
+    );
+    if (result.ok) await this.loadSavings();
+    return result;
+  };
 
   private async loadSettings(): Promise<void> {
     if (!this.hass) return;
@@ -505,6 +514,9 @@ export class ZephyrPanel extends LitElement {
         .uiLang=${this.uiLang}
         .locale=${this.locale}
         .timeZone=${this.timeZone}
+        ?admin=${this.admin}
+        .states=${this.hass?.states}
+        .backfill=${this.backfillSavings}
       ></zephyr-savings>`;
     }
     if (this.view === "diagnostics") {
@@ -623,29 +635,13 @@ export class ZephyrPanel extends LitElement {
     const power = now.battery_w !== null && Math.abs(now.battery_w) >= 10 ? ` · ${watts(now.battery_w, this.locale)}` : "";
     return html`<article class="card">
       <div class="label"><span class="dot" style="background:${actionFill(action)}"></span>${this.tr("now.title")}</div>
-      <div class="bigrow">
-        <div class="big">${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}</div>
-        ${now.soc !== null ? this.batteryChip(now.soc) : nothing}
-      </div>
+      <div class="big">${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}</div>
       ${now.reason ? html`<p class="text">${now.reason[this.uiLang]}</p>` : nothing} ${this.renderAirco(now)}
       <div class="foot">
         ${now.grid_w !== null ? html`<span>${this.tr("now.grid", { value: signedWatts(now.grid_w, this.locale) })}</span>` : nothing}
         ${now.live ? nothing : html`<span>${this.tr("now.shadow_note")}</span>`}
       </div>
     </article>`;
-  }
-
-  private batteryChip(soc: number): TemplateResult {
-    const fill = Math.max(0, Math.min(100, soc));
-    const low = fill <= 20;
-    return html`<span class=${low ? "batt low" : "batt"} title=${this.tr("now.battery_title")}>
-      <svg viewBox="0 0 26 14" aria-hidden="true">
-        <rect x="0.75" y="0.75" width="21.5" height="12.5" rx="2.5" class="shell"></rect>
-        <rect x="23" y="4.5" width="2.25" height="5" rx="1" class="tip"></rect>
-        <rect x="2.5" y="2.5" width=${(18 * fill) / 100} height="9" rx="1.2" class="level"></rect>
-      </svg>
-      ${percent(soc, this.locale)}
-    </span>`;
   }
 
   private renderAirco(now: Now): TemplateResult | typeof nothing {
@@ -1019,43 +1015,6 @@ export class ZephyrPanel extends LitElement {
         list-style: none;
         font-size: 14px;
         line-height: 1.5;
-      }
-      .bigrow {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-      .batt {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: var(--z-info-bg);
-        font-size: 14px;
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-      }
-      .batt svg {
-        width: 26px;
-        height: 14px;
-      }
-      .batt .shell {
-        fill: none;
-        stroke: var(--z-text);
-        stroke-width: 1.5;
-      }
-      .batt .tip {
-        fill: var(--z-text);
-      }
-      .batt .level {
-        fill: var(--z-export);
-      }
-      .batt.low .level {
-        fill: var(--z-deliver);
       }
       .blocks li {
         display: grid;

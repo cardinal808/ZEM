@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 from freezegun.api import FrozenDateTimeFactory
@@ -140,3 +141,80 @@ async def test_savings_view_for_the_panel(
     assert view["periods"]["week"]["days"] == 3  # Monday 23-11 to Wednesday 25-11
     assert view["periods"]["month"]["days"] == 3
     assert set(today) >= {"savings_solar_via_battery", "savings_trade", "charge_kwh", "discharge_kwh", "incomplete_quarters"}
+
+
+async def test_savings_before_the_cost_log_from_hourly_statistics(
+    hass: HomeAssistant,
+    fake_sets: FakeSets,
+    freezer: FrozenDateTimeFactory,
+    hass_ws_client: WebSocketGenerator,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Bjorn, 26-11 (choice 2): days before the cost log are worked out again per hour, with the same method."""
+    from custom_components.zephyr import planner_runner
+
+    charge, discharge = "sensor.set_energy_in", "sensor.set_energy_out"
+    calls: list[tuple[datetime, datetime, list[str]]] = []
+
+    async def fake_stats(hass: HomeAssistant, start: datetime, end: datetime, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+        calls.append((start, end, ids))
+        rows: dict[str, list[dict[str, Any]]] = {i: [] for i in ids}
+        t = start
+        while t < end:
+            hour = dt_util.as_local(t).hour
+            evening = 17 <= hour < 21
+            for entity, value in (
+                (IMPORT[0], 0.1 if evening else 0.6),
+                (IMPORT[1], 0.0),
+                (EXPORT[0], 0.0),
+                (EXPORT[1], 0.0),
+                (charge, 0.0),
+                (discharge, 0.5 if evening else 0.0),
+            ):
+                rows[entity].append({"start": t, "change": value})
+            rows[PRICE].append({"start": dt_util.as_utc(t).timestamp(), "mean": 0.30 if evening else 0.20})
+            t += timedelta(hours=1)
+        return rows
+
+    monkeypatch.setattr(planner_runner, "hourly_statistics", fake_stats)
+    for entity in (*IMPORT, *EXPORT, charge, discharge):
+        hass.states.async_set(entity, "100.0", ENERGY)
+    client = await hass_ws_client(hass)
+    entry = await _setup(hass, fake_sets, freezer, cost_import_counters=list(IMPORT), cost_export_counters=list(EXPORT))
+    await _run(hass, freezer, 10)
+    costs = entry.runtime_data.costs
+    assert costs.measured_since == "2026-11-25"
+
+    msg_base = {"type": "zephyr/savings/backfill", "first": "2026-11-20", "charge_entity": charge, "discharge_entity": discharge}
+    await client.send_json_auto_id({**msg_base, "price_entity": PRICE})
+    result = (await client.receive_json())["result"]
+    assert result["ok"] is True
+    assert (result["first"], result["last"], result["days"]) == ("2026-11-20", "2026-11-24", 5)
+    assert result["hours"] == 120 and result["skipped"] == 0 and result["priced_hours"] == 120
+    # Statistics are asked up to the first measured day, not into it.
+    assert dt_util.as_local(calls[-1][1]).date().isoformat() == "2026-11-25"
+
+    await client.send_json_auto_id({"type": "zephyr/savings"})
+    view = (await client.receive_json())["result"]
+    assert view["measured_since"] == "2026-11-25" and view["since"] == "2026-11-20"
+    assert view["backfilled_days"] == 5 and view["can_backfill"] is True
+    hourly = [d for d in view["days"] if d["hourly"]]
+    assert [d["day"] for d in hourly] == ["2026-11-20", "2026-11-21", "2026-11-22", "2026-11-23", "2026-11-24"]
+    assert all(not d["incomplete"] for d in hourly)
+    tariffs = costs.tariffs.tariffs_for(date(2026, 11, 22))
+    assert hourly[0]["savings_battery"] == pytest.approx(4 * 0.5 * tariffs.buy(0.30), abs=0.01)
+    assert not view["days"][-1]["hourly"]
+
+    # A second run replaces the first; clearing removes only the worked-out days.
+    await client.send_json_auto_id({**msg_base, "first": "2026-11-23", "price_entity": PRICE})
+    assert (await client.receive_json())["result"]["days"] == 2
+    assert sorted(k for k, v in costs.days.items() if v.get("source")) == ["2026-11-23", "2026-11-24"]
+    await client.send_json_auto_id({"type": "zephyr/savings/backfill", "clear": True})
+    assert (await client.receive_json())["result"] == {"ok": True, "removed": 2}
+    assert list(costs.days) == ["2026-11-25"]
+
+    # Without battery counters or with an unknown entity: an error, nothing changes.
+    await client.send_json_auto_id({"type": "zephyr/savings/backfill", "first": "2026-11-20"})
+    assert (await client.receive_json())["result"] == {"ok": False, "error": "no_battery_counters"}
+    await client.send_json_auto_id({**msg_base, "charge_entity": "sensor.gone"})
+    assert (await client.receive_json())["result"]["error"] == "entity_missing"

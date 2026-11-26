@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.22 — Besparing: days before the cost log worked out from hourly statistics
+- **Screen *Besparing* → *Eerdere dagen terugrekenen*** (administrators, with P1 counters set): for the days before the cost log, ZEPHYR works out the savings again from Home Assistant's hourly statistics: grid import and export (the P1 counters), the battery's charge and discharge counters (for example those of the previous integration), solar and the price sensor. Every hour goes through the same calculation as a quarter of the cost log, so all days use one method (Bjorn, 26-11, choice 2).
+- Those days are marked: hatched in the day chart, *teruggerekend per uur* on hover, and a line in *Wat telt mee*. Hours without a counter reading do not count (the day is then incomplete); hours without a price get no amount. Working out again replaces the previous run; *Teruggerekende dagen weghalen* removes them. Days the cost log measured itself are never touched.
+- Websocket `zephyr/savings/backfill`; `zephyr/savings` adds `measured_since`, `backfilled_days`, `can_backfill`, `hourly` per day.
+- **Card *Nu*:** the battery chip from 0.8.18 is gone again; the card *Accu* right next to it already shows the percentage (Bjorn, 26-11).
+- New core module `core/backfill.py`. Tests: a day worked out like the cost log, night charging and missing hours, counters per hour; in HA a run, a second run, clearing and the errors.
 ### 0.8.21 — Plan against reality (B38)
 - The planner keeps the **day-ahead plan**: every new plan overwrites what it expects for tomorrow (per quarter: use without the air conditioner, solar, grid import and export, cost, SOC); at midnight that is fixed, so a day is compared with the plan as it stood at the end of the day before. Only with tomorrow's real prices (not the indicative pattern). Stored with the planner (survives a restart).
 - Every cost quarter gets `ahead_load_kwh`, `ahead_excluded_kwh`, `ahead_solar_kwh`, `ahead_import_kwh`, `ahead_export_kwh`, `ahead_cost`, `ahead_soc` (also in the CSV export, with `excluded_kwh` and `vacation`). Day totals add the expectation and the matching measured values over the quarters that have both, plus the absolute error per quarter for use and solar.
