@@ -186,11 +186,17 @@ class Forecaster:
     * ``perfect``: the real values (yardstick);
     * ``learned`` load: the learned profile per hour (workday/weekend) with steering, learned online;
     * ``yesterday`` solar: the solar of the same quarter one day earlier (a simple, pessimistic stand-in
-      for a forecast; a real forecast such as Solcast should do better).
+      for a forecast);
+    * ``solcast`` solar: Solcast's forecast from its ``solcast.json`` (half-hour ``pv_estimate`` and
+      ``pv_estimate10``), with the cautious solar of §12.4 (``alpha``) for slots more than 1 hour ahead.
     """
 
-    def __init__(self, quarters: list[Quarter], load: str, solar: str) -> None:
+    def __init__(
+        self, quarters: list[Quarter], load: str, solar: str, solcast: dict[datetime, tuple[float, float]] | None = None, alpha: float = 0.0
+    ) -> None:
         self.quarters = quarters
+        self.solcast = solcast or {}
+        self.alpha = alpha
         self.load_mode, self.solar_mode = load, solar
         self.profile = LoadProfile()
         self.by_start = {q.start: q for q in quarters}
@@ -228,8 +234,30 @@ class Forecaster:
         q = self.quarters[j]
         if self.solar_mode == "perfect" or j == i:
             return q.solar  # the running quarter: the controller follows the real solar
+        if self.solar_mode == "solcast":
+            hour = q.start.replace(minute=0)
+            if hour not in self.solcast:
+                return q.solar
+            mid, low = self.solcast[hour]
+            ahead = (q.start - self.quarters[i].start).total_seconds() / 3600
+            # Cautious solar (B32, §12.4) only for decisions more than 1 hour ahead.
+            value = mid - self.alpha * (mid - low) if ahead > 1 else mid
+            return value / 4
         yesterday = self.by_start.get(q.start - timedelta(days=1))
         return yesterday.solar if yesterday else q.solar
+
+
+def read_solcast(path: Path) -> dict[datetime, tuple[float, float]]:
+    """kWh per UTC hour (mid, p10) from the Solcast integration's ``solcast.json``."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    out: dict[datetime, list[float]] = {}
+    for site in data.get("siteinfo", {}).values():
+        for item in site.get("forecasts", []):
+            hour = _utc(item["period_start"]).replace(minute=0)
+            cell = out.setdefault(hour, [0.0, 0.0])
+            cell[0] += float(item["pv_estimate"]) * 0.5
+            cell[1] += float(item.get("pv_estimate10", item["pv_estimate"])) * 0.5
+    return {h: (v[0], v[1]) for h, v in out.items()}
 
 
 def planner_strategy(tariffs: Tariffs, battery: Battery, cfg: PlannerSettings, forecaster: Forecaster | None = None) -> Strategy:
@@ -293,7 +321,9 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--eta", type=float, default=0.93, help="efficiency per direction")
     ap.add_argument("--supplier", default="zonneplan")
     ap.add_argument("--load", choices=["perfect", "learned"], default="perfect", help="consumption the planner knows")
-    ap.add_argument("--sun", choices=["perfect", "yesterday"], default="perfect", help="solar the planner knows")
+    ap.add_argument("--sun", choices=["perfect", "yesterday", "solcast"], default="perfect", help="solar the planner knows")
+    ap.add_argument("--solcast", type=Path, help="solcast.json of the Solcast integration (for --sun solcast)")
+    ap.add_argument("--alpha", type=float, default=0.0, help="cautious solar 0–1 (B32): plan with mid − alpha × (mid − p10)")
     ap.add_argument("--rules", choices=["both", "2026", "2027"], default="both")
     ap.add_argument("--quick", action="store_true", help="only no battery, zero meter and the planner with wear")
     ap.add_argument(
@@ -316,13 +346,16 @@ def main(argv: list[str] | None = None) -> None:
     rules = {"2026 (net metering)": base, "2027 (no net metering)": replace(base, saldering_until=date(2000, 1, 1))}
     if args.rules != "both":
         rules = {k: v for k, v in rules.items() if k.startswith(args.rules)}
-    print(f"planner knows: consumption {args.load}, solar {args.sun}")
+    solcast = read_solcast(args.solcast) if args.sun == "solcast" and args.solcast else None
+    if args.sun == "solcast" and solcast is None:
+        ap.error("--sun solcast needs --solcast")
+    print(f"planner knows: consumption {args.load}, solar {args.sun}" + (f", alpha {args.alpha}" if solcast else ""))
     for label, tariffs in rules.items():
         print(f"\n{label}, {base.source}")
         w = args.wear
 
         def run(name: str, cfg: PlannerSettings, tariffs: Tariffs = tariffs) -> Result:
-            forecaster = Forecaster(quarters, args.load, args.sun)
+            forecaster = Forecaster(quarters, args.load, args.sun, solcast, args.alpha)
             return simulate(name, quarters, tariffs, battery, planner_strategy(tariffs, battery, cfg, forecaster))
 
         runs = [
