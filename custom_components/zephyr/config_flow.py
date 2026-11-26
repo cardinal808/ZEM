@@ -386,6 +386,8 @@ class ZephyrOptionsFlow(OptionsFlow):
                     errors["base"] = "p1_pair_same"
             elif not user_input.get(CONF_P1_ENTITY):
                 errors["base"] = "p1_missing"
+            if not errors and user_input.get(CONF_EXCLUDED_CLIMATE) and not user_input.get(CONF_EXCLUDED_ENERGY):
+                errors["base"] = "excluded_needs_counter"
             if not errors:
                 data = {**self.config_entry.options, **user_input}
                 for key in (

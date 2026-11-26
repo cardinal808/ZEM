@@ -211,9 +211,7 @@
     "no": "uit",
     "more": "Meer uitleg over {label}",
     "readonly": "Alleen een beheerder kan instellingen wijzigen.",
-    "coming": "Wijzigen vanuit het paneel komt in de volgende versie. Tot dan: Instellingen → Apparaten en diensten → ZEPHYR → Configureren.",
-    "open_options": "Opties openen",
-    "reload_note": "Een wijziging hier laadt ZEPHYR opnieuw.",
+    "reload_note": "Wijzigingen in deze groep bewaar je samen; ZEPHYR start daarna kort opnieuw.",
     "supplier_note": "Met een leverancier gelden de bedragen uit de tarieventabel ({source}). Alleen bij eigen tarieven zijn ze aan te passen.",
     "in_use": "in gebruik: {value}",
     "status": {
@@ -221,7 +219,11 @@
       "missing": "niet gevonden: {entities}",
       "ok": "werkt",
       "interval": "meldt elke {s} s",
-      "slots": "{n} prijzen in de sensor"
+      "slots": "{n} prijzen in de sensor",
+      "unavailable": "niet beschikbaar",
+      "climate": "{mode} · {action}",
+      "no_step": "nog geen meting",
+      "steps": "elke {every} een stap van {kwh} kWh"
     },
     "own": "Eigen tarieven",
     "options": {
@@ -232,7 +234,8 @@
       "dry": "Drogen",
       "fan_only": "Ventileren",
       "heat_cool": "Verwarmen/koelen",
-      "auto": "Automatisch"
+      "auto": "Automatisch",
+      "off": "Uit"
     },
     "fields": {
       "min_soc": {
@@ -385,6 +388,46 @@
         "help": "Na een herstart van HA eerst in de schaduw.",
         "more": "Voor de testfase: na elke herstart zet je live sturen zelf weer aan."
       }
+    },
+    "restarting": "ZEPHYR start opnieuw met de nieuwe instellingen…",
+    "pending": "{n} wijzigingen nog niet bewaard · ZEPHYR start kort opnieuw",
+    "pending_one": "1 wijziging nog niet bewaard · ZEPHYR start kort opnieuw",
+    "cancel": "Annuleren",
+    "save_restart": "Bewaren en herstarten",
+    "saving": "Bezig…",
+    "saved": "bewaard",
+    "not_saved": "niet bewaard",
+    "reset": "Standaard terugzetten",
+    "clear": "Leegmaken",
+    "remove": "Weghalen",
+    "choose_entity": "Kies of typ een entiteit",
+    "actions": {
+      "heating": "draait",
+      "cooling": "draait",
+      "drying": "draait",
+      "fan": "draait",
+      "preheating": "draait",
+      "defrosting": "ontdooit",
+      "idle": "staat stil",
+      "off": "uit"
+    },
+    "errors": {
+      "out_of_range": "Buiten de grenzen.",
+      "off_step": "Past niet bij de stapgrootte.",
+      "not_a_number": "Geen getal.",
+      "not_a_bool": "Ongeldige waarde.",
+      "required": "Mag niet leeg zijn.",
+      "unknown_choice": "Onbekende keuze.",
+      "choose_one": "Kies minstens één stand. Uitzetten: maak de teller leeg.",
+      "not_an_entity": "Dit soort entiteit past hier niet.",
+      "entity_missing": "Entiteit niet gevonden.",
+      "unknown_key": "Onbekende instelling.",
+      "p1_missing": "Kies een P1-sensor.",
+      "p1_pair_incomplete": "Kies zowel de afname- als de terugleversensor.",
+      "p1_pair_same": "Afname en teruglevering moeten twee verschillende sensoren zijn.",
+      "excluded_needs_counter": "De klimaat-entiteit werkt alleen samen met de energieteller van de airco. Kies de teller of maak de klimaat-entiteit leeg.",
+      "failed": "Bewaren lukte niet. Probeer het opnieuw.",
+      "range": "Kies een waarde van {min} tot en met {max}{unit}."
     }
   },
   "airco": {

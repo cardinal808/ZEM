@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Final
 import voluptuous as vol
 from homeassistant.components.websocket_api import async_register_command
 from homeassistant.components.websocket_api.connection import ActiveConnection
-from homeassistant.components.websocket_api.decorators import websocket_command
+from homeassistant.components.websocket_api.decorators import async_response, require_admin, websocket_command
 from homeassistant.components.websocket_api.messages import event_message
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.event import async_call_later
@@ -41,6 +41,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_plan)
     async_register_command(hass, ws_sets)
     async_register_command(hass, ws_settings_get)
+    async_register_command(hass, ws_settings_set)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -328,7 +329,7 @@ def ws_sets(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, An
 
 def _source_status(hass: HomeAssistant, entry: ZephyrConfigEntry, key: str, value: Any) -> dict[str, Any] | None:
     """How a source is doing, for the line under it (e.g. "every 1 s", "96 quarter prices")."""
-    from .const import CONF_P1_ENTITY, CONF_P1_EXPORT, CONF_P1_IMPORT, CONF_PRICE_ENTITY
+    from .const import CONF_EXCLUDED_CLIMATE, CONF_EXCLUDED_ENERGY, CONF_P1_ENTITY, CONF_P1_EXPORT, CONF_P1_IMPORT, CONF_PRICE_ENTITY
 
     if not value:
         return {"state": "unset"}
@@ -337,6 +338,17 @@ def _source_status(hass: HomeAssistant, entry: ZephyrConfigEntry, key: str, valu
     if missing:
         return {"state": "missing", "entities": missing}
     runtime = entry.runtime_data
+    if key == CONF_EXCLUDED_CLIMATE:
+        climate = hass.states.get(value)
+        assert climate is not None
+        if climate.state in ("unavailable", "unknown"):
+            return {"state": "unavailable"}
+        return {"state": "ok", "mode": climate.state, "action": climate.attributes.get("hvac_action")}
+    if key == CONF_EXCLUDED_ENERGY and runtime.control is not None and runtime.control.excluded is not None:
+        diag = runtime.control.excluded.diagnostics(time.monotonic())
+        if not diag["mean_step_interval_s"]:
+            return {"state": "ok", "no_step": True}
+        return {"state": "ok", "step_kwh": diag["last_step_kwh"], "step_interval_s": diag["mean_step_interval_s"]}
     if key in (CONF_P1_ENTITY, CONF_P1_IMPORT, CONF_P1_EXPORT) and runtime.control is not None:
         result = runtime.control.result
         interval = None if result is None else result.p1_interval
@@ -390,3 +402,40 @@ def ws_settings_get(hass: HomeAssistant, connection: ActiveConnection, msg: dict
     view = settings_view(hass, entry)
     view["can_edit"] = bool(connection.user is not None and connection.user.is_admin)
     connection.send_result(msg["id"], view)
+
+
+@websocket_command(
+    {
+        vol.Required("type"): "zephyr/settings/set",
+        vol.Optional("changes", default={}): {str: vol.Any(None, bool, int, float, str, [str])},
+        vol.Optional("reset", default=[]): [str],
+    }
+)
+@require_admin
+@async_response
+async def ws_settings_set(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Change settings (UI-7). Sources reload ZEPHYR; the rest goes live without a reload."""
+    from .const import TARIFF_OWN
+    from .settings_schema import apply_changes
+
+    entry = _entry(hass)
+    if entry is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    provider = entry.runtime_data.tariffs
+    suppliers = [TARIFF_OWN]
+    if provider is not None and provider.table is not None:
+        suppliers += [key for key, _name in provider.table.choices()]
+    result = apply_changes(
+        entry.options,
+        msg["changes"],
+        msg["reset"],
+        suppliers=suppliers,
+        entity_ok=lambda entity_id: hass.states.get(entity_id) is not None,
+    )
+    if result.errors:
+        connection.send_result(msg["id"], {"ok": False, "errors": result.errors})
+        return
+    if result.changed:
+        hass.config_entries.async_update_entry(entry, options=result.options)
+    connection.send_result(msg["id"], {"ok": True, "changed": list(result.changed), "reload": result.reload})

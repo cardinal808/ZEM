@@ -92,6 +92,15 @@ class TariffProvider:
             return None
         return "github" if table is self.fetched else "shipped"
 
+    def apply_options(self, options: Mapping[str, Any]) -> None:
+        """Supplier or own tariffs changed without a reload (UI-7); a new supplier fetches the table when due."""
+        supplier = options.get(CONF_TARIFF_SUPPLIER) or TARIFF_OWN
+        self.own = tariffs_from_options(options)
+        if supplier != self.supplier:
+            self.supplier = supplier
+            self.attempted_at = None
+            self._on_day(dt_util.utcnow())
+
     async def async_start(self) -> Callable[[], None]:
         self.shipped = await self.hass.async_add_executor_job(load_shipped)
         stored = await self._store.async_load() or {}

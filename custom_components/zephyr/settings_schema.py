@@ -4,10 +4,16 @@ One list of fields with group, type, range, standard value and whether a
 change needs a reload. The options flow of Home Assistant asks the same keys
 with the same ranges; ``tests/ha/test_settings.py`` keeps the two in step.
 Texts (label, short help, more help) live in the panel's translations.
+
+``apply_changes`` checks a change from the panel (UI-7) against the same
+rules as the options flow and returns the new options or the errors.
 """
 
 from __future__ import annotations
 
+import math
+import re
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final
 
@@ -77,6 +83,10 @@ class Field:
     """A change needs a reload of the installation (sources): the panel asks first."""
     tariff: bool = False
     """Only used with own tariffs; with a supplier the table's value applies."""
+    domain: str = "sensor"
+    """Entity domain for entity fields."""
+    multiple: bool = False
+    """A select with a list value (at least one choice)."""
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -92,6 +102,8 @@ class Field:
             "optional": self.optional,
             "reload": self.reload,
             "tariff": self.tariff,
+            "domain": self.domain,
+            "multiple": self.multiple,
         }
 
 
@@ -109,8 +121,16 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_SOLAR_FORECAST, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True),
     Field(CONF_EXCLUDED_ENERGY, "corrections", "entity", device_class="energy", optional=True, reload=True),
-    Field(CONF_EXCLUDED_CLIMATE, "corrections", "entity", optional=True, reload=True),
-    Field(CONF_EXCLUDED_MODES, "corrections", "select", tuple(DEFAULT_EXCLUDED_MODES), options=tuple(HVAC_MODE_CHOICES), reload=True),
+    Field(CONF_EXCLUDED_CLIMATE, "corrections", "entity", optional=True, reload=True, domain="climate"),
+    Field(
+        CONF_EXCLUDED_MODES,
+        "corrections",
+        "select",
+        tuple(DEFAULT_EXCLUDED_MODES),
+        options=tuple(HVAC_MODE_CHOICES),
+        reload=True,
+        multiple=True,
+    ),
     Field(CONF_COST_IMPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True),
     Field(CONF_COST_EXPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True),
     Field(CONF_TARIFF_SUPPLIER, "tariffs", "select", TARIFF_OWN),
@@ -142,3 +162,123 @@ def is_modified(field: Field, options: dict[str, Any]) -> bool:
     if field.kind == "number" and value is not None and field.default is not None:
         return abs(float(value) - float(field.default)) > 1e-9
     return bool(value != field.default and not (field.optional and value in (None, "", [])))
+
+
+_ENTITY_ID: Final = re.compile(r"^[a-z0-9_]+\.[a-z0-9_]+$")
+_EMPTY: Final[tuple[Any, ...]] = (None, "", [])
+
+
+def _number(field: Field, value: Any) -> tuple[float | None, str | None]:
+    if isinstance(value, bool) or not isinstance(value, int | float | str):
+        return None, "not_a_number"
+    try:
+        number = float(value)
+    except ValueError:
+        return None, "not_a_number"
+    if not math.isfinite(number):
+        return None, "not_a_number"
+    if (field.minimum is not None and number < field.minimum - 1e-9) or (field.maximum is not None and number > field.maximum + 1e-9):
+        return None, "out_of_range"
+    if isinstance(field.step, int | float) and field.step > 0:
+        base = field.minimum or 0.0
+        steps = (number - base) / field.step
+        if abs(steps - round(steps)) > 1e-6:
+            return None, "off_step"
+        number = round(base + round(steps) * field.step, 6)
+    return number, None
+
+
+def _check(field: Field, value: Any, suppliers: Iterable[str], entity_ok: Callable[[str], bool]) -> tuple[Any, str | None]:
+    """The value to store for one field, or an error code."""
+    if field.kind == "number":
+        return _number(field, value)
+    if field.kind == "bool":
+        return (value, None) if isinstance(value, bool) else (None, "not_a_bool")
+    if field.kind == "select":
+        allowed = set(field.options) if field.options else set(suppliers)
+        if field.multiple:
+            if not isinstance(value, list) or not value:
+                return None, "choose_one"
+            if any(not isinstance(v, str) or v not in allowed for v in value):
+                return None, "unknown_choice"
+            return [o for o in field.options if o in value], None
+        return (value, None) if isinstance(value, str) and value in allowed else (None, "unknown_choice")
+    ids = value if field.kind == "entities" else [value]
+    if not isinstance(ids, list) or any(not isinstance(e, str) for e in ids):
+        return None, "not_an_entity"
+    for entity_id in ids:
+        if not _ENTITY_ID.match(entity_id) or entity_id.split(".", 1)[0] != field.domain:
+            return None, "not_an_entity"
+        if not entity_ok(entity_id):
+            return None, "entity_missing"
+    if field.kind == "entities":
+        return list(dict.fromkeys(ids)), None
+    return value, None
+
+
+def cross_errors(options: Mapping[str, Any]) -> str | None:
+    """Rules over several fields, the same as the options flow (and B41: a climate entity needs the counter)."""
+    if options.get(CONF_P1_SOURCE, P1_SOURCE_SINGLE) == P1_SOURCE_PAIR:
+        if not (options.get(CONF_P1_IMPORT) and options.get(CONF_P1_EXPORT)):
+            return "p1_pair_incomplete"
+        if options[CONF_P1_IMPORT] == options[CONF_P1_EXPORT]:
+            return "p1_pair_same"
+    elif not options.get(CONF_P1_ENTITY):
+        return "p1_missing"
+    if options.get(CONF_EXCLUDED_CLIMATE) and not options.get(CONF_EXCLUDED_ENERGY):
+        return "excluded_needs_counter"
+    return None
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeResult:
+    options: dict[str, Any]
+    errors: dict[str, str]
+    """Per field key, or ``base`` for a rule over several fields."""
+    changed: tuple[str, ...]
+
+    @property
+    def reload(self) -> bool:
+        return any(BY_KEY[k].reload for k in self.changed)
+
+
+def apply_changes(
+    options: Mapping[str, Any],
+    changes: Mapping[str, Any],
+    reset: Iterable[str] = (),
+    *,
+    suppliers: Iterable[str] = (TARIFF_OWN,),
+    entity_ok: Callable[[str], bool] = lambda _e: True,
+) -> ChangeResult:
+    """New options after ``changes`` (key → value) and ``reset`` (keys back to the standard value).
+
+    An empty value of an optional field removes it, like the options flow does.
+    """
+    data = dict(options)
+    errors: dict[str, str] = {}
+    supplier_keys = list(suppliers)
+    for key in reset:
+        if key not in BY_KEY:
+            errors[key] = "unknown_key"
+        else:
+            data.pop(key, None)
+    for key, value in changes.items():
+        field = BY_KEY.get(key)
+        if field is None:
+            errors[key] = "unknown_key"
+            continue
+        if value in _EMPTY and not (field.kind == "select" and field.multiple):
+            if field.optional:
+                data.pop(key, None)
+            else:
+                errors[key] = "required"
+            continue
+        stored, error = _check(field, value, supplier_keys, entity_ok)
+        if error is not None:
+            errors[key] = error
+        else:
+            data[key] = stored
+    if not errors and (base := cross_errors(data)) is not None:
+        errors["base"] = base
+    changed = tuple(k for k in BY_KEY if data.get(k) != options.get(k))
+    return ChangeResult(data if not errors else dict(options), errors, changed if not errors else ())

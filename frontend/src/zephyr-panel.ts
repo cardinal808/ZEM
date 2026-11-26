@@ -11,6 +11,7 @@ import "./sets";
 import type { SetsView } from "./sets";
 import "./settings";
 import type { SettingsView } from "./settings";
+import type { SetResult } from "./settings-edit";
 import { actionFill, theme } from "./theme";
 import type { HomeAssistant, Now, PanelInfo, PlanNow, SubscribeEvent } from "./types";
 
@@ -194,6 +195,19 @@ export class ZephyrPanel extends LitElement {
     }
   }
 
+  private saveSettings = async (changes: Record<string, unknown>, reset: string[]): Promise<SetResult> => {
+    if (!this.hass) return { ok: false, errors: { base: "failed" } };
+    const result = await this.hass.callWS<SetResult>({ type: "zephyr/settings/set", changes, reset });
+    if (result.ok) {
+      if (result.reload) {
+        // ZEPHYR restarts: ask again once it is back.
+        window.setTimeout(() => void this.loadSettings(), 3000);
+        window.setTimeout(() => void this.loadSettings(), 8000);
+      } else void this.loadSettings();
+    }
+    return result;
+  };
+
   private show(view: View): void {
     this.view = view;
     window.clearInterval(this.setsTimer);
@@ -309,6 +323,8 @@ export class ZephyrPanel extends LitElement {
         .uiLang=${this.uiLang}
         .locale=${this.locale}
         .friendlyName=${(id: string) => this.hass?.states?.[id]?.attributes?.friendly_name as string | undefined}
+        .states=${this.hass?.states}
+        .save=${this.saveSettings}
       ></zephyr-settings>`;
     }
     return this.renderComing();

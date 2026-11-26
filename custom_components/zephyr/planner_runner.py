@@ -167,6 +167,12 @@ class PlanRunner:
 
     # --- lifecycle --------------------------------------------------------------
 
+    def apply_options(self, options: Mapping[str, Any]) -> None:
+        """Planner settings changed without a reload (UI-7): plan again with them."""
+        self.settings = planner_settings(options)
+        self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
+        self.async_request()
+
     async def async_start(self) -> Callable[[], None]:
         stored = await self._store.async_load() or {}
         self.profile = LoadProfile.from_dict(stored.get("profile"))

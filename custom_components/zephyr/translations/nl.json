@@ -337,7 +337,8 @@
     "error": {
       "p1_missing": "Kies een P1-sensor.",
       "p1_pair_incomplete": "Kies zowel de sensor voor afname als die voor teruglevering.",
-      "p1_pair_same": "Afname en teruglevering moeten twee verschillende sensoren zijn."
+      "p1_pair_same": "Afname en teruglevering moeten twee verschillende sensoren zijn.",
+      "excluded_needs_counter": "Een klimaat-entiteit van de airco werkt alleen samen met de energieteller. Kies de teller of maak de klimaat-entiteit leeg."
     }
   },
   "selector": {
