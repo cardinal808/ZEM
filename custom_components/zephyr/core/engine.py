@@ -681,6 +681,11 @@ class ZephyrEngine:
             r = view.report
             if r is None or not view.online:
                 continue
+            if r.calibrating or r.bypass:
+                # The set calibrates itself or passes solar straight to the house: write nothing,
+                # no 0 W and no standby (SPEC-basis §8). The idle timer starts again afterwards.
+                state.zero_since = None
+                continue
             # First time we see the set (or settings changed): its SOC limits must match ours.
             flash_ok = (
                 state.counters.flash_count(now, 3600) < s.flash_limit_hour and state.counters.flash_count(now, 86400) < s.flash_limit_day

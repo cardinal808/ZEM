@@ -6,9 +6,10 @@ and ZEPHYR controls a simulated set against it. The result is compared with
 the recorded grid power of the existing system over the same seconds.
 
 Usage (the CSV stays on your own machine; never commit it):
-    python tools/replay_opname.py history.csv --start 2026-11-12T16:00 --hours 6
+    python tools/replay_opname.py history.csv --start 2026-11-12T16:00 --hours 6 \
+        --p1 sensor.<grid_power> --soc sensor.<battery_soc> --battery sensor.<battery_power>
 
-Entity ids of the recorded system can be changed with the options.
+The entity ids of the recorded system are required (they differ per installation).
 """
 
 from __future__ import annotations
@@ -58,14 +59,16 @@ def main() -> None:
     ap.add_argument("csv", type=Path)
     ap.add_argument("--start", required=True, help="UTC start, e.g. 2026-11-12T16:00")
     ap.add_argument("--hours", type=float, default=6)
-    ap.add_argument("--p1", default="sensor.p1_aansturing_vermogen")
-    ap.add_argument("--deliver", default="sensor.zendure_2400_ac_vermogen_naar_huis")
-    ap.add_argument("--charge", default="sensor.zendure_2400_ac_vermogen_van_huis")
-    ap.add_argument("--soc", default="sensor.zendure_2400_ac_laadpercentage")
+    ap.add_argument("--p1", required=True, help="entity id of the grid power sensor (W, + import) in the recording")
+    ap.add_argument("--deliver", help="entity id of the battery's power to the house (W)")
+    ap.add_argument("--charge", help="entity id of the battery's power from the house (W)")
+    ap.add_argument("--soc", required=True, help="entity id of the battery's SOC (%%) in the recording")
     ap.add_argument("--battery", help="one signed battery sensor (+ charging) instead of --deliver/--charge")
     ap.add_argument("--max-deliver", type=int, default=2400)
     ap.add_argument("--compare-filters", action="store_true", help="run without filters, step filter only, both, and hold times")
     args = ap.parse_args()
+    if not args.battery and not (args.deliver and args.charge):
+        ap.error("give --battery, or both --deliver and --charge")
 
     wanted = {args.p1, args.soc} | ({args.battery} if args.battery else {args.deliver, args.charge})
     series = load_series(args.csv, wanted)

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.25 — Live: safer second-controller stop, set left alone while calibrating
+From the check before going live (26-11, `TOETS-live-basis.md`).
+- **Second controller detected:** ZEPHYR now writes 0 W once before going back to shadow mode, as when the switch is turned off by hand. Before, the set stayed at ZEPHYR's last power (for example 2 kW delivering).
+- **Set calibrates itself (`socStatus` 1) or is in bypass (`pass` > 0):** ZEPHYR writes nothing to it: no 0 W, no standby after 5 minutes, no SOC limits, also not when stopping (SPEC-basis §8). Its own limit changes then no longer count as a second controller; neither do those of a set reporting a fault.
+- `tools/replay_opname.py`: the entity ids of the recording are required options, no defaults from one installation.
+- Tests: live scenarios for the basic functions with the slow 2400 Pro model (`tests/scenarios/test_live_basics.py`: zero on the meter, battery full from solar then standby and delivering in the evening, hysteresis when full, empty, Standby, fast charge/discharge, `socLimit`); no commands to a calibrating or bypassed set; 0 W after a second controller; a calibrating set stays live.
+
 ### 0.8.24 — Diagnose: plan tegen werkelijkheid; Instellingen: vakantie
 - Diagnose has a card **Plan tegen werkelijkheid** for the last 14 days (from `zephyr/plan_check`): expected against actual for house use, sun, import, export and costs, with the difference in %, plus a small pair of bars per day.
 - Instellingen has a group **Vakantie**: status (on by hand, automatic, since when, until when), a *Terug op* time and buttons to start or stop. The panel switches ZEPHYR's own vacation switch and end-time entity, so automations and the panel go one way (B42). The option *vakantie bij afwezigheid* moved into this group.
