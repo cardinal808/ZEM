@@ -4,7 +4,8 @@ Pure and deterministic: time and measurements come in, commands and state
 go out. The Home Assistant layer decides whether the commands are sent
 (shadow mode: never).
 
-M3 scope: modes Standby, Zero meter, Fast charge and Fast discharge. With
+Modes Standby, Zero meter, Fast charge, Fast discharge and Dynamic Forecasting
+(the planner's action per quarter, SPEC-planner §7). With
 more than one set, the whole setpoint goes to the first available set; the
 distributor of SPEC-meerdere-sets follows in M7.
 """
@@ -22,6 +23,7 @@ from .counters import SetCounters
 from .device_table import charging_allowed_by_temperature, delivering_allowed_by_temperature
 from .grid_filter import GridFilter
 from .models import AcMode, SetReport
+from .planner import Action as PlanAction
 from .settings import Settings
 from .twin import GridTally, TwinSet
 from .zensdk import power_command, soc_limits_command, standby_command
@@ -32,6 +34,15 @@ class Mode(StrEnum):
     ZERO_METER = "zero_meter"
     FAST_CHARGE = "fast_charge"
     FAST_DISCHARGE = "fast_discharge"
+    FORECAST = "dynamic_forecasting"
+
+
+ZERO_METER_MODES = (Mode.ZERO_METER, Mode.FORECAST)
+"""Modes that follow the P1 meter."""
+PLAN_RESTART_PAUSE = 120.0
+"""s: grid charging (L) and export (X) start only after grid charging was off this long (§7)."""
+PLAN_CHARGE_GRACE = 10.0
+"""s: grid charging stops when the plan has not said L for this long (§7)."""
 
 
 class Action(StrEnum):
@@ -65,6 +76,10 @@ class ReasonCode(StrEnum):
     NOT_EXPENSIVE = "not_expensive"
     NO_PRICES = "no_prices"
     RESERVE_CHARGE = "reserve_charge"
+    PLAN_CHARGE = "plan_charge"
+    PLAN_CHARGE_WAIT = "plan_charge_wait"
+    PLAN_HOLD = "plan_hold"
+    PLAN_EXPORT = "plan_export"
 
 
 REASON_TEXT: dict[ReasonCode, tuple[str, str]] = {
@@ -104,6 +119,13 @@ REASON_TEXT: dict[ReasonCode, tuple[str, str]] = {
         "Charging {power} W from the grid to the reserve of {reserve} % (cheap hour).",
         "Laadt {power} W uit het net tot de reserve van {reserve} % (goedkoop uur).",
     ),
+    ReasonCode.PLAN_CHARGE: ("Plan: charging {power} W from the grid.", "Plan: laadt {power} W uit het net."),
+    ReasonCode.PLAN_CHARGE_WAIT: (
+        "Plan: grid charging starts after a pause of 2 minutes.",
+        "Plan: laden uit het net start na een pauze van 2 minuten.",
+    ),
+    ReasonCode.PLAN_HOLD: ("Plan: holding, the battery does not deliver now.", "Plan: vasthouden, de accu levert nu niet."),
+    ReasonCode.PLAN_EXPORT: ("Plan: exporting {power} W from the battery.", "Plan: levert {power} W terug uit de accu."),
 }
 
 
@@ -198,6 +220,11 @@ class ZephyrEngine:
         self._real_battery: float | None = None
         self._p1_history: deque[tuple[float, float]] = deque(maxlen=200)
         self.tally_measured = GridTally()
+        self._plan: PlanAction | None = None
+        self._plan_l_seen = -1e9
+        self._grid_charging = False
+        self._grid_charge_stopped = -1e9
+        self._exporting = False
         self.tally_virtual = GridTally()
 
     def enable_twin(self) -> None:
@@ -322,16 +349,21 @@ class ZephyrEngine:
         discharge_blocked: bool = False,
         price_block: Reason | None = None,
         reserve_charge: tuple[int, float] | None = None,
+        plan_action: PlanAction | None = None,
     ) -> StepResult:
         """One control step.
 
         ``price_block``: delivering is not allowed now because of the prices (PLAN-M4b §2.6), with
         the reason to show. ``reserve_charge``: (power W, reserve %) to charge from the grid now.
-        Both only apply to zero-meter control.
+        Both only apply to zero-meter control. ``plan_action``: the planner's action for now
+        (mode Dynamic Forecasting; None = no plan, zero on the meter).
         """
         s = self.settings
         self._price_block = price_block if self.mode is Mode.ZERO_METER else None
         self._reserve_charge = reserve_charge if self.mode is Mode.ZERO_METER else None
+        self._plan = plan_action if self.mode is Mode.FORECAST else None
+        if self._plan is PlanAction.HOLD:
+            self._price_block = Reason(ReasonCode.PLAN_HOLD)
         if self._twins is not None:
             sets = self._twin_views(now, sets)
         for view in sets:
@@ -346,7 +378,7 @@ class ZephyrEngine:
         if self._started is None:
             self._started = now
         # Before the first P1 report, count from the start: no standby command right after a restart.
-        waiting_for_p1 = self.mode is Mode.ZERO_METER and self._p1_at is None and now - self._started <= s.p1_lost_after
+        waiting_for_p1 = self.mode in ZERO_METER_MODES and self._p1_at is None and now - self._started <= s.p1_lost_after
         p1_age = None if self._p1_at is None else now - self._p1_at
         meter = self._p1_interval or 0.0
         # Until the meter's interval is known, only a lost P1 counts (no 0 W after 10 s at start-up).
@@ -390,8 +422,14 @@ class ZephyrEngine:
         elif self._p1_interval is not None and self._p1_interval > s.too_slow_p1_interval:
             reason = Reason(ReasonCode.P1_TOO_SLOW, {"interval": round(self._p1_interval)})
             self.controller.reset(now)
+        elif self.mode is Mode.FORECAST:
+            total, reason = self._forecast(now, primary, usable, blocked)
         else:
             total, reason = self._zero_meter(now, primary, usable, blocked)
+        if self.mode is not Mode.FORECAST or total <= 0 or reason.code is not ReasonCode.PLAN_CHARGE:
+            self._stop_grid_charge(now)
+        if self.mode is not Mode.FORECAST or reason.code is not ReasonCode.PLAN_EXPORT:
+            self._exporting = False
 
         targets = {v.key: 0 for v in sets}
         if primary is not None and total:
@@ -522,6 +560,52 @@ class ZephyrEngine:
         if deliver <= 0:
             return 0, why or Reason(ReasonCode.BLOCKED), False
         return -(int(deliver) // 10 * 10), Reason(ReasonCode.FAST_DISCHARGE, {"soc": round(s.min_soc)}), False
+
+    def _stop_grid_charge(self, now: float) -> None:
+        if self._grid_charging:
+            self._grid_charging = False
+            self._grid_charge_stopped = now
+
+    def _forecast(self, now: float, primary: SetView, usable: Sequence[SetView], blocked: bool) -> tuple[int, Reason]:
+        """Carry out the planner's action for now (SPEC-planner §7).
+
+        L: charge from the grid at full power; starts only after 2 minutes without grid charging,
+        stops at max_SOC (then as H) or 10 s after the plan stopped saying L. H: zero on the meter
+        without delivering (charging from solar surplus stays). N: zero on the meter. X: deliver at
+        full power, only after 2 minutes without grid charging and above min_SOC.
+        """
+        r = primary.report
+        assert r is not None
+        plan = self._plan
+        if plan is PlanAction.CHARGE:
+            self._plan_l_seen = now
+        elif self._grid_charging and now - self._plan_l_seen < PLAN_CHARGE_GRACE:
+            plan = PlanAction.CHARGE
+        else:
+            self._stop_grid_charge(now)
+        state = self._sets[primary.key]
+        charge, deliver, _ = self._limits(primary, blocked)
+        if plan is PlanAction.CHARGE:
+            if state.full or charge <= 0:
+                self._price_block = Reason(ReasonCode.PLAN_HOLD)  # full: as H
+                return self._zero_meter(now, primary, usable, True)
+            if not self._grid_charging and now - self._grid_charge_stopped < PLAN_RESTART_PAUSE:
+                self._price_block = Reason(ReasonCode.PLAN_CHARGE_WAIT)
+                return self._zero_meter(now, primary, usable, True)
+            self._grid_charging = True
+            self.controller.reset(now)
+            power = int(charge) // 10 * 10
+            return power, Reason(ReasonCode.PLAN_CHARGE, {"power": power})
+        if plan is PlanAction.EXPORT:
+            ready = self._exporting or now - self._grid_charge_stopped >= PLAN_RESTART_PAUSE
+            if ready and deliver > 0 and not state.empty:
+                self._exporting = True
+                self.controller.reset(now)
+                power = int(deliver) // 10 * 10
+                return -power, Reason(ReasonCode.PLAN_EXPORT, {"power": power})
+        if plan is PlanAction.HOLD:
+            return self._zero_meter(now, primary, usable, True)
+        return self._zero_meter(now, primary, usable, blocked)
 
     def _zero_meter(self, now: float, primary: SetView, usable: Sequence[SetView], blocked: bool) -> tuple[int, Reason]:
         s = self.settings

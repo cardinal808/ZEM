@@ -227,8 +227,11 @@ class ZephyrControl:
     def async_set_mode(self, mode: Mode) -> None:
         if mode in (Mode.FAST_CHARGE, Mode.FAST_DISCHARGE) and self.engine.mode not in (Mode.FAST_CHARGE, Mode.FAST_DISCHARGE):
             self._previous_mode = self.engine.mode
+        changed = mode is not self.engine.mode
         self.engine.set_mode(mode, time.monotonic())
         self._apply_poll_interval()
+        if changed and self.runtime.planner is not None:
+            self.runtime.planner.async_request()  # §5: recalculate on a mode change
         self.async_step()
 
     # --- live mode (PLAN-M4b §2.2) ---------------------------------------------
@@ -382,7 +385,11 @@ class ZephyrControl:
         now = time.monotonic()
         views = self._views()
         price_block, reserve_charge = self._price_inputs(now, views)
-        result = self.engine.step(now, views, price_block=price_block, reserve_charge=reserve_charge)
+        plan_action = None
+        planner = self.runtime.planner
+        if self.engine.mode is Mode.FORECAST and planner is not None:
+            plan_action = planner.action_at(dt_util.utcnow())
+        result = self.engine.step(now, views, price_block=price_block, reserve_charge=reserve_charge, plan_action=plan_action)
         if not self.shadow:
             self._check_reports(now)
         if not self.shadow:
