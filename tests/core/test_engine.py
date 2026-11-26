@@ -364,3 +364,26 @@ def test_calibrating_or_bypass_set_gets_no_commands() -> None:
                 eng.p1_reported(float(t), 300.0)
                 r = eng.step(float(t), [SetView("0", 1, rep, True)])
                 assert r.commands == (), (flag, mode, t, r.commands)
+
+
+def _at_soc(soc: int, fixture: str = "standby") -> SetView:
+    data = load_fixture(fixture)
+    data["properties"]["electricLevel"] = soc
+    return SetView("a", 1, parse_report(data), True)
+
+
+@pytest.mark.parametrize("soc", [9, 5])
+def test_recharge_starts_just_below_the_minimum(soc: int) -> None:
+    e = ZephyrEngine(Settings(min_soc=10, max_soc=95))
+    e.p1_reported(0, 300)
+    r = e.step(0, [_at_soc(soc)])
+    assert r.reason.code is ReasonCode.RECHARGE_MIN
+    assert r.setpoint == 300
+
+
+def test_no_recharge_at_the_minimum() -> None:
+    e = ZephyrEngine(Settings(min_soc=10, max_soc=95))
+    e.p1_reported(0, 300)
+    r = e.step(0, [_at_soc(10)])
+    assert r.reason.code is not ReasonCode.RECHARGE_MIN
+    assert r.setpoint <= 0

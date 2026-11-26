@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.29 — Recharge below the minimum starts right below min_SOC
+- **Recharging below the minimum** (self-consumption in standby, SPEC-basis §10) started only at min_SOC − 1: with min_SOC 10 % and a set that reports whole percents, at 8 %. It now starts as soon as the SOC is below min_SOC (9 % with 10 %) and goes on up to min_SOC, with the same gentle power (default 300 W). Delivering still waits until min_SOC + 2 (hysteresis), so the battery does not swing around the minimum.
+- Tests: recharge at 9 % and 5 % with min_SOC 10 %, none at 10 %.
+
 ### 0.8.28 — Energy counters fill their gaps (SPEC-tellers T2)
 - When a set reports again after more than 60 s, the gap is **filled**:
   - **interpolate** (gap ≤ 15 min, same direction, power before and after within 20 % or 200 W): the power linearly between the report before and after; checked against the change of the energy in the packs (Σ capacity × SOC per pack), within the SOC resolution (1 % of the capacity) + 2 %;
