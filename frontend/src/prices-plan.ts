@@ -9,6 +9,7 @@ import {
   bar,
   currentIndex,
   dayOf,
+  pastSocLines,
   days,
   quartersOf,
   scale,
@@ -173,6 +174,7 @@ export class ZephyrPricesPlan extends LitElement {
     const tickIdx = ticks(quarters, this.period === "both" ? 6 : 3, this.timeZone);
     const focus = this.sel !== null && this.sel < n ? this.sel : null;
     const pts = socPoints(quarters, this.view?.soc_now ?? null);
+    const pastLines = pastSocLines(quarters, this.view?.soc_now ?? null);
     const zero = s.lo < 0 ? ((0 - s.lo) / (s.hi - s.lo)) * 100 : null;
     return html`<div class="scroll">
       <div class="chart ${n > 100 ? "wide" : ""}">
@@ -200,6 +202,7 @@ export class ZephyrPricesPlan extends LitElement {
             return html`<div class=${cls} style="left:${pct(i)};width:${pct(1)};bottom:${b.bottom}%;height:${b.height}%"></div>`;
           })}
           <svg viewBox="0 0 ${n} 100" preserveAspectRatio="none" aria-hidden="true">
+            ${pastLines.map((p) => svg`<polyline class="halo" points=${p}></polyline><polyline class="soc measured" points=${p}></polyline>`)}
             ${pts ? svg`<polyline class="halo" points=${pts}></polyline><polyline class="soc" points=${pts}></polyline>` : nothing}
           </svg>
           ${split > 0
@@ -254,7 +257,11 @@ export class ZephyrPricesPlan extends LitElement {
     const left = ((i + 0.5) / n) * 100;
     const side = left > 60 ? "right" : "left";
     const pos = side === "left" ? `left:calc(${left}% + 10px)` : `right:calc(${100 - left}% + 10px)`;
-    const action = q.action ? this.tr(`action.${q.action}`) + (q.past ? "" : q.indicative ? ` (${this.tr("plan.indicative_short")})` : "") : null;
+    const action = q.action
+      ? this.tr(`action.${q.action}`) + (q.past ? ` (${this.tr("plan.actual")})` : q.indicative ? ` (${this.tr("plan.indicative_short")})` : "")
+      : q.past
+        ? this.tr("plan.no_record")
+        : null;
     return html`<div class="tip" role="status" style=${pos}>
       <strong>${day(q.start, this.locale, this.timeZone)} ${clock(q.start, this.locale, this.timeZone)}</strong>
       ${q.buy !== null
@@ -262,9 +269,9 @@ export class ZephyrPricesPlan extends LitElement {
             <span>${this.tr("plan.tip_sell", { price: euro(q.sell as number, this.locale) })}</span>`
         : html`<span>${this.tr("plan.unknown")}</span>`}
       ${action ? html`<span>${action}</span>` : nothing}
-      ${q.soc !== null ? html`<span>${this.tr("plan.tip_soc", { soc: percent(q.soc, this.locale) })}</span>` : nothing}
+      ${q.soc !== null ? html`<span>${this.tr(q.past ? "plan.tip_soc_past" : "plan.tip_soc", { soc: percent(q.soc, this.locale) })}</span>` : nothing}
       ${q.solar !== null && q.load !== null
-        ? html`<span>${this.tr("plan.tip_energy", { solar: kwh(q.solar, this.locale, 2), load: kwh(q.load, this.locale, 2) })}</span>`
+        ? html`<span>${this.tr(q.past ? "plan.tip_energy_past" : "plan.tip_energy", { solar: kwh(q.solar, this.locale, 2), load: kwh(q.load, this.locale, 2) })}</span>`
         : nothing}
     </div>`;
   }
@@ -286,6 +293,7 @@ export class ZephyrPricesPlan extends LitElement {
     return html`<div class="legend">
       ${item("var(--z-bar)", "plan.legend_price")} ${item(actionFill("charge"), "action.charge")} ${item(actionFill("deliver"), "action.deliver")}
       ${item(actionFill("hold"), "action.hold")} ${item(actionFill("export"), "action.export")}
+      <span class="li"><span class="line solid"></span>${this.tr("plan.legend_soc_past")}</span>
       <span class="li"><span class="line"></span>${this.tr("plan.legend_soc")}</span>
       <span class="li">${this.tr("plan.legend_past")}</span>
     </div>`;
@@ -502,6 +510,10 @@ export class ZephyrPricesPlan extends LitElement {
         stroke-width: 3;
         stroke-dasharray: 6 5;
       }
+      .soc.measured {
+        stroke-dasharray: none;
+        opacity: 0.7;
+      }
       .split {
         position: absolute;
         top: -20px;
@@ -614,6 +626,10 @@ export class ZephyrPricesPlan extends LitElement {
         width: 18px;
         border-top: 3px dashed var(--z-text);
         display: inline-block;
+      }
+      .line.solid {
+        border-top-style: solid;
+        opacity: 0.7;
       }
       @media (max-width: 700px) {
         .card {

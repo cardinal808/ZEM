@@ -98,9 +98,14 @@
     "aria": "Prijzen per kwartier; laagst {low} om {low_time}, hoogst {high} om {high_time}. Pijltjestoetsen tonen een kwartier.",
     "legend_price": "Prijs per kwartier",
     "legend_soc": "SOC verwacht",
-    "legend_past": "Lichter = voorbij",
+    "legend_past": "Lichter = voorbij (wat er echt gebeurde)",
     "mode_note": "Zo zou het plan zijn. ZEPHYR volgt nu de modus {mode}.",
-    "shadow_note": "ZEPHYR rekent dit plan mee, maar stuurt de accu niet (schaduwmodus)."
+    "shadow_note": "ZEPHYR rekent dit plan mee, maar stuurt de accu niet (schaduwmodus).",
+    "legend_soc_past": "SOC gemeten",
+    "actual": "werkelijk",
+    "no_record": "Niet vastgelegd (HA stond uit)",
+    "tip_soc_past": "SOC na dit kwartier {soc} (gemeten)",
+    "tip_energy_past": "Zon {solar} · huis {load}"
   },
   "blocks": {
     "title": "Blokken",

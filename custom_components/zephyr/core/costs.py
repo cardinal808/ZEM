@@ -201,8 +201,10 @@ RECORD_FIELDS: Final = (
     "fixed",
     "plan_action",
     "plan_cost",
+    "soc",
 )
-"""Fields of a stored quarter (and the CSV columns). Plan fields stay empty until the planner (M5)."""
+"""Fields of a stored quarter (and the CSV columns). Plan fields stay empty until the planner (M5).
+``soc``: state of charge at the end of the quarter (%, 0.8.2), for the panel's past."""
 
 
 def _r(value: float | None, digits: int = 4) -> float | None:

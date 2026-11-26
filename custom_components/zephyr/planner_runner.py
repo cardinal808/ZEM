@@ -60,7 +60,7 @@ from .core.forecast_plan import (
     solar_per_quarter,
 )
 from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, profile_from_history
-from .core.plan_view import plan_view
+from .core.plan_view import local_midnight, plan_view
 from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
 from .core.solar_history import parse_detailed_forecast
@@ -317,6 +317,8 @@ class PlanRunner:
         why = None
         if outcome is not None:
             why = {"nl": reason(outcome, "nl", tz), "en": reason(outcome, "en", tz)}
+        costs = self.runtime.costs
+        history = costs.records_since(local_midnight(now, tz)) if costs is not None else None
         return plan_view(
             outcome,
             prices,
@@ -327,6 +329,7 @@ class PlanRunner:
             daylight=self._daylight,
             tomorrow_known_at=self.known_at.get(tomorrow),
             reason=why,
+            history=history,
         )
 
     async def async_calculate(self) -> PlanOutcome | None:

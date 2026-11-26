@@ -149,6 +149,30 @@ export function socPoints(quarters: Quarter[], socNow: number | null): string {
   return pts.join(" ");
 }
 
+/**
+ * Measured SOC before now (end of each past quarter), as separate line pieces:
+ * a quarter without a value (HA was off) breaks the line. The last piece runs to now.
+ */
+export function pastSocLines(quarters: Quarter[], socNow: number | null): string[] {
+  const now = currentIndex(quarters);
+  const lines: string[][] = [];
+  let piece: string[] = [];
+  quarters.forEach((q, i) => {
+    if (!q.past) return;
+    if (q.soc === null) {
+      if (piece.length) lines.push(piece);
+      piece = [];
+      return;
+    }
+    piece.push(`${i + 1},${(100 - q.soc).toFixed(1)}`);
+  });
+  if (piece.length) {
+    if (now >= 0 && socNow !== null && piece[piece.length - 1].startsWith(`${now},`)) piece.push(`${now},${(100 - socNow).toFixed(1)}`);
+    lines.push(piece);
+  }
+  return lines.filter((l) => l.length > 1).map((l) => l.join(" "));
+}
+
 /** Future blocks of the plan, the running one first (it may have started before now). */
 export function upcomingBlocks(blocks: PlanBlock[], nowIso: string): PlanBlock[] {
   const now = new Date(nowIso).getTime();

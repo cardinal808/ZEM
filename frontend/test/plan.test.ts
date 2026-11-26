@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { bands, bar, currentIndex, dayOf, days, quartersOf, scale, socPoints, stats, ticks, upcomingBlocks, type Quarter } from "../src/plan";
+import {
+  bands,
+  bar,
+  currentIndex,
+  dayOf,
+  days,
+  pastSocLines,
+  quartersOf,
+  scale,
+  socPoints,
+  stats,
+  ticks,
+  upcomingBlocks,
+  type Quarter,
+} from "../src/plan";
 
 const TZ = "Europe/Amsterdam";
 
@@ -86,5 +100,15 @@ describe("plan helpers", () => {
     ];
     expect(upcomingBlocks(blocks, "2026-11-26T19:00:00Z")).toHaveLength(2);
     expect(upcomingBlocks(blocks, "2026-11-26T20:00:00Z")).toHaveLength(1);
+  });
+
+  it("draws the measured SOC before now in pieces, broken where HA was off", () => {
+    const qs = today.slice(0, 84).map((q, i) => ({ ...q, soc: i < 80 && i !== 40 ? 60 - i * 0.1 : q.soc }));
+    const lines = pastSocLines(qs, 52);
+    expect(lines).toHaveLength(2);
+    expect(lines[0].split(" ")).toHaveLength(40);
+    const last = lines[1].split(" ");
+    expect(last[last.length - 2]).toBe("80,47.9"); // SOC 52.1 % at the end of the last past quarter
+    expect(last[last.length - 1]).toBe("80,48.0");
   });
 });

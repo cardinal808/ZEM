@@ -200,6 +200,24 @@ async def test_plan_command(
     assert quarters[80]["soc"] is not None
     assert view["blocks"]
 
+    # After 20:15 the cost log has closed 20:00–20:15: the panel shows what happened (UI-3).
+    # (Asked from the planner directly: 16 minutes of fake time would close the test's websocket.)
+    await client.close()
+    for _ in range(16):
+        freezer.tick(timedelta(seconds=60))
+        hass.states.async_set(P1, "300", {"device_class": "power", "unit_of_measurement": "W"}, force_update=True)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    planner = entry.runtime_data.planner
+    assert planner is not None
+    quarters = planner.view()["quarters"]
+    past = quarters[80]
+    assert past["past"] is True
+    assert past["action"] in ("charge", "deliver", "hold")
+    assert past["soc"] is not None
+    assert past["buy"] is not None
+    assert quarters[81]["past"] is False
+
 
 async def test_plan_command_without_price_source(hass: HomeAssistant, fake_sets: FakeSets, hass_ws_client: WebSocketGenerator) -> None:
     await _install_with_p1(hass, fake_sets)
