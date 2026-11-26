@@ -1,9 +1,10 @@
 // ZEPHYR panel (M6, SPEC-ui). UI-1: header, menu and the three cards of *Now* on the Plan screen.
-import { LitElement, css, html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { LitElement, css, html, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
 import { clock, euro, kwh, minutesUntil, percent, sameDay, signedWatts, watts } from "./format";
 import { language, t, type Lang } from "./i18n";
+import { aircoLine } from "./airco";
 import { stats, upcomingBlocks, type PlanBlock, type PlanView } from "./plan";
 import "./prices-plan";
 import "./sets";
@@ -404,12 +405,33 @@ export class ZephyrPanel extends LitElement {
     return html`<article class="card">
       <div class="label"><span class="dot" style="background:${actionFill(action)}"></span>${this.tr("now.title")}</div>
       <div class="big">${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}</div>
-      ${now.reason ? html`<p class="text">${now.reason[this.uiLang]}</p>` : nothing}
+      ${now.reason ? html`<p class="text">${now.reason[this.uiLang]}</p>` : nothing} ${this.renderAirco(now)}
       <div class="foot">
         ${now.grid_w !== null ? html`<span>${this.tr("now.grid", { value: signedWatts(now.grid_w, this.locale) })}</span>` : nothing}
         ${now.live ? nothing : html`<span>${this.tr("now.shadow_note")}</span>`}
       </div>
     </article>`;
+  }
+
+  private renderAirco(now: Now): TemplateResult | typeof nothing {
+    const line = aircoLine(now.excluded, this.uiLang, this.locale);
+    if (!line) return nothing;
+    const icon =
+      line.icon === "heat"
+        ? svg`<path d="M12 3c1 3 4 4.5 4 8.5a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-7.5Z"/>`
+        : line.icon === "cool"
+          ? svg`<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>`
+          : nothing;
+    return html`<p class=${line.allowed ? "airco allowed" : "airco"}>
+      ${line.icon ? html`<svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg>` : nothing}
+      <span
+        >${line.text}${line.estimate
+          ? html` <span class="estimate" tabindex="0" title=${line.estimate} aria-label=${`${this.tr("airco.estimate")}: ${line.estimate}`}
+                >${this.tr("airco.estimate")}</span
+              >`
+          : nothing}</span
+      >
+    </p>`;
   }
 
   private renderBattery(now: Now): TemplateResult {
@@ -794,6 +816,40 @@ export class ZephyrPanel extends LitElement {
         font-size: 14px;
         line-height: 1.5;
         color: var(--z-muted);
+      }
+      .airco {
+        margin: 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        line-height: 1.5;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--z-text);
+      }
+      .airco.allowed {
+        font-weight: 400;
+        color: var(--z-muted);
+      }
+      .airco svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+        margin-top: 1px;
+      }
+      .estimate {
+        white-space: nowrap;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--z-info-bg);
+        font-size: 11px;
+        font-weight: 600;
+        cursor: help;
       }
       .text.warn {
         color: var(--z-warn-text);

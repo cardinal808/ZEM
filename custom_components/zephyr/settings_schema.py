@@ -55,7 +55,7 @@ from .const import (
 from .core.costs import Tariffs
 from .core.settings import Settings
 
-GROUPS: Final = ("battery", "sources", "tariffs", "planner", "zero_meter", "testing")
+GROUPS: Final = ("battery", "sources", "tariffs", "planner", "corrections", "zero_meter", "testing")
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,9 +108,9 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_PRICE_ENTITY, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_FORECAST, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True),
-    Field(CONF_EXCLUDED_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True),
-    Field(CONF_EXCLUDED_CLIMATE, "sources", "entity", optional=True, reload=True),
-    Field(CONF_EXCLUDED_MODES, "sources", "select", tuple(DEFAULT_EXCLUDED_MODES), options=tuple(HVAC_MODE_CHOICES), reload=True),
+    Field(CONF_EXCLUDED_ENERGY, "corrections", "entity", device_class="energy", optional=True, reload=True),
+    Field(CONF_EXCLUDED_CLIMATE, "corrections", "entity", optional=True, reload=True),
+    Field(CONF_EXCLUDED_MODES, "corrections", "select", tuple(DEFAULT_EXCLUDED_MODES), options=tuple(HVAC_MODE_CHOICES), reload=True),
     Field(CONF_COST_IMPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True),
     Field(CONF_COST_EXPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True),
     Field(CONF_TARIFF_SUPPLIER, "tariffs", "select", TARIFF_OWN),

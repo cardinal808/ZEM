@@ -70,6 +70,7 @@ export interface Now {
   sets_total: number;
   price_entity: boolean;
   plan: PlanNow | null;
+  excluded?: import("./airco").Excluded | null;
 }
 
 export type SubscribeEvent = { type: "now"; data: Now } | { type: "unloaded" };
