@@ -68,3 +68,49 @@ async def test_without_options_nothing_is_excluded(hass: HomeAssistant, fake_set
     assert entry.runtime_data.control.excluded is None
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["control"]["excluded_load"] is None
+
+
+async def test_panel_now_shows_the_airco(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    """SPEC-ui-airco §2.1: now.excluded per state (UI-A1)."""
+    from custom_components.zephyr.websocket_api import now_snapshot
+
+    entry = await _install_with_p1(hass, fake_sets)
+    assert now_snapshot(hass, entry)["excluded"] is None  # not set up
+
+    _energy(hass, 115.0)
+    _climate(hass, "heat", "heating")
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], {"p1_entity": P1, "excluded_energy_entity": ENERGY, "excluded_climate_entity": CLIMATE}
+    )
+    await hass.async_block_till_done()
+    ex = now_snapshot(hass, entry)["excluded"]
+    assert ex["active"] is True and ex["mode"] == "heat" and ex["action"] == "heating"
+    assert ex["quality"] == "starting" and ex["has_climate"] is True and ex["blocked_modes"] == ["heat"]
+
+    freezer.tick(timedelta(seconds=500))
+    _energy(hass, 115.25)
+    await hass.async_block_till_done()
+    ex = now_snapshot(hass, entry)["excluded"]
+    assert ex["power_w"] == 1800 and ex["quality"] == "ok" and ex["mean_step_interval_s"] == 500
+
+    freezer.tick(timedelta(seconds=1200))  # counter late: > 2 × the interval
+    ex = now_snapshot(hass, entry)["excluded"]
+    assert ex["quality"] == "fading" and ex["power_w"] < 1800
+
+    _climate(hass, "cool", "cooling")  # cooling may use the battery
+    await hass.async_block_till_done()
+    ex = now_snapshot(hass, entry)["excluded"]
+    assert ex["active"] is False and ex["power_w"] == 0 and ex["mode"] == "cool"
+
+
+async def test_panel_now_counter_without_climate(hass: HomeAssistant, fake_sets: FakeSets) -> None:
+    from custom_components.zephyr.websocket_api import now_snapshot
+
+    _energy(hass, 10.0)
+    entry = await _install_with_p1(hass, fake_sets)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(result["flow_id"], {"p1_entity": P1, "excluded_energy_entity": ENERGY})
+    await hass.async_block_till_done()
+    ex = now_snapshot(hass, entry)["excluded"]
+    assert ex["quality"] == "no_climate" and ex["active"] is True and ex["has_climate"] is False
