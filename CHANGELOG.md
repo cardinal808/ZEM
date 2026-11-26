@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.18 — Panel: battery % in Nu, spread, use profile in Diagnose
+- **Card *Nu*:** a battery chip next to the action (*46 %*, orange at 20 % or less), so on a phone it is clear at once how full the battery is.
+- **Prices:** today and tomorrow show the **spread** as a percentage of the cheapest quarter (*spread 81 %*), with an explanation on hover; with prices around zero or below, the difference in euro.
+- **Diagnose → Verbruiksprofiel:** the learned use per hour the planner works with, *Werkdag* and *Weekend*: house in blue, the air conditioner hatched on top (B41), day totals, and hours not learned yet lighter (there the planner uses the mean, which the screen names). An empty weekend says so.
+- `zephyr/events` adds `profile` (source, hours, mean, per day type house/air conditioner/counts/min_count).
+- Tests: profile in the events view (with the air conditioner apart), spread percentage, profile sums.
+
 ### 0.8.17 — Panel: solar in the action band (SPEC-ui-airco §3.2, UI-A3)
 - **Solar lane under the action band** (design A, Bjorn 26-11): a small yellow bar per quarter, height = solar relative to the sunniest quarter in view; full yellow = measured, lighter = forecast. A **green top** marks *solar to spare*: more solar than the house and the air conditioner use, so the battery can charge from solar. Legend *Zon* and *Zon over (accu kan laden)*.
 - Quarter details also show the air conditioner: *Airco 0,30 kWh (niet uit de accu)*; *huis* is now the house without the air conditioner, in the past as well as in the plan.

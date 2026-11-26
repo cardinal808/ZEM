@@ -14,6 +14,7 @@ import {
   quartersOf,
   scale,
   socPoints,
+  spreadPct,
   sunLane,
   stats,
   ticks,
@@ -128,6 +129,14 @@ export class ZephyrPricesPlan extends LitElement {
     </section>`;
   }
 
+  private spreadText(s: PriceStats): string {
+    const low = s.min.buy as number;
+    const high = s.max.buy as number;
+    const pct = spreadPct(low, high);
+    // Around zero or below a percentage says nothing: then the difference in euro.
+    return pct === null ? this.tr("plan.spread", { value: euro(high - low, this.locale) }) : this.tr("plan.spread", { value: `${pct} %` });
+  }
+
   private statCell(quarters: Quarter[], s: PriceStats | null, label: string, tomorrow = false): TemplateResult {
     const dayLabel = quarters.length ? day(quarters[0].start, this.locale, this.timeZone) : "";
     if (!s) {
@@ -140,7 +149,11 @@ export class ZephyrPricesPlan extends LitElement {
     const known = tomorrow && this.view?.tomorrow_known_at ? ` · ${this.tr("plan.known_at", { time: clock(this.view.tomorrow_known_at, this.locale, this.timeZone) })}` : "";
     return html`<div class="cell">
       <span class="cap">${this.tr(label)} · ${dayLabel}</span>
-      <span class="value">${euro(s.min.buy as number, this.locale)} – ${euro(s.max.buy as number, this.locale)}</span>
+      <span class="value"
+        >${euro(s.min.buy as number, this.locale)} – ${euro(s.max.buy as number, this.locale)}<span class="spread" title=${this.tr("plan.spread_title")}
+          >${this.spreadText(s)}</span
+        ></span
+      >
       <span class="sub"
         >${this.tr("plan.stats", {
           avg: euro(s.avg, this.locale),
@@ -334,6 +347,17 @@ export class ZephyrPricesPlan extends LitElement {
         gap: 16px;
         color: var(--z-text);
         font-family: var(--z-font);
+      }
+      .spread {
+        margin-left: 10px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--z-info-bg);
+        font-family: var(--z-font);
+        font-size: 12px;
+        font-weight: 600;
+        vertical-align: middle;
+        white-space: nowrap;
       }
       .skeleton {
         height: 320px;
