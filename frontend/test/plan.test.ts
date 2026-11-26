@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   bands,
+  blocksFor,
   bar,
   currentIndex,
   dayOf,
@@ -13,6 +14,8 @@ import {
   stats,
   ticks,
   upcomingBlocks,
+  type PlanBlock,
+  type Period,
   type Quarter,
 } from "../src/plan";
 
@@ -110,5 +113,24 @@ describe("plan helpers", () => {
     const last = lines[1].split(" ");
     expect(last[last.length - 2]).toBe("80,47.9"); // SOC 52.1 % at the end of the last past quarter
     expect(last[last.length - 1]).toBe("80,48.0");
+  });
+
+  it("picks the blocks of the chosen period", () => {
+    const tz = "Europe/Amsterdam";
+    const b = (start: string, end: string, action: "charge" | "hold" | "deliver" = "hold") =>
+      ({ start, end, action, kwh: 0, price: 0.3, indicative: false }) as PlanBlock;
+    const blocks = [
+      b("2026-11-26T10:00:00Z", "2026-11-26T12:45:00Z", "deliver"), // past
+      b("2026-11-26T12:45:00Z", "2026-11-26T20:45:00Z", "deliver"), // now – 21:45
+      b("2026-11-26T20:45:00Z", "2026-11-27T02:00:00Z"), // over midnight
+      b("2026-11-27T02:00:00Z", "2026-11-27T04:15:00Z", "charge"),
+      b("2026-11-27T04:15:00Z", "2026-11-27T23:00:00Z"), // until 00:00 the day after
+    ];
+    const now = "2026-11-26T13:00:00Z";
+    const starts = (p: Period) => blocksFor(blocks, p, now, "2026-11-27", tz).map((x) => x.start.slice(11, 16));
+    expect(starts("today")).toEqual(["12:45", "20:45"]);
+    expect(starts("tomorrow")).toEqual(["20:45", "02:00", "04:15"]);
+    expect(starts("both")).toEqual(["12:45", "20:45", "02:00", "04:15"]);
+    expect(blocksFor(blocks, "tomorrow", now, null, tz)).toEqual([]);
   });
 });

@@ -36,7 +36,7 @@ export interface PlanView {
 
 export type Period = "today" | "tomorrow" | "both";
 
-const dayKey = (iso: string, timeZone: string): string =>
+export const dayKey = (iso: string, timeZone: string): string =>
   new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone }).format(new Date(iso));
 
 /** Local calendar days present in the view, in order (normally today and tomorrow). */
@@ -177,4 +177,21 @@ export function pastSocLines(quarters: Quarter[], socNow: number | null): string
 export function upcomingBlocks(blocks: PlanBlock[], nowIso: string): PlanBlock[] {
   const now = new Date(nowIso).getTime();
   return blocks.filter((b) => new Date(b.end).getTime() > now);
+}
+
+/**
+ * The blocks the cards *Blokken* and *Waarom dit plan* show for the chosen period:
+ * today = still to come today (a block over midnight included), tomorrow = every block that touches tomorrow,
+ * 48 uur = everything still to come.
+ */
+export function blocksFor(blocks: PlanBlock[], period: Period, nowIso: string, tomorrowKey: string | null, timeZone: string): PlanBlock[] {
+  const upcoming = upcomingBlocks(blocks, nowIso);
+  if (period === "both") return upcoming;
+  const wanted = period === "today" ? dayKey(nowIso, timeZone) : tomorrowKey;
+  if (!wanted) return [];
+  return upcoming.filter((b) => {
+    const first = dayKey(b.start, timeZone);
+    const last = dayKey(new Date(new Date(b.end).getTime() - 1).toISOString(), timeZone);
+    return first <= wanted && wanted <= last;
+  });
 }

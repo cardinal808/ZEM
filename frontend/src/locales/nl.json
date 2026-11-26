@@ -119,14 +119,21 @@
     "what_deliver": "Leveren aan het huis",
     "what_hold": "Vasthouden",
     "what_export": "Terugleveren uit de accu",
-    "indicative": "indicatief"
+    "indicative": "indicatief",
+    "title_today": "Blokken vandaag",
+    "title_tomorrow": "Blokken morgen",
+    "title_both": "Blokken, 48 uur",
+    "none_tomorrow": "Nog geen blokken voor morgen."
   },
   "why": {
     "title": "Waarom dit plan",
     "cheapest": "Goedkoopst laden: {time} (gemiddeld {price}).",
     "peak": "Duurste moment: {time} ({price}). Daar levert de accu het meeste op.",
     "no_charge": "Laden uit het net is in deze periode niet goedkoper dan wachten; de accu gebruikt wat er is.",
-    "indicative": "Morgen is nog indicatief; de prijzen komen meestal rond 13:00 en dan rekent het plan opnieuw."
+    "indicative": "Morgen is nog indicatief; de prijzen komen meestal rond 13:00 en dan rekent het plan opnieuw.",
+    "title_today": "Waarom dit plan, vandaag",
+    "title_tomorrow": "Waarom dit plan, morgen",
+    "title_both": "Waarom dit plan"
   },
   "sets": {
     "none": "Nog geen set gevonden.",

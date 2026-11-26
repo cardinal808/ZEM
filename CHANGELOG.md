@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.14 — Panel: Blokken and Waarom follow the chosen period
+- The cards *Blokken* and *Waarom dit plan* now follow *Vandaag / Morgen / 48 uur* like the chart (Bjorn, 26-11). *Vandaag*: what is still to come today, a block over midnight included. *Morgen*: every block that touches tomorrow (or *Nog geen blokken voor morgen*). *48 uur*: everything still to come. The cheapest charge time and the most expensive moment are taken from the same period; the plan's reason (about now) is left out for *Morgen*. Titles say which period.
+- The period is kept by the panel (`zephyr-prices-plan` reports a change); still remembered in the browser.
+- Test: `blocksFor` for the three periods, also over midnight.
+
 ### 0.8.12 — Panel: Diagnose and control (SPEC-ui §4.1, §4.2, §4.5; UI-8, UI-A4)
 - **Header:** for administrators the mode is a choice list and *Rekent mee* / *Stuurt* a button. Turning live control on asks first and lists why it cannot start now (set offline, P1 silent, …); turning it off is immediate. The panel uses ZEPHYR's own entities (`select` mode, `switch` control), the same path as automations.
 - **Plan:** buttons *Snel laden* and *Snel ontladen*; during a fast mode a line what it does and *Stoppen, terug naar …* (the mode it came from).
