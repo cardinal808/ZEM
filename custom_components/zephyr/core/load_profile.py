@@ -111,20 +111,45 @@ class HourEnergy:
     solar_kwh: float
     battery_kwh: float
     """Into the battery (+) or out of it (−)."""
+    excluded_kwh: float = 0.0
+    """Use of a load the battery may not feed in that hour (B41); not part of ``house_kwh``."""
 
     @property
     def house_kwh(self) -> float:
-        return max(self.import_kwh - self.export_kwh + self.solar_kwh - self.battery_kwh, 0.0)
+        total = max(self.import_kwh - self.export_kwh + self.solar_kwh - self.battery_kwh, 0.0)
+        return max(total - self.excluded_kwh, 0.0)
 
 
 def day_type_of(local: datetime) -> str:
     return WEEKEND if local.weekday() >= 5 else WORKDAY
 
 
-def profile_from_history(hours: Iterable[HourEnergy]) -> LoadProfile:
-    """A profile learned from past hours, oldest first (§2.3: first fill)."""
+def profile_from_history(hours: Iterable[HourEnergy], excluded: bool = False) -> LoadProfile:
+    """A profile learned from past hours, oldest first (§2.3: first fill).
+
+    ``excluded``: learn the excluded load (B41) instead of the house.
+    """
     profile = LoadProfile()
     for hour in sorted(hours, key=lambda h: h.start):
-        profile.learn(day_type_of(hour.start), hour.start.hour, hour.house_kwh)
+        profile.learn(day_type_of(hour.start), hour.start.hour, hour.excluded_kwh if excluded else hour.house_kwh)
     profile.recent.clear()  # steering is for the live hours only
     return profile
+
+
+def blocked_share(changes: Iterable[tuple[datetime, str | None]], start: datetime, end: datetime, blocked: Iterable[str]) -> float:
+    """Share (0-1) of [start, end) a climate entity spent in a blocked mode (B41, first fill).
+
+    ``changes``: (moment, hvac_mode) oldest first, the first one at or before ``start``.
+    """
+    modes = frozenset(blocked)
+    total = (end - start).total_seconds()
+    if total <= 0:
+        return 0.0
+    inside = 0.0
+    items = list(changes)
+    for i, (moment, mode) in enumerate(items):
+        until = items[i + 1][0] if i + 1 < len(items) else end
+        a, b = max(moment, start), min(until, end)
+        if b > a and mode in modes:
+            inside += (b - a).total_seconds()
+    return inside / total

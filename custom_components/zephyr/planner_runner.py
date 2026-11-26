@@ -19,6 +19,7 @@ import time
 from collections import deque
 from collections.abc import Callable, Mapping
 from datetime import date, datetime, timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -31,6 +32,9 @@ from homeassistant.helpers.sun import is_up
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_EXCLUDED_CLIMATE,
+    CONF_EXCLUDED_ENERGY,
+    CONF_EXCLUDED_MODES,
     CONF_PLAN_ALLOW_EXPORT,
     CONF_PLAN_BUFFER,
     CONF_PLAN_GRID_CHARGE_COST,
@@ -38,6 +42,7 @@ from .const import (
     CONF_PLAN_WEAR_COST,
     CONF_PRICE_ENTITY,
     CONF_SOLAR_FORECAST,
+    DEFAULT_EXCLUDED_MODES,
     DEFAULT_PLAN_GRID_CHARGE_COST,
     DEFAULT_PLAN_WEAR_COST,
     DOMAIN,
@@ -61,7 +66,7 @@ from .core.forecast_plan import (
     remember,
     solar_per_quarter,
 )
-from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, profile_from_history
+from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, blocked_share, profile_from_history
 from .core.plan_view import local_midnight, plan_view
 from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
@@ -133,6 +138,12 @@ class PlanRunner:
         self.settings = planner_settings(options)
         self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
         self.profile = LoadProfile()
+        self.excluded_entity: str | None = options.get(CONF_EXCLUDED_ENERGY)
+        """B41: energy counter of the load the battery may not feed (the air conditioner)."""
+        self.excluded_climate: str | None = options.get(CONF_EXCLUDED_CLIMATE) if self.excluded_entity else None
+        self.excluded_modes: list[str] = list(options.get(CONF_EXCLUDED_MODES, DEFAULT_EXCLUDED_MODES))
+        self.excluded_profile = LoadProfile()
+        """That load's use per hour while excluded; the house profile is without it."""
         self.hour: dict[str, Any] = {}
         """The hour being collected for the profile: ``start`` (ISO local), ``kwh``, ``quarters``."""
         self.reserve: list[PriceSlot] = []
@@ -162,14 +173,25 @@ class PlanRunner:
         self.hour = dict(stored.get("hour") or {})
         self.reserve = _slots_from_store(stored.get("reserve"))
         self.profile_source = str(stored.get("profile_source") or ("stored" if self.profile.mean_count else "none"))
-        if self.profile.mean_count < FILL_BELOW_HOURS:
+        self.excluded_profile = LoadProfile.from_dict(stored.get("excluded_profile"))
+        # B41: a profile learned with another (or no) excluded load mixes it in: fill again.
+        changed = stored.get("profile", None) is not None and stored.get("excluded_entity") != self.excluded_entity
+        if changed:
+            LOGGER.debug(
+                "Excluded load changed (%s → %s): consumption profile filled again", stored.get("excluded_entity"), self.excluded_entity
+            )
+            self.excluded_profile = LoadProfile()
+        if self.profile.mean_count < FILL_BELOW_HOURS or changed:
             try:
                 filled = await self._learn_from_recorder()
             except Exception:  # the recorder is a nice-to-have: never block the planner
                 LOGGER.exception("Consumption profile from the recorder failed")
                 filled = 0
+            # The cost log before B41 has no use of the excluded load: with a changed load the
+            # old profile stays until the recorder (or the live hours) give a better one.
             if filled < MIN_FILL_HOURS and self.profile.mean_count == 0:
                 await self._learn_from_history()
+            self._store.async_delay_save(self._data, 10)
         assert self.price_entity is not None
         unsubs: list[Callable[[], None]] = [
             async_track_time_change(self.hass, self._on_minute, second=10),
@@ -288,6 +310,13 @@ class PlanRunner:
         local = dt_util.as_local(start)
         return self.profile.forecast(day_type(local), local.hour, ahead) * hours
 
+    def _excluded(self, start: datetime, ahead: float) -> float:
+        """Expected use of the excluded load (B41) in this quarter."""
+        if self.excluded_profile.mean_count == 0:
+            return 0.0
+        local = dt_util.as_local(start)
+        return self.excluded_profile.forecast(day_type(local), local.hour, ahead) * QUARTER.total_seconds() / 3600
+
     def _buy(self, start: datetime, market: float) -> float:
         tariffs = self.runtime.tariffs
         assert tariffs is not None
@@ -361,7 +390,16 @@ class PlanRunner:
         tariffs = self.runtime.tariffs
         assert tariffs is not None
         solar_fn, solar_source = self._solar()
-        slots = build_horizon(markets, now, buy=self._buy, sell=self._sell, load=self._load, solar=solar_fn, daylight=self._daylight)
+        slots = build_horizon(
+            markets,
+            now,
+            buy=self._buy,
+            sell=self._sell,
+            load=self._load,
+            solar=solar_fn,
+            daylight=self._daylight,
+            excluded=self._excluded if self.excluded_entity else None,
+        )
         prev_action = previous.action if previous is not None and previous.slots else Action.DELIVER
         began = time.perf_counter()
         outcome = await self.hass.async_add_executor_job(make_plan, slots, battery, now, self.settings, prev_action)
@@ -456,14 +494,19 @@ class PlanRunner:
         local = dt_util.as_local(start)
         hour_start = local.replace(minute=0, second=0, microsecond=0).isoformat()
         if self.hour.get("start") != hour_start:
-            self.hour = {"start": hour_start, "kwh": 0.0, "quarters": 0}
+            self.hour = {"start": hour_start, "kwh": 0.0, "quarters": 0, "excluded_kwh": 0.0}
         kwh = house_kwh(record, solar_known) if record.get("complete") else None
         if kwh is not None:
-            self.hour["kwh"] += max(kwh, 0.0)
+            excluded = float(record.get("excluded_kwh") or 0.0)
+            # B41: the house without the excluded load; that load is learned apart.
+            self.hour["kwh"] += max(kwh - excluded, 0.0)
+            self.hour["excluded_kwh"] = self.hour.get("excluded_kwh", 0.0) + excluded
             self.hour["quarters"] += 1
         if local.minute == 45:
             if self.hour["quarters"] == 4:
                 self.profile.learn(day_type(local), local.hour, self.hour["kwh"])
+                if self.excluded_entity:
+                    self.excluded_profile.learn(day_type(local), local.hour, self.hour.get("excluded_kwh", 0.0))
             self.hour = {}
 
     def _battery_entity(self) -> str:
@@ -483,10 +526,14 @@ class PlanRunner:
             return 0
         battery = self._battery_entity()
         solar = costs.solar_entity
-        ids = [*costs.import_counters, *costs.export_counters, battery, *([solar] if solar else [])]
+        excluded = self.excluded_entity
+        ids = [*costs.import_counters, *costs.export_counters, battery, *([solar] if solar else []), *([excluded] if excluded else [])]
         end = dt_util.now().replace(minute=0, second=0, microsecond=0)
         start = end - timedelta(days=LEARN_FROM_DAYS)
         stats = await hourly_statistics(self.hass, start, end, ids)
+        modes: list[tuple[datetime, str | None]] | None = None
+        if excluded and self.excluded_climate:
+            modes = await climate_history(self.hass, start, end, self.excluded_climate)
 
         def by_hour(entity: str, field: str) -> dict[float, float]:
             out: dict[float, float] = {}
@@ -503,26 +550,38 @@ class PlanRunner:
         exports = [by_hour(e, "change") for e in costs.export_counters]
         solar_rows = by_hour(solar, "change") if solar else None
         battery_rows = by_hour(battery, "mean")
+        excluded_rows = by_hour(excluded, "change") if excluded else None
         hours: list[HourEnergy] = []
         for key, mean_w in battery_rows.items():
             parts = [rows.get(key) for rows in imports + exports]
             sun = solar_rows.get(key) if solar_rows is not None else 0.0
             if any(p is None for p in parts) or sun is None:
                 continue
+            begin = dt_util.utc_from_timestamp(key)
+            aside = 0.0
+            if excluded_rows is not None:
+                used = excluded_rows.get(key)
+                if used is None:
+                    continue  # the house without the excluded load is unknown for this hour
+                share = 1.0 if modes is None else blocked_share(modes, begin, begin + timedelta(hours=1), self.excluded_modes)
+                aside = max(used, 0.0) * share
             n = len(imports)
             hours.append(
                 HourEnergy(
-                    start=dt_util.as_local(dt_util.utc_from_timestamp(key)),
+                    start=dt_util.as_local(begin),
                     import_kwh=sum(p for p in parts[:n] if p is not None),
                     export_kwh=sum(p for p in parts[n:] if p is not None),
                     solar_kwh=sun,
                     battery_kwh=mean_w / 1000,
+                    excluded_kwh=aside,
                 )
             )
         if len(hours) < MIN_FILL_HOURS:
             LOGGER.debug("Recorder gave %s complete hours for the consumption profile: too few", len(hours))
             return len(hours)
         self.profile = profile_from_history(hours)
+        if excluded:
+            self.excluded_profile = profile_from_history(hours, excluded=True)
         self.hour = {}
         self.profile_source = f"recorder ({len(hours)} h)"
         LOGGER.debug("Consumption profile filled from %s recorder hours", len(hours))
@@ -548,6 +607,8 @@ class PlanRunner:
             "profile": self.profile.as_dict(),
             "hour": self.hour,
             "profile_source": self.profile_source,
+            "excluded_entity": self.excluded_entity,
+            "excluded_profile": self.excluded_profile.as_dict(),
             "reserve": [[s.start.isoformat(), s.end.isoformat(), s.price] for s in self.reserve],
         }
 
@@ -568,6 +629,7 @@ class PlanRunner:
             "timeline": [] if outcome is None else outcome.timeline(),
             "snapshots": list(self.snapshots),
             "profile": self.profile.as_dict(),
+            "excluded_profile": None if not self.excluded_entity else self.excluded_profile.as_dict(),
             "planned_quarters": self.by_quarter,
         }
 
@@ -582,6 +644,19 @@ def _price_key(state: State | None) -> tuple[Any, ...]:
         first = items[0].get("start") if items and isinstance(items[0], Mapping) else None
         key += [len(items), str(first)]
     return tuple(key)
+
+
+async def climate_history(hass: HomeAssistant, start: datetime, end: datetime, entity: str) -> list[tuple[datetime, str | None]]:
+    """``hvac_mode`` changes of a climate entity from the recorder, oldest first (with the state at ``start``)."""
+    from homeassistant.components.recorder.history import state_changes_during_period
+    from homeassistant.helpers.recorder import get_instance
+
+    result = await get_instance(hass).async_add_executor_job(
+        partial(state_changes_during_period, hass, start, end, entity, no_attributes=True, include_start_time_state=True)
+    )
+    return [
+        (state.last_changed, None if state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN) else state.state) for state in result.get(entity, [])
+    ]
 
 
 async def hourly_statistics(hass: HomeAssistant, start: datetime, end: datetime, ids: list[str]) -> dict[str, list[dict[str, Any]]]:

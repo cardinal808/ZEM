@@ -125,6 +125,8 @@ class CostRecorder:
         self.pools = Pools()
         self.counters: dict[str, list[Any]] = {}
         """entity → [boundary (ISO UTC), kWh]: the reading at the last quarter boundary."""
+        self._excluded_total: float | None = None
+        """B41: the excluded load's energy total at the last quarter close (None until the first close)."""
         self.months: list[str] = []
         self.current: list[dict[str, Any]] = []
         self.current_month: str | None = None
@@ -267,6 +269,13 @@ class CostRecorder:
             _days_in_month(local_start.date()),
         )
         record["soc"] = None if totals.soc is None else round(totals.soc, 1)
+        excluded = self.runtime.control.excluded if self.runtime.control is not None else None
+        if excluded is not None:
+            # B41: use of the load the battery may not feed (the air conditioner), from its counter.
+            total = excluded.energy_total
+            previous = self._excluded_total if self._excluded_total is not None else total
+            record["excluded_kwh"] = round(max(total - previous, 0.0), 3)
+            self._excluded_total = total
         if self.runtime.planner is not None:
             record.update(self.runtime.planner.quarter_closed(start, record, self.solar_entity is not None))
         self._open(boundary)

@@ -126,9 +126,24 @@ class HorizonSlot:
     solar_kwh: float
     indicative: bool
     """Price taken from today's pattern (tomorrow not known yet)."""
+    excluded_kwh: float = 0.0
+    """Expected use of a load the battery may not feed (B41, the air conditioner); not in ``load_kwh``."""
 
     def planner_slot(self) -> Slot:
-        return Slot(QUARTER.total_seconds() / 3600, self.buy, self.sell, self.load_kwh, self.solar_kwh)
+        return Slot(QUARTER.total_seconds() / 3600, self.buy, self.sell, self.load_kwh, solar_for_planner(self))
+
+
+def solar_for_planner(slot: HorizonSlot) -> float:
+    """Solar as the planner may use it when an excluded load runs (B41, SPEC-airco §5).
+
+    Zero-meter control delivers only for the rest of the house, with the solar counted for
+    that rest first; the battery only charges once the solar also covers the excluded load.
+    So between ``load`` and ``load + excluded`` the solar is used up (no surplus, no export):
+    solar for the planner = min(solar, load) + max(0, solar − load − excluded).
+    """
+    if slot.excluded_kwh <= 0:
+        return slot.solar_kwh
+    return min(slot.solar_kwh, slot.load_kwh) + max(0.0, slot.solar_kwh - slot.load_kwh - slot.excluded_kwh)
 
 
 def price_at(slots: Sequence[PriceSlot], moment: datetime) -> PriceSlot | None:
@@ -211,6 +226,7 @@ def build_horizon(
     load: LoadFn,
     solar: SolarFn,
     daylight: DaylightFn,
+    excluded: LoadFn | None = None,
 ) -> list[HorizonSlot]:
     out: list[HorizonSlot] = []
     for start, market, indicative in markets:
@@ -225,6 +241,7 @@ def build_horizon(
                 load_kwh=max(load(start, ahead), 0.0),
                 solar_kwh=sun,
                 indicative=indicative,
+                excluded_kwh=0.0 if excluded is None else max(excluded(start, ahead), 0.0),
             )
         )
     return out
@@ -367,6 +384,7 @@ class PlanOutcome:
                     "sell": round(slot.sell, 4),
                     "solar": round(slot.solar_kwh, 3),
                     "load": round(slot.load_kwh, 3),
+                    "excluded": round(slot.excluded_kwh, 3),
                     "battery_kw": round((st.charged - st.delivered) / hours, 2),
                     "soc": soc,
                     "grid_kw": round((st.grid_import - st.grid_export) / hours, 2),
