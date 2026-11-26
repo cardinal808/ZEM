@@ -285,3 +285,99 @@ async def test_pt2_pt6_pt12_night_with_price_reserve(
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["planner"]["snapshots"]
     assert not [r for r in caplog.records if r.levelname in ("ERROR", "CRITICAL") and "zephyr" in r.name]
+
+
+async def test_b41_profile_without_the_air_conditioner(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """B41: the first fill takes the air conditioner out of the house while it was heating; it is learned apart."""
+    from custom_components.zephyr import planner_runner
+
+    imp, exp, airco, climate = "sensor.meter_import", "sensor.meter_export", "sensor.airco_energy", "climate.airco"
+
+    async def fake_stats(hass: HomeAssistant, start: datetime, end: datetime, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+        rows: dict[str, list[dict[str, Any]]] = {i: [] for i in ids}
+        t = start
+        while t < end:
+            midday = 11 <= dt_util.as_local(t).hour < 15
+            ts = dt_util.as_utc(t).timestamp()
+            rows[imp].append({"start": ts, "change": 2.2 if midday else 0.3})
+            rows[exp].append({"start": ts, "change": 0.0})
+            rows[airco].append({"start": ts, "change": 1.8 if midday else 0.0})
+            rows["sensor.zephyr_power"].append({"start": ts, "mean": 0.0})
+            t += timedelta(hours=1)
+        return rows
+
+    async def fake_climate(hass: HomeAssistant, start: datetime, end: datetime, entity: str) -> list[tuple[datetime, str | None]]:
+        assert entity == climate
+        return [(start, "heat")]
+
+    monkeypatch.setattr(planner_runner, "hourly_statistics", fake_stats)
+    monkeypatch.setattr(planner_runner, "climate_history", fake_climate)
+    hass.config.components.add("recorder")
+    _set_prices(hass)
+    entry = await _setup(
+        hass,
+        fake_sets,
+        freezer,
+        (7, 30),
+        price_entity=PRICE,
+        cost_import_counters=[imp],
+        cost_export_counters=[exp],
+        excluded_energy_entity=airco,
+        excluded_climate_entity=climate,
+    )
+    planner = entry.runtime_data.planner
+    assert planner.profile.expected("workday", 12) == pytest.approx(0.4)  # 2.2 − 1.8
+    assert planner.excluded_profile.expected("workday", 12) == pytest.approx(1.8)
+    assert planner.excluded_profile.expected("workday", 3) == pytest.approx(0.0)
+
+    # Live: a cost hour with 0.45 kWh air conditioner per quarter is learned without it.
+    start = datetime(2026, 11, 26, 12, 0, tzinfo=dt_util.get_default_time_zone())
+    for q in range(4):
+        planner.quarter_closed(start + timedelta(minutes=15 * q), {"complete": True, "house_kwh": 0.55, "excluded_kwh": 0.45}, True)
+    assert planner.profile.recent[-1][0] == pytest.approx(0.4)
+    assert planner.excluded_profile.recent[-1][0] == pytest.approx(1.8)
+
+    await _tick(hass, freezer, 10)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["planner"]["excluded_profile"] is not None
+    assert all("excluded" in q for q in diag["planner"]["timeline"])
+
+
+async def test_b41_existing_profile_is_filled_again_when_the_air_conditioner_is_added(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A profile learned with the air conditioner in it (Bjorn: 64 h) is replaced once the counter is set."""
+    from custom_components.zephyr import planner_runner
+
+    imp, exp, airco = "sensor.meter_import", "sensor.meter_export", "sensor.airco_energy"
+
+    async def fake_stats(hass: HomeAssistant, start: datetime, end: datetime, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+        rows: dict[str, list[dict[str, Any]]] = {i: [] for i in ids}
+        t = start
+        while t < end:
+            ts = dt_util.as_utc(t).timestamp()
+            rows[imp].append({"start": ts, "change": 2.0})
+            rows[exp].append({"start": ts, "change": 0.0})
+            if airco in rows:
+                rows[airco].append({"start": ts, "change": 1.5})
+            rows["sensor.zephyr_power"].append({"start": ts, "mean": 0.0})
+            t += timedelta(hours=1)
+        return rows
+
+    monkeypatch.setattr(planner_runner, "hourly_statistics", fake_stats)
+    hass.config.components.add("recorder")
+    _set_prices(hass)
+    options = {"price_entity": PRICE, "cost_import_counters": [imp], "cost_export_counters": [exp]}
+    entry = await _setup(hass, fake_sets, freezer, (7, 30), **options)
+    planner = entry.runtime_data.planner
+    assert planner.profile.mean_count >= 48 and planner.profile.expected("workday", 12) == pytest.approx(2.0)
+    await planner._store.async_save(planner._data())  # as after a day of running
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(result["flow_id"], {"p1_entity": P1, **options, "excluded_energy_entity": airco})
+    await hass.async_block_till_done()
+    planner = entry.runtime_data.planner
+    assert planner.profile.expected("workday", 12) == pytest.approx(0.5)  # without a climate entity: always aside
+    assert planner.excluded_profile.expected("workday", 12) == pytest.approx(1.5)

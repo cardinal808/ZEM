@@ -57,3 +57,42 @@ def test_exclusion_never_exceeds_the_house_demand() -> None:
     assert exclusion_for_controller(2000, 300, -760) == 1060
     # Charging from solar: no demand, the surplus is untouched.
     assert exclusion_for_controller(2000, -200, 500) == 0
+
+
+def test_energy_total_counts_only_while_excluded() -> None:
+    load = ExcludedLoad(blocked_modes=("heat",), has_climate=True)
+    load.observe_counter(10.0, 0)
+    load.observe_climate("heat", "heating", 0)
+    load.observe_counter(10.25, 500)
+    load.observe_climate("cool", "cooling", 600)
+    load.observe_counter(10.5, 1000)  # cooling: may come from the battery
+    assert load.energy_total == pytest.approx(0.25)
+
+
+def test_solar_for_the_planner_with_an_excluded_load() -> None:
+    from datetime import UTC, datetime
+
+    from zephyr_core.forecast_plan import HorizonSlot, solar_for_planner
+
+    def slot(solar: float, excluded: float) -> HorizonSlot:
+        return HorizonSlot(datetime(2026, 11, 26, tzinfo=UTC), 0.1, 0.3, 0.3, 0.2, solar, False, excluded)
+
+    # Rest of the house 0.2 kWh, air conditioner 0.4 kWh in this quarter.
+    assert solar_for_planner(slot(0.1, 0.4)) == pytest.approx(0.1)  # all solar for the rest
+    assert solar_for_planner(slot(0.5, 0.4)) == pytest.approx(0.2)  # rest covered, no surplus for the battery
+    assert solar_for_planner(slot(0.9, 0.4)) == pytest.approx(0.5)  # surplus once the air conditioner is covered
+    assert solar_for_planner(slot(0.5, 0.0)) == pytest.approx(0.5)
+
+
+def test_history_hour_and_blocked_share() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from zephyr_core.load_profile import HourEnergy, blocked_share, profile_from_history
+
+    t0 = datetime(2026, 11, 25, 12, tzinfo=UTC)
+    hour = HourEnergy(t0, import_kwh=2.5, export_kwh=0.0, solar_kwh=0.3, battery_kwh=0.0, excluded_kwh=1.8)
+    assert hour.house_kwh == pytest.approx(1.0)
+    assert profile_from_history([hour], excluded=True).expected("workday", 12) == pytest.approx(1.8)
+    changes = [(t0 - timedelta(hours=1), "heat"), (t0 + timedelta(minutes=45), "off")]
+    assert blocked_share(changes, t0, t0 + timedelta(hours=1), ["heat"]) == pytest.approx(0.75)
+    assert blocked_share(changes, t0, t0 + timedelta(hours=1), ["cool"]) == 0

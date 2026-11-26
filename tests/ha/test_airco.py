@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from custom_components.zephyr.diagnostics import async_get_config_entry_diagnostics
 
@@ -51,6 +52,17 @@ async def test_airco_heating_is_not_fed_from_the_battery(hass: HomeAssistant, fa
     excluded = diag["control"]["excluded_load"]
     assert excluded["active"] and excluded["power_w"] == 1800 and excluded["blocked_modes"] == ["heat"]
     assert any(d.get("excluded") == 1800 for d in diag["control"]["decisions"])
+
+    # Cost log: the quarter gets the air conditioner's kWh counted while it was excluded.
+    costs = entry.runtime_data.costs
+    assert costs is not None
+    boundary = dt_util.now().replace(second=0, microsecond=0)
+    await costs.async_close(boundary)  # first close: reference
+    _energy(hass, 115.5)
+    freezer.tick(timedelta(seconds=500))
+    await hass.async_block_till_done()
+    record = await costs.async_close(boundary + timedelta(minutes=15))
+    assert record is not None and record["excluded_kwh"] == 0.25
 
     # The airco stops: at once nothing is excluded any more.
     _climate(hass, "heat", "idle")

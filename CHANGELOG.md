@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.9 — Planner without the air conditioner (B41, steps 2 and 3)
+- **The consumption profile is the house without the air conditioner** while it ran in a mode the battery may not feed; the air conditioner is learned apart (`excluded_profile`). Before, its heating (~2 kWh/h at midday) counted as house use the battery would cover, so the plan charged and held more than needed.
+- **Solar in the plan follows the control:** with the air conditioner running, solar first covers the rest of the house; the battery only gets a surplus once the air conditioner is covered too (`solar_for_planner`, SPEC-airco §5).
+- **First fill from the recorder** takes the air conditioner's hourly counter out of the house, times the share of the hour the climate entity was in a blocked mode (`hvac_mode` history). A profile learned before the air conditioner was set is **filled again once** (Bjorn: 64 h with the air conditioner in it); with too few recorder hours the old profile stays.
+- **Cost log:** per quarter `excluded_kwh`, the air conditioner's kWh while it was excluded (from the counter steps); the profile learns from it.
+- Plan timeline per quarter: `excluded` (kWh, expected), for the panel's chart (SPEC-ui-airco §2.2). Diagnostics: `planner.excluded_profile`, `control.excluded_load.energy_total_kwh`.
+- Tests: solar rule, blocked share, history hour, energy total; Home Assistant: first fill with climate history, refill when the air conditioner is added, live learning, cost log field.
+
 ### 0.8.7 — Cell balance judged near full (SPEC-celbalans.md)
 - **Correction of 0.8.4.** The cell difference of LiFePO4 says little in the middle of the charge (the voltage curve is flat there); an imbalance shows near full. The panel now judges the cell difference only when a battery is **near full** (SOC ≥ 95 % or highest cell ≥ 3.40 V) **with a small current** (≤ 0.1 C: ≈ 290 W for an AB3000L, 240 W for the built-in battery, 200 W for an unknown type).
 - Labels: **Good** (≤ 30 mV), **Balancing** (≤ 100 mV, normal near full; the set works it away) and **Imbalance** (> 100 mV). Outside a judged moment the value is shown with *judged when full*.
