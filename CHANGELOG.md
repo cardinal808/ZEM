@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.7.7 — Test dashboard: view *Plan*
+- New view **Plan** in `dashboards/zephyr-test.yaml` (standard cards only): mode and live switch, plan now with reason next to what ZEPHYR does (live or shadow), key figures (planned grid charge and cost, export, battery empty at, expected grid cost), the blocks, a table **per hour** from the plan's timeline (actions per quarter, price, solar, consumption, grid, SOC at the end of the hour) and 24-hour history of plan vs ZEPHYR, SOC, setpoint and grid.
+- Fix: the block table used a folded YAML block (`>-`), which joined the table rows into one line; now a literal block (`|-`).
+
 ### 0.7.6 — M5: mode Dynamic Forecasting carries out the plan (SPEC-planner §7)
 - **New mode `dynamic_forecasting`** (Dynamische Forecasting) in `select.zephyr_mode`, only when the planner runs (a price sensor is chosen). The engine takes the plan's action for the running quarter:
   - **L** (charge from the grid): full charge power. Starts only after 2 minutes without grid charging; keeps going 10 s after the plan stops saying L; at max SOC it holds instead (the plan may still say L with a full battery).
