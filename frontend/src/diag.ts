@@ -1,0 +1,95 @@
+// Screen "Diagnose" and the controls (SPEC-ui §4.1, §4.2 point 4, §4.5; UI-8). Pure helpers.
+import { t, type Lang } from "./i18n";
+import type { Localized } from "./types";
+
+export interface DiagEvent {
+  time: string;
+  kind: "reason" | "mode" | "live" | "shadow" | "test" | "test_end" | "second_controller" | "excluded_on" | "excluded_off" | "flash";
+  code?: string;
+  text?: Localized | null;
+  setpoint?: number | null;
+  mode?: string;
+  power?: number;
+  cause?: string;
+  set?: number;
+}
+
+export interface DiagSet {
+  number: number;
+  ram_24h: number;
+  flash_24h: number;
+  relay_24h: number | null;
+  failed_24h: number;
+  last_error: string | null;
+}
+
+export interface EventsView {
+  entry_id: string;
+  events: DiagEvent[];
+  sets: DiagSet[];
+}
+
+/** One sentence per event, in the panel's language. */
+export function eventText(e: DiagEvent, lang: Lang, locale: string): string {
+  const kw = (w: number) => new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(w / 1000);
+  switch (e.kind) {
+    case "reason":
+      return e.text?.[lang] ?? t(lang, "diag.event.reason_code", { code: e.code ?? "?" });
+    case "mode":
+      return t(lang, "diag.event.mode", { mode: t(lang, `mode.${e.mode ?? ""}`) });
+    case "test":
+      return t(lang, "diag.event.test", { power: new Intl.NumberFormat(locale).format(e.power ?? 0) });
+    case "excluded_on":
+      return t(lang, "diag.event.excluded_on", { kw: kw(e.power ?? 0) });
+    case "flash":
+      return t(lang, "diag.event.flash", { set: e.set ?? "?", cause: t(lang, `diag.cause.${e.cause ?? ""}`) });
+    default:
+      return t(lang, `diag.event.${e.kind}`);
+  }
+}
+
+/** Kind label for the list (a word, not only a colour). */
+export function eventKind(e: DiagEvent): "control" | "mode" | "live" | "airco" | "write" | "warning" {
+  if (e.kind === "mode") return "mode";
+  if (e.kind === "live" || e.kind === "shadow" || e.kind === "test" || e.kind === "test_end") return "live";
+  if (e.kind === "excluded_on" || e.kind === "excluded_off") return "airco";
+  if (e.kind === "flash") return "write";
+  if (e.kind === "second_controller") return "warning";
+  return "control";
+}
+
+export interface FastButtons {
+  charge: boolean;
+  discharge: boolean;
+  /** In a fast mode: back to this mode. */
+  stop: string | null;
+}
+
+/** Which of Snel laden / Snel ontladen / Stoppen the plan screen shows. */
+export function fastButtons(mode: string, modes: string[], previous: string): FastButtons {
+  const fast = mode === "fast_charge" || mode === "fast_discharge";
+  return {
+    charge: modes.includes("fast_charge") && mode !== "fast_charge",
+    discharge: modes.includes("fast_discharge") && mode !== "fast_discharge",
+    stop: fast ? (previous === mode ? "zero_meter" : previous) : null,
+  };
+}
+
+const BLOCKERS: [RegExp, string][] = [
+  [/^no P1 sensor chosen$/, "no_p1"],
+  [/^P1 is not reporting$/, "p1_silent"],
+  [/^no sets$/, "no_sets"],
+  [/^set (\d+) is offline$/, "offline"],
+  [/^set (\d+) reports a different serial number$/, "serial"],
+  [/^set (\d+) reports an error$/, "fault"],
+  [/^a write test is running$/, "test"],
+];
+
+/** Why live control cannot start, in the panel's language (the backend gives English sentences). */
+export function blockerText(blocker: string, lang: Lang): string {
+  for (const [re, key] of BLOCKERS) {
+    const m = re.exec(blocker);
+    if (m) return t(lang, `control.blocker.${key}`, { set: m[1] ?? "" });
+  }
+  return blocker;
+}

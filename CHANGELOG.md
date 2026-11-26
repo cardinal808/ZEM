@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.12 — Panel: Diagnose and control (SPEC-ui §4.1, §4.2, §4.5; UI-8, UI-A4)
+- **Header:** for administrators the mode is a choice list and *Rekent mee* / *Stuurt* a button. Turning live control on asks first and lists why it cannot start now (set offline, P1 silent, …); turning it off is immediate. The panel uses ZEPHYR's own entities (`select` mode, `switch` control), the same path as automations.
+- **Plan:** buttons *Snel laden* and *Snel ontladen*; during a fast mode a line what it does and *Stoppen, terug naar …* (the mode it came from).
+- **Screen *Diagnose*:** *Diagnose downloaden* (HA's diagnostics of the installation), *Kostenlogboek exporteren* (`zephyr.export_costs`, shows file and number of quarters), writes per set over 24 hours (power, flash, relay, failed, last error) and the **last 100 events**: other reason, other mode, live on/off, write test, second controller, flash writes, and the air conditioner going outside the battery and back (UI-A4).
+- Websocket `zephyr/events` (`core/events.py` makes events from the decision log). `zephyr/subscribe` adds `entities` and `previous_mode`. The decision log keeps the reason's parameters (`reason_params`), so an event has its full sentence.
+- Tests: events from the log (changes only, flash, air conditioner, limit 100, older lines), `zephyr/events`, entities in the snapshot; frontend: event sentences, fast buttons, live blockers in NL/EN.
+
 ### 0.8.11 — Panel: change settings (SPEC-ui §3.4, UI-7; SPEC-ui-airco §3.3, UI-A2)
 - **Screen *Instellingen* is now editable for administrators.** Battery limits, tariffs, planner, zero meter and test phase save at once and go live **without a reload**: the engine gets the new limits, the planner plans again, a new supplier fetches the tariff table. *Standaard terugzetten* next to every changed field; an error shows under the field (for example *Kies een waarde van 5 tot en met 50 %*).
 - **Sources and corrections** (P1, prices, solar, counters, air conditioner) are collected and saved together with *Bewaren en herstarten*, because ZEPHYR restarts for them. Rules over several fields (P1 pair, air conditioner) are checked first.

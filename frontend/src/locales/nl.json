@@ -437,5 +437,77 @@
     "allowed": "Airco {mode} · mag uit de accu",
     "estimate": "schatting",
     "estimate_more": "Geschat uit de energieteller van de airco (stappen van {kwh} kWh). Tussen twee stappen zakt de schatting vanzelf; stoppen ziet ZEPHYR direct aan de klimaat-entiteit."
+  },
+  "control": {
+    "mode": "Modus",
+    "fast": "Snel laden of ontladen",
+    "fast_charge": "Snel laden",
+    "fast_discharge": "Snel ontladen",
+    "stop": "Stoppen, terug naar {mode}",
+    "running_fast_charge": "Snel laden loopt tot de bovengrens.",
+    "running_fast_discharge": "Snel ontladen loopt tot de ondergrens.",
+    "shadow_note": "Schaduwmodus: ZEPHYR rekent mee maar stuurt niets.",
+    "live_title": "Live sturen aanzetten",
+    "live_text": "ZEPHYR gaat de accu echt sturen. Uitzetten kan altijd met dezelfde knop.",
+    "live_blocked": "Live sturen kan nu niet:",
+    "live_start": "Live sturen",
+    "cancel": "Annuleren",
+    "failed": "Lukte niet: {error}",
+    "close": "Sluiten",
+    "blocker": {
+      "no_p1": "Geen P1-sensor gekozen.",
+      "p1_silent": "De P1-sensor meldt niets.",
+      "no_sets": "Geen sets.",
+      "offline": "Set {set} is offline.",
+      "serial": "Set {set} meldt een ander serienummer.",
+      "fault": "Set {set} meldt een fout.",
+      "test": "Er loopt een schrijftest."
+    }
+  },
+  "diag": {
+    "title": "Diagnose",
+    "intro": "Voor een melding op GitHub of hulp op het forum: download de diagnose. Serienummers en IP-adressen worden weggelaten; namen van je entiteiten staan er wel in.",
+    "download": "Diagnose downloaden",
+    "export": "Kostenlogboek exporteren",
+    "busy": "Bezig…",
+    "exported": "Bewaard in {path} ({rows} kwartieren).",
+    "failed": "Lukte niet: {error}",
+    "counters": "Schrijfacties, laatste 24 uur",
+    "set": "Set",
+    "ram": "Vermogen",
+    "flash": "Flash",
+    "relay": "Relais",
+    "failed_col": "Mislukt",
+    "counters_note": "Vermogensopdrachten gaan naar het werkgeheugen; standby en laadgrenzen naar flash (zo min mogelijk). Relais telt de wissels tussen leveren, laden en uit.",
+    "last_error": "Laatste fout: {error}",
+    "no_sets": "Geen sets.",
+    "events": "Gebeurtenissen",
+    "refresh": "Vernieuwen",
+    "no_events": "Nog geen gebeurtenissen sinds de laatste start.",
+    "kind": {
+      "control": "Regeling",
+      "mode": "Modus",
+      "live": "Sturen",
+      "airco": "Airco",
+      "write": "Flash",
+      "warning": "Let op"
+    },
+    "event": {
+      "reason_code": "Reden: {code}",
+      "mode": "Modus: {mode}",
+      "live": "Live sturen aan",
+      "shadow": "Live sturen uit (schaduwmodus)",
+      "test": "Schrijftest {power} W",
+      "test_end": "Schrijftest klaar",
+      "second_controller": "Iets anders stuurt de set ook (tweede regelaar)",
+      "excluded_on": "Airco buiten de accu: {kw} kW",
+      "excluded_off": "Airco niet meer buiten de accu",
+      "flash": "Set {set}: {cause} in flash geschreven"
+    },
+    "cause": {
+      "standby": "standby",
+      "soc_limits": "laadgrenzen",
+      "test": "schrijftest"
+    }
   }
 }

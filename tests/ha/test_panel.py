@@ -166,6 +166,10 @@ async def test_subscribe_without_price_source(hass: HomeAssistant, fake_sets: Fa
     assert now["price_entity"] is False
     assert now["plan"] is None
     assert now["modes"] == ["standby", "zero_meter", "fast_charge", "fast_discharge"]
+    assert now["previous_mode"] == "zero_meter"
+    mode_entity, live_entity = now["entities"]["mode"], now["entities"]["live"]
+    assert mode_entity.startswith("select.") and hass.states.get(mode_entity) is not None
+    assert live_entity.startswith("switch.") and hass.states.get(live_entity) is not None
 
 
 async def test_plan_command(
@@ -263,3 +267,44 @@ async def test_sets_command(hass: HomeAssistant, fake_sets: FakeSets, hass_ws_cl
     for serial in {p.serial for p in entry.runtime_data.coordinators[s["id"]].data.report.packs}:
         assert serial not in text
     assert entry.runtime_data.coordinators[s["id"]].data.report.serial not in text
+
+
+async def test_events_for_the_screen_diagnose(
+    hass: HomeAssistant, fake_sets: FakeSets, hass_ws_client: WebSocketGenerator, freezer: FrozenDateTimeFactory
+) -> None:
+    client = await hass_ws_client(hass)
+    entry = await _install_with_p1(hass, fake_sets)
+    for watts in ("300", "900"):
+        freezer.tick(timedelta(seconds=5))
+        hass.states.async_set(P1, watts, {"device_class": "power", "unit_of_measurement": "W"}, force_update=True)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    # Through the mode entity, like the panel does: the event list shows the change.
+    now = (await _first_now(client))["entities"]
+    await hass.services.async_call("select", "select_option", {"entity_id": now["mode"], "option": "standby"}, blocking=True)
+    await client.send_json_auto_id({"type": "zephyr/events"})
+    msg = await client.receive_json()
+    assert msg["success"] is True
+    view = msg["result"]
+    assert view["entry_id"] == entry.entry_id
+    assert any(e["kind"] == "reason" and e["text"] is not None for e in view["events"])
+    assert any(e["kind"] == "mode" and e["mode"] == "standby" for e in view["events"])
+    assert all("time" in e for e in view["events"])
+    assert [s["number"] for s in view["sets"]] == [1]
+    assert set(view["sets"][0]) == {"number", "ram_24h", "flash_24h", "relay_24h", "failed_24h", "last_error"}
+    assert view["sets"][0]["failed_24h"] == 0
+
+
+async def test_events_without_installation(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -> None:
+    assert await async_setup_component(hass, DOMAIN, {})
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "zephyr/events"})
+    msg = await client.receive_json()
+    assert msg["success"] is False and msg["error"]["code"] == "not_loaded"
+
+
+async def _first_now(client: Any) -> dict[str, Any]:
+    await client.send_json_auto_id({"type": "zephyr/subscribe"})
+    assert (await client.receive_json())["success"] is True
+    data: dict[str, Any] = (await client.receive_json())["event"]["data"]
+    return data

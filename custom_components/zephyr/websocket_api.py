@@ -42,6 +42,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_sets)
     async_register_command(hass, ws_settings_get)
     async_register_command(hass, ws_settings_set)
+    async_register_command(hass, ws_events)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -117,6 +118,17 @@ def _excluded(control: Any) -> dict[str, Any] | None:
     }
 
 
+def _control_entities(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, str | None]:
+    """Entity ids of the mode select and the live switch: the panel controls ZEPHYR through them (SPEC-ui §3)."""
+    from homeassistant.helpers import entity_registry as er
+
+    registry = er.async_get(hass)
+    return {
+        "mode": registry.async_get_entity_id("select", DOMAIN, f"{entry.entry_id}_mode"),
+        "live": registry.async_get_entity_id("switch", DOMAIN, f"{entry.entry_id}_control"),
+    }
+
+
 def now_snapshot(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
     """Everything the cards *Nu*, *Accu* and *Volgende stap* need."""
     runtime = entry.runtime_data
@@ -131,6 +143,8 @@ def now_snapshot(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any
         "updated_at": dt_util.utcnow().isoformat(),
         "mode": str(control.engine.mode),
         "modes": [str(m) for m in modes],
+        "previous_mode": str(control.previous_mode),
+        "entities": _control_entities(hass, entry),
         "live": not control.shadow,
         "blockers": control.live_blockers(),
         "action": None if result is None else str(result.action),
@@ -439,3 +453,41 @@ async def ws_settings_set(hass: HomeAssistant, connection: ActiveConnection, msg
     if result.changed:
         hass.config_entries.async_update_entry(entry, options=result.options)
     connection.send_result(msg["id"], {"ok": True, "changed": list(result.changed), "reload": result.reload})
+
+
+def events_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
+    """Recent events and today's write counters for the screen Diagnose (SPEC-ui §4.5)."""
+    from .core.events import events_from_log
+
+    runtime = entry.runtime_data
+    control = runtime.control
+    assert control is not None
+    now = time.monotonic()
+    counts = control.engine.counters(now)
+    sets = []
+    for key, coordinator in sorted(runtime.coordinators.items(), key=lambda kv: kv[1].number):
+        c = counts.get(key, {})
+        writer = control.writers.get(key)
+        w = writer.stats.snapshot(now) if writer is not None else {}
+        sets.append(
+            {
+                "number": coordinator.number,
+                "ram_24h": c.get("ram_24h", 0),
+                "flash_24h": c.get("flash_24h", 0),
+                "relay_24h": c.get("relay_24h"),
+                "failed_24h": w.get("failed_24h", 0),
+                "last_error": w.get("last_error"),
+            }
+        )
+    return {"entry_id": entry.entry_id, "events": events_from_log(control.log), "sets": sets}
+
+
+@websocket_command({vol.Required("type"): "zephyr/events"})
+@callback
+def ws_events(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """The last 100 events from the decision log and the counters of the last 24 hours."""
+    entry = _entry(hass)
+    if entry is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    connection.send_result(msg["id"], events_view(entry))

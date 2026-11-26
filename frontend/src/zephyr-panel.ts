@@ -12,6 +12,9 @@ import type { SetsView } from "./sets";
 import "./settings";
 import type { SettingsView } from "./settings";
 import type { SetResult } from "./settings-edit";
+import { blockerText, fastButtons, type EventsView } from "./diag";
+import "./diagnostics";
+import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
 import type { HomeAssistant, Now, PanelInfo, PlanNow, SubscribeEvent } from "./types";
 
@@ -52,6 +55,10 @@ export class ZephyrPanel extends LitElement {
   @state() private planView?: PlanView;
   @state() private setsView?: SetsView;
   @state() private settingsView?: SettingsView;
+  @state() private eventsView?: EventsView;
+  @state() private confirmLive = false;
+  @state() private controlBusy = false;
+  @state() private controlError: string | null = null;
 
   private setsTimer?: number;
 
@@ -195,6 +202,70 @@ export class ZephyrPanel extends LitElement {
     }
   }
 
+  private async loadEvents(): Promise<void> {
+    if (!this.hass || this.view !== "diagnostics") return;
+    try {
+      this.eventsView = await this.hass.callWS<EventsView>({ type: "zephyr/events" });
+    } catch {
+      // Not loaded: the banner says so.
+    }
+  }
+
+  private get admin(): boolean {
+    return Boolean(this.hass?.user?.is_admin);
+  }
+
+  /** Control through ZEPHYR's own entities (mode select, live switch), the same path as automations (SPEC-ui §3). */
+  private async callService(domain: string, service: string, data: Record<string, unknown>): Promise<void> {
+    if (!this.hass || this.controlBusy) return;
+    this.controlBusy = true;
+    this.controlError = null;
+    try {
+      await this.hass.callWS({ type: "call_service", domain, service, service_data: data });
+    } catch (err) {
+      this.controlError = (err as { message?: string })?.message ?? String(err);
+    } finally {
+      this.controlBusy = false;
+    }
+  }
+
+  private setMode(mode: string): void {
+    const entity = this.now?.entities.mode;
+    if (entity && mode !== this.now?.mode) void this.callService("select", "select_option", { entity_id: entity, option: mode });
+  }
+
+  private async setLive(on: boolean): Promise<void> {
+    const entity = this.now?.entities.live;
+    this.confirmLive = false;
+    if (entity) await this.callService("switch", on ? "turn_on" : "turn_off", { entity_id: entity });
+  }
+
+  private downloadDiagnostics = async (): Promise<void> => {
+    if (!this.hass || !this.eventsView) return;
+    const signed = await this.hass.callWS<{ path: string }>({
+      type: "auth/sign_path",
+      path: `/api/diagnostics/config_entry/${this.eventsView.entry_id}`,
+    });
+    const a = document.createElement("a");
+    a.href = signed.path;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  private exportCosts = async (): Promise<ExportResult> => {
+    if (!this.hass) throw new Error("no connection");
+    const result = await this.hass.callWS<{ response: ExportResult }>({
+      type: "call_service",
+      domain: "zephyr",
+      service: "export_costs",
+      service_data: {},
+      return_response: true,
+    });
+    return result.response;
+  };
+
   private saveSettings = async (changes: Record<string, unknown>, reset: string[]): Promise<SetResult> => {
     if (!this.hass) return { ok: false, errors: { base: "failed" } };
     const result = await this.hass.callWS<SetResult>({ type: "zephyr/settings/set", changes, reset });
@@ -216,6 +287,9 @@ export class ZephyrPanel extends LitElement {
       this.setsTimer = window.setInterval(() => void this.loadSets(), 10_000);
     } else if (view === "settings") {
       void this.loadSettings();
+    } else if (view === "diagnostics") {
+      void this.loadEvents();
+      this.setsTimer = window.setInterval(() => void this.loadEvents(), 15_000);
     }
   }
 
@@ -278,19 +352,89 @@ export class ZephyrPanel extends LitElement {
           )}
         </nav>
         <div class="meta">
-          ${now
-            ? html`<span class="chip">${this.tr(`mode.${now.mode}`)}</span>
-                <span class=${now.live ? "chip live" : "chip"} title=${this.tr(now.live ? "header.live_title" : "header.shadow_title")}
-                  >${this.tr(now.live ? "header.live" : "header.shadow")}</span
-                >`
-            : nothing}
+          ${now ? this.renderControls(now) : nothing}
           <span class="time">${clock(new Date(this.clockMs).toISOString(), this.locale, this.timeZone)}</span>
         </div>
       </header>
     `;
   }
 
+  private renderControls(now: Now): TemplateResult {
+    const canMode = this.admin && Boolean(now.entities?.mode);
+    const canLive = this.admin && Boolean(now.entities?.live);
+    const liveText = this.tr(now.live ? "header.live" : "header.shadow");
+    const liveTitle = this.tr(now.live ? "header.live_title" : "header.shadow_title");
+    return html`${canMode
+        ? html`<label class="chipselect">
+            <span class="sr">${this.tr("control.mode")}</span>
+            <select class="chip" ?disabled=${this.controlBusy} @change=${(e: Event) => this.setMode((e.target as HTMLSelectElement).value)}>
+              ${now.modes.map((m) => html`<option value=${m} ?selected=${m === now.mode}>${this.tr(`mode.${m}`)}</option>`)}
+            </select>
+          </label>`
+        : html`<span class="chip">${this.tr(`mode.${now.mode}`)}</span>`}
+      ${canLive
+        ? html`<span class="livewrap">
+            <button
+              type="button"
+              class=${now.live ? "chip live" : "chip"}
+              title=${liveTitle}
+              aria-pressed=${now.live ? "true" : "false"}
+              aria-expanded=${this.confirmLive ? "true" : "false"}
+              ?disabled=${this.controlBusy}
+              @click=${() => (now.live ? void this.setLive(false) : (this.confirmLive = !this.confirmLive))}
+            >
+              ${liveText}
+            </button>
+            ${this.confirmLive && !now.live ? this.renderConfirmLive(now) : nothing}
+          </span>`
+        : html`<span class=${now.live ? "chip live" : "chip"} title=${liveTitle}>${liveText}</span>`}`;
+  }
+
+  private renderConfirmLive(now: Now): TemplateResult {
+    const blocked = now.blockers.length > 0;
+    return html`<div class="popover" role="dialog" aria-label=${this.tr("control.live_title")}>
+      <strong>${this.tr("control.live_title")}</strong>
+      <p>${this.tr(blocked ? "control.live_blocked" : "control.live_text")}</p>
+      ${blocked ? html`<ul>${now.blockers.map((b) => html`<li>${blockerText(b, this.uiLang)}</li>`)}</ul>` : nothing}
+      <div class="row">
+        <button type="button" class="ghost" @click=${() => (this.confirmLive = false)}>${this.tr("control.cancel")}</button>
+        <button type="button" class="primary" ?disabled=${blocked || this.controlBusy} @click=${() => void this.setLive(true)}>
+          ${this.tr("control.live_start")}
+        </button>
+      </div>
+    </div>`;
+  }
+
+  private renderFast(now: Now): TemplateResult | typeof nothing {
+    if (!this.admin || !now.entities?.mode) return nothing;
+    const b = fastButtons(now.mode, now.modes, now.previous_mode);
+    return html`<div class="fast" role="group" aria-label=${this.tr("control.fast")}>
+      ${b.stop
+        ? html`<span class="fastnote">${this.tr(`control.running_${now.mode}`)}</span>
+            <button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode(b.stop as string)}>
+              ${this.tr("control.stop", { mode: this.tr(`mode.${b.stop}`) })}
+            </button>`
+        : nothing}
+      ${b.charge
+        ? html`<button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode("fast_charge")}>
+            ${this.tr("control.fast_charge")}
+          </button>`
+        : nothing}
+      ${b.discharge
+        ? html`<button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode("fast_discharge")}>
+            ${this.tr("control.fast_discharge")}
+          </button>`
+        : nothing}
+      ${now.live ? nothing : html`<span class="fastnote">${this.tr("control.shadow_note")}</span>`}
+    </div>`;
+  }
+
   private renderBanner(): TemplateResult | typeof nothing {
+    if (this.controlError && this.status === "ok")
+      return html`<div class="banner" role="alert">
+        ${this.tr("control.failed", { error: this.controlError })}
+        <button type="button" class="link" @click=${() => (this.controlError = null)}>${this.tr("control.close")}</button>
+      </div>`;
     switch (this.status) {
       case "not_loaded":
         return html`<div class="banner" role="status">${this.tr("status.not_loaded")}</div>`;
@@ -327,6 +471,19 @@ export class ZephyrPanel extends LitElement {
         .save=${this.saveSettings}
       ></zephyr-settings>`;
     }
+    if (this.view === "diagnostics") {
+      return html`<zephyr-diagnostics
+        class=${this.status === "ok" ? "" : "stale"}
+        .view=${this.eventsView}
+        .uiLang=${this.uiLang}
+        .locale=${this.locale}
+        .timeZone=${this.timeZone}
+        ?admin=${this.admin}
+        .download=${this.downloadDiagnostics}
+        .exportCosts=${this.exportCosts}
+        .refresh=${() => void this.loadEvents()}
+      ></zephyr-diagnostics>`;
+    }
     return this.renderComing();
   }
 
@@ -345,7 +502,7 @@ export class ZephyrPanel extends LitElement {
     return html`<section class="cards ${stale}" aria-label=${this.tr("now.title")}>
         ${this.renderNow(now)} ${this.renderBattery(now)} ${this.renderNext(now)}
       </section>
-      ${now.price_entity ? this.renderPlanParts(now, stale) : nothing}`;
+      ${this.renderFast(now)} ${now.price_entity ? this.renderPlanParts(now, stale) : nothing}`;
   }
 
   private renderPlanParts(now: Now, stale: string): TemplateResult {
@@ -643,6 +800,104 @@ export class ZephyrPanel extends LitElement {
         background: var(--z-text);
         color: var(--z-on-text);
         border-color: var(--z-text);
+      }
+      button.chip,
+      select.chip {
+        font: inherit;
+        font-size: inherit;
+        background: var(--z-card);
+        min-height: 36px;
+        cursor: pointer;
+      }
+      button.chip.live {
+        background: var(--z-text);
+      }
+      select.chip {
+        padding-right: 28px;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+      }
+      .livewrap {
+        position: relative;
+      }
+      .popover {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 8px);
+        z-index: 5;
+        width: min(320px, 85vw);
+        box-sizing: border-box;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: var(--z-card);
+        border: 1px solid var(--z-border);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+        font-size: 14px;
+        line-height: 1.5;
+        text-align: left;
+      }
+      .popover p {
+        margin: 6px 0;
+        color: var(--z-muted);
+      }
+      .popover ul {
+        margin: 0 0 6px;
+        padding-left: 18px;
+        color: var(--z-warn-text);
+      }
+      .popover .row,
+      .fast {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .popover .row {
+        justify-content: flex-end;
+        margin-top: 8px;
+      }
+      .popover button,
+      .fast button {
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 10px;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .ghost {
+        border: 1px solid var(--z-border);
+        background: var(--z-card);
+        color: var(--z-text);
+      }
+      .primary {
+        border: 0;
+        background: var(--z-text);
+        color: var(--z-on-text);
+      }
+      .fastnote {
+        font-size: 13px;
+        color: var(--z-muted);
+      }
+      .banner .link {
+        margin-left: 8px;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      :disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
       .time {
         font-variant-numeric: tabular-nums;

@@ -51,6 +51,8 @@ export interface Now {
   updated_at: string;
   mode: string;
   modes: string[];
+  previous_mode: string;
+  entities: { mode: string | null; live: string | null };
   live: boolean;
   blockers: string[];
   action: string | null;
