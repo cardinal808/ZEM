@@ -24,7 +24,7 @@ from .const import DOMAIN, SUBENTRY_SET
 from .coordinator import SetCoordinator
 from .core.totals import Totals, compute_totals
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT, Platform.SWITCH]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT, Platform.SWITCH, Platform.DATETIME]
 
 if TYPE_CHECKING:
     from .control import ZephyrControl
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from .planner_runner import PlanRunner
     from .solar_recorder import SolarRecorder
     from .tariff_provider import TariffProvider
+    from .vacation import VacationManager
 
 
 @dataclass(slots=True)
@@ -46,6 +47,7 @@ class ZephyrRuntime:
     tariffs: TariffProvider | None = None
     planner: PlanRunner | None = None
     packs: PackRecorder | None = None
+    vacation: VacationManager | None = None
     options: dict[str, Any] = field(default_factory=dict)
     """The options in use; a change of only live fields is applied without a reload (UI-7)."""
 
@@ -176,6 +178,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
 
     planner = PlanRunner(hass, entry.entry_id, dict(entry.options), runtime)
     runtime.planner = planner if planner.enabled else None
+    from .vacation import VacationManager
+
+    runtime.vacation = VacationManager(hass, entry.entry_id, dict(entry.options))
+    entry.async_on_unload(await runtime.vacation.async_start())
+    if runtime.planner is not None:
+        entry.async_on_unload(runtime.vacation.async_add_listener(runtime.planner.async_request))
     entry.runtime_data = runtime
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

@@ -57,6 +57,7 @@ from .const import (
     CONF_TARIFF_SOLAR_BONUS,
     CONF_TARIFF_SUPPLIER,
     CONF_TARIFF_VAT,
+    CONF_VACATION_AWAY,
     DEFAULT_EXCLUDED_MODES,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_PLAN_GRID_CHARGE_COST,
@@ -500,6 +501,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Required(CONF_PLAN_ALLOW_EXPORT, default=options.get(CONF_PLAN_ALLOW_EXPORT, False)): bool,
                 vol.Required(CONF_PLAN_LOAD_MARGIN, default=options.get(CONF_PLAN_LOAD_MARGIN, 0)): _percent(0, 50),
                 vol.Required(CONF_PLAN_BUFFER, default=options.get(CONF_PLAN_BUFFER, 0)): _percent(0, 50),
+                vol.Required(CONF_VACATION_AWAY, default=options.get(CONF_VACATION_AWAY, False)): bool,
                 vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, True)): bool,
             }
         )

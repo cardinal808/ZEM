@@ -71,6 +71,7 @@ from .core.plan_view import local_midnight, plan_view
 from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
 from .core.solar_history import parse_detailed_forecast
+from .core.vacation import base_load
 
 if TYPE_CHECKING:
     from . import ZephyrRuntime
@@ -84,6 +85,8 @@ FIRST_RUN_DELAY = 5.0
 LEARN_FROM_DAYS = 28
 """First fill of the profile: this many days of the recorder's hourly statistics, else of the cost log."""
 FILL_BELOW_HOURS = 48
+MIN_VACATION_COUNT = 1
+"""Hours of vacation use per day type and hour before the planner trusts them over the standby use."""
 """Fill from the recorder while fewer hours than this have been learned."""
 MIN_FILL_HOURS = 24
 """A fill from the recorder replaces the profile only with at least this many hours."""
@@ -144,6 +147,8 @@ class PlanRunner:
         self.excluded_modes: list[str] = list(options.get(CONF_EXCLUDED_MODES, DEFAULT_EXCLUDED_MODES))
         self.excluded_profile = LoadProfile()
         """That load's use per hour while excluded; the house profile is without it."""
+        self.vacation_profile = LoadProfile()
+        """B42: use per hour while on vacation (kept apart from the normal profile)."""
         self.hour: dict[str, Any] = {}
         """The hour being collected for the profile: ``start`` (ISO local), ``kwh``, ``quarters``."""
         self.reserve: list[PriceSlot] = []
@@ -180,6 +185,7 @@ class PlanRunner:
         self.reserve = _slots_from_store(stored.get("reserve"))
         self.profile_source = str(stored.get("profile_source") or ("stored" if self.profile.mean_count else "none"))
         self.excluded_profile = LoadProfile.from_dict(stored.get("excluded_profile"))
+        self.vacation_profile = LoadProfile.from_dict(stored.get("vacation_profile"))
         # B41: a profile learned with another (or no) excluded load mixes it in: fill again.
         changed = stored.get("profile", None) is not None and stored.get("excluded_entity") != self.excluded_entity
         if changed:
@@ -338,8 +344,22 @@ class PlanRunner:
             return from_yesterday, "yesterday"
         return lambda t: 0.0, "none"
 
+    def _on_vacation(self, moment: datetime) -> bool:
+        vacation = self.runtime.vacation
+        return vacation is not None and vacation.active_at(moment)
+
+    def _vacation_load(self, local: datetime) -> float:
+        """kWh per hour while away (B42): the learned vacation use, else the standby use of the normal profile."""
+        kind, hour = day_type(local), local.hour
+        if self.vacation_profile.counts[kind][hour] >= MIN_VACATION_COUNT:
+            return self.vacation_profile.values[kind][hour]
+        night = [self.profile.expected(k, h) for k in (WORKDAY, WEEKEND) for h in range(6)] if self.profile.mean_count else []
+        return base_load(night, DEFAULT_LOAD_KWH_PER_HOUR)
+
     def _load(self, start: datetime, ahead: float) -> float:
         hours = QUARTER.total_seconds() / 3600
+        if self._on_vacation(start):
+            return self._vacation_load(dt_util.as_local(start)) * hours
         if self.profile.mean_count == 0:
             return DEFAULT_LOAD_KWH_PER_HOUR * hours
         local = dt_util.as_local(start)
@@ -347,8 +367,8 @@ class PlanRunner:
 
     def _excluded(self, start: datetime, ahead: float) -> float:
         """Expected use of the excluded load (B41) in this quarter."""
-        if self.excluded_profile.mean_count == 0:
-            return 0.0
+        if self.excluded_profile.mean_count == 0 or self._on_vacation(start):
+            return 0.0  # B42: the air conditioner is off while away
         local = dt_util.as_local(start)
         return self.excluded_profile.forecast(day_type(local), local.hour, ahead) * QUARTER.total_seconds() / 3600
 
@@ -466,6 +486,7 @@ class PlanRunner:
                 },
                 "profile_hours_learned": self.profile.mean_count,
                 "profile_source": self.profile_source,
+                "vacation": self._on_vacation(now),
                 "previous_action": prev_action.value,
             },
         )
@@ -529,7 +550,10 @@ class PlanRunner:
         local = dt_util.as_local(start)
         hour_start = local.replace(minute=0, second=0, microsecond=0).isoformat()
         if self.hour.get("start") != hour_start:
-            self.hour = {"start": hour_start, "kwh": 0.0, "quarters": 0, "excluded_kwh": 0.0}
+            self.hour = {"start": hour_start, "kwh": 0.0, "quarters": 0, "excluded_kwh": 0.0, "vacation": False}
+        vacation = self.runtime.vacation
+        if record.get("vacation") or (vacation is not None and vacation.was(start)):
+            self.hour["vacation"] = True
         kwh = house_kwh(record, solar_known) if record.get("complete") else None
         if kwh is not None:
             excluded = float(record.get("excluded_kwh") or 0.0)
@@ -538,7 +562,11 @@ class PlanRunner:
             self.hour["excluded_kwh"] = self.hour.get("excluded_kwh", 0.0) + excluded
             self.hour["quarters"] += 1
         if local.minute == 45:
-            if self.hour["quarters"] == 4:
+            if self.hour["quarters"] == 4 and self.hour.get("vacation"):
+                # B42: away hours go into the vacation profile only (house and air conditioner together).
+                total = self.hour["kwh"] + self.hour.get("excluded_kwh", 0.0)
+                self.vacation_profile.learn(day_type(local), local.hour, total)
+            elif self.hour["quarters"] == 4:
                 self.profile.learn(day_type(local), local.hour, self.hour["kwh"])
                 if self.excluded_entity:
                     self.excluded_profile.learn(day_type(local), local.hour, self.hour.get("excluded_kwh", 0.0))
@@ -593,6 +621,9 @@ class PlanRunner:
             if any(p is None for p in parts) or sun is None:
                 continue
             begin = dt_util.utc_from_timestamp(key)
+            vacation = self.runtime.vacation
+            if vacation is not None and vacation.was(begin):
+                continue  # B42: not into the normal profile
             aside = 0.0
             if excluded_rows is not None:
                 used = excluded_rows.get(key)
@@ -644,6 +675,7 @@ class PlanRunner:
             "profile_source": self.profile_source,
             "excluded_entity": self.excluded_entity,
             "excluded_profile": self.excluded_profile.as_dict(),
+            "vacation_profile": self.vacation_profile.as_dict(),
             "reserve": [[s.start.isoformat(), s.end.isoformat(), s.price] for s in self.reserve],
         }
 
@@ -665,6 +697,8 @@ class PlanRunner:
             "snapshots": list(self.snapshots),
             "profile": self.profile.as_dict(),
             "excluded_profile": None if not self.excluded_entity else self.excluded_profile.as_dict(),
+            "vacation_profile": self.vacation_profile.as_dict() if self.vacation_profile.mean_count else None,
+            "vacation": None if self.runtime.vacation is None else self.runtime.vacation.diagnostics(),
             "planned_quarters": self.by_quarter,
         }
 

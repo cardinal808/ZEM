@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.8.15 — Vacation (B42)
+- **`switch.zephyr_vacation`** (*Vacation*) with **`datetime.zephyr_vacation_until`** (*Vacation until*): set an end and the switch goes off by itself at that moment.
+- **Option *Vacation when nobody is home*** (default off): on by itself after 24 hours with nobody home (`zone.home` = 0), off as soon as someone is back.
+- **Planner while away:** uses the learned vacation use, else the **standby use** (lowest night hour of the normal profile); the air conditioner counts as off. After the end the normal profile applies again, so the battery is charged for the return home at the cheapest moment.
+- **Learning:** vacation hours go into a separate **vacation profile** (stored, used next time), not into the house or air-conditioner profile. The recorder fill skips past vacations (periods kept 400 days).
+- **Cost log:** quarters while away get `vacation: true`.
+- Diagnostics: `planner.vacation`, `planner.vacation_profile`, `inputs.vacation`. Panel: the option in Settings (Planner).
+- Tests: state, end, automatic, periods, base load; Home Assistant: switch + end, plan before/after the end, learning apart, away via `zone.home`, cost log flag.
+
 ### 0.8.13 — Panel: fixes after the first test of UI-8
 - **Snel laden / Snel ontladen stay in place.** In a fast mode the buttons used to swap places, so a second tap could switch from fast discharge straight back to fast charge (seen in Bjorn's diagnostics of 26-11). Now both buttons keep their place; the running one reads *… stoppen* and goes back to the mode it came from, with a line *Daarna terug naar …*. After a tap the buttons wait until the new mode shows (at most 5 s).
 - **Diagnose in shadow mode:** the counters are what ZEPHYR *would* send; the screen now says so (*Opdrachten, laatste 24 uur (schaduw)*). `zephyr/events` adds `shadow`.
