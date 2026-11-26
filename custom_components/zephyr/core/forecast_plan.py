@@ -77,6 +77,31 @@ def market_slots(attributes: Mapping[str, Any]) -> list[PriceSlot]:
     return sorted(seen.values(), key=lambda s: s.start)
 
 
+def merge_reserve(source: Sequence[PriceSlot], reserve: Sequence[PriceSlot]) -> list[PriceSlot]:
+    """The source's prices, with saved prices filling the gaps (§2.1: price reserve).
+
+    Matched by time: a saved slot only counts where the source has no slot overlapping it, so
+    a source that is back always wins, and prices are never moved to another day.
+    """
+    out = list(source)
+    for slot in reserve:
+        if not any(s.start < slot.end and slot.start < s.end for s in source):
+            out.append(slot)
+    return sorted(out, key=lambda s: s.start)
+
+
+def remember(reserve: Sequence[PriceSlot], source: Sequence[PriceSlot], now: datetime) -> list[PriceSlot]:
+    """Update the saved prices with the source: the source wins; slots that ended more than an hour ago go."""
+    keep = now - timedelta(hours=1)
+    merged = {s.start: s for s in reserve if s.end > keep}
+    for s in source:
+        if s.end > keep:
+            merged[s.start] = s
+    by_start = sorted(merged.values(), key=lambda s: s.start)
+    # Drop saved slots that overlap a newer source slot of another resolution (hour ↔ quarter).
+    return merge_reserve([s for s in source if s.end > keep], by_start)
+
+
 def quarter_floor(moment: datetime) -> datetime:
     """Start of the quarter containing ``moment`` (aware)."""
     return moment.replace(minute=moment.minute - moment.minute % 15, second=0, microsecond=0)
@@ -447,6 +472,7 @@ REASONS: Final[dict[str, tuple[str, str]]] = {
     ),
     "hold": ("Holding: {now} now; the battery waits for a better moment.", "Vasthouden: {now} nu; de accu wacht op een beter moment."),
     "export": ("Exporting from the battery pays now: {sell} per kWh.", "Terugleveren uit de accu loont nu: {sell} per kWh."),
+    "reserve": ("Saved prices (the source has no price for now yet). ", "Bewaarde prijzen (de bron heeft nog geen prijs voor nu). "),
 }
 
 
@@ -470,6 +496,11 @@ def reason(outcome: PlanOutcome, language: str, tz: tzinfo) -> str:
     if outcome.state == PlanState.NO_PRICES or not outcome.slots:
         since = outcome.no_prices_since or outcome.calculated_at
         return text("no_prices", since=_clock(since, tz))
+    prefix = text("reserve") if outcome.state == PlanState.PRICE_RESERVE else ""
+    return prefix + _action_reason(outcome, language, tz, text)
+
+
+def _action_reason(outcome: PlanOutcome, language: str, tz: tzinfo, text: Callable[..., str]) -> str:
     now_slot = outcome.slots[0]
     now = _euro(now_slot.buy, language)
     later_blocks = [b for b in outcome.blocks if b.start > now_slot.start]

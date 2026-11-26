@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.7.9 — Planner: price reserve after midnight (SPEC-planner §2.1, PT2, PT6, PT12)
+- **Saved prices:** every calculation saves the known prices (today and tomorrow, by start time) in ZEPHYR's storage, so also over a restart. When the source has no price for the running quarter — the HACS sensor that does not move on after 00:00, or a sensor that is empty or unavailable — the planner fills the gaps with the saved prices for the same time slots and plans as usual.
+- State **`price_reserve`** (Prijzenreserve) and the reason starts with *Bewaarde prijzen (de bron heeft nog geen prijs voor nu).* While on the reserve the planner checks the source every minute; the source always wins as soon as it has prices. Saved prices are never moved to another day; without a saved price for now it stays *No prices* + N.
+- Diagnostics: `price_source` (source / reserve) and `reserve_slots`.
+- Tests: a night from 22:00 with a source that loses tomorrow at 23:59, goes unavailable, a reload, and the source coming back; merge and update of the reserve in `core`.
+
 ### 0.7.8 — Planner: consumption profile from the recorder at the start (SPEC-planner §2.3)
 - **First fill from the recorder's hourly statistics** (last 28 days) while fewer than 48 hours have been learned: house = import − export + solar − battery per hour, from the cost log's DSMR counters, the solar counter and the hourly mean of `sensor.zephyr_power`. Only complete hours count; the fill replaces the profile from 24 hours on. Without the recorder or the counters: the cost log as before.
 - Why: at a tester the profile had learned only five night hours (0.23 kWh/h) and used that for every hour of the day, so the planner saw far too little consumption.

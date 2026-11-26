@@ -204,3 +204,33 @@ def test_hold_reason_names_the_delivery_block() -> None:
     outcome = make_plan(_horizon(markets, noon, load=0.3), full, noon, PlannerSettings(wear_cost=0.03))
     assert outcome.action is Action.HOLD
     assert reason(outcome, "nl", TZ).startswith("Vasthouden: €0,27 nu is te goedkoop om te leveren; de accu levert vanaf 17:")
+
+
+def test_reserve_fills_gaps_by_time_and_the_source_wins() -> None:
+    from zephyr_core.forecast_plan import merge_reserve, remember
+
+    today, tomorrow = _midnight(2026, 11, 26), _midnight(2026, 11, 27)
+    before = market_slots({"raw_today": _raw(today, [0.1] * 24), "raw_tomorrow": _raw(tomorrow, [0.2] * 24)})
+    late = today + timedelta(hours=23, minutes=50)
+    reserve = remember([], before, late)
+    assert len(reserve) == 26  # 22:00 and 23:00 today (ended less than an hour ago or running) and all of tomorrow
+    # After midnight the source still shows yesterday: the saved prices give a price for now.
+    after = tomorrow + timedelta(minutes=30)
+    stale = market_slots({"raw_today": _raw(today, [0.1] * 24), "raw_tomorrow": []})
+    prices = merge_reserve(stale, reserve)
+    markets = horizon_markets(prices, after, TZ)
+    assert markets and markets[0][1] == pytest.approx(0.2) and not markets[0][2]
+    # The source is back with quarter prices: it wins, saved hour slots that overlap it go.
+    fresh = market_slots({"raw_today": _raw(tomorrow, [0.3] * 96, minutes=15), "raw_tomorrow": []})
+    merged = merge_reserve(fresh, reserve)
+    assert all(s.price == pytest.approx(0.3) for s in merged if s.start >= tomorrow)
+    updated = remember(reserve, fresh, after)
+    assert all(s.price == pytest.approx(0.3) for s in updated if s.start >= tomorrow)
+    assert all(s.end > after - timedelta(hours=1) for s in updated)
+
+
+def test_reason_mentions_saved_prices() -> None:
+    markets, now = _night_and_evening()
+    outcome = make_plan(_horizon(markets, now), BAT, now, PlannerSettings())
+    outcome.state = PlanState.PRICE_RESERVE
+    assert reason(outcome, "nl", TZ).startswith("Bewaarde prijzen (de bron heeft nog geen prijs voor nu). ")

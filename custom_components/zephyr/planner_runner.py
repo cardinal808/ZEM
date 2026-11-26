@@ -51,11 +51,16 @@ from .core.forecast_plan import (
     horizon_markets,
     make_plan,
     market_slots,
+    merge_reserve,
     no_prices,
+    price_at,
+    quarter_floor,
+    remember,
     solar_per_quarter,
 )
 from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, profile_from_history
 from .core.planner import Action, PlannerSettings
+from .core.price_window import PriceSlot
 from .core.solar_history import parse_detailed_forecast
 
 if TYPE_CHECKING:
@@ -125,6 +130,8 @@ class PlanRunner:
         self.profile = LoadProfile()
         self.hour: dict[str, Any] = {}
         """The hour being collected for the profile: ``start`` (ISO local), ``kwh``, ``quarters``."""
+        self.reserve: list[PriceSlot] = []
+        """Saved prices (§2.1): used after midnight when the source has none for now yet."""
         self.outcome: PlanOutcome | None = None
         self.inputs: dict[str, Any] = {}
         self.snapshots: deque[dict[str, Any]] = deque(maxlen=SNAPSHOTS)
@@ -146,6 +153,7 @@ class PlanRunner:
         stored = await self._store.async_load() or {}
         self.profile = LoadProfile.from_dict(stored.get("profile"))
         self.hour = dict(stored.get("hour") or {})
+        self.reserve = _slots_from_store(stored.get("reserve"))
         self.profile_source = str(stored.get("profile_source") or ("stored" if self.profile.mean_count else "none"))
         if self.profile.mean_count < FILL_BELOW_HOURS:
             try:
@@ -196,7 +204,7 @@ class PlanRunner:
 
     @callback
     def _on_minute(self, now: datetime) -> None:
-        waiting = self.outcome is None or self.outcome.state == PlanState.NO_PRICES
+        waiting = self.outcome is None or self.outcome.state in (PlanState.NO_PRICES, PlanState.PRICE_RESERVE)
         if waiting or dt_util.as_utc(now).minute % 15 == 0:
             self.async_request()
 
@@ -278,8 +286,14 @@ class PlanRunner:
         now = dt_util.utcnow()
         tz = dt_util.get_default_time_zone()
         state = self.hass.states.get(self.price_entity)
-        prices = market_slots(state.attributes) if state is not None else []
-        self._check_format(state, bool(prices))
+        source = market_slots(state.attributes) if state is not None else []
+        self._check_format(state, bool(source))
+        reserve = remember(self.reserve, source, now)
+        if [(s.start, s.price) for s in reserve] != [(s.start, s.price) for s in self.reserve]:
+            self.reserve = reserve
+            self._store.async_delay_save(self._data, 10)
+        prices = merge_reserve(source, self.reserve)
+        from_reserve = price_at(source, quarter_floor(now)) is None and price_at(prices, quarter_floor(now)) is not None
         markets = horizon_markets(prices, now, tz)
         previous = self.outcome
         if not markets:
@@ -304,11 +318,15 @@ class PlanRunner:
         began = time.perf_counter()
         outcome = await self.hass.async_add_executor_job(make_plan, slots, battery, now, self.settings, prev_action)
         outcome.duration_s = time.perf_counter() - began
+        if from_reserve:
+            outcome.state = PlanState.PRICE_RESERVE
         self._publish(
             outcome,
             {
                 "price_entity": self.price_entity,
-                "price_slots": len(prices),
+                "price_slots": len(source),
+                "reserve_slots": len(self.reserve),
+                "price_source": "reserve" if from_reserve else "source",
                 "solar_source": solar_source,
                 "solar_entities": self.solar_entities,
                 "tariffs": tariffs.tariffs_for(dt_util.as_local(now).date()).source,
@@ -478,7 +496,12 @@ class PlanRunner:
             self._store.async_delay_save(self._data, 10)
 
     def _data(self) -> dict[str, Any]:
-        return {"profile": self.profile.as_dict(), "hour": self.hour, "profile_source": self.profile_source}
+        return {
+            "profile": self.profile.as_dict(),
+            "hour": self.hour,
+            "profile_source": self.profile_source,
+            "reserve": [[s.start.isoformat(), s.end.isoformat(), s.price] for s in self.reserve],
+        }
 
     def diagnostics(self) -> dict[str, Any]:
         outcome = self.outcome
@@ -528,3 +551,14 @@ async def hourly_statistics(hass: HomeAssistant, start: datetime, end: datetime,
         {"change", "mean"},
     )
     return {key: [dict(row) for row in rows] for key, rows in result.items()}
+
+
+def _slots_from_store(data: Any) -> list[PriceSlot]:
+    out: list[PriceSlot] = []
+    for item in data or []:
+        try:
+            start, end, price = item
+            out.append(PriceSlot(datetime.fromisoformat(start), datetime.fromisoformat(end), float(price)))
+        except (TypeError, ValueError):
+            continue
+    return out
