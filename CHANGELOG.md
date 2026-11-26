@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.7.10 — Planner: no "charge" with a full battery
+- A planned charge slot (L) that takes nothing from the grid — the battery is already full, so it costs the same as holding — is now shown and carried out as **hold** (H). The plan, the blocks, the timeline and `sensor.zephyr_plan_action` no longer say *charge* while nothing charges; the state is *Battery full* when that is the case now. Seen at a tester: a "charge" block of 14 hours of which only the first 45 minutes charged.
+
 ### 0.7.9 — Planner: price reserve after midnight (SPEC-planner §2.1, PT2, PT6, PT12)
 - **Saved prices:** every calculation saves the known prices (today and tomorrow, by start time) in ZEPHYR's storage, so also over a restart. When the source has no price for the running quarter — the HACS sensor that does not move on after 00:00, or a sensor that is empty or unavailable — the planner fills the gaps with the saved prices for the same time slots and plans as usual.
 - State **`price_reserve`** (Prijzenreserve) and the reason starts with *Bewaarde prijzen (de bron heeft nog geen prijs voor nu).* While on the reserve the planner checks the source every minute; the source always wins as soon as it has prices. Saved prices are never moved to another day; without a saved price for now it stays *No prices* + N.
