@@ -8,6 +8,8 @@ import { stats, upcomingBlocks, type PlanBlock, type PlanView } from "./plan";
 import "./prices-plan";
 import "./sets";
 import type { SetsView } from "./sets";
+import "./settings";
+import type { SettingsView } from "./settings";
 import { actionFill, theme } from "./theme";
 import type { HomeAssistant, Now, PanelInfo, PlanNow, SubscribeEvent } from "./types";
 
@@ -47,6 +49,7 @@ export class ZephyrPanel extends LitElement {
   @state() private clockMs = Date.now();
   @state() private planView?: PlanView;
   @state() private setsView?: SetsView;
+  @state() private settingsView?: SettingsView;
 
   private setsTimer?: number;
 
@@ -181,12 +184,23 @@ export class ZephyrPanel extends LitElement {
     }
   }
 
+  private async loadSettings(): Promise<void> {
+    if (!this.hass) return;
+    try {
+      this.settingsView = await this.hass.callWS<SettingsView>({ type: "zephyr/settings/get" });
+    } catch {
+      // Not loaded: the banner says so.
+    }
+  }
+
   private show(view: View): void {
     this.view = view;
     window.clearInterval(this.setsTimer);
     if (view === "sets") {
       void this.loadSets();
       this.setsTimer = window.setInterval(() => void this.loadSets(), 10_000);
+    } else if (view === "settings") {
+      void this.loadSettings();
     }
   }
 
@@ -286,6 +300,15 @@ export class ZephyrPanel extends LitElement {
         .locale=${this.locale}
         .timeZone=${this.timeZone}
       ></zephyr-sets>`;
+    }
+    if (this.view === "settings") {
+      return html`<zephyr-settings
+        class=${this.status === "ok" ? "" : "stale"}
+        .view=${this.settingsView}
+        .uiLang=${this.uiLang}
+        .locale=${this.locale}
+        .friendlyName=${(id: string) => this.hass?.states?.[id]?.attributes?.friendly_name as string | undefined}
+      ></zephyr-settings>`;
     }
     return this.renderComing();
   }
@@ -617,7 +640,8 @@ export class ZephyrPanel extends LitElement {
       .cards.stale,
       .duo.stale,
       zephyr-prices-plan.stale,
-      zephyr-sets.stale {
+      zephyr-sets.stale,
+      zephyr-settings.stale {
         opacity: 0.6;
       }
       .duo {

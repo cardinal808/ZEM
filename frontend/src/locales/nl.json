@@ -189,5 +189,177 @@
       "full": "Vol",
       "empty": "Leeg"
     }
+  },
+  "settings": {
+    "title": "Instellingen",
+    "groups": {
+      "battery": "Accu en grenzen",
+      "sources": "Bronnen",
+      "tariffs": "Tarieven",
+      "planner": "Planner",
+      "zero_meter": "Nul op de meter zonder planner",
+      "testing": "Testfase"
+    },
+    "modified_n": "{n} gewijzigd",
+    "default": "standaard: {value}",
+    "none": "leeg",
+    "yes": "aan",
+    "no": "uit",
+    "more": "Meer uitleg over {label}",
+    "readonly": "Alleen een beheerder kan instellingen wijzigen.",
+    "coming": "Wijzigen vanuit het paneel komt in de volgende versie. Tot dan: Instellingen → Apparaten en diensten → ZEPHYR → Configureren.",
+    "open_options": "Opties openen",
+    "reload_note": "Een wijziging hier laadt ZEPHYR opnieuw.",
+    "supplier_note": "Met een leverancier gelden de bedragen uit de tarieventabel ({source}). Alleen bij eigen tarieven zijn ze aan te passen.",
+    "in_use": "in gebruik: {value}",
+    "status": {
+      "unset": "niet ingesteld",
+      "missing": "niet gevonden: {entities}",
+      "ok": "werkt",
+      "interval": "meldt elke {s} s",
+      "slots": "{n} prijzen in de sensor"
+    },
+    "own": "Eigen tarieven",
+    "options": {
+      "single": "Eén sensor (afname − teruglevering)",
+      "import_export": "Twee sensoren (afname en teruglevering)"
+    },
+    "fields": {
+      "min_soc": {
+        "label": "Minimaal laadpercentage",
+        "help": "Hieronder levert de accu niet meer.",
+        "more": "Standaard 10 %. Lager geeft meer bruikbare energie, maar de accu staat dan vaker bijna leeg. Wordt ook in de set zelf gezet, zodat die stopt als ZEPHYR niet draait.\nVoorbeeld: 11 kWh en 10 % = 1,1 kWh blijft altijd over."
+      },
+      "max_soc": {
+        "label": "Maximaal laadpercentage",
+        "help": "Hierboven laadt de accu niet verder.",
+        "more": "Niet op 100 % laden scheelt een beetje slijtage. De set heeft af en toe 100 % nodig om zijn SOC-meting gelijk te zetten en de cellen te balanceren."
+      },
+      "p1_source": {
+        "label": "P1-meting",
+        "help": "Eén sensor met het netto vermogen, of afname en teruglevering apart.",
+        "more": "ZEPHYR kijkt naar het netvermogen en stuurt de accu bij tot het net op nul staat. Hoe vaker de meter meldt, hoe sneller en nauwkeuriger dat gaat. Meldt de meter langer dan 10 s niets, dan stopt ZEPHYR veilig."
+      },
+      "p1_entity": {
+        "label": "P1-sensor (netto)",
+        "help": "Vermogen van het net: + = afname, − = teruglevering.",
+        "more": "Een sensor in W of kW."
+      },
+      "p1_import_entity": {
+        "label": "P1 afname",
+        "help": "Vermogen dat uit het net komt.",
+        "more": "Samen met de teruglevering-sensor; ZEPHYR rekent afname − teruglevering."
+      },
+      "p1_export_entity": {
+        "label": "P1 teruglevering",
+        "help": "Vermogen dat naar het net gaat.",
+        "more": "Samen met de afname-sensor."
+      },
+      "price_entity": {
+        "label": "Prijssensor",
+        "help": "Nord Pool met de prijzen van vandaag en morgen.",
+        "more": "De prijzen van morgen komen rond 13:00. Zonder prijssensor maakt ZEPHYR geen plan; zonder prijzen voor nu valt de planner terug op nul op de meter."
+      },
+      "solar_forecast_entity": {
+        "label": "Zonverwachting",
+        "help": "Solcast (morgen) met detail per half uur.",
+        "more": "Zonder verwachting neemt de planner de opbrengst van gisteren per uur."
+      },
+      "solar_energy_entity": {
+        "label": "Zonnepanelen-teller",
+        "help": "Opbrengst in kWh (oplopend).",
+        "more": "Hiermee weet ZEPHYR wat je panelen echt opbrachten: voor het huisverbruik, het kostenlogboek en het bijstellen van de zonverwachting."
+      },
+      "cost_import_counters": {
+        "label": "Tellers afname",
+        "help": "De kWh-tellers van je slimme meter (tarief 1 en 2).",
+        "more": "Voor het kostenlogboek: preciezer dan het vermogen optellen."
+      },
+      "cost_export_counters": {
+        "label": "Tellers teruglevering",
+        "help": "De kWh-tellers voor teruglevering (tarief 1 en 2).",
+        "more": "Voor het kostenlogboek."
+      },
+      "tariff_supplier": {
+        "label": "Energieleverancier",
+        "help": "Bedragen uit de tarieventabel van ZEPHYR, of eigen tarieven.",
+        "more": "De tabel wordt met updates bijgewerkt en elke dag opgehaald. Staat je leverancier er niet in, kies dan eigen tarieven."
+      },
+      "tariff_energy_tax": {
+        "label": "Energiebelasting",
+        "help": "Per kWh, zonder btw.",
+        "more": "Wettelijk bedrag; staat per jaar in de tabel."
+      },
+      "tariff_markup_import": {
+        "label": "Opslag inkoop",
+        "help": "Wat de leverancier bovenop de marktprijs rekent, zonder btw.",
+        "more": "Staat op je contract of factuur."
+      },
+      "tariff_markup_export": {
+        "label": "Opslag teruglevering",
+        "help": "Bij de marktprijs opgeteld (negatief = kosten), zonder btw.",
+        "more": "Sommige leveranciers trekken een vast bedrag af van wat je terugkrijgt: vul dat dan negatief in."
+      },
+      "tariff_vat": {
+        "label": "Btw",
+        "help": "Over marktprijs, opslag en energiebelasting.",
+        "more": "Wettelijk tarief."
+      },
+      "tariff_solar_bonus": {
+        "label": "Zonnebonus",
+        "help": "Extra op de terugleverprijs overdag.",
+        "more": "Bijvoorbeeld 10 % bij Zonneplan. ZEPHYR telt dit alleen mee als de zon op is."
+      },
+      "tariff_fixed_month": {
+        "label": "Vaste kosten per maand",
+        "help": "Leveringskosten en netbeheer min heffingskorting.",
+        "more": "Alleen voor het kostenlogboek; verandert het plan niet."
+      },
+      "plan_wear_cost": {
+        "label": "Slijtagekosten",
+        "help": "Per kWh door de accu.",
+        "more": "De planner laadt en levert alleen als het verschil groter is dan dit bedrag. Standaard € 0,03 (B39)."
+      },
+      "plan_grid_charge_cost": {
+        "label": "Drempel laden uit het net",
+        "help": "Minimale winst per kWh om uit het net te laden.",
+        "more": "Voorkomt laden uit het net voor een heel klein voordeel. Standaard € 0,01."
+      },
+      "plan_allow_export": {
+        "label": "Terugleveren uit de accu",
+        "help": "Mag de accu naar het net leveren als dat loont?",
+        "more": "Alleen zinvol als de terugleverprijs soms hoger is dan wat het later kost om bij te laden, inclusief verlies en slijtage. Standaard uit."
+      },
+      "plan_load_margin": {
+        "label": "Laadmarge",
+        "help": "Rekenen met meer verbruik dan geleerd.",
+        "more": "Bij 10 % rekent de planner met 10 % meer verbruik. Nuttig als de accu op drukke avonden te vroeg leeg is."
+      },
+      "plan_buffer": {
+        "label": "Buffer",
+        "help": "Deel van de accu dat de planner niet inplant.",
+        "more": "De regelaar mag de buffer wel gebruiken als het verbruik hoger uitvalt dan verwacht. Daarna vult de planner hem bij als dat goedkoper is (B37)."
+      },
+      "expensive_hours": {
+        "label": "Dure uren",
+        "help": "Zonder planner: alleen in de N duurste uren leveren.",
+        "more": "Geldt in de modus Nul op de meter met een prijssensor, maar zonder Dynamische Forecasting."
+      },
+      "reserve_soc": {
+        "label": "Reserve",
+        "help": "Zonder planner: bijladen tot dit percentage vóór de dure uren.",
+        "more": "Gaat op in de buffer van de planner (B37)."
+      },
+      "min_price": {
+        "label": "Minimumprijs",
+        "help": "Zonder planner: niet leveren onder deze prijs.",
+        "more": "Leeg = geen minimum."
+      },
+      "live_off_after_restart": {
+        "label": "Live sturen uit na herstart",
+        "help": "Na een herstart van HA eerst in de schaduw.",
+        "more": "Voor de testfase: na elke herstart zet je live sturen zelf weer aan."
+      }
+    }
   }
 }

@@ -40,6 +40,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_subscribe)
     async_register_command(hass, ws_plan)
     async_register_command(hass, ws_sets)
+    async_register_command(hass, ws_settings_get)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -287,3 +288,69 @@ def ws_sets(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, An
         connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
         return
     connection.send_result(msg["id"], sets_view(hass, entry))
+
+
+def _source_status(hass: HomeAssistant, entry: ZephyrConfigEntry, key: str, value: Any) -> dict[str, Any] | None:
+    """How a source is doing, for the line under it (e.g. "every 1 s", "96 quarter prices")."""
+    from .const import CONF_P1_ENTITY, CONF_P1_EXPORT, CONF_P1_IMPORT, CONF_PRICE_ENTITY
+
+    if not value:
+        return {"state": "unset"}
+    ids = value if isinstance(value, list) else [value]
+    missing = [e for e in ids if hass.states.get(e) is None]
+    if missing:
+        return {"state": "missing", "entities": missing}
+    runtime = entry.runtime_data
+    if key in (CONF_P1_ENTITY, CONF_P1_IMPORT, CONF_P1_EXPORT) and runtime.control is not None:
+        result = runtime.control.result
+        interval = None if result is None else result.p1_interval
+        return {"state": "ok", "interval_s": None if interval is None else round(interval, 1)}
+    if key == CONF_PRICE_ENTITY and runtime.planner is not None:
+        return {"state": "ok", "price_slots": runtime.planner.inputs.get("price_slots")}
+    return {"state": "ok"}
+
+
+def settings_view(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
+    """Groups, fields, values and source status for the screen Instellingen (SPEC-ui §3.4)."""
+    from .const import CONF_TARIFF_SUPPLIER, TARIFF_OWN
+    from .settings_schema import FIELDS, GROUPS, is_modified
+
+    options = dict(entry.options)
+    runtime = entry.runtime_data
+    provider = runtime.tariffs
+    supplier = options.get(CONF_TARIFF_SUPPLIER, TARIFF_OWN)
+    suppliers = [{"value": TARIFF_OWN, "label": None}]
+    in_use: dict[str, Any] = {}
+    if provider is not None:
+        if provider.table is not None:
+            suppliers += [{"value": key, "label": name} for key, name in provider.table.choices()]
+        in_use = provider.tariffs_for(dt_util.now().date()).as_dict()
+    groups: list[dict[str, Any]] = []
+    for group in GROUPS:
+        fields = []
+        for field in (f for f in FIELDS if f.group == group):
+            value = options.get(field.key, field.default)
+            item = field.as_dict() | {"value": value, "modified": is_modified(field, options)}
+            if field.key == CONF_TARIFF_SUPPLIER:
+                item["choices"] = suppliers
+            if field.tariff:
+                item["active"] = supplier == TARIFF_OWN
+                item["in_use"] = in_use.get(field.key.removeprefix("tariff_"))
+            if field.group == "sources" and field.kind in ("entity", "entities"):
+                item["status"] = _source_status(hass, entry, field.key, value)
+            fields.append(item)
+        groups.append({"key": group, "fields": fields, "modified": sum(1 for f in fields if f["modified"])})
+    return {"groups": groups, "supplier": supplier, "tariffs_source": in_use.get("source")}
+
+
+@websocket_command({vol.Required("type"): "zephyr/settings/get"})
+@callback
+def ws_settings_get(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Settings of the installation; everyone may read them, only administrators change them (UI-7)."""
+    entry = _entry(hass)
+    if entry is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    view = settings_view(hass, entry)
+    view["can_edit"] = bool(connection.user is not None and connection.user.is_admin)
+    connection.send_result(msg["id"], view)
