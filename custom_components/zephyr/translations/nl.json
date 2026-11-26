@@ -275,6 +275,9 @@
           "p1_export_entity": "P1 teruglevering (vermogen)",
           "solar_forecast_entity": "Zonverwachting voor morgen",
           "solar_energy_entity": "Teller zonne-opbrengst",
+          "excluded_energy_entity": "Airco: energieteller",
+          "excluded_climate_entity": "Airco: klimaat-entiteit",
+          "excluded_hvac_modes": "Airco: niet uit de accu bij",
           "min_soc": "Minimale laadtoestand",
           "max_soc": "Maximale laadtoestand",
           "live_off_after_restart": "Live sturen uit na herstart (testfase)",
@@ -306,6 +309,9 @@
           "p1_export_entity": "Vermogen naar het net, bijvoorbeeld …_power_production.",
           "solar_forecast_entity": "Optioneel. Een verwachtingssensor met detail per half uur (Solcast: …_forecast_tomorrow). ZEPHYR bewaart elke avond om 23:00 de verwachting voor morgen, als meetlat voor de planner later.",
           "solar_energy_entity": "Optioneel. Totale zonne-opbrengst in kWh (bijvoorbeeld de energieteller van de omvormer). Wordt elk uur gelezen om met de verwachting te vergelijken.",
+          "excluded_energy_entity": "Optioneel. Energieteller (kWh) van een verbruiker die niet uit de accu mag, zoals de airco. ZEPHYR schat het vermogen uit de teller en levert daar niet voor; de rest van het huis komt wel uit de accu en zon over laadt de accu gewoon.",
+          "excluded_climate_entity": "Optioneel. De klimaat-entiteit van die airco: die zegt direct of hij draait en in welke stand. Zonder deze entiteit komt de verbruiker nooit uit de accu.",
+          "excluded_hvac_modes": "Standen waarin de airco niet uit de accu mag. Standaard: verwarmen.",
           "live_off_after_restart": "Na een herstart van Home Assistant of een herlaad staat \"ZEPHYR stuurt de accu\" uit en zet je hem zelf weer aan. Laat dit aan tijdens de testweek.",
           "price_entity": "Optioneel. Met een Nord Pool-sensor (met de prijzen van vandaag in de attributen) levert Nul op de meter alleen in de duurste uren van de dag. Zonder sensor levert ZEPHYR zodra het huis vraagt.",
           "expensive_hours": "Aantal uren per dag waarin ZEPHYR mag leveren: de duurste volgens Nord Pool.",
@@ -339,6 +345,16 @@
       "options": {
         "single": "Eén netto sensor",
         "import_export": "Afname en teruglevering (twee sensoren)"
+      }
+    },
+    "hvac_modes": {
+      "options": {
+        "heat": "Verwarmen",
+        "cool": "Koelen",
+        "dry": "Drogen",
+        "fan_only": "Ventileren",
+        "heat_cool": "Verwarmen/koelen",
+        "auto": "Automatisch"
       }
     }
   },

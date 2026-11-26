@@ -25,6 +25,12 @@ P1_SOURCE_PAIR: Final = "import_export"
 CONF_SOLAR_FORECAST: Final = "solar_forecast_entity"
 CONF_SOLAR_ENERGY: Final = "solar_energy_entity"
 CONF_PRICE_ENTITY: Final = "price_entity"
+CONF_EXCLUDED_ENERGY: Final = "excluded_energy_entity"
+"""B41: energy counter of a load the battery may not feed (the air conditioner)."""
+CONF_EXCLUDED_CLIMATE: Final = "excluded_climate_entity"
+CONF_EXCLUDED_MODES: Final = "excluded_hvac_modes"
+DEFAULT_EXCLUDED_MODES: Final = ["heat"]
+HVAC_MODE_CHOICES: Final = ["heat", "cool", "dry", "fan_only", "heat_cool", "auto"]
 CONF_EXPENSIVE_HOURS: Final = "expensive_hours"
 CONF_RESERVE_SOC: Final = "reserve_soc"
 CONF_MIN_PRICE: Final = "min_price"

@@ -275,6 +275,9 @@
           "p1_export_entity": "P1 export (power)",
           "solar_forecast_entity": "Solar forecast for tomorrow",
           "solar_energy_entity": "Solar production counter",
+          "excluded_energy_entity": "Air conditioner: energy counter",
+          "excluded_climate_entity": "Air conditioner: climate entity",
+          "excluded_hvac_modes": "Air conditioner: not from the battery when",
           "min_soc": "Minimum state of charge",
           "max_soc": "Maximum state of charge",
           "live_off_after_restart": "Live control off after a restart (test phase)",
@@ -306,6 +309,9 @@
           "p1_export_entity": "Power returned to the grid, for example …_power_production.",
           "solar_forecast_entity": "Optional. A forecast sensor with half-hour detail (Solcast: …_forecast_tomorrow). ZEPHYR stores tomorrow's forecast every evening at 23:00, as a yardstick for the planner later.",
           "solar_energy_entity": "Optional. Total solar production in kWh (for example the inverter's energy counter). Read every hour to compare with the forecast.",
+          "excluded_energy_entity": "Optional. Energy counter (kWh) of a load the battery may not feed, such as the air conditioner. ZEPHYR estimates its power from the counter and does not deliver for it; the house's other use still comes from the battery and solar surplus still charges it.",
+          "excluded_climate_entity": "Optional. The climate entity of that air conditioner: it tells at once whether it runs and in which mode. Without it, the load is never fed from the battery.",
+          "excluded_hvac_modes": "Modes in which the air conditioner may not be fed from the battery. Default: heating.",
           "live_off_after_restart": "After a restart of Home Assistant or a reload, \"ZEPHYR controls the battery\" is off and you switch it on yourself. Keep this on during the test week.",
           "price_entity": "Optional. With a Nord Pool sensor (today's prices in its attributes) zero-meter control delivers only in the most expensive hours of the day. Without it ZEPHYR delivers whenever the house asks.",
           "expensive_hours": "Hours per day in which ZEPHYR may deliver: the most expensive according to Nord Pool.",
@@ -339,6 +345,16 @@
       "options": {
         "single": "One net sensor",
         "import_export": "Import and export (two sensors)"
+      }
+    },
+    "hvac_modes": {
+      "options": {
+        "heat": "Heating",
+        "cool": "Cooling",
+        "dry": "Drying",
+        "fan_only": "Fan",
+        "heat_cool": "Heating/cooling",
+        "auto": "Auto"
       }
     }
   },

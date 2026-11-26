@@ -21,6 +21,7 @@ from typing import Any
 from .controller import ControllerInput, ZeroMeterController
 from .counters import SetCounters
 from .device_table import charging_allowed_by_temperature, delivering_allowed_by_temperature
+from .excluded_load import exclusion_for_controller
 from .grid_filter import GridFilter
 from .models import AcMode, SetReport
 from .planner import Action as PlanAction
@@ -221,6 +222,9 @@ class ZephyrEngine:
         self._p1_history: deque[tuple[float, float]] = deque(maxlen=200)
         self.tally_measured = GridTally()
         self._plan: PlanAction | None = None
+        self._excluded_load = 0.0
+        self._excluded_now = 0.0
+        """W of the excluded load taken out of the P1 in the last zero-meter step (B41)."""
         self._plan_l_seen = -1e9
         self._grid_charging = False
         self._grid_charge_stopped = -1e9
@@ -350,18 +354,23 @@ class ZephyrEngine:
         price_block: Reason | None = None,
         reserve_charge: tuple[int, float] | None = None,
         plan_action: PlanAction | None = None,
+        excluded_load: float = 0.0,
     ) -> StepResult:
         """One control step.
 
         ``price_block``: delivering is not allowed now because of the prices (PLAN-M4b §2.6), with
         the reason to show. ``reserve_charge``: (power W, reserve %) to charge from the grid now.
         Both only apply to zero-meter control. ``plan_action``: the planner's action for now
-        (mode Dynamic Forecasting; None = no plan, zero on the meter).
+        (mode Dynamic Forecasting; None = no plan, zero on the meter). ``excluded_load``: power (W)
+        of a load the battery may not feed (B41, the air conditioner while heating); zero-meter
+        control does not deliver for it.
         """
         s = self.settings
         self._price_block = price_block if self.mode is Mode.ZERO_METER else None
         self._reserve_charge = reserve_charge if self.mode is Mode.ZERO_METER else None
         self._plan = plan_action if self.mode is Mode.FORECAST else None
+        self._excluded_load = max(0.0, excluded_load)
+        self._excluded_now = 0.0
         if self._plan is PlanAction.HOLD:
             self._price_block = Reason(ReasonCode.PLAN_HOLD)
         if self._twins is not None:
@@ -626,10 +635,14 @@ class ZephyrEngine:
             return power, Reason(ReasonCode.RESERVE_CHARGE, {"power": power, "reserve": round(self._reserve_charge[1])})
 
         battery = sum(v.report.battery_power_ac for v in usable if v.report is not None)
+        grid = self._controller_grid(now, battery)
+        # B41: the part of the excluded load the battery would deliver for stays on the grid.
+        excluded = exclusion_for_controller(self._excluded_load, grid, battery)
+        self._excluded_now = excluded
         out = self.controller.step(
             ControllerInput(
                 now=now,
-                grid_power=self._controller_grid(now, battery),
+                grid_power=grid - excluded,
                 battery_power=battery,
                 max_charge=charge,
                 max_deliver=deliver,
@@ -639,7 +652,10 @@ class ZephyrEngine:
         )
         sp = out.setpoint
         if sp < 0:
-            return sp, Reason(ReasonCode.DELIVERING, {"power": -sp, "grid": round(self._p1_value)})
+            params: dict[str, Any] = {"power": -sp, "grid": round(self._p1_value)}
+            if excluded > 0:
+                params["excluded"] = round(excluded)
+            return sp, Reason(ReasonCode.DELIVERING, params)
         if sp > 0:
             return sp, Reason(ReasonCode.CHARGING_SOLAR, {"power": sp})
         if out.waiting_for_direction:
@@ -763,6 +779,11 @@ class ZephyrEngine:
             else:
                 break
         return aligned
+
+    @property
+    def excluded_now(self) -> float:
+        """W of the excluded load (B41) the battery did not deliver for in the last step."""
+        return self._excluded_now
 
     def counters_record(self, key: str, kind: str, now: float) -> None:
         """Count a write made outside the engine (the write test)."""

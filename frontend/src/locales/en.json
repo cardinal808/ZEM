@@ -222,7 +222,13 @@
     "own": "Own tariffs",
     "options": {
       "single": "One sensor (import − export)",
-      "import_export": "Two sensors (import and export)"
+      "import_export": "Two sensors (import and export)",
+      "heat": "Heating",
+      "cool": "Cooling",
+      "dry": "Drying",
+      "fan_only": "Fan",
+      "heat_cool": "Heating/cooling",
+      "auto": "Auto"
     },
     "fields": {
       "min_soc": {
@@ -269,6 +275,21 @@
         "label": "Solar counter",
         "help": "Production in kWh (increasing).",
         "more": "Tells ZEPHYR what your panels really produced: for the house consumption, the cost log and correcting the forecast."
+      },
+      "excluded_energy_entity": {
+        "label": "Air conditioner: energy counter",
+        "help": "kWh counter of a load the battery may not feed.",
+        "more": "ZEPHYR estimates the power from the counter steps and does not deliver for the air conditioner while it runs in a blocked mode. The rest of the house still comes from the battery; solar surplus still charges it."
+      },
+      "excluded_climate_entity": {
+        "label": "Air conditioner: climate entity",
+        "help": "Says at once whether it runs and in which mode.",
+        "more": "Without it ZEPHYR cannot tell heating from cooling and never feeds the air conditioner from the battery; it also notices a stop only from the counter."
+      },
+      "excluded_hvac_modes": {
+        "label": "Air conditioner: not from the battery when",
+        "help": "Modes in which the battery does not feed it.",
+        "more": "Default heating: while heating, the air conditioner takes from the grid or from solar."
       },
       "cost_import_counters": {
         "label": "Import counters",

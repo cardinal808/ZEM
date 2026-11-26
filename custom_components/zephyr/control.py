@@ -15,7 +15,7 @@ from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfPower
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfEnergy, UnitOfPower
 from homeassistant.core import Event, EventStateChangedData, EventStateReportedData, HomeAssistant, State, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
@@ -28,6 +28,9 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_EXCLUDED_CLIMATE,
+    CONF_EXCLUDED_ENERGY,
+    CONF_EXCLUDED_MODES,
     CONF_EXPENSIVE_HOURS,
     CONF_MAX_SOC,
     CONF_MIN_PRICE,
@@ -38,6 +41,7 @@ from .const import (
     CONF_P1_SOURCE,
     CONF_PRICE_ENTITY,
     CONF_RESERVE_SOC,
+    DEFAULT_EXCLUDED_MODES,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_RESERVE_SOC,
     DOMAIN,
@@ -47,6 +51,7 @@ from .const import (
     SCAN_INTERVAL_IDLE,
 )
 from .core.engine import Mode, Reason, ReasonCode, SetView, StepResult, ZephyrEngine
+from .core.excluded_load import ExcludedLoad
 from .core.price_window import NO_PRICES, PriceDecision, decide, parse_nordpool_raw
 from .core.settings import Settings
 from .core.zensdk import power_command, standby_command
@@ -105,6 +110,14 @@ class ZephyrControl:
         """Last P1 value (W, + import) and when it came (monotonic); read by the cost log."""
         self.p1_at: float | None = None
         self._test_task: asyncio.Task[None] | None = None
+        # B41: a load the battery may not feed (the air conditioner while heating).
+        self.excluded_energy: str | None = options.get(CONF_EXCLUDED_ENERGY)
+        self.excluded_climate: str | None = options.get(CONF_EXCLUDED_CLIMATE) if self.excluded_energy else None
+        self.excluded: ExcludedLoad | None = (
+            ExcludedLoad(options.get(CONF_EXCLUDED_MODES, DEFAULT_EXCLUDED_MODES), has_climate=self.excluded_climate is not None)
+            if self.excluded_energy
+            else None
+        )
 
     # --- lifecycle ----------------------------------------------------------
 
@@ -125,6 +138,12 @@ class ZephyrControl:
             watts = _p1_watts(self.hass.states.get(self.p1_entity))
             if watts is not None:
                 self._p1_value(watts)
+        if self.excluded is not None and self.excluded_energy:
+            unsubs.append(async_track_state_change_event(self.hass, [self.excluded_energy], self._on_excluded_energy))
+            self._excluded_energy_state(self.hass.states.get(self.excluded_energy))
+            if self.excluded_climate:
+                unsubs.append(async_track_state_change_event(self.hass, [self.excluded_climate], self._on_excluded_climate))
+                self._excluded_climate_state(self.hass.states.get(self.excluded_climate))
         if self.p1_pair or self.p1_entity:
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
         else:
@@ -159,6 +178,34 @@ class ZephyrControl:
         return lambda: self._listeners.remove(listener)
 
     # --- inputs -----------------------------------------------------------------
+
+    @callback
+    def _on_excluded_energy(self, event: Event[EventStateChangedData]) -> None:
+        self._excluded_energy_state(event.data["new_state"])
+
+    def _excluded_energy_state(self, state: State | None) -> None:
+        if self.excluded is None or state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN, ""):
+            return
+        try:
+            kwh = float(state.state)
+        except ValueError:
+            return
+        if state.attributes.get("unit_of_measurement") == UnitOfEnergy.WATT_HOUR:
+            kwh /= 1000
+        self.excluded.observe_counter(kwh, time.monotonic())
+
+    @callback
+    def _on_excluded_climate(self, event: Event[EventStateChangedData]) -> None:
+        self._excluded_climate_state(event.data["new_state"])
+
+    def _excluded_climate_state(self, state: State | None) -> None:
+        if self.excluded is None:
+            return
+        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN, ""):
+            self.excluded.observe_climate(None, None, time.monotonic())
+            return
+        action = state.attributes.get("hvac_action")
+        self.excluded.observe_climate(state.state, None if action is None else str(action), time.monotonic())
 
     @callback
     def _on_p1_changed(self, event: Event[EventStateChangedData]) -> None:
@@ -389,7 +436,10 @@ class ZephyrControl:
         planner = self.runtime.planner
         if self.engine.mode is Mode.FORECAST and planner is not None:
             plan_action = planner.action_at(dt_util.utcnow())
-        result = self.engine.step(now, views, price_block=price_block, reserve_charge=reserve_charge, plan_action=plan_action)
+        excluded = self.excluded.power(now) if self.excluded is not None else 0.0
+        result = self.engine.step(
+            now, views, price_block=price_block, reserve_charge=reserve_charge, plan_action=plan_action, excluded_load=excluded
+        )
         if not self.shadow:
             self._check_reports(now)
         if not self.shadow:
@@ -419,6 +469,7 @@ class ZephyrControl:
                     ),
                     "setpoint": result.setpoint,
                     "reason": result.reason.code.value,
+                    **({"excluded": round(self.engine.excluded_now)} if self.engine.excluded_now else {}),
                     "commands": [{"set": self.runtime.coordinators[c.key].number, "kind": c.kind, **c.props} for c in result.commands],
                     "sent": not self.shadow,
                 }

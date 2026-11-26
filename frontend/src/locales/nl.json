@@ -222,7 +222,13 @@
     "own": "Eigen tarieven",
     "options": {
       "single": "Eén sensor (afname − teruglevering)",
-      "import_export": "Twee sensoren (afname en teruglevering)"
+      "import_export": "Twee sensoren (afname en teruglevering)",
+      "heat": "Verwarmen",
+      "cool": "Koelen",
+      "dry": "Drogen",
+      "fan_only": "Ventileren",
+      "heat_cool": "Verwarmen/koelen",
+      "auto": "Automatisch"
     },
     "fields": {
       "min_soc": {
@@ -269,6 +275,21 @@
         "label": "Zonnepanelen-teller",
         "help": "Opbrengst in kWh (oplopend).",
         "more": "Hiermee weet ZEPHYR wat je panelen echt opbrachten: voor het huisverbruik, het kostenlogboek en het bijstellen van de zonverwachting."
+      },
+      "excluded_energy_entity": {
+        "label": "Airco: energieteller",
+        "help": "kWh-teller van een verbruiker die niet uit de accu mag.",
+        "more": "ZEPHYR schat het vermogen uit de stappen van de teller en levert niet voor de airco zolang die in een geblokkeerde stand draait. De rest van het huis komt wel uit de accu; zon over laadt de accu gewoon."
+      },
+      "excluded_climate_entity": {
+        "label": "Airco: klimaat-entiteit",
+        "help": "Zegt direct of hij draait en in welke stand.",
+        "more": "Zonder deze entiteit ziet ZEPHYR geen verschil tussen verwarmen en koelen en komt de airco nooit uit de accu; een stop merkt ZEPHYR dan pas aan de teller."
+      },
+      "excluded_hvac_modes": {
+        "label": "Airco: niet uit de accu bij",
+        "help": "Standen waarin de accu de airco niet voedt.",
+        "more": "Standaard verwarmen: dan haalt de airco zijn stroom uit het net of van de zon."
       },
       "cost_import_counters": {
         "label": "Tellers afname",

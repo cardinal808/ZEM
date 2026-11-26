@@ -94,6 +94,14 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
             else None,
             "p1_filter": {"step_holds": control.engine.grid_filter.holds},
             "twin": control.engine.twin_summary(),
+            "excluded_load": None
+            if control.excluded is None
+            else {
+                "energy_entity_set": True,
+                "climate_entity_set": control.excluded_climate is not None,
+                **control.excluded.diagnostics(time.monotonic()),
+                "excluded_now_w": round(control.engine.excluded_now),
+            },
             "counters": {
                 runtime.coordinators[key].number: counts
                 for key, counts in control.engine.counters(time.monotonic()).items()

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.8.6 — Air conditioner not from the battery (B41, step 1: control)
+- **New options *Air conditioner: energy counter*, *climate entity* and *not from the battery when*** (default: heating). While the air conditioner runs in such a mode, zero-meter control (also in Dynamic Forecasting) does not deliver for it: the battery only covers the rest of the house, the air conditioner takes from the grid. Solar surplus still charges the battery, and ZEPHYR never charges from the grid for it.
+- **Power from a coarse energy counter** (`core/excluded_load.py`): seen live, steps of 0.25 kWh every 8-9 minutes. Power = step / time since the previous step; between steps at most step / time since the last step, so a stopped device fades out by itself. The climate entity switches at once: `hvac_action` idle/off → 0, a start begins with the power of the previous run. Without a climate entity the load is always excluded.
+- Decision log: `excluded` (W) on each decision and as a parameter of *delivering*; diagnostics: section `control.excluded_load` (mode, action, estimate, mean step interval).
+- Panel (Settings, Sources): the three new fields with texts; a select with several values shows them all.
+- Tests: estimator (steps, fading, start/stop, counter reset), closed-loop scenarios (battery delivers only the rest, estimate above the house demand, solar surplus, stop), Home Assistant (options, climate states, diagnostics).
+- Next steps (B41): planner learns the house without the air conditioner; cost log per quarter.
+>>>>>>> Stashed changes
+
 ### 0.8.5 — Panel: screen *Instellingen*, reading (SPEC-ui §4.4, UI-6)
 - **Screen *Instellingen*:** groups on the left (Battery and limits, Sources, Tariffs, Planner, Zero on the meter without planner, Test phase) with the number of changed fields; per field the label, a short help text, an **i button with more explanation** (tap, one open at a time, also with the keyboard), the value, and for a changed field a dot and *standard: …*. Sources show how they are doing (*reports every 1 s*, *96 prices in the sensor*, *not set*, *not found*); with a supplier the tariff fields show the amount *in use* from the tariff table.
 - Changing settings from the panel follows in UI-7; until then the screen points to the options flow. Users who are not administrators see a read-only note.
