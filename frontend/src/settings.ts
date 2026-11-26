@@ -146,6 +146,7 @@ export class ZephyrSettings extends LitElement {
     if (f.kind === "number") return `${formatNumber(Number(value), f.step, this.locale)}${f.unit ? ` ${f.unit}` : ""}`;
     if (f.kind === "select") {
       if (f.key === "tariff_supplier") return f.choices?.find((c) => c.value === value)?.label ?? this.tr("settings.own");
+      if (Array.isArray(value)) return (value as string[]).map((v) => this.tr(`settings.options.${v}`)).join(", ");
       return this.tr(`settings.options.${String(value)}`);
     }
     const ids = Array.isArray(value) ? (value as string[]) : [String(value)];

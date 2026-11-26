@@ -25,6 +25,9 @@ from .const import (
     CONF_CAPACITY_OVERRIDE,
     CONF_COST_EXPORT_COUNTERS,
     CONF_COST_IMPORT_COUNTERS,
+    CONF_EXCLUDED_CLIMATE,
+    CONF_EXCLUDED_ENERGY,
+    CONF_EXCLUDED_MODES,
     CONF_EXPENSIVE_HOURS,
     CONF_HOST,
     CONF_LIVE_OFF_AFTER_RESTART,
@@ -54,11 +57,13 @@ from .const import (
     CONF_TARIFF_SOLAR_BONUS,
     CONF_TARIFF_SUPPLIER,
     CONF_TARIFF_VAT,
+    DEFAULT_EXCLUDED_MODES,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_PLAN_GRID_CHARGE_COST,
     DEFAULT_PLAN_WEAR_COST,
     DEFAULT_RESERVE_SOC,
     DOMAIN,
+    HVAC_MODE_CHOICES,
     MAX_SETS,
     P1_SOURCE_PAIR,
     P1_SOURCE_SINGLE,
@@ -389,6 +394,8 @@ class ZephyrOptionsFlow(OptionsFlow):
                     CONF_P1_EXPORT,
                     CONF_SOLAR_FORECAST,
                     CONF_SOLAR_ENERGY,
+                    CONF_EXCLUDED_ENERGY,
+                    CONF_EXCLUDED_CLIMATE,
                     CONF_PRICE_ENTITY,
                     CONF_COST_IMPORT_COUNTERS,
                     CONF_COST_EXPORT_COUNTERS,
@@ -430,6 +437,17 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_SOLAR_ENERGY, description={"suggested_value": options.get(CONF_SOLAR_ENERGY) or solar_energy}
                 ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.ENERGY)),
+                vol.Optional(CONF_EXCLUDED_ENERGY, description={"suggested_value": options.get(CONF_EXCLUDED_ENERGY)}): (
+                    selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.ENERGY))
+                ),
+                vol.Optional(CONF_EXCLUDED_CLIMATE, description={"suggested_value": options.get(CONF_EXCLUDED_CLIMATE)}): (
+                    selector.EntitySelector(selector.EntitySelectorConfig(domain="climate"))
+                ),
+                vol.Required(
+                    CONF_EXCLUDED_MODES, default=options.get(CONF_EXCLUDED_MODES, DEFAULT_EXCLUDED_MODES)
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=HVAC_MODE_CHOICES, multiple=True, translation_key="hvac_modes")
+                ),
                 vol.Required(CONF_MIN_SOC, default=options.get(CONF_MIN_SOC, defaults.min_soc)): _percent(5, 50),
                 vol.Required(CONF_MAX_SOC, default=options.get(CONF_MAX_SOC, defaults.max_soc)): _percent(70, 100),
                 vol.Optional(CONF_PRICE_ENTITY, description={"suggested_value": price}): selector.EntitySelector(

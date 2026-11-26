@@ -839,7 +839,13 @@ var He = {
 			own: "Eigen tarieven",
 			options: {
 				single: "Eén sensor (afname − teruglevering)",
-				import_export: "Twee sensoren (afname en teruglevering)"
+				import_export: "Twee sensoren (afname en teruglevering)",
+				heat: "Verwarmen",
+				cool: "Koelen",
+				dry: "Drogen",
+				fan_only: "Ventileren",
+				heat_cool: "Verwarmen/koelen",
+				auto: "Automatisch"
 			},
 			fields: {
 				min_soc: {
@@ -886,6 +892,21 @@ var He = {
 					label: "Zonnepanelen-teller",
 					help: "Opbrengst in kWh (oplopend).",
 					more: "Hiermee weet ZEPHYR wat je panelen echt opbrachten: voor het huisverbruik, het kostenlogboek en het bijstellen van de zonverwachting."
+				},
+				excluded_energy_entity: {
+					label: "Airco: energieteller",
+					help: "kWh-teller van een verbruiker die niet uit de accu mag.",
+					more: "ZEPHYR schat het vermogen uit de stappen van de teller en levert niet voor de airco zolang die in een geblokkeerde stand draait. De rest van het huis komt wel uit de accu; zon over laadt de accu gewoon."
+				},
+				excluded_climate_entity: {
+					label: "Airco: klimaat-entiteit",
+					help: "Zegt direct of hij draait en in welke stand.",
+					more: "Zonder deze entiteit ziet ZEPHYR geen verschil tussen verwarmen en koelen en komt de airco nooit uit de accu; een stop merkt ZEPHYR dan pas aan de teller."
+				},
+				excluded_hvac_modes: {
+					label: "Airco: niet uit de accu bij",
+					help: "Standen waarin de accu de airco niet voedt.",
+					more: "Standaard verwarmen: dan haalt de airco zijn stroom uit het net of van de zon."
 				},
 				cost_import_counters: {
 					label: "Tellers afname",
@@ -1204,7 +1225,13 @@ var He = {
 			own: "Own tariffs",
 			options: {
 				single: "One sensor (import − export)",
-				import_export: "Two sensors (import and export)"
+				import_export: "Two sensors (import and export)",
+				heat: "Heating",
+				cool: "Cooling",
+				dry: "Drying",
+				fan_only: "Fan",
+				heat_cool: "Heating/cooling",
+				auto: "Auto"
 			},
 			fields: {
 				min_soc: {
@@ -1251,6 +1278,21 @@ var He = {
 					label: "Solar counter",
 					help: "Production in kWh (increasing).",
 					more: "Tells ZEPHYR what your panels really produced: for the house consumption, the cost log and correcting the forecast."
+				},
+				excluded_energy_entity: {
+					label: "Air conditioner: energy counter",
+					help: "kWh counter of a load the battery may not feed.",
+					more: "ZEPHYR estimates the power from the counter steps and does not deliver for the air conditioner while it runs in a blocked mode. The rest of the house still comes from the battery; solar surplus still charges it."
+				},
+				excluded_climate_entity: {
+					label: "Air conditioner: climate entity",
+					help: "Says at once whether it runs and in which mode.",
+					more: "Without it ZEPHYR cannot tell heating from cooling and never feeds the air conditioner from the battery; it also notices a stop only from the counter."
+				},
+				excluded_hvac_modes: {
+					label: "Air conditioner: not from the battery when",
+					help: "Modes in which the battery does not feed it.",
+					more: "Default heating: while heating, the air conditioner takes from the grid or from solar."
 				},
 				cost_import_counters: {
 					label: "Import counters",
@@ -2697,7 +2739,7 @@ var Q = class extends A {
 		return this.tr("settings.default", { value: this.display(e, e.default) });
 	}
 	display(e, t) {
-		return t == null || t === "" || Array.isArray(t) && !t.length ? this.tr("settings.none") : e.kind === "bool" ? this.tr(t ? "settings.yes" : "settings.no") : e.kind === "number" ? `${Z(Number(t), e.step, this.locale)}${e.unit ? ` ${e.unit}` : ""}` : e.kind === "select" ? e.key === "tariff_supplier" ? e.choices?.find((e) => e.value === t)?.label ?? this.tr("settings.own") : this.tr(`settings.options.${String(t)}`) : (Array.isArray(t) ? t : [String(t)]).map((e) => this.friendlyName(e) ?? e).join(", ");
+		return t == null || t === "" || Array.isArray(t) && !t.length ? this.tr("settings.none") : e.kind === "bool" ? this.tr(t ? "settings.yes" : "settings.no") : e.kind === "number" ? `${Z(Number(t), e.step, this.locale)}${e.unit ? ` ${e.unit}` : ""}` : e.kind === "select" ? e.key === "tariff_supplier" ? e.choices?.find((e) => e.value === t)?.label ?? this.tr("settings.own") : Array.isArray(t) ? t.map((e) => this.tr(`settings.options.${e}`)).join(", ") : this.tr(`settings.options.${String(t)}`) : (Array.isArray(t) ? t : [String(t)]).map((e) => this.friendlyName(e) ?? e).join(", ");
 	}
 	meta(e) {
 		let t = [];

@@ -63,6 +63,8 @@ class Simulation:
     write_delay: float = 0.2
     dt: float = 0.1
     discharge_blocked: Callable[[float], bool] = field(default_factory=lambda: lambda t: False)
+    excluded_load: Callable[[float], float] = field(default_factory=lambda: lambda t: 0.0)
+    """W of a load the battery may not feed (B41), as ZEPHYR estimates it."""
     observer: ZephyrEngine | None = None
     """A second engine in shadow mode: sees the same P1 and reports, its commands go nowhere."""
     engine: ZephyrEngine = field(init=False)
@@ -108,7 +110,9 @@ class Simulation:
                 due_step = True
             if due_step:
                 views = [SetView(str(i), i + 1, reports[i], self.sets[i].online) for i in range(len(self.sets))]
-                result = self.engine.step(self.now, views, discharge_blocked=self.discharge_blocked(self.now))
+                result = self.engine.step(
+                    self.now, views, discharge_blocked=self.discharge_blocked(self.now), excluded_load=self.excluded_load(self.now)
+                )
                 for cmd in result.commands:
                     pending.append((self.now + self.write_delay, int(cmd.key), cmd.props))
                 trace.results.append((self.now, result))
