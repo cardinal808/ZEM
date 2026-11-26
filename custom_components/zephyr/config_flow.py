@@ -36,6 +36,10 @@ from .const import (
     CONF_P1_EXPORT,
     CONF_P1_IMPORT,
     CONF_P1_SOURCE,
+    CONF_PLAN_ALLOW_EXPORT,
+    CONF_PLAN_BUFFER,
+    CONF_PLAN_LOAD_MARGIN,
+    CONF_PLAN_WEAR_COST,
     CONF_PRICE_ENTITY,
     CONF_PRODUCT,
     CONF_RESERVE_SOC,
@@ -50,6 +54,7 @@ from .const import (
     CONF_TARIFF_SUPPLIER,
     CONF_TARIFF_VAT,
     DEFAULT_EXPENSIVE_HOURS,
+    DEFAULT_PLAN_WEAR_COST,
     DEFAULT_RESERVE_SOC,
     DOMAIN,
     MAX_SETS,
@@ -464,6 +469,12 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_COST_EXPORT_COUNTERS, description={"suggested_value": options.get(CONF_COST_EXPORT_COUNTERS) or counters_export}
                 ): _energy_sensors(),
+                vol.Required(CONF_PLAN_WEAR_COST, default=options.get(CONF_PLAN_WEAR_COST, DEFAULT_PLAN_WEAR_COST)): _box(
+                    0, 0.5, 0.001, "€/kWh"
+                ),
+                vol.Required(CONF_PLAN_ALLOW_EXPORT, default=options.get(CONF_PLAN_ALLOW_EXPORT, False)): bool,
+                vol.Required(CONF_PLAN_LOAD_MARGIN, default=options.get(CONF_PLAN_LOAD_MARGIN, 0)): _percent(0, 50),
+                vol.Required(CONF_PLAN_BUFFER, default=options.get(CONF_PLAN_BUFFER, 0)): _percent(0, 50),
                 vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, True)): bool,
             }
         )

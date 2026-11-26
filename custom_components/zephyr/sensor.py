@@ -30,10 +30,12 @@ from . import ZephyrConfigEntry, ZephyrRuntime
 from .control import ZephyrControl
 from .coordinator import SetCoordinator, SetData
 from .core.engine import Action
+from .core.forecast_plan import ACTION_KEYS, PlanOutcome, PlanState, reason
 from .core.models import SetStatus
 from .core.totals import Totals
 from .cost_recorder import CostRecorder
 from .entity import ZephyrControlEntity, ZephyrSetEntity, ZephyrTotalEntity, installation_device
+from .planner_runner import PlanRunner
 
 StateValue = float | int | str | None
 
@@ -215,6 +217,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async
     async_add_entities(ZephyrTotalSensor(runtime, entry, d) for d in TOTAL_SENSORS)
     assert runtime.control is not None
     async_add_entities(ZephyrControlSensor(runtime, entry, d) for d in CONTROL_SENSORS)
+    if runtime.planner is not None:
+        async_add_entities(ZephyrPlanSensor(runtime.planner, entry, d) for d in PLAN_SENSORS)
     if runtime.costs is not None:
         async_add_entities(ZephyrCostSensor(runtime.costs, entry, kind, period) for kind in ("costs", "savings") for period in COST_PERIODS)
     for subentry_id, coordinator in runtime.coordinators.items():
@@ -452,3 +456,110 @@ class ZephyrCostSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return {**self._costs.summary(self._period).as_dict(), "tariffs": self._costs.tariffs.tariffs_for(dt_util.now().date()).source}
+
+
+# --- planner (M5, SPEC-planner §4) ------------------------------------------------------
+
+
+@dataclass(frozen=True, kw_only=True)
+class ZephyrPlanSensorDescription(SensorEntityDescription):
+    value_fn: Callable[[PlanRunner, PlanOutcome], StateValue | datetime]
+    attrs_fn: Callable[[PlanRunner, PlanOutcome], dict[str, Any] | None] = lambda r, o: None
+
+
+def _plan_action_attrs(runner: PlanRunner, outcome: PlanOutcome) -> dict[str, Any]:
+    return {
+        "code": outcome.action.value,
+        "blocks": [b.as_dict() for b in outcome.blocks[:24]],
+        "timeline": outcome.timeline(),
+        "indicative_from": None if outcome.indicative_from is None else outcome.indicative_from.isoformat(),
+        "shadow": True,
+    }
+
+
+def _round(value: float, digits: int = 2) -> float:
+    return round(value, digits)
+
+
+PLAN_SENSORS: tuple[ZephyrPlanSensorDescription, ...] = (
+    ZephyrPlanSensorDescription(
+        key="plan_action",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(ACTION_KEYS.values()),
+        value_fn=lambda r, o: ACTION_KEYS[o.action],
+        attrs_fn=_plan_action_attrs,
+    ),
+    ZephyrPlanSensorDescription(
+        key="plan_state",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(PlanState.ALL),
+        value_fn=lambda r, o: o.state,
+        attrs_fn=lambda r, o: {"no_prices_since": None if o.no_prices_since is None else o.no_prices_since.isoformat()},
+    ),
+    ZephyrPlanSensorDescription(
+        key="plan_reason",
+        value_fn=lambda r, o: reason(o, str(r.hass.config.language or "en"), dt_util.get_default_time_zone())[:255],
+    ),
+    ZephyrPlanSensorDescription(
+        key="planned_grid_charge",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=2,
+        value_fn=lambda r, o: _round(o.planned_grid_charge_kwh, 3),
+        attrs_fn=lambda r, o: {"cost": _round(o.planned_grid_charge_cost)},
+    ),
+    ZephyrPlanSensorDescription(
+        key="planned_export",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=2,
+        value_fn=lambda r, o: _round(o.planned_export_kwh, 3),
+        attrs_fn=lambda r, o: {"revenue": _round(o.planned_export_revenue)},
+    ),
+    ZephyrPlanSensorDescription(
+        key="battery_empty_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda r, o: o.empty_at,
+    ),
+    ZephyrPlanSensorDescription(
+        key="plan_calculated_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda r, o: o.calculated_at,
+        attrs_fn=lambda r, o: {"duration_s": round(o.duration_s, 3), "expected_cost": _round(o.expected_cost, 3)},
+    ),
+)
+
+
+class ZephyrPlanSensor(SensorEntity):
+    """What the planner would do (shadow: calculated and shown, not carried out yet)."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _unrecorded_attributes = frozenset({"blocks", "timeline"})
+    entity_description: ZephyrPlanSensorDescription
+
+    def __init__(self, runner: PlanRunner, entry: ZephyrConfigEntry, description: ZephyrPlanSensorDescription) -> None:
+        self._runner = runner
+        self.entity_description = description
+        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
+        self._attr_translation_key = description.key
+        self.entity_id = f"sensor.zephyr_{description.key}"
+        self._attr_device_info = installation_device(entry)
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self._runner.async_add_listener(self.async_write_ha_state))
+
+    @property
+    def available(self) -> bool:
+        return self._runner.outcome is not None
+
+    @property
+    def native_value(self) -> Any:
+        outcome = self._runner.outcome
+        return None if outcome is None else self.entity_description.value_fn(self._runner, outcome)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        outcome = self._runner.outcome
+        return None if outcome is None else self.entity_description.attrs_fn(self._runner, outcome)

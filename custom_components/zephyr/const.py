@@ -55,3 +55,11 @@ TARIFF_OWN: Final = "own"
 """Supplier choice: own tariffs from the options instead of the tariff table (B28)."""
 CONF_COST_IMPORT_COUNTERS: Final = "cost_import_counters"
 CONF_COST_EXPORT_COUNTERS: Final = "cost_export_counters"
+
+# Planner (M5, SPEC-planner §2.5)
+CONF_PLAN_WEAR_COST: Final = "plan_wear_cost"
+CONF_PLAN_ALLOW_EXPORT: Final = "plan_allow_export"
+CONF_PLAN_LOAD_MARGIN: Final = "plan_load_margin"
+CONF_PLAN_BUFFER: Final = "plan_buffer"
+DEFAULT_PLAN_WEAR_COST: Final = 0.03
+"""€ per kWh out of the battery (B39)."""

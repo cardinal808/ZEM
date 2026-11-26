@@ -169,6 +169,40 @@
       },
       "savings_year": {
         "name": "Besparing dit jaar"
+      },
+      "plan_action": {
+        "name": "Plan: actie nu",
+        "state": {
+          "charge": "Laden uit het net",
+          "hold": "Vasthouden",
+          "deliver": "Leveren",
+          "export": "Terugleveren"
+        }
+      },
+      "plan_state": {
+        "name": "Plan: toestand",
+        "state": {
+          "active": "Plan actief",
+          "no_prices": "Geen prijzen",
+          "price_reserve": "Prijzenreserve",
+          "battery_empty": "Accu leeg",
+          "battery_full": "Accu vol"
+        }
+      },
+      "plan_reason": {
+        "name": "Plan: reden"
+      },
+      "planned_grid_charge": {
+        "name": "Gepland netladen"
+      },
+      "planned_export": {
+        "name": "Gepland terugleveren"
+      },
+      "battery_empty_at": {
+        "name": "Accu leeg om"
+      },
+      "plan_calculated_at": {
+        "name": "Plan berekend om"
       }
     },
     "binary_sensor": {
@@ -222,6 +256,10 @@
     "second_controller": {
       "title": "Een ander systeem stuurt de accu",
       "description": "De set meldde twee keer binnen 5 minuten grenzen die ZEPHYR niet heeft geschreven. ZEPHYR is gestopt met schrijven en staat weer in de schaduwmodus. Zet je oude aansturing (Gielz, automations, de Zendure-app) uit en zet daarna \"ZEPHYR stuurt de accu\" weer aan."
+    },
+    "price_format": {
+      "title": "Prijzen van {entity} niet leesbaar",
+      "description": "De prijssensor {entity} heeft een waarde, maar ZEPHYR vindt in de attributen geen prijzen per tijdvak (raw_today / raw_tomorrow met start, end en value). De planner houdt Nul op de meter aan tot hij prijzen kan lezen. Kies een Nord Pool-sensor bij de opties van ZEPHYR, of meld het formaat in een issue op GitHub."
     }
   },
   "options": {
@@ -251,7 +289,11 @@
           "cost_import_counters": "Metertellers afname",
           "cost_export_counters": "Metertellers teruglevering",
           "tariff_solar_bonus": "Zonnebonus op teruglevering",
-          "tariff_supplier": "Energieleverancier"
+          "tariff_supplier": "Energieleverancier",
+          "plan_wear_cost": "Planner: slijtagekosten",
+          "plan_allow_export": "Planner: terugleveren uit de accu toestaan",
+          "plan_load_margin": "Planner: laadmarge",
+          "plan_buffer": "Planner: buffer boven het minimum"
         },
         "data_description": {
           "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
@@ -275,7 +317,11 @@
           "cost_import_counters": "Optioneel: de kWh-tellers van de meter voor afname (tarief 1 en 2, opgeteld). Zonder tellers integreert ZEPHYR het P1-vermogen.",
           "cost_export_counters": "Optioneel: de kWh-tellers van de meter voor teruglevering (tarief 1 en 2).",
           "tariff_solar_bonus": "Optioneel: extra % over (marktprijs + opslag teruglevering) bij teruglevering tussen zonsopkomst en zonsondergang, alleen als dat bedrag positief is. Zonneplan: 10 %.",
-          "tariff_supplier": "Kies je leverancier: ZEPHYR neemt dan de opslagen, zonnebonus, energiebelasting en btw uit zijn tarieventabel (één keer per maand opgehaald van GitHub). Alleen leveranciers waarvan een gebruiker de bedragen heeft gecontroleerd staan erin. Met \"Eigen tarieven\" gelden de velden hieronder; de vaste kosten per maand gelden in beide gevallen."
+          "tariff_supplier": "Kies je leverancier: ZEPHYR neemt dan de opslagen, zonnebonus, energiebelasting en btw uit zijn tarieventabel (één keer per maand opgehaald van GitHub). Alleen leveranciers waarvan een gebruiker de bedragen heeft gecontroleerd staan erin. Met \"Eigen tarieven\" gelden de velden hieronder; de vaste kosten per maand gelden in beide gevallen.",
+          "plan_wear_cost": "Geavanceerd. Kosten per kWh uit de accu die de planner meeweegt bij zijn keuze (niet in de kosten), zodat hij de accu niet voor een paar cent laat werken. Standaard €0,03.",
+          "plan_allow_export": "De planner mag op vol vermogen leveren en de rest terugleveren als dat loont (actie Terugleveren). Standaard uit.",
+          "plan_load_margin": "De planner kiest alsof het huis zoveel meer verbruikt (buffer tegen een te lage schatting). Telt niet mee in de kosten. 0 = uit.",
+          "plan_buffer": "De planner plant nooit onder de minimale laadtoestand plus deze buffer; de regelaar mag hem gebruiken als het huis meer verbruikt dan verwacht. 0 = uit."
         }
       }
     },

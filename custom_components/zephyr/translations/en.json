@@ -169,6 +169,40 @@
       },
       "savings_year": {
         "name": "Savings this year"
+      },
+      "plan_action": {
+        "name": "Plan: action now",
+        "state": {
+          "charge": "Charge from the grid",
+          "hold": "Hold",
+          "deliver": "Deliver",
+          "export": "Export"
+        }
+      },
+      "plan_state": {
+        "name": "Plan: state",
+        "state": {
+          "active": "Plan active",
+          "no_prices": "No prices",
+          "price_reserve": "Price reserve",
+          "battery_empty": "Battery empty",
+          "battery_full": "Battery full"
+        }
+      },
+      "plan_reason": {
+        "name": "Plan: reason"
+      },
+      "planned_grid_charge": {
+        "name": "Planned grid charge"
+      },
+      "planned_export": {
+        "name": "Planned export"
+      },
+      "battery_empty_at": {
+        "name": "Battery empty at"
+      },
+      "plan_calculated_at": {
+        "name": "Plan calculated at"
       }
     },
     "binary_sensor": {
@@ -222,6 +256,10 @@
     "second_controller": {
       "title": "Another system controls the battery",
       "description": "The set twice reported limits within 5 minutes that ZEPHYR did not write. ZEPHYR stopped writing and is back in shadow mode. Switch off your old control (Gielz, automations, the Zendure app) and then switch \"ZEPHYR controls the battery\" on again."
+    },
+    "price_format": {
+      "title": "Prices of {entity} cannot be read",
+      "description": "The price sensor {entity} has a value, but ZEPHYR finds no prices per time slot in its attributes (raw_today / raw_tomorrow with start, end and value). The planner uses zero on the meter until it can read prices. Choose a Nord Pool sensor in the ZEPHYR options, or report the format in an issue on GitHub."
     }
   },
   "options": {
@@ -251,7 +289,11 @@
           "cost_import_counters": "Meter counters import",
           "cost_export_counters": "Meter counters export",
           "tariff_solar_bonus": "Solar bonus on export",
-          "tariff_supplier": "Energy supplier"
+          "tariff_supplier": "Energy supplier",
+          "plan_wear_cost": "Planner: wear cost",
+          "plan_allow_export": "Planner: allow export from the battery",
+          "plan_load_margin": "Planner: load margin",
+          "plan_buffer": "Planner: buffer above the minimum"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -275,7 +317,11 @@
           "cost_import_counters": "Optional: the meter's kWh counters for import (tariff 1 and 2, summed). Without them ZEPHYR integrates the P1 power.",
           "cost_export_counters": "Optional: the meter's kWh counters for export (tariff 1 and 2).",
           "tariff_solar_bonus": "Optional: extra % on (market + export margin) for export between sunrise and sunset, only when that amount is positive. Zonneplan: 10 %.",
-          "tariff_supplier": "Choose your supplier: ZEPHYR then takes the margins, solar bonus, energy tax and VAT from its tariff table (fetched from GitHub once a month). Only suppliers whose amounts a user has checked are listed. With \"Own tariffs\" the fields below apply; the fixed costs per month apply in both cases."
+          "tariff_supplier": "Choose your supplier: ZEPHYR then takes the margins, solar bonus, energy tax and VAT from its tariff table (fetched from GitHub once a month). Only suppliers whose amounts a user has checked are listed. With \"Own tariffs\" the fields below apply; the fixed costs per month apply in both cases.",
+          "plan_wear_cost": "Advanced. Cost per kWh delivered by the battery that the planner weighs in its choice (not in the costs), so it does not cycle the battery for a few cents. Default €0.03.",
+          "plan_allow_export": "The planner may deliver at full power and export the rest when that pays (action Export). Off by default.",
+          "plan_load_margin": "The planner chooses as if the house uses this much more (buffer against a low estimate). Not in the costs. 0 = off.",
+          "plan_buffer": "The planner never plans below the minimum state of charge plus this buffer; the controller may use it when the house uses more than expected. 0 = off."
         }
       }
     },
