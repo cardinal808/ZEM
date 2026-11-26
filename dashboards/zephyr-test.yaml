@@ -153,33 +153,97 @@ views:
           - entity: sensor.zephyr_savings_month
             name: Besparing deze maand
 
+  # --- Plan (M5): what the planner wants and what ZEPHYR does now -----------------------
+  - title: Plan
+    path: zephyr-plan
+    icon: mdi:chart-timeline-variant
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: tile
+            entity: select.zephyr_mode
+            features_position: bottom
+            vertical: false
+            features:
+              - type: select-options
+          - type: tile
+            entity: switch.zephyr_control
+            name: ZEPHYR stuurt de accu (uit = schaduw)
+            features_position: bottom
+            vertical: false
+            features:
+              - type: toggle
+          - type: markdown
+            content: |-
+              **Plan nu:** {{ state_translated('sensor.zephyr_plan_action') }} — {{ state_translated('sensor.zephyr_plan_state') }}
+
+              **Waarom:** {{ states('sensor.zephyr_plan_reason') }}
+
+              **ZEPHYR doet ({{ 'live' if is_state('switch.zephyr_control', 'on') else 'schaduw' }}):** {{ states('sensor.zephyr_reason') }} (doel {{ states('sensor.zephyr_setpoint') }} W)
+
       - type: entities
-        title: Plan (schaduw, M5)
+        title: Kerncijfers plan
         entities:
-          - entity: sensor.zephyr_plan_action
-            name: Plan nu
-          - entity: sensor.zephyr_plan_state
-            name: Toestand
-          - entity: sensor.zephyr_plan_reason
-            name: Reden
           - entity: sensor.zephyr_planned_grid_charge
             name: Gepland netladen
           - type: attribute
             entity: sensor.zephyr_planned_grid_charge
             attribute: cost
             name: Kosten netladen (€)
+          - entity: sensor.zephyr_planned_export
+            name: Gepland terugleveren
           - entity: sensor.zephyr_battery_empty_at
             name: Accu leeg om
+          - type: attribute
+            entity: sensor.zephyr_plan_calculated_at
+            attribute: expected_cost
+            name: Verwachte netkosten (€)
           - entity: sensor.zephyr_plan_calculated_at
             name: Berekend om
+          - entity: sensor.zephyr_state_of_charge
+            name: Laadpercentage nu
 
       - type: markdown
         title: Plan in blokken
-        content: >-
+        content: |-
           {% set blocks = state_attr('sensor.zephyr_plan_action', 'blocks') or [] %}
           {% set names = {'charge': 'Laden', 'hold': 'Vasthouden', 'deliver': 'Leveren', 'export': 'Terugleveren'} %}
           | Van | Tot | Actie | kWh | € gem. |
           |---|---|---|---|---|
           {% for b in blocks %}| {{ as_timestamp(b.start) | timestamp_custom('%a %H:%M') }} | {{ as_timestamp(b.end) | timestamp_custom('%H:%M') }} | {{ names[b.action] }}{{ ' *' if b.indicative }} | {{ b.kwh }} | {{ '%.3f' % b.price }} |
           {% endfor %}
+
           \* indicatief: prijzen van morgen nog onbekend
+
+      - type: markdown
+        title: Plan per uur (simulatie)
+        content: |-
+          {% set tl = state_attr('sensor.zephyr_plan_action', 'timeline') or [] %}
+          Per kwartier: L laden, H vasthouden, N leveren, X terugleveren. Zon, verbruik en net in kWh per uur; SOC aan het eind van het uur.
+
+          | Uur | Plan | € | Zon | Verbr. | Net | SOC |
+          |---|---|---|---|---|---|---|
+          {% for i in range(0, tl | count, 4) %}{% set q = tl[i:i + 4] %}| {{ as_timestamp(q[0].start) | timestamp_custom('%a %H:%M') }}{{ ' *' if q[0].indicative }} | {{ q | map(attribute='action') | join('') }} | {{ '%.2f' % ((q | map(attribute='buy') | sum) / (q | count)) }} | {{ '%.2f' % (q | map(attribute='solar') | sum) }} | {{ '%.2f' % (q | map(attribute='load') | sum) }} | {{ '%.2f' % ((q | map(attribute='grid_kw') | sum) / 4) }} | {{ q[-1].soc }} % |
+          {% endfor %}
+
+      - type: history-graph
+        title: Plan en uitvoering (24 uur)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.zephyr_plan_action
+            name: Plan
+          - entity: sensor.zephyr_action
+            name: ZEPHYR
+          - entity: sensor.zephyr_plan_state
+            name: Toestand plan
+
+      - type: history-graph
+        title: Accu en net (24 uur)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.zephyr_state_of_charge
+            name: SOC
+          - entity: sensor.zephyr_setpoint
+            name: Doel ZEPHYR
+          - entity: sensor.zephyr_grid_power
+            name: Net
