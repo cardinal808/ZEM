@@ -44,6 +44,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_settings_set)
     async_register_command(hass, ws_events)
     async_register_command(hass, ws_savings)
+    async_register_command(hass, ws_plan_check)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -586,3 +587,14 @@ def ws_savings(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str,
         connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
         return
     connection.send_result(msg["id"], savings_view(entry))
+
+
+@websocket_command({vol.Required("type"): "zephyr/plan_check", vol.Optional("days", default=14): vol.All(int, vol.Range(min=1, max=400))})
+@callback
+def ws_plan_check(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Plan against reality per day: the day-ahead plan next to what was measured (B38)."""
+    entry = _entry(hass)
+    if entry is None or entry.runtime_data.costs is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    connection.send_result(msg["id"], entry.runtime_data.costs.plan_check(msg["days"]))

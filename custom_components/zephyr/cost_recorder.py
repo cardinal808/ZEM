@@ -30,6 +30,7 @@ from .const import (
     DOMAIN,
     LOGGER,
 )
+from .core import plan_check
 from .core.costs import (
     QUARTER_SECONDS,
     Pools,
@@ -349,6 +350,12 @@ class CostRecorder:
         await self.hass.async_add_executor_job(write)
         return {"path": str(path), "rows": len(records)}
 
+    def plan_check(self, days: int = 14) -> dict[str, Any]:
+        """Plan against reality (B38) for the last ``days`` local days, today included."""
+        today = dt_util.now().date()
+        items = plan_check.checks(self.days, today - timedelta(days=days - 1), today)
+        return {"days": items, "summary": plan_check.summary([i for i in items if i["date"] < today.isoformat()])}
+
     def diagnostics(self) -> dict[str, Any]:
         return {
             "tariffs": self.tariffs.diagnostics(),
@@ -364,4 +371,5 @@ class CostRecorder:
             "today": self.summary("today").as_dict(),
             "month": self.summary("month").as_dict(),
             "last_quarters": self.current[-8:],
+            "plan_check": self.plan_check(7),
         }
