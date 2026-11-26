@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### 0.8.20 — Plan against reality (B38)
+### 0.8.21 — Plan against reality (B38)
 - The planner keeps the **day-ahead plan**: every new plan overwrites what it expects for tomorrow (per quarter: use without the air conditioner, solar, grid import and export, cost, SOC); at midnight that is fixed, so a day is compared with the plan as it stood at the end of the day before. Only with tomorrow's real prices (not the indicative pattern). Stored with the planner (survives a restart).
 - Every cost quarter gets `ahead_load_kwh`, `ahead_excluded_kwh`, `ahead_solar_kwh`, `ahead_import_kwh`, `ahead_export_kwh`, `ahead_cost`, `ahead_soc` (also in the CSV export, with `excluded_kwh` and `vacation`). Day totals add the expectation and the matching measured values over the quarters that have both, plus the absolute error per quarter for use and solar.
 - New websocket `zephyr/plan_check` (`days`, default 14): per day expected / measured / difference for use, solar, import, export and cost, the SOC at the end of the day, and a summary over the finished days (mean absolute difference per day). Diagnostics: `costs.plan_check` (7 days).

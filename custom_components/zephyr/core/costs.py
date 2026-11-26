@@ -216,7 +216,7 @@ RECORD_FIELDS: Final = (
 )
 """Fields of a stored quarter (and the CSV columns). ``plan_*``: the plan at the start of the quarter.
 ``soc``: state of charge at the end of the quarter (%, 0.8.2), for the panel's past.
-``excluded_kwh`` (B41), ``vacation`` (B42). ``ahead_*``: the day-ahead plan (plan against reality, 0.8.20)."""
+``excluded_kwh`` (B41), ``vacation`` (B42). ``ahead_*``: the day-ahead plan (plan against reality, 0.8.21)."""
 
 
 def _r(value: float | None, digits: int = 4) -> float | None:
