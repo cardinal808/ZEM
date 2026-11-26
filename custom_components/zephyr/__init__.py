@@ -22,7 +22,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN, SUBENTRY_SET
 from .coordinator import SetCoordinator
-from .core.totals import Totals, compute_totals
+from .core.totals import CostFlows, Totals, compute_totals, cost_flows
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT, Platform.SWITCH, Platform.DATETIME]
 
@@ -53,6 +53,10 @@ class ZephyrRuntime:
 
     def totals(self) -> Totals:
         return compute_totals((c.snapshot() for c in self.coordinators.values()), time.monotonic())
+
+    def cost_flows(self) -> CostFlows | None:
+        """Battery and set-PV flows for the cost log (B44 T0)."""
+        return cost_flows((c.snapshot() for c in self.coordinators.values()), time.monotonic())
 
 
 type ZephyrConfigEntry = ConfigEntry[ZephyrRuntime]

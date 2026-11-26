@@ -134,9 +134,9 @@ def test_yearly_saldering_correction_only_for_the_surplus() -> None:
 
 def test_meter_integrates_and_skips_gaps() -> None:
     m = QuarterMeter()
-    m.sample(0.0, 1000.0, -500.0)
-    m.sample(1.0, -2000.0, 600.0, 100.0)
-    m.sample(2.0, None, 600.0, 100.0)  # P1 stale from here
+    m.sample(0.0, 1000.0, 0.0, 500.0)
+    m.sample(1.0, -2000.0, 600.0, 0.0, 100.0)
+    m.sample(2.0, None, 600.0, 0.0, 100.0)  # P1 stale from here
     m.sample(40.0, 1000.0, 0.0)  # 38 s gap: not integrated
     done = m.take(41.0)
     assert done.import_kwh == pytest.approx(1000 / 3600 / 1000 + 1 / 3600)
@@ -147,6 +147,17 @@ def test_meter_integrates_and_skips_gaps() -> None:
     assert m.import_kwh == 0.0
     m.sample(42.0, 1000.0, 0.0)
     assert m.take(42.0).import_kwh == pytest.approx(1 / 3600)  # the held 1000 W from 41 s
+
+
+def test_meter_battery_coverage_only_with_all_sets() -> None:
+    m = QuarterMeter()
+    m.sample(0.0, 0.0, 1000.0, 0.0, 0.0, battery_complete=False)  # one set beyond the hold
+    m.sample(2.0, 0.0, 1000.0)
+    done = m.take(3.0)
+    assert done.charge_kwh == pytest.approx(3 / 3600)
+    assert done.battery_seconds == 1.0  # only the last second had every set
+    m.sample(4.0, 0.0, None)  # no set at all
+    assert m.take(5.0).charge_kwh == pytest.approx(1 / 3600)  # 3→4 s still held, 4→5 s nothing
 
 
 def test_counter_delta() -> None:
