@@ -8,6 +8,7 @@ export interface HassConnection {
 
 export interface HomeAssistant {
   connection: HassConnection;
+  callWS<T>(message: Record<string, unknown>): Promise<T>;
   language: string;
   locale?: { language: string };
   themes?: { darkMode?: boolean };

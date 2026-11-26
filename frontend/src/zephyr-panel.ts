@@ -4,6 +4,8 @@ import { customElement, property, state } from "lit/decorators.js";
 
 import { clock, euro, kwh, minutesUntil, percent, sameDay, signedWatts, watts } from "./format";
 import { language, t, type Lang } from "./i18n";
+import { stats, upcomingBlocks, type PlanBlock, type PlanView } from "./plan";
+import "./prices-plan";
 import { actionFill, theme } from "./theme";
 import type { HomeAssistant, Now, PanelInfo, PlanNow, SubscribeEvent } from "./types";
 
@@ -41,6 +43,11 @@ export class ZephyrPanel extends LitElement {
   @state() private status: Status = "loading";
   @state() private view: View = "plan";
   @state() private clockMs = Date.now();
+  @state() private planView?: PlanView;
+
+  private planFor = "";
+  private planBusy = false;
+  private planTimer?: number;
 
   private unsubscribe?: () => Promise<void>;
   private subscribing = false;
@@ -72,12 +79,15 @@ export class ZephyrPanel extends LitElement {
     super.connectedCallback();
     loadFonts(this.base);
     this.clockTimer = window.setInterval(() => (this.clockMs = Date.now()), 30_000);
+    // The running quarter moves on even without a new plan.
+    this.planTimer = window.setInterval(() => void this.loadPlan(true), 300_000);
     if (this.hass) void this.subscribe();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     window.clearInterval(this.clockTimer);
+    window.clearInterval(this.planTimer);
     window.clearTimeout(this.retryTimer);
     this.watch(undefined);
     void this.stop();
@@ -136,6 +146,26 @@ export class ZephyrPanel extends LitElement {
     }
   }
 
+  /** Fetch prices and plan when there is a new plan (or when ``force``). */
+  private async loadPlan(force = false): Promise<void> {
+    const now = this.now;
+    if (!this.hass || !now?.price_entity || this.planBusy) {
+      if (now && !now.price_entity) this.planView = undefined;
+      return;
+    }
+    const key = now.plan?.calculated_at ?? "none";
+    if (!force && key === this.planFor) return;
+    this.planBusy = true;
+    try {
+      this.planView = await this.hass.callWS<PlanView>({ type: "zephyr/plan" });
+      this.planFor = key;
+    } catch {
+      // Not loaded or no price source: the cards above already say so.
+    } finally {
+      this.planBusy = false;
+    }
+  }
+
   private retry(ms: number): void {
     window.clearTimeout(this.retryTimer);
     this.retryTimer = window.setTimeout(() => void this.subscribe(), ms);
@@ -146,6 +176,7 @@ export class ZephyrPanel extends LitElement {
       this.now = event.data;
       this.status = "ok";
       this.clockMs = Date.now();
+      void this.loadPlan();
     } else if (event.type === "unloaded") {
       // The installation reloads; the server already closed this subscription.
       this.unsubscribe = undefined;
@@ -232,9 +263,78 @@ export class ZephyrPanel extends LitElement {
         ${[0, 1, 2].map(() => html`<div class="card skeleton" aria-hidden="true"></div>`)}
       </section>`;
     }
-    return html`<section class="cards ${this.status === "ok" ? "" : "stale"}" aria-label=${this.tr("now.title")}>
-      ${this.renderNow(now)} ${this.renderBattery(now)} ${this.renderNext(now)}
-    </section>`;
+    const stale = this.status === "ok" ? "" : "stale";
+    return html`<section class="cards ${stale}" aria-label=${this.tr("now.title")}>
+        ${this.renderNow(now)} ${this.renderBattery(now)} ${this.renderNext(now)}
+      </section>
+      ${now.price_entity ? this.renderPlanParts(now, stale) : nothing}`;
+  }
+
+  private renderPlanParts(now: Now, stale: string): TemplateResult {
+    let note: string | null = null;
+    if (now.mode !== "dynamic_forecasting") note = this.tr("plan.mode_note", { mode: this.tr(`mode.${now.mode}`) });
+    else if (!now.live) note = this.tr("plan.shadow_note");
+    return html`${note ? html`<div class="banner info" role="note">${note}</div>` : nothing}
+      <zephyr-prices-plan
+        class=${stale}
+        .view=${this.planView}
+        .uiLang=${this.uiLang}
+        .locale=${this.locale}
+        .timeZone=${this.timeZone}
+        ?narrow=${this.narrow}
+      ></zephyr-prices-plan>
+      ${this.planView ? html`<section class="duo ${stale}">${this.renderBlocks(this.planView)} ${this.renderWhy(this.planView)}</section>` : nothing}`;
+  }
+
+  private range(b: PlanBlock): string {
+    const from = clock(b.start, this.locale, this.timeZone);
+    const to = clock(b.end, this.locale, this.timeZone);
+    const tomorrow = `${this.tr("blocks.tomorrow")} `;
+    const startToday = sameDay(b.start, this.clockMs, this.timeZone);
+    // The end of a block is exclusive: a block that ends at 00:00 tomorrow ends today.
+    const endToday = sameDay(new Date(b.end).getTime() - 1, this.clockMs, this.timeZone);
+    return `${startToday ? "" : tomorrow}${from}–${startToday && !endToday ? tomorrow : ""}${to}`;
+  }
+
+  private renderBlocks(view: PlanView): TemplateResult {
+    const blocks = upcomingBlocks(view.blocks, new Date(this.clockMs).toISOString()).slice(0, 10);
+    return html`<article class="card">
+      <h2>${this.tr("blocks.title")}</h2>
+      ${blocks.length
+        ? html`<ul class="blocks">
+            ${blocks.map(
+              (b) => html`<li>
+                <span class="when">${this.range(b)}</span>
+                <span class="swatch" style="background:${actionFill(b.action)}"></span>
+                <span class="what">${this.tr(`blocks.what_${b.action}`)}${b.indicative ? html` <em>(${this.tr("blocks.indicative")})</em>` : nothing}</span>
+                <span class="detail">${this.tr(`blocks.${b.action}`, { kwh: kwh(b.kwh, this.locale), price: euro(b.price, this.locale) })}</span>
+              </li>`,
+            )}
+          </ul>`
+        : html`<p class="text">${this.tr("blocks.none")}</p>`}
+    </article>`;
+  }
+
+  private renderWhy(view: PlanView): TemplateResult {
+    const lines: string[] = [];
+    if (view.reason) lines.push(view.reason[this.uiLang]);
+    const blocks = upcomingBlocks(view.blocks, new Date(this.clockMs).toISOString()).filter((b) => !b.indicative);
+    const charge = blocks.filter((b) => b.action === "charge").sort((a, b) => a.price - b.price)[0];
+    if (charge) lines.push(this.tr("why.cheapest", { time: this.range(charge), price: euro(charge.price, this.locale) }));
+    else if (blocks.length) lines.push(this.tr("why.no_charge"));
+    const future = view.quarters.filter((q) => !q.past);
+    const peak = stats(future)?.max;
+    if (peak && peak.action === "deliver") {
+      const time = `${sameDay(peak.start, this.clockMs, this.timeZone) ? "" : `${this.tr("blocks.tomorrow")} `}${clock(peak.start, this.locale, this.timeZone)}`;
+      lines.push(this.tr("why.peak", { time, price: euro(peak.buy as number, this.locale) }));
+    }
+    if (future.some((q) => q.indicative)) lines.push(this.tr("why.indicative"));
+    return html`<article class="card">
+      <h2>${this.tr("why.title")}</h2>
+      <ul class="why">
+        ${lines.map((line) => html`<li>${line}</li>`)}
+      </ul>
+    </article>`;
   }
 
   private renderNow(now: Now): TemplateResult {
@@ -476,8 +576,97 @@ export class ZephyrPanel extends LitElement {
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 16px;
       }
-      .cards.stale {
+      .cards.stale,
+      .duo.stale,
+      zephyr-prices-plan.stale {
         opacity: 0.6;
+      }
+      .duo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .duo > .card {
+        flex: 1 1 420px;
+      }
+      h2 {
+        margin: 0;
+        font-family: var(--z-font-head);
+        font-size: 20px;
+      }
+      .blocks,
+      .why {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .blocks li {
+        display: grid;
+        grid-template-columns: minmax(110px, auto) 4px 1fr auto;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-top: 1px solid var(--z-border);
+      }
+      .blocks .when {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .blocks .swatch {
+        width: 4px;
+        height: 24px;
+        border-radius: 2px;
+      }
+      @media (max-width: 700px) {
+        .blocks li {
+          grid-template-columns: 4px 1fr auto;
+          grid-template-areas: "sw when when" "sw what detail";
+          gap: 2px 12px;
+        }
+        .blocks .when {
+          grid-area: when;
+        }
+        .blocks .swatch {
+          grid-area: sw;
+          height: 100%;
+        }
+        .blocks .what {
+          grid-area: what;
+        }
+        .blocks .detail {
+          grid-area: detail;
+        }
+      }
+      .blocks .detail {
+        color: var(--z-muted);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      .blocks em {
+        color: var(--z-muted);
+        font-style: normal;
+      }
+      .why {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .why li {
+        padding-left: 18px;
+        position: relative;
+      }
+      .why li::before {
+        content: "";
+        position: absolute;
+        left: 4px;
+        top: 0.6em;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--z-muted);
       }
       .card {
         background: var(--z-card);

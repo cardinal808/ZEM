@@ -18,6 +18,7 @@ export const theme = css`
     --z-warn-bg: #fdebd5;
     --z-warn-text: #5c3300;
     --z-info-bg: #eef3fb;
+    --z-bar: #8c9792;
     --z-font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
     --z-font-head: "Space Grotesk", Inter, system-ui, sans-serif;
   }
@@ -37,6 +38,7 @@ export const theme = css`
     --z-warn-bg: #3a2a14;
     --z-warn-text: #f7d4a8;
     --z-info-bg: #1b2433;
+    --z-bar: #6f7a75;
   }
 `;
 

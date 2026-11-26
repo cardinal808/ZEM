@@ -55,10 +55,12 @@ from .core.forecast_plan import (
     no_prices,
     price_at,
     quarter_floor,
+    reason,
     remember,
     solar_per_quarter,
 )
 from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, profile_from_history
+from .core.plan_view import plan_view
 from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
 from .core.solar_history import parse_detailed_forecast
@@ -135,6 +137,8 @@ class PlanRunner:
         self.outcome: PlanOutcome | None = None
         self.inputs: dict[str, Any] = {}
         self.snapshots: deque[dict[str, Any]] = deque(maxlen=SNAPSHOTS)
+        self.known_at: dict[date, datetime] = {}
+        """Day → when its prices were first seen (the panel shows "known since hh:mm")."""
         self.by_quarter: dict[str, tuple[str, float]] = {}
         """Quarter start (ISO UTC) → (action, expected cost) of the first plan in that quarter."""
         self._listeners: list[Callable[[], None]] = []
@@ -281,6 +285,50 @@ class PlanRunner:
         local = dt_util.as_local(start)
         return self.profile.forecast(day_type(local), local.hour, ahead) * hours
 
+    def _buy(self, start: datetime, market: float) -> float:
+        tariffs = self.runtime.tariffs
+        assert tariffs is not None
+        return tariffs.tariffs_for(dt_util.as_local(start).date()).buy(market)
+
+    def _sell(self, start: datetime, market: float, daylight: bool) -> float:
+        tariffs = self.runtime.tariffs
+        assert tariffs is not None
+        return tariffs.tariffs_for(dt_util.as_local(start).date()).sell(market, start, daylight)[0]
+
+    def _daylight(self, moment: datetime) -> bool:
+        return is_up(self.hass, moment)
+
+    def _note_known(self, source: list[PriceSlot], now: datetime) -> None:
+        for day in {dt_util.as_local(s.start).date() for s in source}:
+            self.known_at.setdefault(day, now)
+        for day in sorted(self.known_at)[:-3]:
+            del self.known_at[day]
+
+    def view(self) -> dict[str, Any]:
+        """Prices and plan of today and tomorrow for the panel (SPEC-ui §3.2)."""
+        assert self.price_entity is not None
+        now = dt_util.utcnow()
+        tz = dt_util.get_default_time_zone()
+        state = self.hass.states.get(self.price_entity)
+        source = market_slots(state.attributes) if state is not None else []
+        prices = merge_reserve(source, self.reserve)
+        outcome = self.outcome
+        tomorrow = dt_util.as_local(now).date() + timedelta(days=1)
+        why = None
+        if outcome is not None:
+            why = {"nl": reason(outcome, "nl", tz), "en": reason(outcome, "en", tz)}
+        return plan_view(
+            outcome,
+            prices,
+            now,
+            tz,
+            buy=self._buy,
+            sell=self._sell,
+            daylight=self._daylight,
+            tomorrow_known_at=self.known_at.get(tomorrow),
+            reason=why,
+        )
+
     async def async_calculate(self) -> PlanOutcome | None:
         assert self.price_entity is not None
         now = dt_util.utcnow()
@@ -288,6 +336,7 @@ class PlanRunner:
         state = self.hass.states.get(self.price_entity)
         source = market_slots(state.attributes) if state is not None else []
         self._check_format(state, bool(source))
+        self._note_known(source, now)
         reserve = remember(self.reserve, source, now)
         if [(s.start, s.price) for s in reserve] != [(s.start, s.price) for s in self.reserve]:
             self.reserve = reserve
@@ -306,14 +355,7 @@ class PlanRunner:
         tariffs = self.runtime.tariffs
         assert tariffs is not None
         solar_fn, solar_source = self._solar()
-
-        def buy(start: datetime, market: float) -> float:
-            return tariffs.tariffs_for(dt_util.as_local(start).date()).buy(market)
-
-        def sell(start: datetime, market: float, daylight: bool) -> float:
-            return tariffs.tariffs_for(dt_util.as_local(start).date()).sell(market, start, daylight)[0]
-
-        slots = build_horizon(markets, now, buy=buy, sell=sell, load=self._load, solar=solar_fn, daylight=lambda t: is_up(self.hass, t))
+        slots = build_horizon(markets, now, buy=self._buy, sell=self._sell, load=self._load, solar=solar_fn, daylight=self._daylight)
         prev_action = previous.action if previous is not None and previous.slots else Action.DELIVER
         began = time.perf_counter()
         outcome = await self.hass.async_add_executor_job(make_plan, slots, battery, now, self.settings, prev_action)

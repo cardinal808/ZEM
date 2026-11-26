@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### 0.8.1 — Panel: prices and plan (SPEC-ui §4.2, UI-2)
+- **Card *Prijzen en plan*** on the Plan screen, as approved in the design:
+  - **Price line:** the all-in price now; today and tomorrow lowest–highest, mean and the times of the lowest and highest quarter; *known since hh:mm* for tomorrow, or *not known yet (usually around 13:00)*.
+  - **Period:** Today | Tomorrow | 48 hours, default Today (00:00–24:00); the choice is remembered in the browser.
+  - **Chart:** the all-in price per quarter as bars (past lighter, the running quarter dark, tomorrow's indicative pattern striped, negative prices below zero), the lowest and highest quarter of each day labelled, the planned action as a coloured band underneath, the expected state of charge as a dashed line, *now* marker and day boundary. Point at a quarter (or use the arrow keys) for time, buy and export price, action, SOC, solar and consumption. On a phone the chart scrolls sideways and starts 2 hours before now.
+  - Notes for *No prices*, the price reserve and an indicative tomorrow; above the chart a note when the mode is not Dynamic Forecasting or ZEPHYR only calculates (shadow).
+- **Cards *Blokken*** (the coming blocks with time, action, kWh and average price; *tomorrow* where it applies) and ***Waarom dit plan*** (the planner's reason, the cheapest charging block, the most expensive moment, indicative tomorrow).
+- **Websocket `zephyr/plan`:** every quarter from local midnight today to the end of tomorrow (92/100 on DST days) with market, buy and sell price; from now on also action, SOC, solar, consumption and indicative; the blocks, the reason and when tomorrow's prices were first seen. Quarters before now carry the price only; what happened follows in UI-3 from the cost log. The panel fetches it when the plan changes and every 5 minutes.
+- Core: `core/plan_view.py` (pure, tested incl. DST days); the planner keeps when each day's prices first appeared.
+- Tests: core (quarters, past/now, indicative, DST, view), HA (`zephyr/plan` with and without price source), frontend (days, stats, bands, scale with negative prices, ticks, SOC line, blocks).
+
 ### 0.8.0 — M6: own panel in the sidebar, step 1 (SPEC-ui, UI-1)
 - **Panel *ZEPHYR*** in the Home Assistant sidebar (`/zephyr`), for every user. Header with logo, menu (Plan, Sets — *Accu* with one set —, Settings, Diagnostics), the mode and whether ZEPHYR controls (*In control*) or only calculates (*Shadow*). The Plan screen shows three cards:
   - **Now:** the action with power and the reason in one sentence, the grid power, and in shadow mode a note that this is what ZEPHYR would do.
