@@ -24,6 +24,13 @@ SOLCAST_TODAY = "sensor.solcast_pv_forecast_forecast_today"
 DAY = [0.05] * 6 + [0.15] * 11 + [0.40] * 4 + [0.15] * 3
 
 
+@pytest.fixture(autouse=True)
+async def _test_day(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> None:
+    """Every test starts on 26-11-2026 in Amsterdam, so prices set before `_setup` are for that day (not the real one)."""
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(datetime(2026, 11, 26, 0, 0, 0, tzinfo=dt_util.get_default_time_zone()))
+
+
 def _raw(day_offset: int, prices: list[float]) -> list[dict[str, Any]]:
     start = dt_util.start_of_local_day() + timedelta(days=day_offset)
     return [{"start": start + timedelta(hours=h), "end": start + timedelta(hours=h + 1), "value": v} for h, v in enumerate(prices)]

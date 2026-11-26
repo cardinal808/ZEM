@@ -329,6 +329,13 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument(
         "--wear", type=float, default=0.03, help="€ per kWh out of the battery (PU3), for the 'incl. wear' column and the wear runs"
     )
+    ap.add_argument(
+        "--grid-charge",
+        type=float,
+        nargs="*",
+        default=[],
+        help="€ per kWh charged from the grid, in the choice only (threshold); one run per value, with wear",
+    )
     args = ap.parse_args(argv)
 
     quarters = build_quarters(args.prices, args.p1, args.solar, args.battery)
@@ -365,6 +372,8 @@ def main(argv: list[str] | None = None) -> None:
         if not args.quick:
             runs.append(run("planner", PlannerSettings()))
         runs.append(run(f"planner, wear {w}", PlannerSettings(wear_cost=w)))
+        for g in args.grid_charge:
+            runs.append(run(f"planner, wear {w}, grid {g}", PlannerSettings(wear_cost=w, grid_charge_cost=g)))
         if not args.quick:
             runs.append(run("planner + X", PlannerSettings(allow_export=True)))
             runs.append(run(f"planner + X, wear {w}", PlannerSettings(allow_export=True, wear_cost=w)))
