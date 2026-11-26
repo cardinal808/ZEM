@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.7.4 — backtest with the Solcast forecast and cautious solar (B32)
+- **Backtest:** `--sun solcast --solcast solcast.json` uses Solcast's forecast history from the integration's `solcast.json` (half-hour `pv_estimate` and `pv_estimate10`), and `--alpha` the cautious solar of SPEC-planner §12.4 (mid − α × (mid − p10) for slots more than 1 hour ahead). No change in Home Assistant.
+- Measured (2-2 to 18-11, learned consumption, wear €0.03, cost incl. wear): Solcast €151.49 (2026) / €237.03 (2027), against yesterday's solar €159.14 / €243.78 and zero meter €204.84 / €265.41. Cautious solar α = 0.5 was slightly worse in both years (€152.43 / €238.09), so by the rule of §12.2 α stays 0 for now (B32).
+
 ### 0.7.3 — learned consumption profile; backtest with forecasts
 - **`core/load_profile.py`** (SPEC-planner §2.3): consumption per hour of the day, separately for workdays and weekends, as a running mean (memory about 4 working weeks / 5 weekends); an hour value counts after 3 (workday) or 2 (weekend) measurements, before that the daily mean / 24; steering on the last 3 hours (ratio bounded 0.6–1.6, half of it left after 2 hours). Stored as a plain dict, so a reset is immediate. Not yet in Home Assistant.
 - **Backtest:** `--load learned` (profile learned online, replanning every hour) and `--sun yesterday` (yesterday's solar as a simple, pessimistic forecast); `--rules`, `--quick`.
