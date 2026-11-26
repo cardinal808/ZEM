@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.10 — Planner actions: recalculate, reset profile, get plan
+- **`zephyr.recalculate`**: a new plan now (for the panel and automations; otherwise every quarter and on new prices).
+- **`zephyr.reset_profile`** (PT9): forgets the learned consumption (house and air conditioner). By default fills it again from the recorder (`refill: true`); with `refill: false` it starts empty and learns from the coming hours. Returns the source and the number of hours.
+- **`zephyr.get_plan`** (response only): state, figures, blocks and the quarters of the current plan, for automations and templates.
+- Without a running planner (no price sensor) the actions give a clear error.
+- Tests: all three actions in Home Assistant.
+
 ### 0.8.9 — Planner without the air conditioner (B41, steps 2 and 3)
 - **The consumption profile is the house without the air conditioner** while it ran in a mode the battery may not feed; the air conditioner is learned apart (`excluded_profile`). Before, its heating (~2 kWh/h at midday) counted as house use the battery would cover, so the plan charged and held more than needed.
 - **Solar in the plan follows the control:** with the air conditioner running, solar first covers the rest of the house; the battery only gets a surplus once the air conditioner is covered too (`solar_for_planner`, SPEC-airco §5).

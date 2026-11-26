@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from datetime import date
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -66,6 +66,22 @@ TEST_COMMAND_SCHEMA = vol.Schema(
 SERVICE_EXPORT_COSTS = "export_costs"
 EXPORT_COSTS_SCHEMA = vol.Schema({vol.Optional("start"): cv.date, vol.Optional("end"): cv.date})
 
+SERVICE_RECALCULATE = "recalculate"
+SERVICE_RESET_PROFILE = "reset_profile"
+RESET_PROFILE_SCHEMA = vol.Schema({vol.Optional("refill", default=True): cv.boolean})
+SERVICE_GET_PLAN = "get_plan"
+
+
+def _planners(hass: HomeAssistant) -> list[PlanRunner]:
+    planners = [
+        e.runtime_data.planner
+        for e in hass.config_entries.async_loaded_entries(DOMAIN)
+        if e.runtime_data.planner is not None and e.runtime_data.planner.enabled
+    ]
+    if not planners:
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_planner")
+    return planners
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Actions of ZEPHYR (registered once, act on the loaded installation)."""
@@ -98,6 +114,31 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.services.async_register(
         DOMAIN, SERVICE_EXPORT_COSTS, export_costs, schema=EXPORT_COSTS_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
+
+    async def recalculate(call: ServiceCall) -> None:
+        """Make a new plan now (the panel and automations; otherwise every quarter)."""
+        for planner in _planners(hass):
+            planner.async_request()
+
+    hass.services.async_register(DOMAIN, SERVICE_RECALCULATE, recalculate)
+
+    async def reset_profile(call: ServiceCall) -> ServiceResponse:
+        """Forget the learned consumption (PT9); by default fill it again from the recorder."""
+        result: dict[str, Any] = {}
+        for planner in _planners(hass):
+            result = await planner.async_reset_profile(call.data["refill"])
+        return result
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_RESET_PROFILE, reset_profile, schema=RESET_PROFILE_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+
+    async def get_plan(call: ServiceCall) -> ServiceResponse:
+        """The current plan (blocks, quarters, figures) for automations and templates."""
+        response: ServiceResponse = _planners(hass)[0].plan_response()
+        return response
+
+    hass.services.async_register(DOMAIN, SERVICE_GET_PLAN, get_plan, supports_response=SupportsResponse.ONLY)
     from .websocket_api import async_setup as async_setup_websocket
 
     async_setup_websocket(hass)
