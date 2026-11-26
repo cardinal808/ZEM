@@ -11,6 +11,8 @@ export interface Quarter {
   soc: number | null;
   solar: number | null;
   load: number | null;
+  /** kWh of the air conditioner outside the battery (B41); absent without the counter. */
+  excluded?: number | null;
   indicative: boolean;
 }
 
@@ -193,5 +195,28 @@ export function blocksFor(blocks: PlanBlock[], period: Period, nowIso: string, t
     const first = dayKey(b.start, timeZone);
     const last = dayKey(new Date(new Date(b.end).getTime() - 1).toISOString(), timeZone);
     return first <= wanted && wanted <= last;
+  });
+}
+
+export interface SunQuarter {
+  /** Bar height, % of the lane (the sunniest quarter in view = 100). */
+  height: number;
+  past: boolean;
+  /** More solar than the house and the air conditioner use: solar to spare for the battery. */
+  over: boolean;
+}
+
+/** The solar lane under the action band; null when no quarter has solar data. */
+export function sunLane(quarters: Quarter[]): SunQuarter[] | null {
+  if (!quarters.some((q) => q.solar !== null)) return null;
+  const top = Math.max(0.05, ...quarters.map((q) => q.solar ?? 0));
+  return quarters.map((q) => {
+    const solar = q.solar ?? 0;
+    const use = (q.load ?? 0) + (q.excluded ?? 0);
+    return {
+      height: solar > 0 ? Math.round((solar / top) * 1000) / 10 : 0,
+      past: q.past,
+      over: solar > 0 && q.load !== null && solar > use,
+    };
   });
 }

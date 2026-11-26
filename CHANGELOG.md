@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.17 — Panel: solar in the action band (SPEC-ui-airco §3.2, UI-A3)
+- **Solar lane under the action band** (design A, Bjorn 26-11): a small yellow bar per quarter, height = solar relative to the sunniest quarter in view; full yellow = measured, lighter = forecast. A **green top** marks *solar to spare*: more solar than the house and the air conditioner use, so the battery can charge from solar. Legend *Zon* and *Zon over (accu kan laden)*.
+- Quarter details also show the air conditioner: *Airco 0,30 kWh (niet uit de accu)*; *huis* is now the house without the air conditioner, in the past as well as in the plan.
+- `zephyr/plan`: every quarter has `excluded` (kWh of the air conditioner outside the battery, B41): from the planner for the future, from the cost log for the past; `load` of a past quarter is the house minus the air conditioner, like the planner's.
+- Tests: plan view with the air conditioner (past and future), the solar lane.
+
 ### 0.8.16 — Panel: Blokken and Waarom follow the chosen period
 - The cards *Blokken* and *Waarom dit plan* now follow *Vandaag / Morgen / 48 uur* like the chart (Bjorn, 26-11). *Vandaag*: what is still to come today, a block over midnight included. *Morgen*: every block that touches tomorrow (or *Nog geen blokken voor morgen*). *48 uur*: everything still to come. The cheapest charge time and the most expensive moment are taken from the same period; the plan's reason (about now) is left out for *Morgen*. Titles say which period.
 - The period is kept by the panel (`zephyr-prices-plan` reports a change); still remembered in the browser.

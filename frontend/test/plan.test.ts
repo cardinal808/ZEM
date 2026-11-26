@@ -12,6 +12,7 @@ import {
   scale,
   socPoints,
   stats,
+  sunLane,
   ticks,
   upcomingBlocks,
   type PlanBlock,
@@ -132,5 +133,15 @@ describe("plan helpers", () => {
     expect(starts("tomorrow")).toEqual(["20:45", "02:00", "04:15"]);
     expect(starts("both")).toEqual(["12:45", "20:45", "02:00", "04:15"]);
     expect(blocksFor(blocks, "tomorrow", now, null, tz)).toEqual([]);
+  });
+
+  it("draws the solar lane with solar to spare", () => {
+    const q = (solar: number | null, load: number | null, excluded: number | null, past = false) =>
+      ({ start: "2026-11-26T11:00:00Z", past, market: 0.2, buy: 0.3, sell: 0.2, action: "hold", soc: 50, solar, load, excluded, indicative: false }) as Quarter;
+    expect(sunLane([q(null, null, null)])).toBeNull();
+    const lane = sunLane([q(0, 0.1, 0, true), q(0.2, 0.1, 0), q(0.4, 0.15, 0.3), q(0.4, 0.1, 0.2)]);
+    expect(lane?.map((x) => x.height)).toEqual([0, 50, 100, 100]);
+    expect(lane?.map((x) => x.over)).toEqual([false, true, false, true]);
+    expect(lane?.[0].past).toBe(true);
   });
 });

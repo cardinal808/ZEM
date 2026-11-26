@@ -15,6 +15,7 @@ export const theme = css`
     --z-hold-a: #aeb8c8;
     --z-hold-b: #eef1f6;
     --z-export: #16917a;
+    --z-solar: #f2c230;
     --z-warn-bg: #fdebd5;
     --z-warn-text: #5c3300;
     --z-info-bg: #eef3fb;
@@ -39,6 +40,7 @@ export const theme = css`
     --z-hold-a: #56607a;
     --z-hold-b: #232833;
     --z-export: #3cc4a8;
+    --z-solar: #e8c547;
     --z-warn-bg: #3a2a14;
     --z-warn-text: #f7d4a8;
     --z-info-bg: #1b2433;

@@ -94,7 +94,7 @@
     "tip_buy": "Buy {price}",
     "tip_sell": "Export {price}",
     "tip_soc": "SOC after this quarter {soc}",
-    "tip_energy": "Solar {solar} · consumption {load}",
+    "tip_energy": "Solar {solar} · house {load}",
     "aria": "Prices per quarter; lowest {low} at {low_time}, highest {high} at {high_time}. Arrow keys show a quarter.",
     "legend_price": "Price per quarter",
     "legend_soc": "SOC expected",
@@ -105,7 +105,10 @@
     "actual": "actual",
     "no_record": "Not recorded (HA was off)",
     "tip_soc_past": "SOC after this quarter {soc} (measured)",
-    "tip_energy_past": "Solar {solar} · house {load}"
+    "tip_energy_past": "Solar {solar} · house {load}",
+    "legend_solar": "Solar",
+    "tip_airco": "Air con {kwh} (not from the battery)",
+    "legend_solar_over": "Solar to spare (battery can charge)"
   },
   "blocks": {
     "title": "Blocks",

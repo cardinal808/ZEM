@@ -90,6 +90,7 @@ def plan_quarters(
                 "soc": soc,
                 "solar": round(slot.solar_kwh, 3),
                 "load": round(slot.load_kwh, 3),
+                "excluded": round(slot.excluded_kwh, 3),
                 "indicative": slot.indicative,
             }
 
@@ -110,7 +111,7 @@ def plan_quarters(
                     "action": past_action(record),
                     "soc": record.get("soc"),
                     "solar": record.get("solar_kwh"),
-                    "load": record.get("house_kwh"),
+                    **_house(record),
                     "indicative": False,
                 }
             )
@@ -130,6 +131,7 @@ def plan_quarters(
                     "soc": None,
                     "solar": None,
                     "load": None,
+                    "excluded": None,
                     "indicative": False,
                 }
             )
@@ -163,3 +165,12 @@ def plan_view(
         "quarters": plan_quarters(outcome, prices, now, tz, buy=buy, sell=sell, daylight=daylight, history=history),
         "blocks": [] if outcome is None else [b.as_dict() for b in outcome.blocks],
     }
+
+
+def _house(record: Mapping[str, Any]) -> dict[str, Any]:
+    """House use without the air conditioner, and the air conditioner apart (B41), like the planner's quarters."""
+    house = record.get("house_kwh")
+    excluded = record.get("excluded_kwh")
+    if house is None or not excluded:
+        return {"load": house, "excluded": excluded}
+    return {"load": round(max(0.0, house - excluded), 4), "excluded": excluded}
