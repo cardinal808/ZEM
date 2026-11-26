@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
@@ -10,6 +12,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import ZephyrConfigEntry, ZephyrRuntime
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import SetCoordinator
+
+if TYPE_CHECKING:
+    from .vacation import VacationManager
 
 
 def installation_device(entry: ZephyrConfigEntry) -> DeviceInfo:
@@ -97,3 +102,20 @@ class ZephyrControlEntity(Entity):
         if fingerprint != self._last_written:
             self._last_written = fingerprint
             self.async_write_ha_state()
+
+
+class ZephyrVacationEntity(Entity):
+    """Entity of the installation for the vacation (B42)."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(self, vacation: VacationManager, entry: ZephyrConfigEntry, key: str, platform: str) -> None:
+        self._vacation = vacation
+        self._attr_unique_id = f"{entry.entry_id}_{key}"
+        self._attr_translation_key = key
+        self.entity_id = f"{platform}.zephyr_{key}"
+        self._attr_device_info = installation_device(entry)
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self._vacation.async_add_listener(self.async_write_ha_state))

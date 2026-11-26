@@ -269,6 +269,8 @@ class CostRecorder:
             _days_in_month(local_start.date()),
         )
         record["soc"] = None if totals.soc is None else round(totals.soc, 1)
+        if self.runtime.vacation is not None and self.runtime.vacation.was(start):
+            record["vacation"] = True  # B42: filter vacations out of overviews; the planner learns apart
         excluded = self.runtime.control.excluded if self.runtime.control is not None else None
         if excluded is not None:
             # B41: use of the load the battery may not feed (the air conditioner), from its counter.

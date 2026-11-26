@@ -234,6 +234,14 @@
     "switch": {
       "control": {
         "name": "ZEPHYR controls the battery"
+      },
+      "vacation": {
+        "name": "Vacation"
+      }
+    },
+    "datetime": {
+      "vacation_until": {
+        "name": "Vacation until"
       }
     }
   },
@@ -298,7 +306,8 @@
           "plan_grid_charge_cost": "Planner: grid-charge threshold",
           "plan_allow_export": "Planner: allow export from the battery",
           "plan_load_margin": "Planner: load margin",
-          "plan_buffer": "Planner: buffer above the minimum"
+          "plan_buffer": "Planner: buffer above the minimum",
+          "vacation_when_away": "Vacation when nobody is home"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -330,7 +339,8 @@
           "plan_grid_charge_cost": "Advanced. Gain per kWh that charging from the grid must bring before the planner does it (only in its choice, not in the costs), so it does not buy at an expensive moment for a cent. Default €0.01.",
           "plan_allow_export": "The planner may deliver at full power and export the rest when that pays (action Export). Off by default.",
           "plan_load_margin": "The planner chooses as if the house uses this much more (buffer against a low estimate). Not in the costs. 0 = off.",
-          "plan_buffer": "The planner never plans below the minimum state of charge plus this buffer; the controller may use it when the house uses more than expected. 0 = off."
+          "plan_buffer": "The planner never plans below the minimum state of charge plus this buffer; the controller may use it when the house uses more than expected. 0 = off.",
+          "vacation_when_away": "Switches the vacation on by itself when nobody has been home (zone.home = 0) for 24 hours, and off when someone is back. While on vacation the planner uses the standby use, the air conditioner counts as off, and the hours are learned apart from the normal profile."
         }
       }
     },
