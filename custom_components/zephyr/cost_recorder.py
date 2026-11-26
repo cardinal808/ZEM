@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable, Iterable, Mapping
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -122,7 +122,7 @@ class CostRecorder:
         self.import_counters: list[str] = list(options.get(CONF_COST_IMPORT_COUNTERS) or [])
         self.export_counters: list[str] = list(options.get(CONF_COST_EXPORT_COUNTERS) or [])
         self.meter = QuarterMeter()
-        self.days: dict[str, dict[str, float]] = {}
+        self.days: dict[str, dict[str, Any]] = {}
         self.pools = Pools()
         self.counters: dict[str, list[Any]] = {}
         """entity → [boundary (ISO UTC), kWh]: the reading at the last quarter boundary."""
@@ -337,6 +337,86 @@ class CostRecorder:
                 if first <= day <= last:
                     out.append(record)
         return out
+
+    # --- savings before the cost log (from hourly statistics) ------------------------
+
+    @property
+    def measured_since(self) -> str | None:
+        """First day the cost log measured itself (not worked out afterwards)."""
+        measured = [k for k, v in self.days.items() if v.get("source") is None]
+        return min(measured) if measured else None
+
+    async def async_backfill(
+        self, first: date, charge_entity: str, discharge_entity: str, solar_entity: str | None, price_entity: str | None
+    ) -> dict[str, Any]:
+        """Work out the days from ``first`` up to the cost log again from hourly statistics (replaces an earlier run)."""
+        from .core.backfill import SOURCE_HOURLY, backfill_days, series_to_hours
+        from .planner_runner import hourly_statistics
+
+        tz = dt_util.get_default_time_zone()
+        since = self.measured_since
+        end_day = date.fromisoformat(since) if since else dt_util.now().date()
+        if first >= end_day:
+            return {"days": 0, "hours": 0, "skipped": 0, "priced_hours": 0, "first": None, "last": None}
+        start = datetime.combine(first, datetime.min.time(), tz)
+        end = datetime.combine(end_day, datetime.min.time(), tz)
+        counters = [*self.import_counters, *self.export_counters, charge_entity, discharge_entity]
+        ids = [*counters, *([solar_entity] if solar_entity else []), *([price_entity] if price_entity else [])]
+        stats = await hourly_statistics(self.hass, start, end, list(dict.fromkeys(ids)))
+
+        series: dict[str, dict[datetime, float]] = {}
+        for entity in ids:
+            field = "mean" if entity == price_entity else "change"
+            rows: dict[datetime, float] = {}
+            for row in stats.get(entity, []):
+                value, begin = row.get(field), row.get("start")
+                if value is None or begin is None:
+                    continue
+                moment = begin if isinstance(begin, datetime) else datetime.fromtimestamp(float(begin), UTC)
+                rows[dt_util.as_utc(moment)] = float(value)
+            series[entity] = rows
+
+        starts = []
+        t = dt_util.as_utc(start)
+        while t < dt_util.as_utc(end):
+            starts.append(t)
+            t += timedelta(hours=1)
+        hours = series_to_hours(
+            starts,
+            series,
+            self.import_counters,
+            self.export_counters,
+            lambda moment: series[charge_entity].get(moment),
+            lambda moment: series[discharge_entity].get(moment),
+            solar_entity,
+            price_entity,
+        )
+        result = backfill_days(hours, self.tariffs.tariffs_for, tz)
+        self.days = {k: v for k, v in self.days.items() if v.get("source") != SOURCE_HOURLY}
+        for key, day in result.days.items():
+            if since is None or key < since:
+                self.days[key] = day
+        self._summaries.clear()
+        await self._main.async_save(self._main_data())
+        keys = sorted(result.days)
+        return {
+            "days": len(keys),
+            "hours": result.hours,
+            "skipped": result.skipped,
+            "priced_hours": sum(1 for h in hours if h.market is not None and h.import_kwh is not None),
+            "first": keys[0] if keys else None,
+            "last": keys[-1] if keys else None,
+        }
+
+    async def async_clear_backfill(self) -> int:
+        """Remove the days worked out afterwards."""
+        from .core.backfill import SOURCE_HOURLY
+
+        before = len(self.days)
+        self.days = {k: v for k, v in self.days.items() if v.get("source") != SOURCE_HOURLY}
+        self._summaries.clear()
+        await self._main.async_save(self._main_data())
+        return before - len(self.days)
 
     async def async_export(self, first: date, last: date) -> dict[str, Any]:
         records = await self.async_records(first, last)

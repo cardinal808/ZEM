@@ -45,6 +45,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_events)
     async_register_command(hass, ws_savings)
     async_register_command(hass, ws_plan_check)
+    async_register_command(hass, ws_savings_backfill)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -564,7 +565,14 @@ def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         gaps = bool(totals.get("incomplete") or totals.get("no_price"))
         # Today is still running; an earlier day with fewer than 92 quarters (the shortest day) misses some.
         short = day != today and totals.get("quarters", 0) < 92
-        days.append({"day": key, "savings_battery": None if saved is None else round(saved, 2), "incomplete": gaps or short})
+        days.append(
+            {
+                "day": key,
+                "savings_battery": None if saved is None else round(saved, 2),
+                "incomplete": gaps or short,
+                "hourly": totals.get("source") is not None,
+            }
+        )
     return {
         "periods": {
             "today": period(costs.summary("today")),
@@ -574,6 +582,10 @@ def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         },
         "days": days,
         "since": since,
+        "measured_since": costs.measured_since,
+        "backfilled_days": sum(1 for v in stored.values() if v.get("source") is not None),
+        "can_backfill": bool(costs.import_counters and costs.export_counters),
+        "defaults": {"solar_entity": costs.solar_entity, "price_entity": costs.price_entity},
         "saldering_until": tariffs.saldering_until.isoformat() if tariffs.saldering_until > today else None,
     }
 
@@ -598,3 +610,50 @@ def ws_plan_check(hass: HomeAssistant, connection: ActiveConnection, msg: dict[s
         connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
         return
     connection.send_result(msg["id"], entry.runtime_data.costs.plan_check(msg["days"]))
+
+
+@websocket_command(
+    {
+        vol.Required("type"): "zephyr/savings/backfill",
+        vol.Optional("clear", default=False): bool,
+        vol.Optional("first"): str,
+        vol.Optional("charge_entity"): str,
+        vol.Optional("discharge_entity"): str,
+        vol.Optional("solar_entity"): vol.Any(None, str),
+        vol.Optional("price_entity"): vol.Any(None, str),
+    }
+)
+@require_admin
+@async_response
+async def ws_savings_backfill(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Work out the savings before the cost log from hourly statistics (or remove that again)."""
+    from datetime import date as _date
+
+    entry = _entry(hass)
+    if entry is None or entry.runtime_data.costs is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    costs = entry.runtime_data.costs
+    if msg["clear"]:
+        connection.send_result(msg["id"], {"ok": True, "removed": await costs.async_clear_backfill()})
+        return
+    if not (costs.import_counters and costs.export_counters):
+        connection.send_result(msg["id"], {"ok": False, "error": "no_counters"})
+        return
+    try:
+        first = _date.fromisoformat(msg.get("first", ""))
+    except ValueError:
+        connection.send_result(msg["id"], {"ok": False, "error": "bad_date"})
+        return
+    entities = {k: msg.get(k) for k in ("charge_entity", "discharge_entity", "solar_entity", "price_entity")}
+    if not entities["charge_entity"] or not entities["discharge_entity"]:
+        connection.send_result(msg["id"], {"ok": False, "error": "no_battery_counters"})
+        return
+    missing = [e for e in entities.values() if e and hass.states.get(e) is None]
+    if missing:
+        connection.send_result(msg["id"], {"ok": False, "error": "entity_missing", "entities": missing})
+        return
+    result = await costs.async_backfill(
+        first, entities["charge_entity"], entities["discharge_entity"], entities["solar_entity"], entities["price_entity"]
+    )
+    connection.send_result(msg["id"], {"ok": True, **result})

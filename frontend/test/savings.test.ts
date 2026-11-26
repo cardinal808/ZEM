@@ -21,5 +21,8 @@ describe("savings", () => {
   it("has the same texts in both languages", () => {
     expect(Object.keys(nl.savings).sort()).toEqual(Object.keys(en.savings).sort());
     expect(nl.menu).toHaveProperty("savings");
+    // Every error of zephyr/savings/backfill has a sentence.
+    for (const code of ["no_counters", "no_battery_counters", "entity_missing", "bad_date", "no_connection"])
+      expect(nl.savings).toHaveProperty(`bf_err_${code}`);
   });
 });

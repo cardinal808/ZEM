@@ -34,8 +34,7 @@
     "title": "Nu",
     "waiting": "Wacht op de eerste meting…",
     "grid": "Net {value}",
-    "shadow_note": "Zo zou ZEPHYR het doen (schaduwmodus).",
-    "battery_title": "Hoe vol de accu nu is"
+    "shadow_note": "Zo zou ZEPHYR het doen (schaduwmodus)."
   },
   "battery": {
     "title": "Accu",
@@ -585,6 +584,30 @@
     "ps_today": "Vandaag",
     "ps_week": "Week",
     "ps_month": "Maand",
-    "ps_year": "Jaar"
+    "ps_year": "Jaar",
+    "note_hourly": "Dagen vóór {date} zijn achteraf teruggerekend uit de uurstatistiek van HA, met dezelfde rekenwijze maar per uur in plaats van per kwartier: iets minder precies.",
+    "day_hourly": "teruggerekend per uur",
+    "leg_hourly": "Teruggerekend per uur",
+    "optional": "optioneel",
+    "choose_entity": "Kies of typ een entiteit",
+    "bf_title": "Eerdere dagen terugrekenen",
+    "bf_intro": "Het kostenlogboek meet sinds {date}. Voor de dagen daarvoor rekent ZEPHYR de besparing terug uit de uurstatistiek van Home Assistant: je P1-tellers (uit Instellingen), de laad- en leverteller van de accu, zon en prijs.",
+    "bf_first": "Vanaf",
+    "bf_charge": "Accu geladen (energieteller, kWh)",
+    "bf_discharge": "Accu geleverd (energieteller, kWh)",
+    "bf_solar": "Zon (energieteller)",
+    "bf_price": "Prijssensor met statistiek",
+    "bf_help": "Kies de tellers van de set uit de periode vóór ZEPHYR, bijvoorbeeld die van de vorige integratie. Uren zonder tellerstand tellen niet mee; uren zonder prijs krijgen geen bedrag. Nog een keer terugrekenen vervangt de vorige keer.",
+    "bf_run": "Terugrekenen",
+    "bf_busy": "Bezig…",
+    "bf_clear": "Teruggerekende dagen weghalen ({n})",
+    "bf_done": "{n} dagen teruggerekend ({first} – {last}). {skipped} uur zonder tellerstand, {unpriced} uur zonder prijs.",
+    "bf_nothing": "Geen dagen om terug te rekenen in deze periode.",
+    "bf_removed": "{n} teruggerekende dagen weggehaald.",
+    "bf_err_no_counters": "Kies eerst de P1-tellers voor afname en teruglevering in Instellingen → Bronnen.",
+    "bf_err_no_battery_counters": "Kies de laad- en leverteller van de accu.",
+    "bf_err_entity_missing": "Niet gevonden: {entities}.",
+    "bf_err_bad_date": "Ongeldige datum.",
+    "bf_err_no_connection": "Geen verbinding met Home Assistant."
   }
 }

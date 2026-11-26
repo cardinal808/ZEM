@@ -34,8 +34,7 @@
     "title": "Now",
     "waiting": "Waiting for the first measurement…",
     "grid": "Grid {value}",
-    "shadow_note": "What ZEPHYR would do (shadow mode).",
-    "battery_title": "How full the battery is now"
+    "shadow_note": "What ZEPHYR would do (shadow mode)."
   },
   "battery": {
     "title": "Battery",
@@ -585,6 +584,30 @@
     "ps_today": "Today",
     "ps_week": "Week",
     "ps_month": "Month",
-    "ps_year": "Year"
+    "ps_year": "Year",
+    "note_hourly": "Days before {date} were worked out afterwards from HA's hourly statistics, with the same method but per hour instead of per quarter: a little less precise.",
+    "day_hourly": "worked out per hour",
+    "leg_hourly": "Worked out per hour",
+    "optional": "optional",
+    "choose_entity": "Choose or type an entity",
+    "bf_title": "Work out earlier days",
+    "bf_intro": "The cost log measures since {date}. For the days before, ZEPHYR works out the savings from Home Assistant's hourly statistics: your P1 counters (from Settings), the battery's charge and discharge counters, solar and price.",
+    "bf_first": "From",
+    "bf_charge": "Battery charged (energy counter, kWh)",
+    "bf_discharge": "Battery delivered (energy counter, kWh)",
+    "bf_solar": "Solar (energy counter)",
+    "bf_price": "Price sensor with statistics",
+    "bf_help": "Choose the set's counters from the period before ZEPHYR, for example those of the previous integration. Hours without a counter reading do not count; hours without a price get no amount. Working out again replaces the previous run.",
+    "bf_run": "Work out",
+    "bf_busy": "Working…",
+    "bf_clear": "Remove worked-out days ({n})",
+    "bf_done": "{n} days worked out ({first} – {last}). {skipped} hours without a counter reading, {unpriced} hours without a price.",
+    "bf_nothing": "No days to work out in this period.",
+    "bf_removed": "{n} worked-out days removed.",
+    "bf_err_no_counters": "First choose the P1 counters for import and export in Settings → Sources.",
+    "bf_err_no_battery_counters": "Choose the battery's charge and discharge counters.",
+    "bf_err_entity_missing": "Not found: {entities}.",
+    "bf_err_bad_date": "Invalid date.",
+    "bf_err_no_connection": "No connection with Home Assistant."
   }
 }
