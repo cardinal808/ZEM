@@ -2,13 +2,15 @@
 
 From local midnight today to the end of the plan's horizon: the price per
 quarter (market, all-in buy and sell) and, from the running quarter on, the
-planned action and the expected state of charge. Quarters before now carry
-only the price (the cost log fills in what happened, UI-3).
+planned action and the expected state of charge. Quarters before now show
+what happened, from the cost log (UI-3): the action derived from the energy
+that went in and out of the battery, the state of charge at the end, and the
+prices as they were then.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta, tzinfo
 from typing import Any
 
@@ -20,11 +22,35 @@ SellFn = Callable[[datetime, float, bool], float]
 DaylightFn = Callable[[datetime], bool]
 
 
+MIN_KWH = 0.05
+"""Less energy in or out of the battery in a quarter counts as holding (≈ 200 W)."""
+
+
+def past_action(record: Mapping[str, Any]) -> str:
+    """What the battery did in a closed cost quarter: charge, deliver, export or hold."""
+    charged = float(record.get("charge_kwh") or 0.0)
+    delivered = float(record.get("discharge_kwh") or 0.0)
+    if charged >= MIN_KWH and charged >= delivered:
+        return "charge"
+    if delivered >= MIN_KWH:
+        exported = float(record.get("export_kwh") or 0.0)
+        return "export" if record.get("plan_action") == "X" and exported >= MIN_KWH else "deliver"
+    return "hold"
+
+
 def _price(prices: Sequence[PriceSlot], moment: datetime) -> float | None:
     for p in prices:
         if p.start <= moment < p.end:
             return p.price
     return None
+
+
+def _priced(buy: BuyFn, t: datetime, market: float | None) -> float | None:
+    return None if market is None else round(buy(t, market), 4)
+
+
+def _priced_sell(sell: SellFn, daylight: DaylightFn, t: datetime, market: float | None) -> float | None:
+    return None if market is None else round(sell(t, market, daylight(t)), 4)
 
 
 def local_midnight(now: datetime, tz: tzinfo, days: int = 0) -> datetime:
@@ -42,6 +68,7 @@ def plan_quarters(
     buy: BuyFn,
     sell: SellFn,
     daylight: DaylightFn,
+    history: Mapping[datetime, Mapping[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Quarters from midnight today to the end of tomorrow (local), in UTC steps (DST: 92 or 100 per day)."""
     start = local_midnight(now, tz)
@@ -70,8 +97,28 @@ def plan_quarters(
     t = start
     while t < end_utc:
         item: dict[str, Any] = {"start": t.isoformat(), "past": t < current}
+        record = history.get(t) if history is not None and t < current else None
         if t in planned:
             item.update(planned[t])
+        elif record is not None:
+            market = record.get("market")
+            item.update(
+                {
+                    "market": market,
+                    "buy": record.get("buy") if record.get("buy") is not None else _priced(buy, t, market),
+                    "sell": record.get("sell") if record.get("sell") is not None else _priced_sell(sell, daylight, t, market),
+                    "action": past_action(record),
+                    "soc": record.get("soc"),
+                    "solar": record.get("solar_kwh"),
+                    "load": record.get("house_kwh"),
+                    "indicative": False,
+                }
+            )
+            if item["market"] is None:
+                found = _price(prices, t)
+                item["market"] = None if found is None else round(found, 5)
+                item["buy"] = _priced(buy, t, found)
+                item["sell"] = _priced_sell(sell, daylight, t, found)
         else:
             market = _price(prices, t)
             item.update(
@@ -102,6 +149,7 @@ def plan_view(
     daylight: DaylightFn,
     tomorrow_known_at: datetime | None,
     reason: dict[str, str] | None,
+    history: Mapping[datetime, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Everything the chart *Prijzen en plan* and the cards *Blokken* and *Waarom* need."""
     bat = outcome.battery if outcome is not None else None
@@ -112,6 +160,6 @@ def plan_view(
         "reason": reason,
         "soc_now": None if bat is None else round(bat.soc, 1),
         "tomorrow_known_at": None if tomorrow_known_at is None else tomorrow_known_at.astimezone(UTC).isoformat(),
-        "quarters": plan_quarters(outcome, prices, now, tz, buy=buy, sell=sell, daylight=daylight),
+        "quarters": plan_quarters(outcome, prices, now, tz, buy=buy, sell=sell, daylight=daylight, history=history),
         "blocks": [] if outcome is None else [b.as_dict() for b in outcome.blocks],
     }

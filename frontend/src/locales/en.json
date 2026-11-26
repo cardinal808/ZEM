@@ -98,9 +98,14 @@
     "aria": "Prices per quarter; lowest {low} at {low_time}, highest {high} at {high_time}. Arrow keys show a quarter.",
     "legend_price": "Price per quarter",
     "legend_soc": "SOC expected",
-    "legend_past": "Lighter = past",
+    "legend_past": "Lighter = past (what actually happened)",
     "mode_note": "This is what the plan would be. ZEPHYR now follows the mode {mode}.",
-    "shadow_note": "ZEPHYR calculates this plan but does not control the battery (shadow mode)."
+    "shadow_note": "ZEPHYR calculates this plan but does not control the battery (shadow mode).",
+    "legend_soc_past": "SOC measured",
+    "actual": "actual",
+    "no_record": "Not recorded (HA was off)",
+    "tip_soc_past": "SOC after this quarter {soc} (measured)",
+    "tip_energy_past": "Solar {solar} · house {load}"
   },
   "blocks": {
     "title": "Blocks",

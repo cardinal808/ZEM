@@ -266,6 +266,7 @@ class CostRecorder:
             self.pools,
             _days_in_month(local_start.date()),
         )
+        record["soc"] = None if totals.soc is None else round(totals.soc, 1)
         if self.runtime.planner is not None:
             record.update(self.runtime.planner.quarter_closed(start, record, self.solar_entity is not None))
         self._open(boundary)
@@ -281,6 +282,15 @@ class CostRecorder:
         for listener in list(self._listeners):
             listener()
         return record
+
+    def records_since(self, start: datetime) -> dict[datetime, dict[str, Any]]:
+        """Stored quarters of the current month from ``start`` on, by start time (UTC); for the panel."""
+        out: dict[datetime, dict[str, Any]] = {}
+        for record in self.current:
+            moment = dt_util.as_utc(datetime.fromisoformat(record["start"]))
+            if moment >= start:
+                out[moment] = record
+        return out
 
     def _main_data(self) -> dict[str, Any]:
         return {"days": self.days, "pools": self.pools.as_dict(), "counters": self.counters, "months": self.months}

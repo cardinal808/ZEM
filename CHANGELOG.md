@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.2 — Panel: what happened today (SPEC-ui §3.2, UI-3)
+- **Prices and plan before now** come from the cost log: the band under the chart shows what the battery actually did per quarter (charge, deliver, hold; export when the plan said X and energy went to the grid), lighter than the plan. Less than 0.05 kWh in or out of the battery counts as holding. A quarter without a record (HA was off) stays empty, with *Not recorded* in the tooltip.
+- **Measured SOC** as a solid line before now, joining the dashed expected line at *now*; broken where a quarter is missing. Prices before now as they were in the cost log (falls back to the price sensor).
+- **Cost log:** new field **`soc`** (state of charge at the end of the quarter, %), also as the last CSV column of `zephyr.export_costs`. Quarters recorded before this version have no SOC, so today's measured line starts at the update.
+- Tests: core (action from a cost quarter, past quarters from the log, gaps), HA (a closed quarter shows up in the panel's plan), frontend (measured SOC pieces).
+
 ### 0.8.1 — Panel: prices and plan (SPEC-ui §4.2, UI-2)
 - **Card *Prijzen en plan*** on the Plan screen, as approved in the design:
   - **Price line:** the all-in price now; today and tomorrow lowest–highest, mean and the times of the lowest and highest quarter; *known since hh:mm* for tomorrow, or *not known yet (usually around 13:00)*.

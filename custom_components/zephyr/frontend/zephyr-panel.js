@@ -29,11 +29,11 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: ee, getOwnPropertySymbols: te, getPrototypeOf: ne } = Object, f = globalThis, re = f.trustedTypes, ie = re ? re.emptyScript : "", ae = f.reactiveElementPolyfillSupport, p = (e, t) => e, m = {
+})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: ee, getPrototypeOf: te } = Object, p = globalThis, ne = p.trustedTypes, re = ne ? ne.emptyScript : "", ie = p.reactiveElementPolyfillSupport, m = (e, t) => e, h = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
-				e = e ? ie : null;
+				e = e ? re : null;
 				break;
 			case Object:
 			case Array: e = e == null ? e : JSON.stringify(e);
@@ -58,23 +58,23 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, h = (e, t) => !l(e, t), oe = {
+}, g = (e, t) => !l(e, t), ae = {
 	attribute: !0,
 	type: String,
-	converter: m,
+	converter: h,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: h
+	hasChanged: g
 };
-Symbol.metadata ??= Symbol("metadata"), f.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var g = class extends HTMLElement {
+Symbol.metadata ??= Symbol("metadata"), p.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+var _ = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = oe) {
+	static createProperty(e, t = ae) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && u(this.prototype, e, r);
@@ -100,17 +100,17 @@ var g = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? oe;
+		return this.elementProperties.get(e) ?? ae;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(p("elementProperties"))) return;
-		let e = ne(this);
+		if (this.hasOwnProperty(m("elementProperties"))) return;
+		let e = te(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(p("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(p("properties"))) {
-			let e = this.properties, t = [...ee(e), ...te(e)];
+		if (this.hasOwnProperty(m("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(m("properties"))) {
+			let e = this.properties, t = [...f(e), ...ee(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
 		let e = this[Symbol.metadata];
@@ -171,14 +171,14 @@ var g = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? m : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? h : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? m : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? h : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -187,7 +187,7 @@ var g = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? h)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? g)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -251,9 +251,9 @@ var g = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-g.elementStyles = [], g.shadowRootOptions = { mode: "open" }, g[p("elementProperties")] = /* @__PURE__ */ new Map(), g[p("finalized")] = /* @__PURE__ */ new Map(), ae?.({ ReactiveElement: g }), (f.reactiveElementVersions ??= []).push("2.1.2");
+_.elementStyles = [], _.shadowRootOptions = { mode: "open" }, _[m("elementProperties")] = /* @__PURE__ */ new Map(), _[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: _ }), (p.reactiveElementVersions ??= []).push("2.1.2");
 // node_modules/lit-html/lit-html.js
-var _ = globalThis, se = (e) => e, v = _.trustedTypes, ce = v ? v.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, le = "$lit$", y = `lit$${Math.random().toFixed(9).slice(2)}$`, ue = "?" + y, de = `<${ue}>`, b = document, x = () => b.createComment(""), S = (e) => e === null || typeof e != "object" && typeof e != "function", C = Array.isArray, fe = (e) => C(e) || typeof e?.[Symbol.iterator] == "function", w = "[ 	\n\f\r]", T = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, pe = /-->/g, me = />/g, E = RegExp(`>|${w}(?:([^\\s"'>=/]+)(${w}*=${w}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), he = /'/g, ge = /"/g, _e = /^(?:script|style|textarea|title)$/i, ve = (e) => (t, ...n) => ({
+var oe = globalThis, se = (e) => e, v = oe.trustedTypes, ce = v ? v.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, le = "$lit$", y = `lit$${Math.random().toFixed(9).slice(2)}$`, ue = "?" + y, de = `<${ue}>`, b = document, x = () => b.createComment(""), S = (e) => e === null || typeof e != "object" && typeof e != "function", C = Array.isArray, fe = (e) => C(e) || typeof e?.[Symbol.iterator] == "function", w = "[ 	\n\f\r]", T = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, pe = /-->/g, me = />/g, E = RegExp(`>|${w}(?:([^\\s"'>=/]+)(${w}*=${w}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), he = /'/g, ge = /"/g, _e = /^(?:script|style|textarea|title)$/i, ve = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
@@ -473,8 +473,8 @@ var Ce = class {
 	_$AI(e) {
 		M(this, e);
 	}
-}, Oe = _.litHtmlPolyfillSupport;
-Oe?.(j, N), (_.litHtmlVersions ??= []).push("3.3.3");
+}, Oe = oe.litHtmlPolyfillSupport;
+Oe?.(j, N), (oe.litHtmlVersions ??= []).push("3.3.3");
 var ke = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
@@ -482,7 +482,7 @@ var ke = (e, t, n) => {
 		r._$litPart$ = i = new N(t.insertBefore(x(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, F = globalThis, I = class extends g {
+}, F = globalThis, I = class extends _ {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -515,9 +515,9 @@ var je = (e) => (t, n) => {
 }, Me = {
 	attribute: !0,
 	type: String,
-	converter: m,
+	converter: h,
 	reflect: !1,
-	hasChanged: h
+	hasChanged: g
 }, Ne = (e = Me, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
@@ -715,9 +715,14 @@ var ze = {
 			aria: "Prijzen per kwartier; laagst {low} om {low_time}, hoogst {high} om {high_time}. Pijltjestoetsen tonen een kwartier.",
 			legend_price: "Prijs per kwartier",
 			legend_soc: "SOC verwacht",
-			legend_past: "Lichter = voorbij",
+			legend_past: "Lichter = voorbij (wat er echt gebeurde)",
 			mode_note: "Zo zou het plan zijn. ZEPHYR volgt nu de modus {mode}.",
-			shadow_note: "ZEPHYR rekent dit plan mee, maar stuurt de accu niet (schaduwmodus)."
+			shadow_note: "ZEPHYR rekent dit plan mee, maar stuurt de accu niet (schaduwmodus).",
+			legend_soc_past: "SOC gemeten",
+			actual: "werkelijk",
+			no_record: "Niet vastgelegd (HA stond uit)",
+			tip_soc_past: "SOC na dit kwartier {soc} (gemeten)",
+			tip_energy_past: "Zon {solar} · huis {load}"
 		},
 		blocks: {
 			title: "Blokken",
@@ -841,9 +846,14 @@ var ze = {
 			aria: "Prices per quarter; lowest {low} at {low_time}, highest {high} at {high_time}. Arrow keys show a quarter.",
 			legend_price: "Price per quarter",
 			legend_soc: "SOC expected",
-			legend_past: "Lighter = past",
+			legend_past: "Lighter = past (what actually happened)",
 			mode_note: "This is what the plan would be. ZEPHYR now follows the mode {mode}.",
-			shadow_note: "ZEPHYR calculates this plan but does not control the battery (shadow mode)."
+			shadow_note: "ZEPHYR calculates this plan but does not control the battery (shadow mode).",
+			legend_soc_past: "SOC measured",
+			actual: "actual",
+			no_record: "Not recorded (HA was off)",
+			tip_soc_past: "SOC after this quarter {soc} (measured)",
+			tip_energy_past: "Solar {solar} · house {load}"
 		},
 		blocks: {
 			title: "Blocks",
@@ -973,11 +983,17 @@ function qe(e, t) {
 	}), r.join(" ");
 }
 function Je(e, t) {
+	let n = Y(e), r = [], i = [];
+	return e.forEach((e, t) => {
+		e.past && (e.soc === null ? (i.length && r.push(i), i = []) : i.push(`${t + 1},${(100 - e.soc).toFixed(1)}`));
+	}), i.length && (n >= 0 && t !== null && i[i.length - 1].startsWith(`${n},`) && i.push(`${n},${(100 - t).toFixed(1)}`), r.push(i)), r.filter((e) => e.length > 1).map((e) => e.join(" "));
+}
+function Ye(e, t) {
 	let n = new Date(t).getTime();
 	return e.filter((e) => new Date(e.end).getTime() > n);
 }
 // src/theme.ts
-var Ye = o`
+var Xe = o`
   :host {
     --z-bg: #f4f5f2;
     --z-card: #ffffff;
@@ -1034,14 +1050,14 @@ function Z(e, t, n, r) {
 	return i > 3 && a && Object.defineProperty(t, n, a), a;
 }
 // src/prices-plan.ts
-var Xe = "zephyr.period", Ze = [
+var Ze = "zephyr.period", Qe = [
 	["today", "plan.today"],
 	["tomorrow", "plan.tomorrow"],
 	["both", "plan.both"]
 ];
-function Qe() {
+function $e() {
 	try {
-		let e = window.localStorage.getItem(Xe);
+		let e = window.localStorage.getItem(Ze);
 		return e === "tomorrow" || e === "both" ? e : "today";
 	} catch {
 		return "today";
@@ -1049,7 +1065,7 @@ function Qe() {
 }
 var Q = class extends I {
 	constructor(...e) {
-		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.narrow = !1, this.period = Qe(), this.sel = null, this.scrolledFor = "";
+		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.narrow = !1, this.period = $e(), this.sel = null, this.scrolledFor = "";
 	}
 	tr(e, t = {}) {
 		return Ve(this.uiLang, e, t);
@@ -1057,7 +1073,7 @@ var Q = class extends I {
 	pick(e) {
 		this.period = e, this.sel = null, this.scrolledFor = "";
 		try {
-			window.localStorage.setItem(Xe, e);
+			window.localStorage.setItem(Ze, e);
 		} catch {}
 	}
 	updated(e) {
@@ -1078,7 +1094,7 @@ var Q = class extends I {
       <div class="head">
         <h2>${this.tr("plan.title")} · ${this.tr(c)}</h2>
         <div class="tabs" role="group" aria-label=${this.tr("plan.period")}>
-          ${Ze.map(([e, t]) => D`<button
+          ${Qe.map(([e, t]) => D`<button
                 type="button"
                 class=${this.period === e ? "on" : ""}
                 aria-pressed=${this.period === e ? "true" : "false"}
@@ -1138,7 +1154,7 @@ var Q = class extends I {
 				kind: "plan.highest"
 			}));
 		}
-		let c = Ke(e, this.period === "both" ? 6 : 3, this.timeZone), l = this.sel !== null && this.sel < t ? this.sel : null, u = qe(e, this.view?.soc_now ?? null), d = n.lo < 0 ? (0 - n.lo) / (n.hi - n.lo) * 100 : null;
+		let c = Ke(e, this.period === "both" ? 6 : 3, this.timeZone), l = this.sel !== null && this.sel < t ? this.sel : null, u = qe(e, this.view?.soc_now ?? null), d = Je(e, this.view?.soc_now ?? null), f = n.lo < 0 ? (0 - n.lo) / (n.hi - n.lo) * 100 : null;
 		return D`<div class="scroll">
       <div class="chart ${t > 100 ? "wide" : ""}">
         <div class="axis left" aria-hidden="true">
@@ -1157,13 +1173,14 @@ var Q = class extends I {
         >
           <div class="grid" style="top:0"></div>
           <div class="grid" style="top:50%"></div>
-          ${d === null ? k : D`<div class="zero" style="bottom:${d}%"></div>`}
+          ${f === null ? k : D`<div class="zero" style="bottom:${f}%"></div>`}
           ${e.map((e, t) => {
 			if (e.buy === null) return k;
 			let a = Ge(e.buy, n);
 			return D`<div class=${`bar${e.past ? " past" : ""}${e.indicative ? " ind" : ""}${t === r ? " cur" : ""}${t === l ? " focus" : ""}`} style="left:${i(t)};width:${i(1)};bottom:${a.bottom}%;height:${a.height}%"></div>`;
 		})}
           <svg viewBox="0 0 ${t} 100" preserveAspectRatio="none" aria-hidden="true">
+            ${d.map((e) => ye`<polyline class="halo" points=${e}></polyline><polyline class="soc measured" points=${e}></polyline>`)}
             ${u ? ye`<polyline class="halo" points=${u}></polyline><polyline class="soc" points=${u}></polyline>` : k}
           </svg>
           ${o > 0 ? D`<div class="split" style="left:${i(o)}"></div>
@@ -1203,14 +1220,14 @@ var Q = class extends I {
 		e.preventDefault();
 	}
 	tooltip(e, t, n) {
-		let r = (t + .5) / n * 100, i = (r > 60 ? "right" : "left") == "left" ? `left:calc(${r}% + 10px)` : `right:calc(${100 - r}% + 10px)`, a = e.action ? this.tr(`action.${e.action}`) + (e.past ? "" : e.indicative ? ` (${this.tr("plan.indicative_short")})` : "") : null;
+		let r = (t + .5) / n * 100, i = (r > 60 ? "right" : "left") == "left" ? `left:calc(${r}% + 10px)` : `right:calc(${100 - r}% + 10px)`, a = e.action ? this.tr(`action.${e.action}`) + (e.past ? ` (${this.tr("plan.actual")})` : e.indicative ? ` (${this.tr("plan.indicative_short")})` : "") : e.past ? this.tr("plan.no_record") : null;
 		return D`<div class="tip" role="status" style=${i}>
       <strong>${U(e.start, this.locale, this.timeZone)} ${H(e.start, this.locale, this.timeZone)}</strong>
       ${e.buy === null ? D`<span>${this.tr("plan.unknown")}</span>` : D`<span>${this.tr("plan.tip_buy", { price: B(e.buy, this.locale) })}</span>
             <span>${this.tr("plan.tip_sell", { price: B(e.sell, this.locale) })}</span>`}
       ${a ? D`<span>${a}</span>` : k}
-      ${e.soc === null ? k : D`<span>${this.tr("plan.tip_soc", { soc: Le(e.soc, this.locale) })}</span>`}
-      ${e.solar !== null && e.load !== null ? D`<span>${this.tr("plan.tip_energy", {
+      ${e.soc === null ? k : D`<span>${this.tr(e.past ? "plan.tip_soc_past" : "plan.tip_soc", { soc: Le(e.soc, this.locale) })}</span>`}
+      ${e.solar !== null && e.load !== null ? D`<span>${this.tr(e.past ? "plan.tip_energy_past" : "plan.tip_energy", {
 			solar: V(e.solar, this.locale, 2),
 			load: V(e.load, this.locale, 2)
 		})}</span>` : k}
@@ -1230,6 +1247,7 @@ var Q = class extends I {
 		return D`<div class="legend">
       ${e("var(--z-bar)", "plan.legend_price")} ${e(X("charge"), "action.charge")} ${e(X("deliver"), "action.deliver")}
       ${e(X("hold"), "action.hold")} ${e(X("export"), "action.export")}
+      <span class="li"><span class="line solid"></span>${this.tr("plan.legend_soc_past")}</span>
       <span class="li"><span class="line"></span>${this.tr("plan.legend_soc")}</span>
       <span class="li">${this.tr("plan.legend_past")}</span>
     </div>`;
@@ -1444,6 +1462,10 @@ var Q = class extends I {
         stroke-width: 3;
         stroke-dasharray: 6 5;
       }
+      .soc.measured {
+        stroke-dasharray: none;
+        opacity: 0.7;
+      }
       .split {
         position: absolute;
         top: -20px;
@@ -1557,6 +1579,10 @@ var Q = class extends I {
         border-top: 3px dashed var(--z-text);
         display: inline-block;
       }
+      .line.solid {
+        border-top-style: solid;
+        opacity: 0.7;
+      }
       @media (max-width: 700px) {
         .card {
           padding: 16px;
@@ -1574,7 +1600,7 @@ var Q = class extends I {
 };
 Z([L({ attribute: !1 })], Q.prototype, "view", void 0), Z([L({ attribute: !1 })], Q.prototype, "uiLang", void 0), Z([L()], Q.prototype, "locale", void 0), Z([L()], Q.prototype, "timeZone", void 0), Z([L({ type: Boolean })], Q.prototype, "narrow", void 0), Z([R()], Q.prototype, "period", void 0), Z([R()], Q.prototype, "sel", void 0), Q = Z([je("zephyr-prices-plan")], Q);
 // src/zephyr-panel.ts
-var $e = "/zephyr_static", et = [
+var et = "/zephyr_static", tt = [
 	[
 		"Inter",
 		400,
@@ -1596,11 +1622,11 @@ var $e = "/zephyr_static", et = [
 		"space-grotesk-latin-700-normal.woff2"
 	]
 ];
-function tt(e) {
+function nt(e) {
 	let t = "zephyr-fonts";
 	if (document.getElementById(t)) return;
 	let n = document.createElement("style");
-	n.id = t, n.textContent = et.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
+	n.id = t, n.textContent = tt.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
 }
 var $ = class extends I {
 	constructor(...e) {
@@ -1611,7 +1637,7 @@ var $ = class extends I {
 		};
 	}
 	get base() {
-		return this.panel?.config?.static ?? $e;
+		return this.panel?.config?.static ?? et;
 	}
 	get uiLang() {
 		return Be(this.hass?.locale?.language ?? this.hass?.language);
@@ -1626,7 +1652,7 @@ var $ = class extends I {
 		return Ve(this.uiLang, e, t);
 	}
 	connectedCallback() {
-		super.connectedCallback(), tt(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
+		super.connectedCallback(), nt(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), window.clearInterval(this.clockTimer), window.clearInterval(this.planTimer), window.clearTimeout(this.retryTimer), this.watch(void 0), this.stop();
@@ -1765,7 +1791,7 @@ var $ = class extends I {
 		return `${i ? "" : r}${t}–${i && !a ? r : ""}${n}`;
 	}
 	renderBlocks(e) {
-		let t = Je(e.blocks, new Date(this.clockMs).toISOString()).slice(0, 10);
+		let t = Ye(e.blocks, new Date(this.clockMs).toISOString()).slice(0, 10);
 		return D`<article class="card">
       <h2>${this.tr("blocks.title")}</h2>
       ${t.length ? D`<ul class="blocks">
@@ -1784,7 +1810,7 @@ var $ = class extends I {
 	renderWhy(e) {
 		let t = [];
 		e.reason && t.push(e.reason[this.uiLang]);
-		let n = Je(e.blocks, new Date(this.clockMs).toISOString()).filter((e) => !e.indicative), r = n.filter((e) => e.action === "charge").sort((e, t) => e.price - t.price)[0];
+		let n = Ye(e.blocks, new Date(this.clockMs).toISOString()).filter((e) => !e.indicative), r = n.filter((e) => e.action === "charge").sort((e, t) => e.price - t.price)[0];
 		r ? t.push(this.tr("why.cheapest", {
 			time: this.range(r),
 			price: B(r.price, this.locale)
@@ -1902,7 +1928,7 @@ var $ = class extends I {
 		return this.tr(`next.${t.action}`, n);
 	}
 	static {
-		this.styles = [Ye, o`
+		this.styles = [Xe, o`
       :host {
         display: block;
         min-height: 100%;

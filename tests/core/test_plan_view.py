@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from zephyr_core.forecast_plan import QUARTER, BatteryInput, build_horizon, horizon_markets, make_plan, market_slots
-from zephyr_core.plan_view import local_midnight, plan_quarters, plan_view
+from zephyr_core.plan_view import local_midnight, past_action, plan_quarters, plan_view
 from zephyr_core.planner import PlannerSettings
 
 TZ = ZoneInfo("Europe/Amsterdam")
@@ -110,3 +110,46 @@ def test_view_carries_blocks_reason_and_known_at() -> None:
     assert view["reason"] == {"nl": "x", "en": "y"}
     assert view["blocks"] and {"action", "start", "end", "kwh", "price", "indicative"} <= set(view["blocks"][0])
     assert any(b["action"] == "charge" for b in view["blocks"])  # cheap night tomorrow
+
+
+@pytest.mark.parametrize(
+    ("record", "action"),
+    [
+        ({"charge_kwh": 0.6, "discharge_kwh": 0.0}, "charge"),
+        ({"charge_kwh": 0.0, "discharge_kwh": 0.2}, "deliver"),
+        ({"charge_kwh": 0.0, "discharge_kwh": 0.6, "export_kwh": 0.4, "plan_action": "X"}, "export"),
+        ({"charge_kwh": 0.0, "discharge_kwh": 0.6, "export_kwh": 0.4, "plan_action": "N"}, "deliver"),
+        ({"charge_kwh": 0.01, "discharge_kwh": 0.02}, "hold"),
+        ({"charge_kwh": None, "discharge_kwh": None}, "hold"),
+    ],
+)
+def test_past_action_from_the_cost_log(record: dict[str, Any], action: str) -> None:
+    assert past_action(record) == action
+
+
+def test_past_quarters_from_the_cost_log() -> None:
+    today = datetime(2026, 11, 26, tzinfo=TZ)
+    prices = market_slots({"raw_today": _raw(today, [0.2] * 24), "raw_tomorrow": []})
+    now = today + timedelta(hours=1, minutes=5)
+    q0 = today.astimezone(UTC)
+    history = {
+        q0: {
+            "market": 0.18,
+            "buy": 0.31,
+            "sell": 0.18,
+            "charge_kwh": 0.6,
+            "discharge_kwh": 0.0,
+            "soc": 52.5,
+            "solar_kwh": 0.0,
+            "house_kwh": 0.1,
+        },
+        q0 + QUARTER: {"market": None, "buy": None, "sell": None, "charge_kwh": 0.0, "discharge_kwh": 0.2, "soc": 51.0},
+        q0 + 5 * QUARTER: {"charge_kwh": 0.0, "discharge_kwh": 0.2, "soc": 40.0},  # not past yet: ignored
+    }
+    quarters = plan_quarters(None, prices, now, TZ, **_fns(), history=history)
+    first, second, third = quarters[0], quarters[1], quarters[2]
+    assert (first["action"], first["soc"], first["buy"], first["load"]) == ("charge", 52.5, 0.31, 0.1)
+    assert second["action"] == "deliver" and second["soc"] == 51.0
+    assert second["market"] == pytest.approx(0.2) and second["buy"] == pytest.approx(0.32)  # price from the sensor
+    assert third["action"] is None  # no record (HA was off)
+    assert quarters[4]["past"] is False and quarters[5]["action"] is None
