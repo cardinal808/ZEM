@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.29 — Recharge below the minimum starts right below min_SOC
+- **Recharging below the minimum** (self-consumption in standby, SPEC-basis §10) started only at min_SOC − 1: with min_SOC 10 % and a set that reports whole percents, at 8 %. It now starts as soon as the SOC is below min_SOC (9 % with 10 %) and goes on up to min_SOC, with the same gentle power (default 300 W). Delivering still waits until min_SOC + 2 (hysteresis), so the battery does not swing around the minimum.
+- Tests: recharge at 9 % and 5 % with min_SOC 10 %, none at 10 %.
+
 ### 0.8.27 — Own energy counters per set (SPEC-tellers T1)
 - **New sensors** (kWh, `total_increasing`, usable in the Energy dashboard): per set `sensor.zephyr_set_<n>_energy_charged` and `_energy_discharged` (from `outputPackPower` / `packInputPower`, AC), `_solar_energy` (only for sets with PV inputs); for the installation `sensor.zephyr_energy_charged`, `_energy_discharged` and `_solar_energy`. Diagnostic, disabled by default: off-grid, battery side (DC) charged/discharged, from the grid, to the house.
 - ZEPHYR integrates the powers of every read itself (zenSDK has no energy counters). A read that fails keeps the last power for **60 s** after the last good report; after that a **gap** starts, recorded (start, end, powers, energy in the packs) but not yet filled (T2). The installation totals add the increases of the sets, so a set that disappears or is replaced never makes them drop.
