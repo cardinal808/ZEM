@@ -437,5 +437,77 @@
     "allowed": "Air conditioner {mode} · may use the battery",
     "estimate": "estimate",
     "estimate_more": "Estimated from the air conditioner's energy counter (steps of {kwh} kWh). Between two steps the estimate drops by itself; ZEPHYR sees a stop at once from the climate entity."
+  },
+  "control": {
+    "mode": "Mode",
+    "fast": "Fast charge or discharge",
+    "fast_charge": "Fast charge",
+    "fast_discharge": "Fast discharge",
+    "stop": "Stop, back to {mode}",
+    "running_fast_charge": "Fast charging runs up to the upper limit.",
+    "running_fast_discharge": "Fast discharging runs down to the lower limit.",
+    "shadow_note": "Shadow mode: ZEPHYR computes but does not control.",
+    "live_title": "Turn on live control",
+    "live_text": "ZEPHYR will really control the battery. You can always turn it off with the same button.",
+    "live_blocked": "Live control is not possible now:",
+    "live_start": "Control live",
+    "cancel": "Cancel",
+    "failed": "Did not work: {error}",
+    "close": "Close",
+    "blocker": {
+      "no_p1": "No P1 sensor chosen.",
+      "p1_silent": "The P1 sensor is not reporting.",
+      "no_sets": "No sets.",
+      "offline": "Set {set} is offline.",
+      "serial": "Set {set} reports a different serial number.",
+      "fault": "Set {set} reports an error.",
+      "test": "A write test is running."
+    }
+  },
+  "diag": {
+    "title": "Diagnostics",
+    "intro": "For an issue on GitHub or help on the forum: download the diagnostics. Serial numbers and IP addresses are left out; your entity names are included.",
+    "download": "Download diagnostics",
+    "export": "Export cost log",
+    "busy": "Working…",
+    "exported": "Saved in {path} ({rows} quarters).",
+    "failed": "Did not work: {error}",
+    "counters": "Writes, last 24 hours",
+    "set": "Set",
+    "ram": "Power",
+    "flash": "Flash",
+    "relay": "Relay",
+    "failed_col": "Failed",
+    "counters_note": "Power commands go to working memory; standby and charge limits to flash (as few as possible). Relay counts the switches between delivering, charging and off.",
+    "last_error": "Last error: {error}",
+    "no_sets": "No sets.",
+    "events": "Events",
+    "refresh": "Refresh",
+    "no_events": "No events since the last start.",
+    "kind": {
+      "control": "Control",
+      "mode": "Mode",
+      "live": "Live",
+      "airco": "Air con",
+      "write": "Flash",
+      "warning": "Warning"
+    },
+    "event": {
+      "reason_code": "Reason: {code}",
+      "mode": "Mode: {mode}",
+      "live": "Live control on",
+      "shadow": "Live control off (shadow mode)",
+      "test": "Write test {power} W",
+      "test_end": "Write test finished",
+      "second_controller": "Something else controls the set too (second controller)",
+      "excluded_on": "Air conditioner outside the battery: {kw} kW",
+      "excluded_off": "Air conditioner no longer outside the battery",
+      "flash": "Set {set}: {cause} written to flash"
+    },
+    "cause": {
+      "standby": "standby",
+      "soc_limits": "charge limits",
+      "test": "write test"
+    }
   }
 }

@@ -277,6 +277,11 @@ class ZephyrControl:
     def _on_tick(self, _now: datetime) -> None:
         self.async_step()  # also when P1 is silent: staleness and timers
 
+    @property
+    def previous_mode(self) -> Mode:
+        """The mode a fast mode returns to."""
+        return self._previous_mode
+
     @callback
     def async_set_mode(self, mode: Mode) -> None:
         if mode in (Mode.FAST_CHARGE, Mode.FAST_DISCHARGE) and self.engine.mode not in (Mode.FAST_CHARGE, Mode.FAST_DISCHARGE):
@@ -476,6 +481,7 @@ class ZephyrControl:
                     ),
                     "setpoint": result.setpoint,
                     "reason": result.reason.code.value,
+                    **({"reason_params": result.reason.params} if result.reason.params else {}),
                     **({"excluded": round(self.engine.excluded_now)} if self.engine.excluded_now else {}),
                     "commands": [{"set": self.runtime.coordinators[c.key].number, "kind": c.kind, **c.props} for c in result.commands],
                     "sent": not self.shadow,
