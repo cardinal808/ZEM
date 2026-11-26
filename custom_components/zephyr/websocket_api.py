@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Final
 
 import voluptuous as vol
@@ -22,8 +22,11 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_PLAN_BUFFER, DOMAIN
+from .core.device_table import pack_info
 from .core.engine import Mode
 from .core.forecast_plan import ACTION_KEYS, PlanOutcome, reason
+from .core.packs import PackHistory, cell_delta_mv, cell_status
+from .core.plan_view import past_action
 
 if TYPE_CHECKING:
     from . import ZephyrConfigEntry
@@ -36,6 +39,7 @@ PLAN_MODES: Final = [Mode.STANDBY, Mode.ZERO_METER, Mode.FAST_CHARGE, Mode.FAST_
 def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_subscribe)
     async_register_command(hass, ws_plan)
+    async_register_command(hass, ws_sets)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -193,3 +197,93 @@ def ws_plan(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, An
         connection.send_error(msg["id"], "no_price_source", "No price sensor chosen in the options")
         return
     connection.send_result(msg["id"], planner.view())
+
+
+def _activity(entry: ZephyrConfigEntry) -> list[dict[str, Any]]:
+    """What the battery did in the last 24 hours, from the cost log, as segments (start, end, action)."""
+    costs = entry.runtime_data.costs
+    if costs is None:
+        return []
+    since = dt_util.utcnow() - timedelta(hours=24)
+    segments: list[dict[str, Any]] = []
+    for start, record in sorted(costs.records_since(since).items()):
+        action = past_action(record)
+        end = start + timedelta(minutes=15)
+        last = segments[-1] if segments else None
+        if last is not None and last["action"] == action and last["end"] == end - timedelta(minutes=15):
+            last["end"] = end
+        else:
+            segments.append({"action": action, "start": start, "end": end})
+    return [{**s, "start": _iso(s["start"]), "end": _iso(s["end"])} for s in segments]
+
+
+def sets_view(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
+    """Sets with their packs, cell balance and history (SPEC-ui §3.3). No serial numbers (B18)."""
+    runtime = entry.runtime_data
+    control = runtime.control
+    assert control is not None
+    counters = control.engine.counters(time.monotonic())
+    history = runtime.packs.history if runtime.packs is not None else PackHistory()
+    today = dt_util.now().date()
+    sets: list[dict[str, Any]] = []
+    for key, coordinator in sorted(runtime.coordinators.items(), key=lambda kv: kv[1].number):
+        data = coordinator.data
+        report = data.report if data is not None else None
+        capacity = data.capacity.capacity_kwh if data is not None and data.capacity is not None else None
+        packs: list[dict[str, Any]] = []
+        names: dict[str, int] = {}
+        for index, pack in enumerate(report.packs if report is not None else ()):
+            info = pack_info(report.product, pack.pack_type, pack.serial) if report is not None else None
+            model = info.name if info is not None else None
+            names[model or "?"] = names.get(model or "?", 0) + 1
+            delta = cell_delta_mv(pack.cell_voltage_min, pack.cell_voltage_max)
+            packs.append(
+                {
+                    "index": index,
+                    "model": model,
+                    "built_in": bool(model and model.startswith("Built-in")),
+                    "number": names[model or "?"],
+                    "capacity_kwh": None if info is None else info.capacity_kwh,
+                    "soc": pack.soc,
+                    "energy_kwh": None if info is None else round(info.capacity_kwh * pack.soc / 100, 2),
+                    "power_w": round(pack.power),
+                    "temp": pack.max_temperature,
+                    "cell_min_v": pack.cell_voltage_min,
+                    "cell_max_v": pack.cell_voltage_max,
+                    "cell_delta_mv": delta,
+                    "cell_status": cell_status(delta, pack.soc),
+                    "history": history.last_days(pack.serial, today),
+                }
+            )
+        relays = counters.get(key, {}).get("relay_24h")
+        sets.append(
+            {
+                "id": key,
+                "number": coordinator.number,
+                "model": coordinator.model_name,
+                "online": bool(data is not None and data.online),
+                "status": None if data is None else str(data.status),
+                "soc": None if report is None else report.soc,
+                "capacity_kwh": capacity,
+                "energy_kwh": None if report is None or capacity is None else round(capacity * report.soc / 100, 2),
+                "power_w": None if report is None else round(report.battery_power_ac),
+                "solar_w": None if report is None else round(report.solar_power),
+                "enclosure_temp": None if report is None else report.enclosure_temperature,
+                "limits": None if report is None else {"min": report.min_soc, "max": report.max_soc},
+                "last_full": None if report is None else history.sets_full.get(report.serial),
+                "relays_24h": relays,
+                "packs": packs,
+            }
+        )
+    return {"now": dt_util.utcnow().isoformat(), "sets": sets, "activity_24h": _activity(entry)}
+
+
+@websocket_command({vol.Required("type"): "zephyr/sets"})
+@callback
+def ws_sets(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Sets and their batteries for the screen Accu/Sets (SPEC-ui §4.3)."""
+    entry = _entry(hass)
+    if entry is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    connection.send_result(msg["id"], sets_view(hass, entry))

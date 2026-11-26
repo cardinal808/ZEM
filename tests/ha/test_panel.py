@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Generator
 from datetime import datetime, timedelta
 from typing import Any
@@ -226,3 +227,38 @@ async def test_plan_command_without_price_source(hass: HomeAssistant, fake_sets:
     msg = await client.receive_json()
     assert msg["success"] is False
     assert msg["error"]["code"] == "no_price_source"
+
+
+async def test_sets_command(hass: HomeAssistant, fake_sets: FakeSets, hass_ws_client: WebSocketGenerator) -> None:
+    """zephyr/sets: one set with its four packs, cell balance and history, no serial numbers (UI-4)."""
+    entry = await _install_with_p1(hass, fake_sets)
+    for coordinator in entry.runtime_data.coordinators.values():
+        await coordinator.async_refresh()  # a report after the pack recorder started
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "zephyr/sets"})
+    msg = await client.receive_json()
+    assert msg["success"] is True
+    view = msg["result"]
+    assert len(view["sets"]) == 1
+    s = view["sets"][0]
+    assert s["number"] == 1 and s["online"] is True
+    assert s["capacity_kwh"] == pytest.approx(11.04)
+    assert s["limits"] == {"min": 10.0, "max": 100.0} or s["limits"]["min"] is not None
+    packs = s["packs"]
+    assert [p["built_in"] for p in packs] == [True, False, False, False]
+    assert [p["model"] for p in packs[1:]] == ["AB3000L"] * 3
+    assert [p["number"] for p in packs] == [1, 1, 2, 3]
+    built_in, first = packs[0], packs[1]
+    assert built_in["capacity_kwh"] == pytest.approx(2.40)
+    assert built_in["cell_delta_mv"] == 10 and built_in["cell_status"] == "good"  # 3.27–3.28 V at 53 %
+    assert first["capacity_kwh"] == pytest.approx(2.88)
+    assert first["cell_delta_mv"] == 0
+    assert first["temp"] == pytest.approx(12.0)
+    assert first["energy_kwh"] == pytest.approx(2.88 * 0.54, abs=0.01)
+    assert len(first["history"]) == 7
+    assert built_in["history"][-1]["max_mv"] == 10  # recorded by the pack recorder
+    assert first["history"][-1]["max_mv"] == 0
+    text = json.dumps(view)
+    for serial in {p.serial for p in entry.runtime_data.coordinators[s["id"]].data.report.packs}:
+        assert serial not in text
+    assert entry.runtime_data.coordinators[s["id"]].data.report.serial not in text

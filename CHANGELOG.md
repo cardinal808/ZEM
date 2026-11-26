@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.4 — Panel: screen *Accu* / *Sets* with the batteries in the set (SPEC-ui §4.3, UI-4)
+- **Screen *Accu*** (one set; *Sets* with more): a summary (batteries online, SOC spread, warmest battery, largest cell difference, one sentence *in short*), the **set card** (status, SOC with limits, kWh, power, inverter temperature, last 100 %, relay switches in 24 h, limits in the set, *+ Add set* to the integration page) and **Batteries in the set**: per battery SOC, kWh, power on the battery side, temperature, lowest–highest cell voltage and the **cell difference** with *Good* (≤ 30 mV), *Watch* (≤ 80 mV) or *High*.
+- **Cell difference only judged between 20 and 90 % SOC.** LiFePO4 cells spread out near full and empty (diagnostics 26-11: 120 mV on a full AB3000L); there the value is shown as *not judged*.
+- **Cell difference per day, last 7 days** per battery (highest judged value, ▲ on days the battery reached 100 %), and **what the set did in the last 24 hours** from the cost log.
+- **Websocket `zephyr/sets`** (no serial numbers, B18). New **pack history** (`core/packs.py`, `pack_recorder.py`): per battery and day the largest judged cell difference and whether it was full, 14 days in `zephyr.<entry>.packs`; when each set was last full.
+- The panel refreshes the screen every 10 s while it is open. Several sets are shown one below the other for now; the overview for 2–3 sets follows in UI-5.
+- Tests: core (cell difference, status window, history, pruning), HA (`zephyr/sets` with the four packs of the test set, no serials in the answer), frontend (pack names, summary).
+
 ### 0.8.3 — Planner: grid-charge threshold
 - **New option *Planner: grid-charge threshold*** (default **€0.01 per kWh**): charging from the grid must win at least this much per kWh before the planner plans it. It counts only in the planner's choice, not in the costs, and not for solar into the battery. Seen at a tester: 0.78 kWh charged from the grid at €0.51 at 10:30 for about a cent of gain from the solar bonus.
 - Backtest (1 Oct – 18 Nov 2026, learned consumption, Solcast, wear €0.03; costs incl. wear): €0 → 96.29 / 102.96, **€0.01 → 96.21 / 102.97**, €0.02 → 96.58 / 102.81, €0.05 → 98.18 / 103.84 (net metering 2026 / 2027). €0.01 is the lowest over both rules, with about 15 % less grid charging and fewer charge starts. Backtest tool: `--grid-charge`.
