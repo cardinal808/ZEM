@@ -43,6 +43,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_settings_get)
     async_register_command(hass, ws_settings_set)
     async_register_command(hass, ws_events)
+    async_register_command(hass, ws_savings)
     async_register_command(hass, ws_plan_check)
 
 
@@ -524,6 +525,68 @@ def ws_events(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, 
         connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
         return
     connection.send_result(msg["id"], events_view(entry))
+
+
+SAVINGS_DAYS = 30
+
+
+def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
+    """What the battery saved: today, this week, month and year, and the last 30 days (cost log, B38)."""
+    from datetime import timedelta as _td
+
+    from .core.costs import Summary, summarize
+
+    costs = entry.runtime_data.costs
+    assert costs is not None
+    today = dt_util.now().date()
+    tariffs = costs.tariffs.tariffs_for(today)
+    week_start = today - _td(days=today.weekday())
+
+    def period(summary: Summary) -> dict[str, Any]:
+        d = summary.as_dict()
+        keys = ("cost", "cost_no_battery", "savings_battery", "savings_solar_via_battery", "savings_trade", "charge_kwh", "discharge_kwh")
+        gaps = d["incomplete_quarters"] + d["quarters_without_price"]
+        return {**{k: d[k] for k in keys}, "days": summary.days, "quarters": d["quarters"], "incomplete_quarters": gaps}
+
+    days: list[dict[str, Any]] = []
+    stored = costs.days
+    since = min(stored) if stored else None
+    for i in range(SAVINGS_DAYS - 1, -1, -1):
+        day = today - _td(days=i)
+        key = day.isoformat()
+        if since is None or key < since:
+            continue
+        totals = stored.get(key)
+        if totals is None:
+            days.append({"day": key, "savings_battery": None, "incomplete": True})
+            continue
+        saved = Summary(days=1, totals=dict(totals)).savings_battery
+        gaps = bool(totals.get("incomplete") or totals.get("no_price"))
+        # Today is still running; an earlier day with fewer than 92 quarters (the shortest day) misses some.
+        short = day != today and totals.get("quarters", 0) < 92
+        days.append({"day": key, "savings_battery": None if saved is None else round(saved, 2), "incomplete": gaps or short})
+    return {
+        "periods": {
+            "today": period(costs.summary("today")),
+            "week": period(summarize(stored, week_start, today, tariffs)),
+            "month": period(costs.summary("month")),
+            "year": period(costs.summary("year")),
+        },
+        "days": days,
+        "since": since,
+        "saldering_until": tariffs.saldering_until.isoformat() if tariffs.saldering_until > today else None,
+    }
+
+
+@websocket_command({vol.Required("type"): "zephyr/savings"})
+@callback
+def ws_savings(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Screen Besparing (M6 part 2)."""
+    entry = _entry(hass)
+    if entry is None or entry.runtime_data.costs is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    connection.send_result(msg["id"], savings_view(entry))
 
 
 @websocket_command({vol.Required("type"): "zephyr/plan_check", vol.Optional("days", default=14): vol.All(int, vol.Range(min=1, max=400))})
