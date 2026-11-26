@@ -203,6 +203,30 @@
       },
       "plan_calculated_at": {
         "name": "Plan berekend om"
+      },
+      "energy_charged": {
+        "name": "Energie geladen"
+      },
+      "energy_discharged": {
+        "name": "Energie geleverd"
+      },
+      "solar_energy": {
+        "name": "Zonne-energie (set)"
+      },
+      "offgrid_energy": {
+        "name": "Energie off-grid"
+      },
+      "dc_energy_charged": {
+        "name": "Energie geladen (accukant)"
+      },
+      "dc_energy_discharged": {
+        "name": "Energie geleverd (accukant)"
+      },
+      "grid_input_energy": {
+        "name": "Energie uit het net"
+      },
+      "output_home_energy": {
+        "name": "Energie naar het huis"
       }
     },
     "binary_sensor": {

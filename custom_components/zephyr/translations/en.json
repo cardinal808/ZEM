@@ -203,6 +203,30 @@
       },
       "plan_calculated_at": {
         "name": "Plan calculated at"
+      },
+      "energy_charged": {
+        "name": "Energy charged"
+      },
+      "energy_discharged": {
+        "name": "Energy discharged"
+      },
+      "solar_energy": {
+        "name": "Solar energy (set)"
+      },
+      "offgrid_energy": {
+        "name": "Off-grid energy"
+      },
+      "dc_energy_charged": {
+        "name": "Energy charged (battery side)"
+      },
+      "dc_energy_discharged": {
+        "name": "Energy discharged (battery side)"
+      },
+      "grid_input_energy": {
+        "name": "Energy from the grid"
+      },
+      "output_home_energy": {
+        "name": "Energy to the house"
       }
     },
     "binary_sensor": {

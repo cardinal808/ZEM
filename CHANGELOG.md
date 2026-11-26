@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.27 — Own energy counters per set (SPEC-tellers T1)
+- **New sensors** (kWh, `total_increasing`, usable in the Energy dashboard): per set `sensor.zephyr_set_<n>_energy_charged` and `_energy_discharged` (from `outputPackPower` / `packInputPower`, AC), `_solar_energy` (only for sets with PV inputs); for the installation `sensor.zephyr_energy_charged`, `_energy_discharged` and `_solar_energy`. Diagnostic, disabled by default: off-grid, battery side (DC) charged/discharged, from the grid, to the house.
+- ZEPHYR integrates the powers of every read itself (zenSDK has no energy counters). A read that fails keeps the last power for **60 s** after the last good report; after that a **gap** starts, recorded (start, end, powers, energy in the packs) but not yet filled (T2). The installation totals add the increases of the sets, so a set that disappears or is replaced never makes them drop.
+- States are kept in `zephyr.<entry>.counters` (every 5 minutes and on unload); a restart continues from the stored state. Entities write their state only when the rounded value changes (recorder).
+- Diagnostics: `energy_counters` (totals, per set the counters, failed reads, open gap, the last gaps).
+- Tests: constant power for a quarter, hold within and beyond 60 s, a long pause between reports, set PV as solar, totals with a replaced set, restore; in HA the sensors, hold, reload and diagnostics.
+
 ### 0.8.26 — Cost log: battery from the pack powers, set PV once (B44 T0)
 - **No double count of the sets' own PV.** The cost log took the battery from the set's net exchange with the house (`gridInputPower − outputHomePower`), which includes the PV inputs of the set, and also counted those PV inputs as solar. 500 W from the set's own panels counted as 500 W *delivered from the battery* plus 500 W solar: the house use 500 W too high and the savings too high. Now: charged = Σ `outputPackPower`, delivered = Σ `packInputPower` (AC, MEET-zensdk W1), set PV only as solar. Without PV nothing changes.
 - **Hold of 60 s per set:** a set that cannot be read keeps its last pack and PV power in the cost log for 60 s after its last good report, also when the controller already counts it as offline. With several sets an unreadable set no longer drops out silently: the battery coverage of the quarter (`complete`) only counts while every set is counted.

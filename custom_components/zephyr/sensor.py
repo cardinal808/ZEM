@@ -34,6 +34,7 @@ from .core.forecast_plan import ACTION_KEYS, PlanOutcome, PlanState, reason
 from .core.models import SetStatus
 from .core.totals import Totals
 from .cost_recorder import CostRecorder
+from .energy_recorder import EnergyRecorder
 from .entity import ZephyrControlEntity, ZephyrSetEntity, ZephyrTotalEntity, installation_device
 from .planner_runner import PlanRunner
 
@@ -221,7 +222,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async
         async_add_entities(ZephyrPlanSensor(runtime.planner, entry, d) for d in PLAN_SENSORS)
     if runtime.costs is not None:
         async_add_entities(ZephyrCostSensor(runtime.costs, entry, kind, period) for kind in ("costs", "savings") for period in COST_PERIODS)
+    energy = runtime.energy
+    if energy is not None:
+        with_solar = any(
+            c.data is not None and c.data.report is not None and c.data.report.solar_power_inputs for c in runtime.coordinators.values()
+        )
+        async_add_entities(ZephyrEnergyTotalSensor(energy, entry, key) for key in ENERGY_TOTALS if key != "solar" or with_solar)
     for subentry_id, coordinator in runtime.coordinators.items():
+        if energy is not None:
+            report = coordinator.data.report if coordinator.data is not None else None
+            async_add_entities(
+                (
+                    ZephyrSetEnergySensor(coordinator, entry, energy, counter)
+                    for counter in ENERGY_SET_SENSORS
+                    if counter != "solar" or (report is not None and report.solar_power_inputs)
+                ),
+                config_subentry_id=subentry_id,
+            )
         async_add_entities(
             [
                 *(ZephyrSetSensor(coordinator, entry, d) for d in SET_SENSORS),
@@ -563,3 +580,101 @@ class ZephyrPlanSensor(SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any] | None:
         outcome = self._runner.outcome
         return None if outcome is None else self.entity_description.attrs_fn(self._runner, outcome)
+
+
+# --- own energy counters (SPEC-tellers T1) ---------------------------------------
+
+ENERGY_SET_SENSORS: dict[str, tuple[str, bool]] = {
+    "charged": ("energy_charged", False),
+    "discharged": ("energy_discharged", False),
+    "solar": ("solar_energy", False),
+    "offgrid": ("offgrid_energy", True),
+    "dc_charged": ("dc_energy_charged", True),
+    "dc_discharged": ("dc_energy_discharged", True),
+    "grid_input": ("grid_input_energy", True),
+    "output_home": ("output_home_energy", True),
+}
+"""Counter → (entity key, diagnostic and disabled by default)."""
+
+ENERGY_TOTALS: dict[str, str] = {"charged": "energy_charged", "discharged": "energy_discharged", "solar": "solar_energy"}
+
+
+class _EnergySensorBase(SensorEntity):
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_suggested_display_precision = 2
+    _attr_should_poll = False
+    _energy: EnergyRecorder
+    _last_value: float | None = None
+
+    def _value(self) -> float | None:
+        raise NotImplementedError
+
+    @property
+    def native_value(self) -> float | None:
+        value = self._value()
+        return None if value is None else round(value, 3)
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(self._energy.async_add_listener(self._handle_energy))
+
+    @callback
+    def _handle_energy(self) -> None:
+        value = self.native_value
+        if value != self._last_value:  # write only when the rounded state moves (recorder)
+            self._last_value = value
+            self.async_write_ha_state()
+
+
+class ZephyrSetEnergySensor(ZephyrSetEntity, _EnergySensorBase):
+    """An own energy counter of one set."""
+
+    def __init__(self, coordinator: SetCoordinator, entry: ZephyrConfigEntry, energy: EnergyRecorder, counter: str) -> None:
+        key, diagnostic = ENERGY_SET_SENSORS[counter]
+        super().__init__(coordinator, entry, key, "sensor")
+        self._energy = energy
+        self._counter = counter
+        if diagnostic:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+            self._attr_entity_registry_enabled_default = False
+
+    @property
+    def available(self) -> bool:
+        return self._value() is not None
+
+    def _value(self) -> float | None:
+        return self._energy.set_kwh(self.coordinator.serial, self._counter)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """The counters, not the coordinator, decide when to write."""
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        counter = self._energy.counters.sets.get(self.coordinator.serial)
+        if counter is None:
+            return None
+        attrs: dict[str, Any] = {"estimated_kwh": round(counter.estimated[self._counter], 3)}
+        if counter.gaps:
+            attrs["last_gap"] = counter.gaps[-1]
+        return attrs
+
+
+class ZephyrEnergyTotalSensor(_EnergySensorBase):
+    """An own energy counter of the installation: the increases of all sets."""
+
+    _attr_has_entity_name = True
+
+    def __init__(self, energy: EnergyRecorder, entry: ZephyrConfigEntry, counter: str) -> None:
+        key = ENERGY_TOTALS[counter]
+        self._energy = energy
+        self._counter = counter
+        self._attr_unique_id = f"{entry.entry_id}_{key}"
+        self._attr_translation_key = key
+        self.entity_id = f"sensor.zephyr_{key}"
+        self._attr_device_info = installation_device(entry)
+
+    def _value(self) -> float | None:
+        return self._energy.counters.totals[self._counter]
