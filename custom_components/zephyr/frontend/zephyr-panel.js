@@ -1004,6 +1004,11 @@ var We = {
 					label: "Live sturen uit na herstart",
 					help: "Na een herstart van HA eerst in de schaduw.",
 					more: "Voor de testfase: na elke herstart zet je live sturen zelf weer aan."
+				},
+				vacation_when_away: {
+					label: "Vakantie als niemand thuis is",
+					help: "Vanzelf aan na 24 uur zonder iemand thuis.",
+					more: "Gebruikt zone.home (het aantal mensen thuis). Uit zodra er iemand terug is. De schakelaar Vakantie (met Vakantie tot) werkt daarnaast altijd."
 				}
 			},
 			restarting: "ZEPHYR start opnieuw met de nieuwe instellingen…",
@@ -1517,6 +1522,11 @@ var We = {
 					label: "Control off after restart",
 					help: "After a restart of HA start in shadow mode.",
 					more: "For the test phase: after every restart you switch control on yourself."
+				},
+				vacation_when_away: {
+					label: "Vacation when nobody is home",
+					help: "On by itself after 24 hours with nobody home.",
+					more: "Uses zone.home (the number of people at home). Off as soon as someone is back. The switch Vacation (with Vacation until) always works as well."
 				}
 			},
 			restarting: "ZEPHYR is restarting with the new settings…",

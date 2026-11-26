@@ -234,6 +234,14 @@
     "switch": {
       "control": {
         "name": "ZEPHYR stuurt de accu"
+      },
+      "vacation": {
+        "name": "Vakantie"
+      }
+    },
+    "datetime": {
+      "vacation_until": {
+        "name": "Vakantie tot"
       }
     }
   },
@@ -298,7 +306,8 @@
           "plan_grid_charge_cost": "Planner: drempel netladen",
           "plan_allow_export": "Planner: terugleveren uit de accu toestaan",
           "plan_load_margin": "Planner: laadmarge",
-          "plan_buffer": "Planner: buffer boven het minimum"
+          "plan_buffer": "Planner: buffer boven het minimum",
+          "vacation_when_away": "Vakantie als niemand thuis is"
         },
         "data_description": {
           "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
@@ -330,7 +339,8 @@
           "plan_grid_charge_cost": "Geavanceerd. Winst per kWh die laden uit het net minstens moet opleveren voordat de planner het doet (alleen bij zijn keuze, niet in de kosten), zodat hij niet op een duur moment inkoopt voor een cent. Standaard €0,01.",
           "plan_allow_export": "De planner mag op vol vermogen leveren en de rest terugleveren als dat loont (actie Terugleveren). Standaard uit.",
           "plan_load_margin": "De planner kiest alsof het huis zoveel meer verbruikt (buffer tegen een te lage schatting). Telt niet mee in de kosten. 0 = uit.",
-          "plan_buffer": "De planner plant nooit onder de minimale laadtoestand plus deze buffer; de regelaar mag hem gebruiken als het huis meer verbruikt dan verwacht. 0 = uit."
+          "plan_buffer": "De planner plant nooit onder de minimale laadtoestand plus deze buffer; de regelaar mag hem gebruiken als het huis meer verbruikt dan verwacht. 0 = uit.",
+          "vacation_when_away": "Zet de vakantie vanzelf aan als er 24 uur niemand thuis is geweest (zone.home = 0), en weer uit zodra er iemand terug is. Tijdens vakantie rekent de planner met het sluimerverbruik, telt de airco als uit en leert hij die uren apart van het gewone profiel."
         }
       }
     },

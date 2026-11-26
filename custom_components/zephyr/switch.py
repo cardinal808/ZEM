@@ -18,11 +18,15 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import ZephyrConfigEntry, ZephyrRuntime
 from .const import CONF_LIVE_OFF_AFTER_RESTART, DOMAIN, LOGGER
-from .entity import ZephyrControlEntity
+from .entity import ZephyrControlEntity, ZephyrVacationEntity
+from .vacation import VacationManager
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
-    async_add_entities([ZephyrControlSwitch(entry.runtime_data, entry)])
+    entities: list[SwitchEntity] = [ZephyrControlSwitch(entry.runtime_data, entry)]
+    if entry.runtime_data.vacation is not None:
+        entities.append(ZephyrVacationSwitch(entry.runtime_data.vacation, entry))
+    async_add_entities(entities)
 
 
 class ZephyrControlSwitch(ZephyrControlEntity, SwitchEntity, RestoreEntity):
@@ -64,3 +68,31 @@ class ZephyrControlSwitch(ZephyrControlEntity, SwitchEntity, RestoreEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self._control.async_set_live(False)
         self.async_write_ha_state()
+
+
+class ZephyrVacationSwitch(ZephyrVacationEntity, SwitchEntity):
+    """``switch.zephyr_vacation`` (B42): away; the planner uses the standby use and learns apart."""
+
+    _attr_icon = "mdi:airplane"
+
+    def __init__(self, vacation: VacationManager, entry: ZephyrConfigEntry) -> None:
+        super().__init__(vacation, entry, "vacation", "switch")
+
+    @property
+    def is_on(self) -> bool:
+        return self._vacation.active()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        state = self._vacation.state
+        return {
+            "until": None if state.until is None else state.until.isoformat(),
+            "automatic": state.auto,
+            "since": None if state.started is None else state.started.isoformat(),
+        }
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self._vacation.set_manual(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self._vacation.set_manual(False)

@@ -387,6 +387,11 @@
         "label": "Live sturen uit na herstart",
         "help": "Na een herstart van HA eerst in de schaduw.",
         "more": "Voor de testfase: na elke herstart zet je live sturen zelf weer aan."
+      },
+      "vacation_when_away": {
+        "label": "Vakantie als niemand thuis is",
+        "help": "Vanzelf aan na 24 uur zonder iemand thuis.",
+        "more": "Gebruikt zone.home (het aantal mensen thuis). Uit zodra er iemand terug is. De schakelaar Vakantie (met Vakantie tot) werkt daarnaast altijd."
       }
     },
     "restarting": "ZEPHYR start opnieuw met de nieuwe instellingen…",

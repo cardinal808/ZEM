@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.8.15 — Vacation (B42)
+- **`switch.zephyr_vacation`** (*Vacation*) with **`datetime.zephyr_vacation_until`** (*Vacation until*): set an end and the switch goes off by itself at that moment.
+- **Option *Vacation when nobody is home*** (default off): on by itself after 24 hours with nobody home (`zone.home` = 0), off as soon as someone is back.
+- **Planner while away:** uses the learned vacation use, else the **standby use** (lowest night hour of the normal profile); the air conditioner counts as off. After the end the normal profile applies again, so the battery is charged for the return home at the cheapest moment.
+- **Learning:** vacation hours go into a separate **vacation profile** (stored, used next time), not into the house or air-conditioner profile. The recorder fill skips past vacations (periods kept 400 days).
+- **Cost log:** quarters while away get `vacation: true`.
+- Diagnostics: `planner.vacation`, `planner.vacation_profile`, `inputs.vacation`. Panel: the option in Settings (Planner).
+- Tests: state, end, automatic, periods, base load; Home Assistant: switch + end, plan before/after the end, learning apart, away via `zone.home`, cost log flag.
+
 ### 0.8.12 — Panel: Diagnose and control (SPEC-ui §4.1, §4.2, §4.5; UI-8, UI-A4)
 - **Header:** for administrators the mode is a choice list and *Rekent mee* / *Stuurt* a button. Turning live control on asks first and lists why it cannot start now (set offline, P1 silent, …); turning it off is immediate. The panel uses ZEPHYR's own entities (`select` mode, `switch` control), the same path as automations.
 - **Plan:** buttons *Snel laden* and *Snel ontladen*; during a fast mode a line what it does and *Stoppen, terug naar …* (the mode it came from).
