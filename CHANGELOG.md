@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.8.28 — Energy counters fill their gaps (SPEC-tellers T2)
+- When a set reports again after more than 60 s, the gap is **filled**:
+  - **interpolate** (gap ≤ 15 min, same direction, power before and after within 20 % or 200 W): the power linearly between the report before and after; checked against the change of the energy in the packs (Σ capacity × SOC per pack), within the SOC resolution (1 % of the capacity) + 2 %;
+  - **from the SOC** otherwise: the packs' gain divided by the charge efficiency (0.92), or their loss times the delivery efficiency (0.88), minus what was already counted during the hold. Net only; a change within the SOC resolution fills nothing;
+  - set PV in the gap: the last power held by daylight (sun at the middle of the gap), 0 at night; off-grid: the last power held when it was above 0.
+- **A restart of Home Assistant is a gap** from the last stored state: the counters now store their last powers, pack energy and direction too, in wall-clock time.
+- Filled energy counts in the counters and in `estimated_kwh`; every gap is logged (start, end, seconds, method, kWh per counter, pack change, restart) in `last_gap` and the diagnostics (last 10). Not yet in the cost log (T3).
+- Tests: short gap interpolated, other power and long gaps from the SOC, SOC drop, interpolation that disagrees with the packs, set PV by day and night, restart, unknown pack capacity; in HA a gap filled when the set returns.
+
 ### 0.8.27 — Own energy counters per set (SPEC-tellers T1)
 - **New sensors** (kWh, `total_increasing`, usable in the Energy dashboard): per set `sensor.zephyr_set_<n>_energy_charged` and `_energy_discharged` (from `outputPackPower` / `packInputPower`, AC), `_solar_energy` (only for sets with PV inputs); for the installation `sensor.zephyr_energy_charged`, `_energy_discharged` and `_solar_energy`. Diagnostic, disabled by default: off-grid, battery side (DC) charged/discharged, from the grid, to the house.
 - ZEPHYR integrates the powers of every read itself (zenSDK has no energy counters). A read that fails keeps the last power for **60 s** after the last good report; after that a **gap** starts, recorded (start, end, powers, energy in the packs) but not yet filled (T2). The installation totals add the increases of the sets, so a set that disappears or is replaced never makes them drop.
