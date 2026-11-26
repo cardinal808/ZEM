@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.5 — Panel: screen *Instellingen*, reading (SPEC-ui §4.4, UI-6)
+- **Screen *Instellingen*:** groups on the left (Battery and limits, Sources, Tariffs, Planner, Zero on the meter without planner, Test phase) with the number of changed fields; per field the label, a short help text, an **i button with more explanation** (tap, one open at a time, also with the keyboard), the value, and for a changed field a dot and *standard: …*. Sources show how they are doing (*reports every 1 s*, *96 prices in the sensor*, *not set*, *not found*); with a supplier the tariff fields show the amount *in use* from the tariff table.
+- Changing settings from the panel follows in UI-7; until then the screen points to the options flow. Users who are not administrators see a read-only note.
+- **`settings_schema.py`:** one list of fields (group, type, range, step, unit, standard value, reload needed). A test keeps it in step with the options flow (same keys, ranges, steps and units), another checks that the panel has NL and EN texts for every field.
+- **Websocket `zephyr/settings/get`** with values, *changed* flags, source status, suppliers, tariffs in use and `can_edit` (administrator).
+- Tests: schema, options-flow sync, the command for an administrator and a read-only user, texts per field; frontend: number formatting by step, texts in both languages.
+
 ### 0.8.4 — Panel: screen *Accu* / *Sets* with the batteries in the set (SPEC-ui §4.3, UI-4)
 - **Screen *Accu*** (one set; *Sets* with more): a summary (batteries online, SOC spread, warmest battery, largest cell difference, one sentence *in short*), the **set card** (status, SOC with limits, kWh, power, inverter temperature, last 100 %, relay switches in 24 h, limits in the set, *+ Add set* to the integration page) and **Batteries in the set**: per battery SOC, kWh, power on the battery side, temperature, lowest–highest cell voltage and the **cell difference** with *Good* (≤ 30 mV), *Watch* (≤ 80 mV) or *High*.
 - **Cell difference only judged between 20 and 90 % SOC.** LiFePO4 cells spread out near full and empty (diagnostics 26-11: 120 mV on a full AB3000L); there the value is shown as *not judged*.

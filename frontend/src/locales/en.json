@@ -189,5 +189,177 @@
       "full": "Full",
       "empty": "Empty"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "groups": {
+      "battery": "Battery and limits",
+      "sources": "Sources",
+      "tariffs": "Tariffs",
+      "planner": "Planner",
+      "zero_meter": "Zero on the meter without planner",
+      "testing": "Test phase"
+    },
+    "modified_n": "{n} changed",
+    "default": "standard: {value}",
+    "none": "empty",
+    "yes": "on",
+    "no": "off",
+    "more": "More about {label}",
+    "readonly": "Only an administrator can change settings.",
+    "coming": "Changing settings from the panel comes in the next version. Until then: Settings → Devices & services → ZEPHYR → Configure.",
+    "open_options": "Open options",
+    "reload_note": "A change here reloads ZEPHYR.",
+    "supplier_note": "With a supplier the amounts from the tariff table apply ({source}). They can only be changed with own tariffs.",
+    "in_use": "in use: {value}",
+    "status": {
+      "unset": "not set",
+      "missing": "not found: {entities}",
+      "ok": "working",
+      "interval": "reports every {s} s",
+      "slots": "{n} prices in the sensor"
+    },
+    "own": "Own tariffs",
+    "options": {
+      "single": "One sensor (import − export)",
+      "import_export": "Two sensors (import and export)"
+    },
+    "fields": {
+      "min_soc": {
+        "label": "Minimum state of charge",
+        "help": "Below this the battery stops delivering.",
+        "more": "Default 10 %. Lower gives more usable energy, but the battery is more often nearly empty. Also written to the set, so it stops when ZEPHYR is not running."
+      },
+      "max_soc": {
+        "label": "Maximum state of charge",
+        "help": "Above this the battery stops charging.",
+        "more": "Not charging to 100 % saves a little wear. The set needs 100 % now and then to reset its SOC and balance the cells."
+      },
+      "p1_source": {
+        "label": "P1 measurement",
+        "help": "One sensor with net power, or import and export separately.",
+        "more": "ZEPHYR watches the grid and steers the battery until the grid is at zero. The more often the meter reports, the faster and more precise. When the meter is silent for more than 10 s, ZEPHYR stops safely."
+      },
+      "p1_entity": {
+        "label": "P1 sensor (net)",
+        "help": "Grid power: + = import, − = export.",
+        "more": "A sensor in W or kW."
+      },
+      "p1_import_entity": {
+        "label": "P1 import",
+        "help": "Power from the grid.",
+        "more": "Together with the export sensor; ZEPHYR uses import − export."
+      },
+      "p1_export_entity": {
+        "label": "P1 export",
+        "help": "Power to the grid.",
+        "more": "Together with the import sensor."
+      },
+      "price_entity": {
+        "label": "Price sensor",
+        "help": "Nord Pool with today's and tomorrow's prices.",
+        "more": "Tomorrow's prices arrive around 13:00. Without a price sensor ZEPHYR makes no plan."
+      },
+      "solar_forecast_entity": {
+        "label": "Solar forecast",
+        "help": "Solcast (tomorrow) with half-hour detail.",
+        "more": "Without a forecast the planner uses yesterday's production per hour."
+      },
+      "solar_energy_entity": {
+        "label": "Solar counter",
+        "help": "Production in kWh (increasing).",
+        "more": "Tells ZEPHYR what your panels really produced: for the house consumption, the cost log and correcting the forecast."
+      },
+      "cost_import_counters": {
+        "label": "Import counters",
+        "help": "The kWh counters of your smart meter (tariff 1 and 2).",
+        "more": "For the cost log: more precise than adding up power."
+      },
+      "cost_export_counters": {
+        "label": "Export counters",
+        "help": "The kWh counters for export (tariff 1 and 2).",
+        "more": "For the cost log."
+      },
+      "tariff_supplier": {
+        "label": "Energy supplier",
+        "help": "Amounts from ZEPHYR's tariff table, or own tariffs.",
+        "more": "The table is updated with releases and fetched daily. Supplier not listed? Choose own tariffs."
+      },
+      "tariff_energy_tax": {
+        "label": "Energy tax",
+        "help": "Per kWh, excluding VAT.",
+        "more": "Statutory amount; listed per year in the table."
+      },
+      "tariff_markup_import": {
+        "label": "Import margin",
+        "help": "What the supplier adds to the market price, excluding VAT.",
+        "more": "See your contract or invoice."
+      },
+      "tariff_markup_export": {
+        "label": "Export margin",
+        "help": "Added to the market price (negative = a fee), excluding VAT.",
+        "more": "Some suppliers deduct a fixed amount from what you get back: enter it as negative."
+      },
+      "tariff_vat": {
+        "label": "VAT",
+        "help": "On market price, margin and energy tax.",
+        "more": "Statutory rate."
+      },
+      "tariff_solar_bonus": {
+        "label": "Solar bonus",
+        "help": "Extra on the export price during the day.",
+        "more": "For example 10 % with Zonneplan. Only counted while the sun is up."
+      },
+      "tariff_fixed_month": {
+        "label": "Fixed costs per month",
+        "help": "Supply and network costs minus tax credit.",
+        "more": "Only for the cost log; does not change the plan."
+      },
+      "plan_wear_cost": {
+        "label": "Wear cost",
+        "help": "Per kWh through the battery.",
+        "more": "The planner only charges and delivers when the difference is larger than this. Default €0.03 (B39)."
+      },
+      "plan_grid_charge_cost": {
+        "label": "Grid charging threshold",
+        "help": "Minimum gain per kWh to charge from the grid.",
+        "more": "Avoids charging from the grid for a tiny gain. Default €0.01."
+      },
+      "plan_allow_export": {
+        "label": "Export from the battery",
+        "help": "May the battery deliver to the grid when that pays?",
+        "more": "Only useful when the export price is sometimes higher than recharging later, including losses and wear. Off by default."
+      },
+      "plan_load_margin": {
+        "label": "Consumption margin",
+        "help": "Plan with more consumption than learned.",
+        "more": "At 10 % the planner assumes 10 % more consumption."
+      },
+      "plan_buffer": {
+        "label": "Buffer",
+        "help": "Part of the battery the planner keeps free.",
+        "more": "The controller may use the buffer when consumption is higher than expected; the planner refills it when that is cheaper (B37)."
+      },
+      "expensive_hours": {
+        "label": "Expensive hours",
+        "help": "Without planner: only deliver in the N most expensive hours.",
+        "more": "Applies in Zero on the meter with a price sensor but without Dynamic Forecasting."
+      },
+      "reserve_soc": {
+        "label": "Reserve",
+        "help": "Without planner: charge to this level before the expensive hours.",
+        "more": "Becomes the planner's buffer (B37)."
+      },
+      "min_price": {
+        "label": "Minimum price",
+        "help": "Without planner: do not deliver below this price.",
+        "more": "Empty = no minimum."
+      },
+      "live_off_after_restart": {
+        "label": "Control off after restart",
+        "help": "After a restart of HA start in shadow mode.",
+        "more": "For the test phase: after every restart you switch control on yourself."
+      }
+    }
   }
 }
