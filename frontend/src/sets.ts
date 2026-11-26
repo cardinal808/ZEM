@@ -13,7 +13,7 @@ export interface PackDay {
   full: boolean;
 }
 
-export type CellStatus = "good" | "watch" | "high" | "edge";
+export type CellStatus = "good" | "balancing" | "imbalance";
 
 export interface Pack {
   index: number;
@@ -28,6 +28,7 @@ export interface Pack {
   cell_min_v: number | null;
   cell_max_v: number | null;
   cell_delta_mv: number | null;
+  cell_judged: boolean;
   cell_status: CellStatus | null;
   history: PackDay[];
 }
@@ -76,31 +77,55 @@ export interface Summary {
   socMin: number | null;
   socMax: number | null;
   warmest: number | null;
-  /** Largest judged cell difference; null when no pack is in the judged window. */
-  worst: { pack: Pack; mv: number; status: CellStatus } | null;
-  /** Largest difference of any pack (also near full/empty). */
-  largest: number | null;
+  /** Largest cell difference judged right now (near full, small current); null when none is judged now. */
+  now: { pack: Pack; mv: number; status: CellStatus } | null;
+  /** Largest judged difference of the most recent judged day, when nothing is judged now. */
+  lastDay: { day: string; mv: number; status: CellStatus } | null;
+  /** Pack with the most imbalance days in the last 7 days, and how many. */
+  imbalance: { pack: Pack; days: number; lastDay: string; mv: number } | null;
+  /** No judged day in the last 7 days and nothing judged now. */
+  notFull: boolean;
   offline: SetInfo[];
 }
+
+const STATUS_FOR = (mv: number): CellStatus => (mv <= 30 ? "good" : mv <= 100 ? "balancing" : "imbalance");
 
 export function summarize(sets: SetInfo[]): Summary {
   const packs = sets.flatMap((s) => s.packs);
   const socs = packs.map((p) => p.soc);
   const temps = packs.map((p) => p.temp).filter((v): v is number => v !== null);
-  let worst: Summary["worst"] = null;
+  let now: Summary["now"] = null;
   for (const p of packs) {
-    if (p.cell_delta_mv === null || p.cell_status === null || p.cell_status === "edge") continue;
-    if (!worst || p.cell_delta_mv > worst.mv) worst = { pack: p, mv: p.cell_delta_mv, status: p.cell_status };
+    if (!p.cell_judged || p.cell_delta_mv === null || p.cell_status === null) continue;
+    if (!now || p.cell_delta_mv > now.mv) now = { pack: p, mv: p.cell_delta_mv, status: p.cell_status };
   }
-  const deltas = packs.map((p) => p.cell_delta_mv).filter((v): v is number => v !== null);
+  let lastDay: Summary["lastDay"] = null;
+  const days = packs[0]?.history.map((d) => d.day) ?? [];
+  for (let i = days.length - 1; i >= 0 && !lastDay; i--) {
+    const values = packs.map((p) => p.history[i]?.max_mv).filter((v): v is number => v !== null && v !== undefined);
+    if (values.length) {
+      const mv = Math.max(...values);
+      lastDay = { day: days[i], mv, status: STATUS_FOR(mv) };
+    }
+  }
+  let imbalance: Summary["imbalance"] = null;
+  for (const p of packs) {
+    const bad = p.history.filter((d) => d.status === "imbalance");
+    if (!bad.length) continue;
+    const last = bad[bad.length - 1];
+    if (!imbalance || bad.length > imbalance.days) imbalance = { pack: p, days: bad.length, lastDay: last.day, mv: last.max_mv as number };
+  }
+  const judgedDays = packs.some((p) => p.history.some((d) => d.max_mv !== null));
   return {
     packs: packs.length,
     online: sets.every((s) => s.online),
     socMin: socs.length ? Math.min(...socs) : null,
     socMax: socs.length ? Math.max(...socs) : null,
     warmest: temps.length ? Math.max(...temps) : null,
-    worst,
-    largest: deltas.length ? Math.max(...deltas) : null,
+    now,
+    lastDay,
+    imbalance,
+    notFull: !now && !judgedDays,
     offline: sets.filter((s) => !s.online),
   };
 }
@@ -145,16 +170,22 @@ export class ZephyrSets extends LitElement {
     const packs = sets.flatMap((s) => s.packs);
     let line: string;
     if (sum.offline.length) line = this.tr("sets.offline_line", { sets: sum.offline.map((s) => this.tr("sets.set", { n: s.number })).join(", ") });
-    else if (sum.worst?.status === "high")
-      line = this.tr("sets.line_high", { pack: packName(sum.worst.pack, packs, this.uiLang), mv: sum.worst.mv });
-    else if (sum.worst?.status === "watch")
-      line = this.tr("sets.line_watch", { pack: packName(sum.worst.pack, packs, this.uiLang), mv: sum.worst.mv });
-    else if (!sum.worst && sum.largest !== null) line = this.tr("sets.line_edge");
+    else if (sum.imbalance && sum.imbalance.days >= 3)
+      line = this.tr("sets.line_persistent", { pack: packName(sum.imbalance.pack, packs, this.uiLang), days: sum.imbalance.days });
+    else if (sum.now?.status === "imbalance")
+      line = this.tr("sets.line_now", { pack: packName(sum.now.pack, packs, this.uiLang), mv: sum.now.mv });
+    else if (sum.imbalance)
+      line = this.tr("sets.line_recent", {
+        pack: packName(sum.imbalance.pack, packs, this.uiLang),
+        day: day(`${sum.imbalance.lastDay}T12:00:00Z`, this.locale, this.timeZone),
+        mv: sum.imbalance.mv,
+      });
+    else if (sum.notFull) line = this.tr("sets.line_not_full");
     else line = this.tr("sets.line_ok");
-    const cells = sum.worst
-      ? `${this.num(sum.worst.mv)} mV`
-      : sum.largest !== null
-        ? `${this.num(sum.largest)} mV*`
+    const cells = sum.now
+      ? `${this.num(sum.now.mv)} mV · ${this.tr(`sets.cell.${sum.now.status}`)}`
+      : sum.lastDay
+        ? `${this.num(sum.lastDay.mv)} mV · ${this.tr(`sets.cell.${sum.lastDay.status}`)}`
         : "–";
     return html`<section class="card summary" aria-label=${this.tr("sets.summary")}>
       ${this.stat(this.tr("sets.batteries"), this.tr(sum.online ? "sets.all_online" : "sets.some_offline", { n: sum.packs }))}
@@ -163,7 +194,7 @@ export class ZephyrSets extends LitElement {
         sum.socMin === null ? "–" : sum.socMin === sum.socMax ? percent(sum.socMin, this.locale) : `${this.num(sum.socMin)}–${percent(sum.socMax as number, this.locale)}`,
       )}
       ${this.stat(this.tr("sets.warmest"), sum.warmest === null ? "–" : `${this.num(sum.warmest)} °C`)}
-      ${this.stat(this.tr("sets.largest_delta"), cells)}
+      ${this.stat(sum.now || !sum.lastDay ? this.tr("sets.largest_delta") : this.tr("sets.largest_delta_day", { day: day(`${sum.lastDay.day}T12:00:00Z`, this.locale, this.timeZone) }), cells)}
       <p class="line"><strong>${this.tr("sets.in_short")}</strong> ${line}</p>
     </section>`;
   }
@@ -248,7 +279,11 @@ export class ZephyrSets extends LitElement {
                 <dt>${this.tr("sets.cell_delta")}</dt>
                 <dd class="delta">
                   ${p.cell_delta_mv === null ? "–" : `${this.num(p.cell_delta_mv)} mV`}
-                  ${status ? html`<span class="tag ${status}">${this.tr(`sets.cell.${status}`)}</span>` : nothing}
+                  ${status
+                    ? html`<span class="tag ${status}">${this.tr(`sets.cell.${status}`)}</span>`
+                    : p.cell_delta_mv !== null
+                      ? html`<span class="tag none" title=${this.tr("sets.not_judged_title")}>${this.tr("sets.not_judged")}</span>`
+                      : nothing}
                 </dd>
               </div>
             </dl>
@@ -559,17 +594,17 @@ export class ZephyrSets extends LitElement {
       background: var(--z-good-bg);
       color: var(--z-good-text);
     }
-    .tag.watch,
-    .cell.watch {
+    .tag.balancing,
+    .cell.balancing {
       background: var(--z-warn-bg);
       color: var(--z-warn-text);
     }
-    .tag.high,
-    .cell.high {
+    .tag.imbalance,
+    .cell.imbalance {
       background: var(--z-bad-bg);
       color: var(--z-bad-text);
     }
-    .tag.edge {
+    .tag.none {
       background: var(--z-track);
       color: var(--z-muted);
     }

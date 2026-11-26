@@ -1,10 +1,14 @@
-"""Batteries in a set: cell balance and a short history (SPEC-ui §3.3, UI-4).
+"""Batteries in a set: cell balance and a short history (SPEC-celbalans.md, 0.8.6).
 
-The cell difference (highest − lowest cell voltage in a pack) only says
-something in the middle of the charge curve. LiFePO4 cells spread out near
-full and near empty (measured 26-11: 120 mV at 100 % on an AB3000L), so the
-difference is only judged between 20 and 90 % SOC; outside that window it is
-shown but not labelled, and it does not count for the daily history.
+The cell difference (highest − lowest cell voltage in a pack) of LiFePO4 says
+little in the middle of the charge: the voltage curve is flat there, so cells
+with a different charge show almost the same voltage. Near full the fullest
+cell reaches the steep knee first and an imbalance becomes visible. A high
+charge current adds a voltage drop over the internal resistance. So the
+difference is only judged near full (SOC ≥ 95 % or highest cell ≥ 3.40 V) and
+with a small current (≤ 0.1 C); otherwise it is shown without a label.
+
+Written on the clean side: no code, texts or thresholds of other projects.
 """
 
 from __future__ import annotations
@@ -14,11 +18,15 @@ from datetime import date, timedelta
 from typing import Any, Final
 
 GOOD_MV: Final = 30
-WATCH_MV: Final = 80
-JUDGE_MIN_SOC: Final = 20.0
-JUDGE_MAX_SOC: Final = 90.0
+BALANCING_MV: Final = 100
+TOP_SOC: Final = 95.0
+TOP_CELL_V: Final = 3.40
+C_RATE: Final = 0.1
+UNKNOWN_PACK_MAX_W: Final = 200.0
 FULL_SOC: Final = 99.5
 KEEP_DAYS: Final = 14
+RULE: Final = 2
+"""Version of the measuring rule; history of another rule is dropped (0.8.4 judged between 20 and 90 %)."""
 
 
 def cell_delta_mv(vmin: float | None, vmax: float | None) -> int | None:
@@ -28,32 +36,34 @@ def cell_delta_mv(vmin: float | None, vmax: float | None) -> int | None:
     return round((vmax - vmin) * 1000)
 
 
-def judged(soc: float) -> bool:
-    return JUDGE_MIN_SOC <= soc <= JUDGE_MAX_SOC
+def rest_power_w(capacity_kwh: float | None) -> float:
+    """0.1 C in W: a battery of C kWh at 0.1 C carries about C × 100 W."""
+    return capacity_kwh * 1000 * C_RATE if capacity_kwh else UNKNOWN_PACK_MAX_W
 
 
-def cell_status(delta_mv: int | None, soc: float) -> str | None:
-    """good / watch / high in the middle of the charge curve; edge near full or empty; None without data."""
+def judged(soc: float, vmax: float | None, power_w: float, capacity_kwh: float | None) -> bool:
+    """A moment at which the cell difference says something: near full and with a small current."""
+    top = soc >= TOP_SOC or (vmax is not None and vmax >= TOP_CELL_V)
+    return top and abs(power_w) <= rest_power_w(capacity_kwh)
+
+
+def label(delta_mv: int | None) -> str | None:
+    """good (≤ 30 mV), balancing (≤ 100 mV) or imbalance; None without a value."""
     if delta_mv is None:
         return None
-    if not judged(soc):
-        return "edge"
     if delta_mv <= GOOD_MV:
         return "good"
-    if delta_mv <= WATCH_MV:
-        return "watch"
-    return "high"
+    return "balancing" if delta_mv <= BALANCING_MV else "imbalance"
 
 
-def day_status(max_mv: int | None) -> str | None:
-    if max_mv is None:
-        return None
-    return "good" if max_mv <= GOOD_MV else "watch" if max_mv <= WATCH_MV else "high"
+def cell_status(delta_mv: int | None, is_judged: bool) -> str | None:
+    """The label on a judged moment; None otherwise (the value is shown without a label)."""
+    return label(delta_mv) if is_judged else None
 
 
 @dataclass(slots=True)
 class PackHistory:
-    """Per pack and day: the largest judged cell difference and whether the pack reached 100 %.
+    """Per pack and day: the largest cell difference on a judged moment and whether the pack reached 100 %.
 
     Keyed by the pack's serial number; this stays in Home Assistant's storage
     and is never sent to the panel (B18).
@@ -63,14 +73,14 @@ class PackHistory:
     sets_full: dict[str, str] = field(default_factory=dict)
     """Set serial → last moment (ISO) the set reported ≥ 99.5 %."""
 
-    def note_pack(self, serial: str, day: date, soc: float, delta_mv: int | None) -> bool:
+    def note_pack(self, serial: str, day: date, soc: float, delta_mv: int | None, is_judged: bool) -> bool:
         """Record one reading; True when something changed (to save)."""
         if not serial:
             return False
         days = self.packs.setdefault(serial, {})
         entry = days.setdefault(day.isoformat(), {"max_mv": None, "full": False})
         changed = False
-        if delta_mv is not None and judged(soc) and (entry["max_mv"] is None or delta_mv > entry["max_mv"]):
+        if delta_mv is not None and is_judged and (entry["max_mv"] is None or delta_mv > entry["max_mv"]):
             entry["max_mv"] = delta_mv
             changed = True
         if soc >= FULL_SOC and not entry["full"]:
@@ -94,20 +104,21 @@ class PackHistory:
                 del self.packs[serial]
 
     def last_days(self, serial: str, today: date, count: int = 7) -> list[dict[str, Any]]:
-        """``count`` days ending today, oldest first; days without data have ``max_mv`` None."""
+        """``count`` days ending today, oldest first; days without a judged moment have ``max_mv`` None."""
         days = self.packs.get(serial, {})
         out = []
         for back in range(count - 1, -1, -1):
             day = (today - timedelta(days=back)).isoformat()
             entry = days.get(day, {})
             max_mv = entry.get("max_mv")
-            out.append({"day": day, "max_mv": max_mv, "status": day_status(max_mv), "full": bool(entry.get("full"))})
+            out.append({"day": day, "max_mv": max_mv, "status": label(max_mv), "full": bool(entry.get("full"))})
         return out
 
     def as_dict(self) -> dict[str, Any]:
-        return {"packs": self.packs, "sets_full": self.sets_full}
+        return {"rule": RULE, "packs": self.packs, "sets_full": self.sets_full}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> PackHistory:
         data = data or {}
-        return cls(packs=dict(data.get("packs") or {}), sets_full=dict(data.get("sets_full") or {}))
+        packs = dict(data.get("packs") or {}) if data.get("rule") == RULE else {}
+        return cls(packs=packs, sets_full=dict(data.get("sets_full") or {}))

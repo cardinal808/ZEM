@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { packName, summarize, type Pack, type SetInfo } from "../src/sets";
+import { packName, summarize, type Pack, type PackDay, type SetInfo } from "../src/sets";
+
+const days = (mvs: (number | null)[]): PackDay[] =>
+  mvs.map((mv, i) => ({
+    day: `2026-11-${String(20 + i).padStart(2, "0")}`,
+    max_mv: mv,
+    status: mv === null ? null : mv <= 30 ? "good" : mv <= 100 ? "balancing" : "imbalance",
+    full: mv !== null,
+  }));
 
 const pack = (index: number, model: string | null, builtIn: boolean, number: number, extra: Partial<Pack> = {}): Pack => ({
   index,
@@ -15,8 +23,9 @@ const pack = (index: number, model: string | null, builtIn: boolean, number: num
   cell_min_v: 3.3,
   cell_max_v: 3.32,
   cell_delta_mv: 20,
-  cell_status: "good",
-  history: [],
+  cell_judged: false,
+  cell_status: null,
+  history: days([null, null, null, null, null, null, null]),
   ...extra,
 });
 
@@ -47,24 +56,32 @@ describe("sets", () => {
     expect(packName(single[0], single, "en")).toBe("AB3000L");
   });
 
-  it("finds the worst judged cell difference, ignoring full/empty packs", () => {
-    const s = summarize([
-      set([
-        pack(0, "AB3000L", false, 1, { cell_delta_mv: 120, cell_status: "edge", soc: 100, temp: 21 }),
-        pack(1, "AB3000L", false, 2, { cell_delta_mv: 50, cell_status: "watch", soc: 73 }),
-        pack(2, "AB3000L", false, 3, { cell_delta_mv: 20, cell_status: "good", soc: 78 }),
-      ]),
-    ]);
-    expect(s.worst?.mv).toBe(50);
-    expect(s.worst?.status).toBe("watch");
-    expect(s.largest).toBe(120);
-    expect([s.socMin, s.socMax, s.warmest]).toEqual([73, 100, 21]);
+  it("judges only what the backend judged: the diagnostics of 26-11", () => {
+    const full = (mv: number, status: Pack["cell_status"], i: number): Pack =>
+      pack(i, "AB3000L", false, i + 1, { soc: 100, cell_delta_mv: mv, cell_judged: true, cell_status: status });
+    const s = summarize([set([full(50, "balancing", 0), full(120, "imbalance", 1), full(70, "balancing", 2), full(40, "balancing", 3)])]);
+    expect(s.now?.mv).toBe(120);
+    expect(s.now?.status).toBe("imbalance");
+    expect(s.notFull).toBe(false);
   });
 
-  it("has no judged worst when every pack is full", () => {
-    const s = summarize([set([pack(0, "AB3000L", false, 1, { cell_delta_mv: 120, cell_status: "edge", soc: 100 })])]);
-    expect(s.worst).toBeNull();
-    expect(s.largest).toBe(120);
+  it("ignores values that are not judged", () => {
+    const s = summarize([set([pack(0, "AB3000L", false, 1, { cell_delta_mv: 200, cell_judged: false })])]);
+    expect(s.now).toBeNull();
+    expect(s.notFull).toBe(true);
+  });
+
+  it("falls back to the last judged day and counts imbalance days", () => {
+    const s = summarize([
+      set([
+        pack(0, "AB3000L", false, 1, { history: days([110, null, 120, null, 130, null, null]) }),
+        pack(1, "AB3000L", false, 2, { history: days([20, null, 30, null, 40, null, null]) }),
+      ]),
+    ]);
+    expect(s.now).toBeNull();
+    expect(s.lastDay).toEqual({ day: "2026-11-24", mv: 130, status: "imbalance" });
+    expect(s.imbalance?.days).toBe(3);
+    expect(s.imbalance?.lastDay).toBe("2026-11-24");
   });
 
   it("lists offline sets", () => {

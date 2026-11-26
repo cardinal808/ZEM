@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.7 — Cell balance judged near full (SPEC-celbalans.md)
+- **Correction of 0.8.4.** The cell difference of LiFePO4 says little in the middle of the charge (the voltage curve is flat there); an imbalance shows near full. The panel now judges the cell difference only when a battery is **near full** (SOC ≥ 95 % or highest cell ≥ 3.40 V) **with a small current** (≤ 0.1 C: ≈ 290 W for an AB3000L, 240 W for the built-in battery, 200 W for an unknown type).
+- Labels: **Good** (≤ 30 mV), **Balancing** (≤ 100 mV, normal near full; the set works it away) and **Imbalance** (> 100 mV). Outside a judged moment the value is shown with *judged when full*.
+- **Per day** the largest judged difference; days without a judged moment stay empty. The history of 0.8.4 (measured mid-curve) is dropped at the update.
+- **In short:** *stays out of balance* on 3 or more of the last 7 days (advice: let the set charge fully a few times, then Zendure), *out of balance now*, *was out of balance on …*, or *not (nearly) full this week*. The summary shows the cell difference now, or of the last judged day.
+- Written on the clean side: own thresholds from public LiFePO4 knowledge and own measurements; a separate review compares with other projects functionally (`OPDRACHT-toets-celbalans.md`).
+- Tests: judged moment (SOC, cell voltage, current per type), labels, the diagnostics of 26-11 (50/120/70/40 mV → Balancing/Imbalance/Balancing/Balancing), history incl. dropping the old rule; frontend summary.
+
 ### 0.8.6 — Air conditioner not from the battery (B41, step 1: control)
 - **New options *Air conditioner: energy counter*, *climate entity* and *not from the battery when*** (default: heating). While the air conditioner runs in such a mode, zero-meter control (also in Dynamic Forecasting) does not deliver for it: the battery only covers the rest of the house, the air conditioner takes from the grid. Solar surplus still charges the battery, and ZEPHYR never charges from the grid for it.
 - **Power from a coarse energy counter** (`core/excluded_load.py`): seen live, steps of 0.25 kWh every 8-9 minutes. Power = step / time since the previous step; between steps at most step / time since the last step, so a stopped device fades out by itself. The climate entity switches at once: `hvac_action` idle/off → 0, a start begins with the power of the previous run. Without a climate entity the load is always excluded.
