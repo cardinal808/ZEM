@@ -10,6 +10,7 @@ from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
+from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.zephyr.const import DOMAIN
 from custom_components.zephyr.diagnostics import async_get_config_entry_diagnostics
@@ -110,3 +111,32 @@ async def test_meter_counters_win(hass: HomeAssistant, fake_sets: FakeSets, free
     assert record["import_kwh"] == pytest.approx(0.07)
     assert record["export_kwh"] == pytest.approx(0.01)
     assert record["complete"] is True
+
+
+async def test_savings_view_for_the_panel(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, hass_ws_client: WebSocketGenerator
+) -> None:
+    """Screen Besparing: periods from the cost log, the last 30 days, incomplete days marked."""
+    client = await hass_ws_client(hass)
+    entry = await _setup(hass, fake_sets, freezer)
+    await _run(hass, freezer, 10)
+    await _run(hass, freezer, 900)
+    costs = entry.runtime_data.costs
+    # Two earlier days: a whole one and one where HA was off for a while.
+    whole = {**costs.days["2026-11-25"], "quarters": 96, "incomplete": 0, "no_price": 0}
+    costs.days["2026-11-23"] = whole
+    costs.days["2026-11-24"] = {**whole, "quarters": 60}
+    costs._summaries.clear()
+    await client.send_json_auto_id({"type": "zephyr/savings"})
+    msg = await client.receive_json()
+    assert msg["success"] is True
+    view = msg["result"]
+    assert view["since"] == "2026-11-23"
+    assert [d["day"] for d in view["days"]] == ["2026-11-23", "2026-11-24", "2026-11-25"]
+    assert [d["incomplete"] for d in view["days"]] == [False, True, True]  # today has an open quarter
+    today = view["periods"]["today"]
+    assert today["savings_battery"] == pytest.approx(today["cost_no_battery"] - today["cost"], abs=0.01)
+    assert today["savings_battery"] > 0
+    assert view["periods"]["week"]["days"] == 3  # Monday 23-11 to Wednesday 25-11
+    assert view["periods"]["month"]["days"] == 3
+    assert set(today) >= {"savings_solar_via_battery", "savings_trade", "charge_kwh", "discharge_kwh", "incomplete_quarters"}

@@ -5,7 +5,8 @@
     "sets": "Sets",
     "battery": "Battery",
     "settings": "Settings",
-    "diagnostics": "Diagnostics"
+    "diagnostics": "Diagnostics",
+    "savings": "Savings"
   },
   "header": {
     "live": "In control",
@@ -547,5 +548,43 @@
     "profile_hour": "{hour}:00 · house {house} kWh · air con {airco} kWh · measured {n}×",
     "profile_empty_workday": "No workdays learned yet. Until then the planner uses the mean for every hour ({mean} kWh).",
     "profile_empty_weekend": "No weekend days learned yet. Until then the planner uses the mean for every hour on Saturday and Sunday ({mean} kWh)."
+  },
+  "savings": {
+    "title": "Savings from the battery",
+    "period": "Period",
+    "p_today": "Today",
+    "p_week": "This week",
+    "p_month": "This month",
+    "p_year": "This year",
+    "saved": "saved",
+    "lost": "lost",
+    "without": "Without battery",
+    "paid": "Paid",
+    "no_data": "No data for this period yet.",
+    "incomplete": "{n} of {total} quarters are incomplete (HA was off or there was no price); the amounts are then too low.",
+    "days_title": "Per day, last 30 days",
+    "days_total": "Together {amount} over {n} days.",
+    "unknown": "unknown",
+    "day_incomplete": "incomplete",
+    "leg_win": "Saved",
+    "leg_loss": "Lost",
+    "leg_part": "Day incomplete",
+    "split_title": "Where it comes from, {period}",
+    "solar_part": "Solar kept",
+    "solar_part_help": "Solar that went into the battery during the day and fed the house in the evening or night, instead of being exported at a lower price.",
+    "trade_part": "Price difference",
+    "trade_part_help": "Charging from the grid when power is cheap and delivering when it is expensive. After losses; can be negative when the difference was too small.",
+    "charged": "charged",
+    "delivered": "delivered",
+    "per_kwh": "saved per delivered kWh",
+    "notes_title": "What counts",
+    "note_compare": "Comparison: the same house and the same solar, once with and once without the battery, with your own tariffs per quarter.",
+    "note_fixed": "Fixed costs (standing charge, grid operator) are the same with and without the battery and do not count.",
+    "note_saldering": "Net metering runs until {date}; until then exporting is worth almost as much as importing, and keeping solar earns less.",
+    "note_since": "The cost log runs since {date}; nothing is known before that.",
+    "ps_today": "Today",
+    "ps_week": "Week",
+    "ps_month": "Month",
+    "ps_year": "Year"
   }
 }
