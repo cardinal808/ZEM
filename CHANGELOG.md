@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.11 — Panel: change settings (SPEC-ui §3.4, UI-7; SPEC-ui-airco §3.3, UI-A2)
+- **Screen *Instellingen* is now editable for administrators.** Battery limits, tariffs, planner, zero meter and test phase save at once and go live **without a reload**: the engine gets the new limits, the planner plans again, a new supplier fetches the tariff table. *Standaard terugzetten* next to every changed field; an error shows under the field (for example *Kies een waarde van 5 tot en met 50 %*).
+- **Sources and corrections** (P1, prices, solar, counters, air conditioner) are collected and saved together with *Bewaren en herstarten*, because ZEPHYR restarts for them. Rules over several fields (P1 pair, air conditioner) are checked first.
+- Entity fields: pick or type an entity (filtered on domain and device class), clear with ×; counters as chips. Air-conditioner modes as a multi-select; at least one mode (switch off by clearing the counter).
+- **Status next to the air-conditioner fields:** the counter's rhythm (*elke 8,5 min een stap van 0,25 kWh*, or *nog geen meting*), the climate entity's mode and action (*Verwarmen · draait*, *niet beschikbaar*).
+- **Websocket `zephyr/settings/set`** (administrators): `changes` and `reset`, checked with the same ranges, steps and rules as the options flow (`settings_schema.apply_changes`); answers `ok`, `changed`, `reload` or `errors` per field.
+- **Options:** a change of only live fields no longer reloads the installation, also from HA's options flow. New check in the options flow: a climate entity needs the air conditioner's energy counter (`excluded_needs_counter`).
+- Tests: every field once through `settings/set` (live without reload, sources with reload), errors, administrators only, settings reach engine/planner/tariffs, air-conditioner status, options-flow check; frontend: number input in NL/EN, entity choice, multi-select, texts for every error.
 ### 0.8.10 — Planner actions: recalculate, reset profile, get plan
 - **`zephyr.recalculate`**: a new plan now (for the panel and automations; otherwise every quarter and on new prices).
 - **`zephyr.reset_profile`** (PT9): forgets the learned consumption (house and air conditioner). By default fills it again from the recorder (`refill: true`); with `refill: false` it starts empty and learns from the coming hours. Returns the source and the number of hours.

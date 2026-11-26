@@ -211,9 +211,7 @@
     "no": "off",
     "more": "More about {label}",
     "readonly": "Only an administrator can change settings.",
-    "coming": "Changing settings from the panel comes in the next version. Until then: Settings → Devices & services → ZEPHYR → Configure.",
-    "open_options": "Open options",
-    "reload_note": "A change here reloads ZEPHYR.",
+    "reload_note": "Changes in this group are saved together; ZEPHYR then restarts briefly.",
     "supplier_note": "With a supplier the amounts from the tariff table apply ({source}). They can only be changed with own tariffs.",
     "in_use": "in use: {value}",
     "status": {
@@ -221,7 +219,11 @@
       "missing": "not found: {entities}",
       "ok": "working",
       "interval": "reports every {s} s",
-      "slots": "{n} prices in the sensor"
+      "slots": "{n} prices in the sensor",
+      "unavailable": "unavailable",
+      "climate": "{mode} · {action}",
+      "no_step": "no measurement yet",
+      "steps": "a step of {kwh} kWh every {every}"
     },
     "own": "Own tariffs",
     "options": {
@@ -232,7 +234,8 @@
       "dry": "Drying",
       "fan_only": "Fan",
       "heat_cool": "Heating/cooling",
-      "auto": "Auto"
+      "auto": "Auto",
+      "off": "Off"
     },
     "fields": {
       "min_soc": {
@@ -385,6 +388,46 @@
         "help": "After a restart of HA start in shadow mode.",
         "more": "For the test phase: after every restart you switch control on yourself."
       }
+    },
+    "restarting": "ZEPHYR is restarting with the new settings…",
+    "pending": "{n} changes not saved yet · ZEPHYR restarts briefly",
+    "pending_one": "1 change not saved yet · ZEPHYR restarts briefly",
+    "cancel": "Cancel",
+    "save_restart": "Save and restart",
+    "saving": "Saving…",
+    "saved": "saved",
+    "not_saved": "not saved",
+    "reset": "Restore standard",
+    "clear": "Clear",
+    "remove": "Remove",
+    "choose_entity": "Choose or type an entity",
+    "actions": {
+      "heating": "running",
+      "cooling": "running",
+      "drying": "running",
+      "fan": "running",
+      "preheating": "running",
+      "defrosting": "defrosting",
+      "idle": "idle",
+      "off": "off"
+    },
+    "errors": {
+      "out_of_range": "Outside the limits.",
+      "off_step": "Does not fit the step size.",
+      "not_a_number": "Not a number.",
+      "not_a_bool": "Invalid value.",
+      "required": "May not be empty.",
+      "unknown_choice": "Unknown choice.",
+      "choose_one": "Choose at least one mode. To switch off: clear the counter.",
+      "not_an_entity": "This kind of entity does not fit here.",
+      "entity_missing": "Entity not found.",
+      "unknown_key": "Unknown setting.",
+      "p1_missing": "Choose a P1 sensor.",
+      "p1_pair_incomplete": "Choose both the import and the export sensor.",
+      "p1_pair_same": "Import and export must be two different sensors.",
+      "excluded_needs_counter": "The climate entity only works together with the air conditioner's energy counter. Choose the counter or clear the climate entity.",
+      "failed": "Saving failed. Please try again.",
+      "range": "Choose a value from {min} to {max}{unit}."
     }
   },
   "airco": {

@@ -122,6 +122,13 @@ class ZephyrControl:
     # --- lifecycle ----------------------------------------------------------
 
     @callback
+    def apply_options(self, options: Mapping[str, Any]) -> None:
+        """Battery limits and zero-meter settings changed without a reload (UI-7)."""
+        self.engine.update_settings(self.engine.settings.with_changes(**_limits(options)))
+        self.expensive_hours = int(options.get(CONF_EXPENSIVE_HOURS, DEFAULT_EXPENSIVE_HOURS))
+        self.reserve_soc = float(options.get(CONF_RESERVE_SOC, DEFAULT_RESERVE_SOC))
+        self.min_price = options.get(CONF_MIN_PRICE)
+
     def async_start(self) -> Callable[[], None]:
         unsubs: list[Callable[[], None]] = []
         issue_id = "p1_missing"
@@ -599,6 +606,14 @@ class ZephyrControl:
         interval = timedelta(seconds=SCAN_INTERVAL_ACTIVE if active else SCAN_INTERVAL_IDLE)
         for coordinator in self.runtime.coordinators.values():
             coordinator.update_interval = interval
+
+
+def _limits(options: Mapping[str, Any]) -> dict[str, float]:
+    defaults = Settings()
+    return {
+        CONF_MIN_SOC: float(options.get(CONF_MIN_SOC, defaults.min_soc)),
+        CONF_MAX_SOC: float(options.get(CONF_MAX_SOC, defaults.max_soc)),
+    }
 
 
 def settings_from_options(options: Mapping[str, Any]) -> Settings:

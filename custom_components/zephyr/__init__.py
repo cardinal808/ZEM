@@ -46,6 +46,8 @@ class ZephyrRuntime:
     tariffs: TariffProvider | None = None
     planner: PlanRunner | None = None
     packs: PackRecorder | None = None
+    options: dict[str, Any] = field(default_factory=dict)
+    """The options in use; a change of only live fields is applied without a reload (UI-7)."""
 
     def totals(self) -> Totals:
         return compute_totals((c.snapshot() for c in self.coordinators.values()), time.monotonic())
@@ -155,7 +157,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
         manufacturer="ZEPHYR",
         model="Installation",
     )
-    runtime = ZephyrRuntime()
+    runtime = ZephyrRuntime(options=dict(entry.options))
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_SET:
             continue
@@ -175,7 +177,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
     planner = PlanRunner(hass, entry.entry_id, dict(entry.options), runtime)
     runtime.planner = planner if planner.enabled else None
     entry.runtime_data = runtime
-    entry.async_on_unload(entry.add_update_listener(_async_reload))
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(runtime.control.async_start())
     entry.async_on_unload(await runtime.tariffs.async_start())
@@ -212,5 +214,21 @@ async def async_remove_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> N
     async_remove_panel(hass, entry.entry_id, final=True)
 
 
-async def _async_reload(hass: HomeAssistant, entry: ZephyrConfigEntry) -> None:
-    await hass.config_entries.async_reload(entry.entry_id)
+async def _async_options_updated(hass: HomeAssistant, entry: ZephyrConfigEntry) -> None:
+    """Apply settings live; reload only for sources or anything that is not a known live setting (SPEC-ui §3.4)."""
+    from .settings_schema import BY_KEY
+
+    runtime = entry.runtime_data
+    new = dict(entry.options)
+    changed = {k for k in set(new) | set(runtime.options) if new.get(k) != runtime.options.get(k)}
+    if not changed or any(k not in BY_KEY or BY_KEY[k].reload for k in changed):
+        # No option changed (a set was added or renamed) or a source changed: start again.
+        await hass.config_entries.async_reload(entry.entry_id)
+        return
+    runtime.options = new
+    if runtime.control is not None:
+        runtime.control.apply_options(new)
+    if runtime.tariffs is not None:
+        runtime.tariffs.apply_options(new)
+    if runtime.planner is not None:
+        runtime.planner.apply_options(new)
