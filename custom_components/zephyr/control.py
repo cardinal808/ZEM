@@ -448,6 +448,19 @@ class ZephyrControl:
             total = min(total, float(settings_max))
         return total / 1000
 
+    def _deliver_kw(self, views: list[SetView]) -> float:
+        limits = [v.report.inverse_max_power or 2400 for v in views if v.report is not None and v.online]
+        settings_max = self.engine.settings.max_deliver_power
+        total = float(sum(limits))
+        if settings_max is not None:
+            total = min(total, float(settings_max))
+        return total / 1000
+
+    def power_limits_kw(self) -> tuple[float, float]:
+        """(charge, deliver) kW of the online sets within the settings, for the planner."""
+        views = self._views()
+        return self._charge_kw(views), self._deliver_kw(views)
+
     def _decide_prices(self, views: list[SetView]) -> PriceDecision:
         assert self.price_entity is not None
         state = self.hass.states.get(self.price_entity)

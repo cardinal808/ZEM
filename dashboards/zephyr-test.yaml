@@ -152,3 +152,34 @@ views:
             name: Kosten deze maand
           - entity: sensor.zephyr_savings_month
             name: Besparing deze maand
+
+      - type: entities
+        title: Plan (schaduw, M5)
+        entities:
+          - entity: sensor.zephyr_plan_action
+            name: Plan nu
+          - entity: sensor.zephyr_plan_state
+            name: Toestand
+          - entity: sensor.zephyr_plan_reason
+            name: Reden
+          - entity: sensor.zephyr_planned_grid_charge
+            name: Gepland netladen
+          - type: attribute
+            entity: sensor.zephyr_planned_grid_charge
+            attribute: cost
+            name: Kosten netladen (€)
+          - entity: sensor.zephyr_battery_empty_at
+            name: Accu leeg om
+          - entity: sensor.zephyr_plan_calculated_at
+            name: Berekend om
+
+      - type: markdown
+        title: Plan in blokken
+        content: >-
+          {% set blocks = state_attr('sensor.zephyr_plan_action', 'blocks') or [] %}
+          {% set names = {'charge': 'Laden', 'hold': 'Vasthouden', 'deliver': 'Leveren', 'export': 'Terugleveren'} %}
+          | Van | Tot | Actie | kWh | € gem. |
+          |---|---|---|---|---|
+          {% for b in blocks %}| {{ as_timestamp(b.start) | timestamp_custom('%a %H:%M') }} | {{ as_timestamp(b.end) | timestamp_custom('%H:%M') }} | {{ names[b.action] }}{{ ' *' if b.indicative }} | {{ b.kwh }} | {{ '%.3f' % b.price }} |
+          {% endfor %}
+          \* indicatief: prijzen van morgen nog onbekend

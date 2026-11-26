@@ -266,6 +266,8 @@ class CostRecorder:
             self.pools,
             _days_in_month(local_start.date()),
         )
+        if self.runtime.planner is not None:
+            record.update(self.runtime.planner.quarter_closed(start, record, self.solar_entity is not None))
         self._open(boundary)
         await self._load_month(_month_key(start))
         self.current.append(record)
