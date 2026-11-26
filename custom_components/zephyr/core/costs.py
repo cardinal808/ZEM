@@ -25,6 +25,8 @@ from dataclasses import asdict, dataclass, field, replace
 from datetime import date, datetime
 from typing import Any, Final
 
+from . import plan_check
+
 QUARTER_SECONDS: Final = 900.0
 COMPLETE_SHARE: Final = 0.95
 """A quarter counts as complete when at least this share of its time was measured."""
@@ -202,9 +204,19 @@ RECORD_FIELDS: Final = (
     "plan_action",
     "plan_cost",
     "soc",
+    "excluded_kwh",
+    "vacation",
+    "ahead_load_kwh",
+    "ahead_excluded_kwh",
+    "ahead_solar_kwh",
+    "ahead_import_kwh",
+    "ahead_export_kwh",
+    "ahead_cost",
+    "ahead_soc",
 )
-"""Fields of a stored quarter (and the CSV columns). Plan fields stay empty until the planner (M5).
-``soc``: state of charge at the end of the quarter (%, 0.8.2), for the panel's past."""
+"""Fields of a stored quarter (and the CSV columns). ``plan_*``: the plan at the start of the quarter.
+``soc``: state of charge at the end of the quarter (%, 0.8.2), for the panel's past.
+``excluded_kwh`` (B41), ``vacation`` (B42). ``ahead_*``: the day-ahead plan (plan against reality, 0.8.20)."""
 
 
 def _r(value: float | None, digits: int = 4) -> float | None:
@@ -322,6 +334,7 @@ def add_to_day(day: dict[str, float], record: Mapping[str, Any]) -> None:
         if record.get("cost_no_solar") is not None:
             day["cost_no_solar"] = day.get("cost_no_solar", 0.0) + float(record["cost_no_solar"])
             day["solar_priced"] = day.get("solar_priced", 0) + 1
+    plan_check.add_to_day(day, record)
     for key in list(day):
         if isinstance(day[key], float):
             day[key] = round(day[key], 5)

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.20 — Plan against reality (B38)
+- The planner keeps the **day-ahead plan**: every new plan overwrites what it expects for tomorrow (per quarter: use without the air conditioner, solar, grid import and export, cost, SOC); at midnight that is fixed, so a day is compared with the plan as it stood at the end of the day before. Only with tomorrow's real prices (not the indicative pattern). Stored with the planner (survives a restart).
+- Every cost quarter gets `ahead_load_kwh`, `ahead_excluded_kwh`, `ahead_solar_kwh`, `ahead_import_kwh`, `ahead_export_kwh`, `ahead_cost`, `ahead_soc` (also in the CSV export, with `excluded_kwh` and `vacation`). Day totals add the expectation and the matching measured values over the quarters that have both, plus the absolute error per quarter for use and solar.
+- New websocket `zephyr/plan_check` (`days`, default 14): per day expected / measured / difference for use, solar, import, export and cost, the SOC at the end of the day, and a summary over the finished days (mean absolute difference per day). Diagnostics: `costs.plan_check` (7 days).
+- Tests: day totals and summary in the core; the day-ahead plan in the cost quarter and the websocket in HA.
+
 ### 0.8.19 — Holidays from Workday
 - New optional setting **Workday sensor** (*Werkdag-sensor*, planner group): a `binary_sensor` of the Workday integration. When set, the planner asks Workday (`workday.check_date`) per day whether it is a workday, so a public holiday such as Christmas or King's Day counts as a *weekend* day: in the plan for today and the next two days, and when learning the load profile (live and from the recorder). Without the setting nothing changes: Saturday and Sunday are weekend.
 - Setup suggests the Workday sensor when there is one. If Workday does not answer, the weekday decides.

@@ -68,6 +68,7 @@ from .core.forecast_plan import (
     solar_per_quarter,
 )
 from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, blocked_share, day_type_of, profile_from_history
+from .core.plan_check import expectations, record_fields
 from .core.plan_view import local_midnight, plan_view
 from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
@@ -163,6 +164,8 @@ class PlanRunner:
         self.known_at: dict[date, datetime] = {}
         """Day → when its prices were first seen (the panel shows "known since hh:mm")."""
         self.by_quarter: dict[str, tuple[str, float]] = {}
+        self.ahead: dict[str, dict[str, dict[str, float]]] = {}
+        """Plan against reality: per local day (ISO date) the day-ahead plan's expectations per quarter (UTC ISO)."""
         """Quarter start (ISO UTC) → (action, expected cost) of the first plan in that quarter."""
         self._listeners: list[Callable[[], None]] = []
         self._task: asyncio.Task[None] | None = None
@@ -190,6 +193,7 @@ class PlanRunner:
         self.profile_source = str(stored.get("profile_source") or ("stored" if self.profile.mean_count else "none"))
         self.excluded_profile = LoadProfile.from_dict(stored.get("excluded_profile"))
         self.vacation_profile = LoadProfile.from_dict(stored.get("vacation_profile"))
+        self.ahead = {str(k): v for k, v in (stored.get("ahead") or {}).items() if isinstance(v, dict)}
         # B41: a profile learned with another (or no) excluded load mixes it in: fill again.
         changed = stored.get("profile", None) is not None and stored.get("excluded_entity") != self.excluded_entity
         if changed:
@@ -519,6 +523,7 @@ class PlanRunner:
     def _publish(self, outcome: PlanOutcome, inputs: dict[str, Any]) -> None:
         self.outcome = outcome
         self.inputs = inputs
+        self._keep_ahead(outcome)
         if outcome.slots:
             first = outcome.slots[0].start.isoformat()
             if first not in self.by_quarter:
@@ -543,16 +548,30 @@ class PlanRunner:
         for listener in list(self._listeners):
             listener()
 
+    def _keep_ahead(self, outcome: PlanOutcome) -> None:
+        """Plan against reality: every plan overwrites tomorrow's expectations; at midnight they are fixed."""
+        tz = dt_util.get_default_time_zone()
+        today = outcome.calculated_at.astimezone(tz).date()
+        tomorrow = today + timedelta(days=1)
+        expected = expectations(outcome, tomorrow, tz)
+        if expected:  # only with tomorrow's real prices (not the indicative pattern)
+            self.ahead[tomorrow.isoformat()] = expected
+            self._store.async_delay_save(self._data, 60)
+        for key in [k for k in self.ahead if k < today.isoformat()]:
+            del self.ahead[key]
+
     # --- the cost log and learning ------------------------------------------------------
 
     def quarter_closed(self, start: datetime, record: Mapping[str, Any], solar_known: bool) -> dict[str, Any]:
         """Learn from a closed cost quarter; return the plan fields for its record (B38)."""
         self._learn_quarter(start, record, solar_known)
         self._store.async_delay_save(self._data, 30)
-        planned = self.by_quarter.get(dt_util.as_utc(start).isoformat())
-        if planned is None:
-            return {}
-        return {"plan_action": planned[0], "plan_cost": planned[1]}
+        key = dt_util.as_utc(start).isoformat()
+        fields = record_fields(self.ahead.get(dt_util.as_local(start).date().isoformat(), {}).get(key))
+        planned = self.by_quarter.get(key)
+        if planned is not None:
+            fields.update({"plan_action": planned[0], "plan_cost": planned[1]})
+        return fields
 
     def _learn_quarter(self, start: datetime, record: Mapping[str, Any], solar_known: bool) -> None:
         local = dt_util.as_local(start)
@@ -709,6 +728,7 @@ class PlanRunner:
             "excluded_entity": self.excluded_entity,
             "excluded_profile": self.excluded_profile.as_dict(),
             "vacation_profile": self.vacation_profile.as_dict(),
+            "ahead": self.ahead,
             "reserve": [[s.start.isoformat(), s.end.isoformat(), s.price] for s in self.reserve],
         }
 

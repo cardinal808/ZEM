@@ -465,3 +465,37 @@ async def test_holidays_from_workday_count_as_weekend(hass: HomeAssistant, fake_
     for q in range(4):
         planner.quarter_closed(holiday + timedelta(minutes=15 * q), {"complete": True, "house_kwh": 0.5}, False)
     assert planner.profile.counts["weekend"][10] == 1 and planner.profile.counts["workday"][10] == 0
+
+
+async def test_day_ahead_plan_in_the_cost_log(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    """Plan against reality: the last plan of the day before travels with each quarter of the day."""
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (14, 0), price_entity=PRICE)
+    await _tick(hass, freezer, 10)
+    planner = entry.runtime_data.planner
+    tz = dt_util.get_default_time_zone()
+    ahead = planner.ahead["2026-11-27"]
+    first = datetime(2026, 11, 27, 0, 0, tzinfo=tz)
+    key = dt_util.as_utc(first).isoformat()
+    assert len(ahead) == 96 and set(ahead[key]) >= {"load", "solar", "import", "export", "cost", "soc"}
+    assert "2026-11-26" not in planner.ahead  # no plan yesterday
+    fields = planner.quarter_closed(first, {"complete": True, "house_kwh": 0.3}, False)
+    assert fields["ahead_load_kwh"] == ahead[key]["load"] and fields["ahead_soc"] == ahead[key]["soc"]
+    assert "ahead_load_kwh" not in planner.quarter_closed(first - timedelta(minutes=15), {"complete": True}, False)
+
+
+async def test_plan_check_websocket(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, hass_ws_client: Any) -> None:
+    client = await hass_ws_client(hass)
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (14, 0), price_entity=PRICE)
+    costs = entry.runtime_data.costs
+    record = {"complete": True, "house_kwh": 0.5, "solar_kwh": 0.0, "cost": 0.1, "import_kwh": 0.5, "soc": 30.0}
+    from custom_components.zephyr.core.costs import add_to_day
+
+    add_to_day(costs.days.setdefault("2026-11-25", {}), {**record, "ahead_load_kwh": 0.4, "ahead_cost": 0.08, "ahead_soc": 32.0})
+    await client.send_json({"id": 1, "type": "zephyr/plan_check", "days": 7})
+    msg = await client.receive_json()
+    assert msg["success"], msg
+    day = msg["result"]["days"][0]
+    assert day["date"] == "2026-11-25" and day["load"]["diff"] == pytest.approx(0.1)
+    assert msg["result"]["summary"]["cost"]["actual"] == pytest.approx(0.1)
