@@ -35,6 +35,7 @@ PLAN_MODES: Final = [Mode.STANDBY, Mode.ZERO_METER, Mode.FAST_CHARGE, Mode.FAST_
 @callback
 def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_subscribe)
+    async_register_command(hass, ws_plan)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -177,3 +178,18 @@ def ws_subscribe(hass: HomeAssistant, connection: ActiveConnection, msg: dict[st
     connection.subscriptions[msg_id] = close
     connection.send_result(msg_id)
     send()
+
+
+@websocket_command({vol.Required("type"): "zephyr/plan"})
+@callback
+def ws_plan(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Prices and plan per quarter, today 00:00 to the end of tomorrow (SPEC-ui §3.2)."""
+    entry = _entry(hass)
+    if entry is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    planner = entry.runtime_data.planner
+    if planner is None:
+        connection.send_error(msg["id"], "no_price_source", "No price sensor chosen in the options")
+        return
+    connection.send_result(msg["id"], planner.view())

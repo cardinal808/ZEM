@@ -165,3 +165,46 @@ async def test_subscribe_without_price_source(hass: HomeAssistant, fake_sets: Fa
     assert now["price_entity"] is False
     assert now["plan"] is None
     assert now["modes"] == ["standby", "zero_meter", "fast_charge", "fast_discharge"]
+
+
+async def test_plan_command(
+    hass: HomeAssistant, fake_sets: FakeSets, hass_ws_client: WebSocketGenerator, freezer: FrozenDateTimeFactory
+) -> None:
+    """zephyr/plan: every quarter of today and tomorrow, past ones with prices only (UI-2)."""
+    client = await hass_ws_client(hass)
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(datetime(2026, 11, 26, 20, 0, 0, tzinfo=dt_util.get_default_time_zone()))
+    _set_prices(hass)
+    entry = await _install_with_p1(hass, fake_sets)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(result["flow_id"], {"p1_entity": P1, "price_entity": PRICE})
+    await hass.async_block_till_done()
+    for _ in range(3):
+        freezer.tick(timedelta(seconds=5))
+        hass.states.async_set(P1, "300", {"device_class": "power", "unit_of_measurement": "W"}, force_update=True)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+
+    await client.send_json_auto_id({"type": "zephyr/plan"})
+    msg = await client.receive_json()
+    assert msg["success"] is True
+    view = msg["result"]
+    assert view["state"] == "active"
+    assert set(view["reason"]) == {"nl", "en"}
+    assert view["tomorrow_known_at"] is not None
+    quarters = view["quarters"]
+    assert len(quarters) == 192
+    assert quarters[0]["start"] == "2026-11-25T23:00:00+00:00"
+    assert quarters[0]["past"] is True and quarters[0]["action"] is None and quarters[0]["buy"] > quarters[0]["market"]
+    assert quarters[80]["past"] is False and quarters[80]["action"] in ("charge", "hold", "deliver")
+    assert quarters[80]["soc"] is not None
+    assert view["blocks"]
+
+
+async def test_plan_command_without_price_source(hass: HomeAssistant, fake_sets: FakeSets, hass_ws_client: WebSocketGenerator) -> None:
+    await _install_with_p1(hass, fake_sets)
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "zephyr/plan"})
+    msg = await client.receive_json()
+    assert msg["success"] is False
+    assert msg["error"]["code"] == "no_price_source"
