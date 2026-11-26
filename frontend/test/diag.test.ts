@@ -30,11 +30,19 @@ describe("diagnose", () => {
     expect(Object.keys(nl.diag).sort()).toEqual(Object.keys(en.diag).sort());
   });
 
-  it("shows fast buttons and a way back", () => {
+  it("keeps the fast buttons in place and stops the running one", () => {
     const modes = ["standby", "zero_meter", "fast_charge", "fast_discharge", "dynamic_forecasting"];
-    expect(fastButtons("dynamic_forecasting", modes, "zero_meter")).toEqual({ charge: true, discharge: true, stop: null });
-    expect(fastButtons("fast_charge", modes, "dynamic_forecasting")).toEqual({ charge: false, discharge: true, stop: "dynamic_forecasting" });
-    expect(fastButtons("fast_discharge", modes, "fast_discharge").stop).toBe("zero_meter");
+    expect(fastButtons("dynamic_forecasting", modes, "zero_meter")).toEqual([
+      { mode: "fast_charge", active: false, target: "fast_charge" },
+      { mode: "fast_discharge", active: false, target: "fast_discharge" },
+    ]);
+    // Bjorn's test 26-11: from fast charge to fast discharge the buttons used to swap places.
+    expect(fastButtons("fast_charge", modes, "dynamic_forecasting").map((b) => [b.mode, b.target])).toEqual([
+      ["fast_charge", "dynamic_forecasting"],
+      ["fast_discharge", "fast_discharge"],
+    ]);
+    expect(fastButtons("fast_discharge", modes, "fast_discharge")[1].target).toBe("zero_meter");
+    expect(fastButtons("zero_meter", ["standby", "zero_meter"], "zero_meter")).toEqual([]);
   });
 
   it("translates the reasons live control cannot start", () => {

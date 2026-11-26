@@ -287,6 +287,7 @@ async def test_events_for_the_screen_diagnose(
     assert msg["success"] is True
     view = msg["result"]
     assert view["entry_id"] == entry.entry_id
+    assert view["shadow"] is True
     assert any(e["kind"] == "reason" and e["text"] is not None for e in view["events"])
     assert any(e["kind"] == "mode" and e["mode"] == "standby" for e in view["events"])
     assert all("time" in e for e in view["events"])

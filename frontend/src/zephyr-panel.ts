@@ -59,6 +59,8 @@ export class ZephyrPanel extends LitElement {
   @state() private confirmLive = false;
   @state() private controlBusy = false;
   @state() private controlError: string | null = null;
+  @state() private pendingMode: string | null = null;
+  private pendingTimer?: number;
 
   private setsTimer?: number;
 
@@ -231,7 +233,12 @@ export class ZephyrPanel extends LitElement {
 
   private setMode(mode: string): void {
     const entity = this.now?.entities.mode;
-    if (entity && mode !== this.now?.mode) void this.callService("select", "select_option", { entity_id: entity, option: mode });
+    if (!entity || mode === this.now?.mode) return;
+    // Until the new mode shows (updates come every 2 s), the fast buttons wait: no double taps.
+    this.pendingMode = mode;
+    window.clearTimeout(this.pendingTimer);
+    this.pendingTimer = window.setTimeout(() => (this.pendingMode = null), 5000);
+    void this.callService("select", "select_option", { entity_id: entity, option: mode });
   }
 
   private async setLive(on: boolean): Promise<void> {
@@ -301,6 +308,7 @@ export class ZephyrPanel extends LitElement {
   private onEvent(event: SubscribeEvent): void {
     if (event.type === "now") {
       this.now = event.data;
+      if (this.pendingMode === event.data.mode) this.pendingMode = null;
       this.status = "ok";
       this.clockMs = Date.now();
       void this.loadPlan();
@@ -407,23 +415,25 @@ export class ZephyrPanel extends LitElement {
 
   private renderFast(now: Now): TemplateResult | typeof nothing {
     if (!this.admin || !now.entities?.mode) return nothing;
-    const b = fastButtons(now.mode, now.modes, now.previous_mode);
+    const buttons = fastButtons(now.mode, now.modes, now.previous_mode);
+    const waiting = this.pendingMode !== null && this.pendingMode !== now.mode;
+    const running = buttons.find((b) => b.active);
     return html`<div class="fast" role="group" aria-label=${this.tr("control.fast")}>
-      ${b.stop
-        ? html`<span class="fastnote">${this.tr(`control.running_${now.mode}`)}</span>
-            <button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode(b.stop as string)}>
-              ${this.tr("control.stop", { mode: this.tr(`mode.${b.stop}`) })}
-            </button>`
-        : nothing}
-      ${b.charge
-        ? html`<button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode("fast_charge")}>
-            ${this.tr("control.fast_charge")}
-          </button>`
-        : nothing}
-      ${b.discharge
-        ? html`<button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode("fast_discharge")}>
-            ${this.tr("control.fast_discharge")}
-          </button>`
+      ${buttons.map(
+        (b) => html`<button
+          type="button"
+          class=${b.active ? "primary" : "ghost"}
+          aria-pressed=${b.active ? "true" : "false"}
+          ?disabled=${this.controlBusy || waiting}
+          @click=${() => this.setMode(b.target)}
+        >
+          ${b.active ? this.tr("control.stop_fast", { mode: this.tr(`control.${b.mode}`) }) : this.tr(`control.${b.mode}`)}
+        </button>`,
+      )}
+      ${running
+        ? html`<span class="fastnote">${this.tr(`control.running_${running.mode}`)} ${this.tr("control.back_to", {
+            mode: this.tr(`mode.${running.target}`),
+          })}</span>`
         : nothing}
       ${now.live ? nothing : html`<span class="fastnote">${this.tr("control.shadow_note")}</span>`}
     </div>`;

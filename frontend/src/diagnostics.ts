@@ -75,7 +75,8 @@ export class ZephyrDiagnostics extends LitElement {
   private renderCounters(view: EventsView): TemplateResult {
     if (!view.sets.length) return html`<p class="muted">${this.tr("diag.no_sets")}</p>`;
     const n = (v: number | null) => (v === null ? "–" : new Intl.NumberFormat(this.locale).format(v));
-    return html`<h3>${this.tr("diag.counters")}</h3>
+    return html`<h3>${this.tr(view.shadow ? "diag.counters_shadow" : "diag.counters")}</h3>
+      ${view.shadow ? html`<p class="note">${this.tr("diag.shadow_counts")}</p>` : nothing}
       <table>
         <thead>
           <tr>
