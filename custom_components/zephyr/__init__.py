@@ -29,6 +29,7 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.S
 if TYPE_CHECKING:
     from .control import ZephyrControl
     from .cost_recorder import CostRecorder
+    from .pack_recorder import PackRecorder
     from .planner_runner import PlanRunner
     from .solar_recorder import SolarRecorder
     from .tariff_provider import TariffProvider
@@ -44,6 +45,7 @@ class ZephyrRuntime:
     costs: CostRecorder | None = None
     tariffs: TariffProvider | None = None
     planner: PlanRunner | None = None
+    packs: PackRecorder | None = None
 
     def totals(self) -> Totals:
         return compute_totals((c.snapshot() for c in self.coordinators.values()), time.monotonic())
@@ -137,6 +139,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
     entry.async_on_unload(runtime.control.async_start())
     entry.async_on_unload(await runtime.tariffs.async_start())
     entry.async_on_unload(await runtime.costs.async_start())
+    from .pack_recorder import PackRecorder
+
+    runtime.packs = PackRecorder(hass, entry.entry_id, runtime)
+    entry.async_on_unload(await runtime.packs.async_start())
     from .solar_recorder import SolarRecorder
 
     runtime.solar = SolarRecorder(hass, entry.entry_id, dict(entry.options))

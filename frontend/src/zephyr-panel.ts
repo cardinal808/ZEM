@@ -6,6 +6,8 @@ import { clock, euro, kwh, minutesUntil, percent, sameDay, signedWatts, watts } 
 import { language, t, type Lang } from "./i18n";
 import { stats, upcomingBlocks, type PlanBlock, type PlanView } from "./plan";
 import "./prices-plan";
+import "./sets";
+import type { SetsView } from "./sets";
 import { actionFill, theme } from "./theme";
 import type { HomeAssistant, Now, PanelInfo, PlanNow, SubscribeEvent } from "./types";
 
@@ -44,6 +46,9 @@ export class ZephyrPanel extends LitElement {
   @state() private view: View = "plan";
   @state() private clockMs = Date.now();
   @state() private planView?: PlanView;
+  @state() private setsView?: SetsView;
+
+  private setsTimer?: number;
 
   private planFor = "";
   private planBusy = false;
@@ -88,6 +93,7 @@ export class ZephyrPanel extends LitElement {
     super.disconnectedCallback();
     window.clearInterval(this.clockTimer);
     window.clearInterval(this.planTimer);
+    window.clearInterval(this.setsTimer);
     window.clearTimeout(this.retryTimer);
     this.watch(undefined);
     void this.stop();
@@ -166,6 +172,24 @@ export class ZephyrPanel extends LitElement {
     }
   }
 
+  private async loadSets(): Promise<void> {
+    if (!this.hass || this.view !== "sets") return;
+    try {
+      this.setsView = await this.hass.callWS<SetsView>({ type: "zephyr/sets" });
+    } catch {
+      // Not loaded: the banner says so.
+    }
+  }
+
+  private show(view: View): void {
+    this.view = view;
+    window.clearInterval(this.setsTimer);
+    if (view === "sets") {
+      void this.loadSets();
+      this.setsTimer = window.setInterval(() => void this.loadSets(), 10_000);
+    }
+  }
+
   private retry(ms: number): void {
     window.clearTimeout(this.retryTimer);
     this.retryTimer = window.setTimeout(() => void this.subscribe(), ms);
@@ -191,7 +215,7 @@ export class ZephyrPanel extends LitElement {
     return html`
       <div class="page">
         ${this.renderHeader()}
-        <main>${this.renderBanner()} ${this.view === "plan" ? this.renderPlan() : this.renderComing()}</main>
+        <main>${this.renderBanner()} ${this.renderView()}</main>
       </div>
     `;
   }
@@ -218,7 +242,7 @@ export class ZephyrPanel extends LitElement {
                 type="button"
                 class=${this.view === view ? "tab active" : "tab"}
                 aria-current=${this.view === view ? "page" : "false"}
-                @click=${() => (this.view = view)}
+                @click=${() => this.show(view)}
               >
                 ${this.tr(key)}
               </button>`,
@@ -250,6 +274,20 @@ export class ZephyrPanel extends LitElement {
       default:
         return nothing;
     }
+  }
+
+  private renderView(): TemplateResult {
+    if (this.view === "plan") return this.renderPlan();
+    if (this.view === "sets") {
+      return html`<zephyr-sets
+        class=${this.status === "ok" ? "" : "stale"}
+        .view=${this.setsView}
+        .uiLang=${this.uiLang}
+        .locale=${this.locale}
+        .timeZone=${this.timeZone}
+      ></zephyr-sets>`;
+    }
+    return this.renderComing();
   }
 
   private renderComing(): TemplateResult {
@@ -578,7 +616,8 @@ export class ZephyrPanel extends LitElement {
       }
       .cards.stale,
       .duo.stale,
-      zephyr-prices-plan.stale {
+      zephyr-prices-plan.stale,
+      zephyr-sets.stale {
         opacity: 0.6;
       }
       .duo {

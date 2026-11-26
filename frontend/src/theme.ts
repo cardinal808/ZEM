@@ -19,6 +19,10 @@ export const theme = css`
     --z-warn-text: #5c3300;
     --z-info-bg: #eef3fb;
     --z-bar: #8c9792;
+    --z-good-bg: #ddf2ec;
+    --z-good-text: #0b5a4b;
+    --z-bad-bg: #fbdcdc;
+    --z-bad-text: #7a1414;
     --z-font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
     --z-font-head: "Space Grotesk", Inter, system-ui, sans-serif;
   }
@@ -39,6 +43,10 @@ export const theme = css`
     --z-warn-text: #f7d4a8;
     --z-info-bg: #1b2433;
     --z-bar: #6f7a75;
+    --z-good-bg: #163b33;
+    --z-good-text: #9fe3cf;
+    --z-bad-bg: #3d1a1a;
+    --z-bad-text: #f5b4b4;
   }
 `;
 
