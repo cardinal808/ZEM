@@ -622,8 +622,8 @@ class ZephyrEngine:
         assert r is not None and self._p1_value is not None
         charge, deliver, why = self._limits(primary, blocked)
 
-        # Below the minimum (self-consumption in standby): recharge gently.
-        if r.soc < s.min_soc - 1 and charge > 0:
+        # Below the minimum (self-consumption in standby): recharge gently, up to the minimum.
+        if r.soc < s.min_soc and charge > 0:
             power = min(s.recharge_below_min_power, int(charge)) // 10 * 10
             self.controller.reset(now)
             return power, Reason(ReasonCode.RECHARGE_MIN, {"power": power})
