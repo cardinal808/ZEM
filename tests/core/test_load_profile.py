@@ -76,3 +76,14 @@ def test_first_fill_from_meter_history() -> None:
     assert profile.expected(WORKDAY, 3) == pytest.approx(0.25)
     assert profile.expected(WEEKEND, 18) == pytest.approx(profile.mean)  # nothing learned for weekends yet
     assert profile.steering() == 1.0
+
+
+def test_workday_overrides_the_weekday() -> None:
+    from datetime import date, datetime
+
+    from zephyr_core.load_profile import WEEKEND, WORKDAY, day_type_of
+
+    christmas = datetime(2026, 12, 25, 12)  # a Friday
+    assert day_type_of(christmas) == WORKDAY
+    assert day_type_of(christmas, {date(2026, 12, 25): False}) == WEEKEND
+    assert day_type_of(datetime(2026, 12, 26, 12), {date(2026, 12, 25): False}) == WEEKEND  # Saturday by the weekday

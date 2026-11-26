@@ -1022,6 +1022,11 @@ var Ge = {
 					label: "Vakantie als niemand thuis is",
 					help: "Vanzelf aan na 24 uur zonder iemand thuis.",
 					more: "Gebruikt zone.home (het aantal mensen thuis). Uit zodra er iemand terug is. De schakelaar Vakantie (met Vakantie tot) werkt daarnaast altijd."
+				},
+				workday_entity: {
+					label: "Werkdag-sensor",
+					help: "Feestdagen tellen als weekenddag.",
+					more: "ZEPHYR vraagt de integratie Workday (actie workday.check_date) naar vandaag, morgen en de dagen van de eerste vulling. Zonder sensor zijn maandag t/m vrijdag werkdagen."
 				}
 			},
 			restarting: "ZEPHYR start opnieuw met de nieuwe instellingen…",
@@ -1568,6 +1573,11 @@ var Ge = {
 					label: "Vacation when nobody is home",
 					help: "On by itself after 24 hours with nobody home.",
 					more: "Uses zone.home (the number of people at home). Off as soon as someone is back. The switch Vacation (with Vacation until) always works as well."
+				},
+				workday_entity: {
+					label: "Workday sensor",
+					help: "Holidays count as weekend days.",
+					more: "ZEPHYR asks the Workday integration (action workday.check_date) about today, tomorrow and the days of the first fill. Without it Monday to Friday are workdays."
 				}
 			},
 			restarting: "ZEPHYR is restarting with the new settings…",

@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Final
 
 WORKDAY: Final = "workday"
@@ -120,18 +120,21 @@ class HourEnergy:
         return max(total - self.excluded_kwh, 0.0)
 
 
-def day_type_of(local: datetime) -> str:
+def day_type_of(local: datetime, workdays: Mapping[date, bool] | None = None) -> str:
+    """Workday or weekend; ``workdays`` (from the Workday integration) overrides the weekday: a holiday is a weekend day."""
+    if workdays is not None and local.date() in workdays:
+        return WORKDAY if workdays[local.date()] else WEEKEND
     return WEEKEND if local.weekday() >= 5 else WORKDAY
 
 
-def profile_from_history(hours: Iterable[HourEnergy], excluded: bool = False) -> LoadProfile:
+def profile_from_history(hours: Iterable[HourEnergy], excluded: bool = False, workdays: Mapping[date, bool] | None = None) -> LoadProfile:
     """A profile learned from past hours, oldest first (§2.3: first fill).
 
     ``excluded``: learn the excluded load (B41) instead of the house.
     """
     profile = LoadProfile()
     for hour in sorted(hours, key=lambda h: h.start):
-        profile.learn(day_type_of(hour.start), hour.start.hour, hour.excluded_kwh if excluded else hour.house_kwh)
+        profile.learn(day_type_of(hour.start, workdays), hour.start.hour, hour.excluded_kwh if excluded else hour.house_kwh)
     profile.recent.clear()  # steering is for the live hours only
     return profile
 

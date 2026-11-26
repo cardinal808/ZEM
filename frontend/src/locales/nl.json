@@ -405,6 +405,11 @@
         "label": "Vakantie als niemand thuis is",
         "help": "Vanzelf aan na 24 uur zonder iemand thuis.",
         "more": "Gebruikt zone.home (het aantal mensen thuis). Uit zodra er iemand terug is. De schakelaar Vakantie (met Vakantie tot) werkt daarnaast altijd."
+      },
+      "workday_entity": {
+        "label": "Werkdag-sensor",
+        "help": "Feestdagen tellen als weekenddag.",
+        "more": "ZEPHYR vraagt de integratie Workday (actie workday.check_date) naar vandaag, morgen en de dagen van de eerste vulling. Zonder sensor zijn maandag t/m vrijdag werkdagen."
       }
     },
     "restarting": "ZEPHYR start opnieuw met de nieuwe instellingen…",
