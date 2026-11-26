@@ -443,7 +443,6 @@
     "fast": "Fast charge or discharge",
     "fast_charge": "Fast charge",
     "fast_discharge": "Fast discharge",
-    "stop": "Stop, back to {mode}",
     "running_fast_charge": "Fast charging runs up to the upper limit.",
     "running_fast_discharge": "Fast discharging runs down to the lower limit.",
     "shadow_note": "Shadow mode: ZEPHYR computes but does not control.",
@@ -462,7 +461,9 @@
       "serial": "Set {set} reports a different serial number.",
       "fault": "Set {set} reports an error.",
       "test": "A write test is running."
-    }
+    },
+    "stop_fast": "Stop {mode}",
+    "back_to": "Then back to {mode}."
   },
   "diag": {
     "title": "Diagnostics",
@@ -508,6 +509,8 @@
       "standby": "standby",
       "soc_limits": "charge limits",
       "test": "write test"
-    }
+    },
+    "counters_shadow": "Commands, last 24 hours (shadow)",
+    "shadow_counts": "Shadow mode: counted what ZEPHYR would send. Nothing was written to the set; Failed only counts real writes."
   }
 }

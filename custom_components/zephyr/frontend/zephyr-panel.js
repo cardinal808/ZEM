@@ -1060,7 +1060,6 @@ var We = {
 			fast: "Snel laden of ontladen",
 			fast_charge: "Snel laden",
 			fast_discharge: "Snel ontladen",
-			stop: "Stoppen, terug naar {mode}",
 			running_fast_charge: "Snel laden loopt tot de bovengrens.",
 			running_fast_discharge: "Snel ontladen loopt tot de ondergrens.",
 			shadow_note: "Schaduwmodus: ZEPHYR rekent mee maar stuurt niets.",
@@ -1079,7 +1078,9 @@ var We = {
 				serial: "Set {set} meldt een ander serienummer.",
 				fault: "Set {set} meldt een fout.",
 				test: "Er loopt een schrijftest."
-			}
+			},
+			stop_fast: "{mode} stoppen",
+			back_to: "Daarna terug naar {mode}."
 		},
 		diag: {
 			title: "Diagnose",
@@ -1125,7 +1126,9 @@ var We = {
 				standby: "standby",
 				soc_limits: "laadgrenzen",
 				test: "schrijftest"
-			}
+			},
+			counters_shadow: "Opdrachten, laatste 24 uur (schaduw)",
+			shadow_counts: "Schaduwmodus: geteld wat ZEPHYR zou sturen. Er is niets naar de set geschreven; Mislukt telt alleen echte schrijfacties."
 		}
 	},
 	en: {
@@ -1573,7 +1576,6 @@ var We = {
 			fast: "Fast charge or discharge",
 			fast_charge: "Fast charge",
 			fast_discharge: "Fast discharge",
-			stop: "Stop, back to {mode}",
 			running_fast_charge: "Fast charging runs up to the upper limit.",
 			running_fast_discharge: "Fast discharging runs down to the lower limit.",
 			shadow_note: "Shadow mode: ZEPHYR computes but does not control.",
@@ -1592,7 +1594,9 @@ var We = {
 				serial: "Set {set} reports a different serial number.",
 				fault: "Set {set} reports an error.",
 				test: "A write test is running."
-			}
+			},
+			stop_fast: "Stop {mode}",
+			back_to: "Then back to {mode}."
 		},
 		diag: {
 			title: "Diagnostics",
@@ -1638,7 +1642,9 @@ var We = {
 				standby: "standby",
 				soc_limits: "charge limits",
 				test: "write test"
-			}
+			},
+			counters_shadow: "Commands, last 24 hours (shadow)",
+			shadow_counts: "Shadow mode: counted what ZEPHYR would send. Nothing was written to the set; Failed only counts real writes."
 		}
 	}
 };
@@ -3739,12 +3745,12 @@ function yt(e) {
 	return e.kind === "mode" ? "mode" : e.kind === "live" || e.kind === "shadow" || e.kind === "test" || e.kind === "test_end" ? "live" : e.kind === "excluded_on" || e.kind === "excluded_off" ? "airco" : e.kind === "flash" ? "write" : e.kind === "second_controller" ? "warning" : "control";
 }
 function bt(e, t, n) {
-	let r = e === "fast_charge" || e === "fast_discharge";
-	return {
-		charge: t.includes("fast_charge") && e !== "fast_charge",
-		discharge: t.includes("fast_discharge") && e !== "fast_discharge",
-		stop: r ? n === e ? "zero_meter" : n : null
-	};
+	let r = n === "fast_charge" || n === "fast_discharge" ? "zero_meter" : n;
+	return ["fast_charge", "fast_discharge"].filter((e) => t.includes(e)).map((t) => ({
+		mode: t,
+		active: e === t,
+		target: e === t ? r : t
+	}));
 }
 var xt = [
 	[/^no P1 sensor chosen$/, "no_p1"],
@@ -3824,7 +3830,8 @@ var Q = class extends O {
 	renderCounters(e) {
 		if (!e.sets.length) return S`<p class="muted">${this.tr("diag.no_sets")}</p>`;
 		let t = (e) => e === null ? "–" : new Intl.NumberFormat(this.locale).format(e);
-		return S`<h3>${this.tr("diag.counters")}</h3>
+		return S`<h3>${this.tr(e.shadow ? "diag.counters_shadow" : "diag.counters")}</h3>
+      ${e.shadow ? S`<p class="note">${this.tr("diag.shadow_counts")}</p>` : w}
       <table>
         <thead>
           <tr>
@@ -4087,7 +4094,7 @@ function Tt(e) {
 }
 var $ = class extends O {
 	constructor(...e) {
-		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.confirmLive = !1, this.controlBusy = !1, this.controlError = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
+		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.confirmLive = !1, this.controlBusy = !1, this.controlError = null, this.pendingMode = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
 			this.status = "loading", this.subscribe();
 		}, this.onDisconnected = () => {
 			this.unsubscribe = void 0, this.status = "disconnected";
@@ -4219,10 +4226,10 @@ var $ = class extends O {
 	}
 	setMode(e) {
 		let t = this.now?.entities.mode;
-		t && e !== this.now?.mode && this.callService("select", "select_option", {
+		t && e !== this.now?.mode && (this.pendingMode = e, window.clearTimeout(this.pendingTimer), this.pendingTimer = window.setTimeout(() => this.pendingMode = null, 5e3), this.callService("select", "select_option", {
 			entity_id: t,
 			option: e
-		});
+		}));
 	}
 	async setLive(e) {
 		let t = this.now?.entities.live;
@@ -4235,7 +4242,7 @@ var $ = class extends O {
 		window.clearTimeout(this.retryTimer), this.retryTimer = window.setTimeout(() => void this.subscribe(), e);
 	}
 	onEvent(e) {
-		e.type === "now" ? (this.now = e.data, this.status = "ok", this.clockMs = Date.now(), this.loadPlan()) : e.type === "unloaded" && (this.unsubscribe = void 0, this.status = "reloading", this.retry(3e3));
+		e.type === "now" ? (this.now = e.data, this.pendingMode === e.data.mode && (this.pendingMode = null), this.status = "ok", this.clockMs = Date.now(), this.loadPlan()) : e.type === "unloaded" && (this.unsubscribe = void 0, this.status = "reloading", this.retry(3e3));
 	}
 	render() {
 		return S`
@@ -4314,18 +4321,18 @@ var $ = class extends O {
 	}
 	renderFast(e) {
 		if (!this.admin || !e.entities?.mode) return w;
-		let t = bt(e.mode, e.modes, e.previous_mode);
+		let t = bt(e.mode, e.modes, e.previous_mode), n = this.pendingMode !== null && this.pendingMode !== e.mode, r = t.find((e) => e.active);
 		return S`<div class="fast" role="group" aria-label=${this.tr("control.fast")}>
-      ${t.stop ? S`<span class="fastnote">${this.tr(`control.running_${e.mode}`)}</span>
-            <button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode(t.stop)}>
-              ${this.tr("control.stop", { mode: this.tr(`mode.${t.stop}`) })}
-            </button>` : w}
-      ${t.charge ? S`<button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode("fast_charge")}>
-            ${this.tr("control.fast_charge")}
-          </button>` : w}
-      ${t.discharge ? S`<button type="button" class="ghost" ?disabled=${this.controlBusy} @click=${() => this.setMode("fast_discharge")}>
-            ${this.tr("control.fast_discharge")}
-          </button>` : w}
+      ${t.map((e) => S`<button
+          type="button"
+          class=${e.active ? "primary" : "ghost"}
+          aria-pressed=${e.active ? "true" : "false"}
+          ?disabled=${this.controlBusy || n}
+          @click=${() => this.setMode(e.target)}
+        >
+          ${e.active ? this.tr("control.stop_fast", { mode: this.tr(`control.${e.mode}`) }) : this.tr(`control.${e.mode}`)}
+        </button>`)}
+      ${r ? S`<span class="fastnote">${this.tr(`control.running_${r.mode}`)} ${this.tr("control.back_to", { mode: this.tr(`mode.${r.target}`) })}</span>` : w}
       ${e.live ? w : S`<span class="fastnote">${this.tr("control.shadow_note")}</span>`}
     </div>`;
 	}
@@ -5018,5 +5025,5 @@ var $ = class extends O {
     `];
 	}
 };
-G([A({ attribute: !1 })], $.prototype, "hass", void 0), G([A({ type: Boolean })], $.prototype, "narrow", void 0), G([A({ attribute: !1 })], $.prototype, "panel", void 0), G([j()], $.prototype, "now", void 0), G([j()], $.prototype, "status", void 0), G([j()], $.prototype, "view", void 0), G([j()], $.prototype, "clockMs", void 0), G([j()], $.prototype, "planView", void 0), G([j()], $.prototype, "setsView", void 0), G([j()], $.prototype, "settingsView", void 0), G([j()], $.prototype, "eventsView", void 0), G([j()], $.prototype, "confirmLive", void 0), G([j()], $.prototype, "controlBusy", void 0), G([j()], $.prototype, "controlError", void 0), $ = G([k("zephyr-panel")], $);
+G([A({ attribute: !1 })], $.prototype, "hass", void 0), G([A({ type: Boolean })], $.prototype, "narrow", void 0), G([A({ attribute: !1 })], $.prototype, "panel", void 0), G([j()], $.prototype, "now", void 0), G([j()], $.prototype, "status", void 0), G([j()], $.prototype, "view", void 0), G([j()], $.prototype, "clockMs", void 0), G([j()], $.prototype, "planView", void 0), G([j()], $.prototype, "setsView", void 0), G([j()], $.prototype, "settingsView", void 0), G([j()], $.prototype, "eventsView", void 0), G([j()], $.prototype, "confirmLive", void 0), G([j()], $.prototype, "controlBusy", void 0), G([j()], $.prototype, "controlError", void 0), G([j()], $.prototype, "pendingMode", void 0), $ = G([k("zephyr-panel")], $);
 export { $ as ZephyrPanel };

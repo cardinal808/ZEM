@@ -479,7 +479,8 @@ def events_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
                 "last_error": w.get("last_error"),
             }
         )
-    return {"entry_id": entry.entry_id, "events": events_from_log(control.log), "sets": sets}
+    # In shadow mode the engine counts what it would send; nothing reaches the set.
+    return {"entry_id": entry.entry_id, "shadow": control.shadow, "events": events_from_log(control.log), "sets": sets}
 
 
 @websocket_command({vol.Required("type"): "zephyr/events"})

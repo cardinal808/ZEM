@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.13 — Panel: fixes after the first test of UI-8
+- **Snel laden / Snel ontladen stay in place.** In a fast mode the buttons used to swap places, so a second tap could switch from fast discharge straight back to fast charge (seen in Bjorn's diagnostics of 26-11). Now both buttons keep their place; the running one reads *… stoppen* and goes back to the mode it came from, with a line *Daarna terug naar …*. After a tap the buttons wait until the new mode shows (at most 5 s).
+- **Diagnose in shadow mode:** the counters are what ZEPHYR *would* send; the screen now says so (*Opdrachten, laatste 24 uur (schaduw)*). `zephyr/events` adds `shadow`.
+
 ### 0.8.12 — Panel: Diagnose and control (SPEC-ui §4.1, §4.2, §4.5; UI-8, UI-A4)
 - **Header:** for administrators the mode is a choice list and *Rekent mee* / *Stuurt* a button. Turning live control on asks first and lists why it cannot start now (set offline, P1 silent, …); turning it off is immediate. The panel uses ZEPHYR's own entities (`select` mode, `switch` control), the same path as automations.
 - **Plan:** buttons *Snel laden* and *Snel ontladen*; during a fast mode a line what it does and *Stoppen, terug naar …* (the mode it came from).

@@ -443,7 +443,6 @@
     "fast": "Snel laden of ontladen",
     "fast_charge": "Snel laden",
     "fast_discharge": "Snel ontladen",
-    "stop": "Stoppen, terug naar {mode}",
     "running_fast_charge": "Snel laden loopt tot de bovengrens.",
     "running_fast_discharge": "Snel ontladen loopt tot de ondergrens.",
     "shadow_note": "Schaduwmodus: ZEPHYR rekent mee maar stuurt niets.",
@@ -462,7 +461,9 @@
       "serial": "Set {set} meldt een ander serienummer.",
       "fault": "Set {set} meldt een fout.",
       "test": "Er loopt een schrijftest."
-    }
+    },
+    "stop_fast": "{mode} stoppen",
+    "back_to": "Daarna terug naar {mode}."
   },
   "diag": {
     "title": "Diagnose",
@@ -508,6 +509,8 @@
       "standby": "standby",
       "soc_limits": "laadgrenzen",
       "test": "schrijftest"
-    }
+    },
+    "counters_shadow": "Opdrachten, laatste 24 uur (schaduw)",
+    "shadow_counts": "Schaduwmodus: geteld wat ZEPHYR zou sturen. Er is niets naar de set geschreven; Mislukt telt alleen echte schrijfacties."
   }
 }

@@ -25,6 +25,7 @@ export interface DiagSet {
 
 export interface EventsView {
   entry_id: string;
+  shadow: boolean;
   events: DiagEvent[];
   sets: DiagSet[];
 }
@@ -58,21 +59,23 @@ export function eventKind(e: DiagEvent): "control" | "mode" | "live" | "airco" |
   return "control";
 }
 
-export interface FastButtons {
-  charge: boolean;
-  discharge: boolean;
-  /** In a fast mode: back to this mode. */
-  stop: string | null;
+export interface FastButton {
+  mode: "fast_charge" | "fast_discharge";
+  /** This fast mode runs now: the button stops it. */
+  active: boolean;
+  /** Mode to switch to on a tap. */
+  target: string;
 }
 
-/** Which of Snel laden / Snel ontladen / Stoppen the plan screen shows. */
-export function fastButtons(mode: string, modes: string[], previous: string): FastButtons {
-  const fast = mode === "fast_charge" || mode === "fast_discharge";
-  return {
-    charge: modes.includes("fast_charge") && mode !== "fast_charge",
-    discharge: modes.includes("fast_discharge") && mode !== "fast_discharge",
-    stop: fast ? (previous === mode ? "zero_meter" : previous) : null,
-  };
+/**
+ * Snel laden and Snel ontladen, always in the same place (a second tap must not hit another button):
+ * the running one stops and goes back to the mode it came from.
+ */
+export function fastButtons(mode: string, modes: string[], previous: string): FastButton[] {
+  const back = previous === "fast_charge" || previous === "fast_discharge" ? "zero_meter" : previous;
+  return (["fast_charge", "fast_discharge"] as const)
+    .filter((m) => modes.includes(m))
+    .map((m) => ({ mode: m, active: mode === m, target: mode === m ? back : m }));
 }
 
 const BLOCKERS: [RegExp, string][] = [
