@@ -30,7 +30,7 @@ const PERIODS: [Period, string][] = [
   ["both", "plan.both"],
 ];
 
-function storedPeriod(): Period {
+export function storedPeriod(): Period {
   try {
     const value = window.localStorage.getItem(PERIOD_KEY);
     return value === "tomorrow" || value === "both" ? value : "today";
@@ -47,7 +47,8 @@ export class ZephyrPricesPlan extends LitElement {
   @property() timeZone = "UTC";
   @property({ type: Boolean }) narrow = false;
 
-  @state() private period: Period = storedPeriod();
+  /** Chosen period; the panel keeps it, so the cards below follow it too. */
+  @property({ attribute: false }) period: Period = storedPeriod();
   @state() private sel: number | null = null;
 
   private scrolledFor = "";
@@ -58,6 +59,7 @@ export class ZephyrPricesPlan extends LitElement {
 
   private pick(period: Period): void {
     this.period = period;
+    this.dispatchEvent(new CustomEvent<Period>("zephyr-period", { detail: period, bubbles: true, composed: true }));
     this.sel = null;
     this.scrolledFor = "";
     try {

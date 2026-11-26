@@ -5,7 +5,8 @@ import { customElement, property, state } from "lit/decorators.js";
 import { clock, euro, kwh, minutesUntil, percent, sameDay, signedWatts, watts } from "./format";
 import { language, t, type Lang } from "./i18n";
 import { aircoLine } from "./airco";
-import { stats, upcomingBlocks, type PlanBlock, type PlanView } from "./plan";
+import { blocksFor, days, quartersOf, stats, type Period, type PlanBlock, type PlanView } from "./plan";
+import { storedPeriod } from "./prices-plan";
 import "./prices-plan";
 import "./sets";
 import type { SetsView } from "./sets";
@@ -55,6 +56,7 @@ export class ZephyrPanel extends LitElement {
   @state() private planView?: PlanView;
   @state() private setsView?: SetsView;
   @state() private settingsView?: SettingsView;
+  @state() private period: Period = storedPeriod();
   @state() private eventsView?: EventsView;
   @state() private confirmLive = false;
   @state() private controlBusy = false;
@@ -527,6 +529,8 @@ export class ZephyrPanel extends LitElement {
         .locale=${this.locale}
         .timeZone=${this.timeZone}
         ?narrow=${this.narrow}
+        .period=${this.period}
+        @zephyr-period=${(e: CustomEvent<Period>) => (this.period = e.detail)}
       ></zephyr-prices-plan>
       ${this.planView ? html`<section class="duo ${stale}">${this.renderBlocks(this.planView)} ${this.renderWhy(this.planView)}</section>` : nothing}`;
   }
@@ -541,10 +545,15 @@ export class ZephyrPanel extends LitElement {
     return `${startToday ? "" : tomorrow}${from}–${startToday && !endToday ? tomorrow : ""}${to}`;
   }
 
+  private shownBlocks(view: PlanView): PlanBlock[] {
+    const tomorrow = days(view.quarters, this.timeZone)[1] ?? null;
+    return blocksFor(view.blocks, this.period, new Date(this.clockMs).toISOString(), tomorrow, this.timeZone);
+  }
+
   private renderBlocks(view: PlanView): TemplateResult {
-    const blocks = upcomingBlocks(view.blocks, new Date(this.clockMs).toISOString()).slice(0, 10);
+    const blocks = this.shownBlocks(view).slice(0, 12);
     return html`<article class="card">
-      <h2>${this.tr("blocks.title")}</h2>
+      <h2>${this.tr(`blocks.title_${this.period}`)}</h2>
       ${blocks.length
         ? html`<ul class="blocks">
             ${blocks.map(
@@ -556,18 +565,19 @@ export class ZephyrPanel extends LitElement {
               </li>`,
             )}
           </ul>`
-        : html`<p class="text">${this.tr("blocks.none")}</p>`}
+        : html`<p class="text">${this.tr(this.period === "tomorrow" ? "blocks.none_tomorrow" : "blocks.none")}</p>`}
     </article>`;
   }
 
   private renderWhy(view: PlanView): TemplateResult {
     const lines: string[] = [];
-    if (view.reason) lines.push(view.reason[this.uiLang]);
-    const blocks = upcomingBlocks(view.blocks, new Date(this.clockMs).toISOString()).filter((b) => !b.indicative);
+    // The plan's reason is about now: not for tomorrow.
+    if (view.reason && this.period !== "tomorrow") lines.push(view.reason[this.uiLang]);
+    const blocks = this.shownBlocks(view).filter((b) => !b.indicative);
     const charge = blocks.filter((b) => b.action === "charge").sort((a, b) => a.price - b.price)[0];
     if (charge) lines.push(this.tr("why.cheapest", { time: this.range(charge), price: euro(charge.price, this.locale) }));
     else if (blocks.length) lines.push(this.tr("why.no_charge"));
-    const future = view.quarters.filter((q) => !q.past);
+    const future = quartersOf(view.quarters, this.period, this.timeZone).filter((q) => !q.past);
     const peak = stats(future)?.max;
     if (peak && peak.action === "deliver") {
       const time = `${sameDay(peak.start, this.clockMs, this.timeZone) ? "" : `${this.tr("blocks.tomorrow")} `}${clock(peak.start, this.locale, this.timeZone)}`;
@@ -575,7 +585,7 @@ export class ZephyrPanel extends LitElement {
     }
     if (future.some((q) => q.indicative)) lines.push(this.tr("why.indicative"));
     return html`<article class="card">
-      <h2>${this.tr("why.title")}</h2>
+      <h2>${this.tr(`why.title_${this.period}`)}</h2>
       <ul class="why">
         ${lines.map((line) => html`<li>${line}</li>`)}
       </ul>
