@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.9 — Planner without the air conditioner (B41, steps 2 and 3)
+- **The consumption profile is the house without the air conditioner** while it ran in a mode the battery may not feed; the air conditioner is learned apart (`excluded_profile`). Before, its heating (~2 kWh/h at midday) counted as house use the battery would cover, so the plan charged and held more than needed.
+- **Solar in the plan follows the control:** with the air conditioner running, solar first covers the rest of the house; the battery only gets a surplus once the air conditioner is covered too (`solar_for_planner`, SPEC-airco §5).
+- **First fill from the recorder** takes the air conditioner's hourly counter out of the house, times the share of the hour the climate entity was in a blocked mode (`hvac_mode` history). A profile learned before the air conditioner was set is **filled again once** (Bjorn: 64 h with the air conditioner in it); with too few recorder hours the old profile stays.
+- **Cost log:** per quarter `excluded_kwh`, the air conditioner's kWh while it was excluded (from the counter steps); the profile learns from it.
+- Plan timeline per quarter: `excluded` (kWh, expected), for the panel's chart (SPEC-ui-airco §2.2). Diagnostics: `planner.excluded_profile`, `control.excluded_load.energy_total_kwh`.
+- Tests: solar rule, blocked share, history hour, energy total; Home Assistant: first fill with climate history, refill when the air conditioner is added, live learning, cost log field.
+
 ### 0.8.8 — Panel: air conditioner in the card *Nu* (SPEC-ui-airco §3.1, UI-A1)
 - **Card *Nu*:** while the air conditioner runs in an excluded mode a line *Airco 1,8 kW · niet uit de accu*; when the battery covers only part of it, also *(1,1 kW nu buiten de accu)*. In an allowed mode *Airco verwarmen · mag uit de accu*. A *schatting* chip with an explanation while the power estimate is starting or fading. No line without a running air conditioner.
 - **Settings:** the three air-conditioner fields move to a new group *Correcties* (they correct what the battery covers, they are not a source).

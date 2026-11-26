@@ -29,6 +29,7 @@ class ExcludedLoad:
 
     __slots__ = (
         "_action",
+        "_energy_total",
         "_interval_sum",
         "_kwh",
         "_last_run_power",
@@ -53,6 +54,7 @@ class ExcludedLoad:
         self._last_run_power = 0.0
         self._steps = 0
         self._interval_sum = 0.0
+        self._energy_total = 0.0
 
     # --- inputs -----------------------------------------------------------
 
@@ -64,6 +66,8 @@ class ExcludedLoad:
         delta = kwh - self._kwh
         if delta <= 0:
             return
+        if self.active():
+            self._energy_total += delta  # kWh the battery did not feed (for the cost log)
         assert self._step_at is not None
         dt = now - self._step_at
         self._kwh, self._step_at = kwh, now
@@ -105,6 +109,11 @@ class ExcludedLoad:
             power = min(power, self._step_kwh * 3_600_000 / elapsed)
         return max(0.0, power)
 
+    @property
+    def energy_total(self) -> float:
+        """kWh counted while the load was excluded, since the start (the cost log takes differences)."""
+        return self._energy_total
+
     def diagnostics(self, now: float) -> dict[str, object]:
         return {
             "blocked_modes": sorted(self.blocked_modes),
@@ -113,6 +122,7 @@ class ExcludedLoad:
             "action": self._action,
             "active": self.active(),
             "power_w": round(self.power(now)),
+            "energy_total_kwh": round(self._energy_total, 3),
             "last_step_kwh": self._step_kwh,
             "last_run_power_w": round(self._last_run_power),
             "mean_step_interval_s": round(self._interval_sum / self._steps) if self._steps else None,
