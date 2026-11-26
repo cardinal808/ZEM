@@ -5,7 +5,8 @@
     "sets": "Sets",
     "battery": "Accu",
     "settings": "Instellingen",
-    "diagnostics": "Diagnose"
+    "diagnostics": "Diagnose",
+    "savings": "Besparing"
   },
   "header": {
     "live": "Stuurt",
@@ -547,5 +548,43 @@
     "profile_hour": "{hour}:00 · huis {house} kWh · airco {airco} kWh · {n}× gemeten",
     "profile_empty_workday": "Nog geen werkdagen geleerd. Tot dan rekent de planner elk uur met het gemiddelde ({mean} kWh).",
     "profile_empty_weekend": "Nog geen weekenddagen geleerd. Tot dan rekent de planner op zaterdag en zondag elk uur met het gemiddelde ({mean} kWh)."
+  },
+  "savings": {
+    "title": "Besparing door de accu",
+    "period": "Periode",
+    "p_today": "Vandaag",
+    "p_week": "Deze week",
+    "p_month": "Deze maand",
+    "p_year": "Dit jaar",
+    "saved": "bespaard",
+    "lost": "verloren",
+    "without": "Zonder accu",
+    "paid": "Betaald",
+    "no_data": "Nog geen gegevens voor deze periode.",
+    "incomplete": "{n} van {total} kwartieren zijn onvolledig (HA stond uit of er was geen prijs); de bedragen zijn dan te laag.",
+    "days_title": "Per dag, laatste 30 dagen",
+    "days_total": "Samen {amount} over {n} dagen.",
+    "unknown": "onbekend",
+    "day_incomplete": "onvolledig",
+    "leg_win": "Bespaard",
+    "leg_loss": "Verloren",
+    "leg_part": "Dag onvolledig",
+    "split_title": "Waar het vandaan komt, {period}",
+    "solar_part": "Zon bewaard",
+    "solar_part_help": "Zon die overdag in de accu ging en 's avonds of 's nachts het huis voedde, in plaats van terug te leveren tegen een lagere prijs.",
+    "trade_part": "Prijsverschil",
+    "trade_part_help": "Uit het net laden als stroom goedkoop is en leveren als die duur is. Na verlies; kan negatief zijn als het verschil te klein was.",
+    "charged": "geladen",
+    "delivered": "geleverd",
+    "per_kwh": "bespaard per geleverde kWh",
+    "notes_title": "Wat telt mee",
+    "note_compare": "Vergelijking: hetzelfde huis en dezelfde zon, één keer met en één keer zonder accu, met je eigen tarieven per kwartier.",
+    "note_fixed": "Vaste kosten (vastrecht, netbeheer) zijn met en zonder accu gelijk en tellen niet mee.",
+    "note_saldering": "Saldering loopt tot {date}; tot dan is teruglevering bijna evenveel waard als afname, en levert zon bewaren minder op.",
+    "note_since": "Het kostenlogboek loopt sinds {date}; daarvoor is er niets bekend.",
+    "ps_today": "Vandaag",
+    "ps_week": "Week",
+    "ps_month": "Maand",
+    "ps_year": "Jaar"
   }
 }

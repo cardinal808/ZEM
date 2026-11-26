@@ -15,11 +15,13 @@ import type { SettingsView } from "./settings";
 import type { SetResult } from "./settings-edit";
 import { blockerText, fastButtons, type EventsView } from "./diag";
 import "./diagnostics";
+import "./savings";
+import type { SavingsView } from "./savings";
 import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
 import type { HomeAssistant, Now, PanelInfo, PlanNow, SubscribeEvent } from "./types";
 
-type View = "plan" | "sets" | "settings" | "diagnostics";
+type View = "plan" | "sets" | "savings" | "settings" | "diagnostics";
 type Status = "loading" | "ok" | "not_loaded" | "disconnected" | "reloading";
 
 const DEFAULT_STATIC = "/zephyr_static";
@@ -58,6 +60,7 @@ export class ZephyrPanel extends LitElement {
   @state() private settingsView?: SettingsView;
   @state() private period: Period = storedPeriod();
   @state() private eventsView?: EventsView;
+  @state() private savingsView?: SavingsView;
   @state() private confirmLive = false;
   @state() private controlBusy = false;
   @state() private controlError: string | null = null;
@@ -197,6 +200,15 @@ export class ZephyrPanel extends LitElement {
     }
   }
 
+  private async loadSavings(): Promise<void> {
+    if (!this.hass || this.view !== "savings") return;
+    try {
+      this.savingsView = await this.hass.callWS<SavingsView>({ type: "zephyr/savings" });
+    } catch {
+      // Not loaded: the banner says so.
+    }
+  }
+
   private async loadSettings(): Promise<void> {
     if (!this.hass) return;
     try {
@@ -296,6 +308,8 @@ export class ZephyrPanel extends LitElement {
       this.setsTimer = window.setInterval(() => void this.loadSets(), 10_000);
     } else if (view === "settings") {
       void this.loadSettings();
+    } else if (view === "savings") {
+      void this.loadSavings();
     } else if (view === "diagnostics") {
       void this.loadEvents();
       this.setsTimer = window.setInterval(() => void this.loadEvents(), 15_000);
@@ -339,6 +353,7 @@ export class ZephyrPanel extends LitElement {
     const items: [View, string][] = [
       ["plan", "menu.plan"],
       ["sets", oneSet ? "menu.battery" : "menu.sets"],
+      ["savings", "menu.savings"],
       ["settings", "menu.settings"],
       ["diagnostics", "menu.diagnostics"],
     ];
@@ -482,6 +497,15 @@ export class ZephyrPanel extends LitElement {
         .states=${this.hass?.states}
         .save=${this.saveSettings}
       ></zephyr-settings>`;
+    }
+    if (this.view === "savings") {
+      return html`<zephyr-savings
+        class=${this.status === "ok" ? "" : "stale"}
+        .view=${this.savingsView}
+        .uiLang=${this.uiLang}
+        .locale=${this.locale}
+        .timeZone=${this.timeZone}
+      ></zephyr-savings>`;
     }
     if (this.view === "diagnostics") {
       return html`<zephyr-diagnostics

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### 0.8.20 — Panel: screen *Besparing* (M6 part 2)
+- New menu item **Besparing**: what the battery saved, from the cost log (B38).
+  - *Vandaag / Deze week / Deze maand / Dit jaar*: the amount saved (green) or lost (orange), with bars *Zonder accu* and *Betaald*; a warning when quarters are incomplete (HA off, no price).
+  - **Where it comes from:** *Zon bewaard* (solar stored and used later) and *Prijsverschil* (cheap charging, dear delivering), with kWh charged and delivered and the saving per delivered kWh.
+  - **Per day, last 30 days:** a bar per day; incomplete days lighter. One outlier (such as a test day) is cut at twice the typical day and drawn with an arrow and its amount, so the other days stay readable.
+  - **What counts:** comparison with and without battery, fixed costs left out, net metering until 2027, since when the cost log runs.
+- On a phone the period buttons read *Vandaag / Week / Maand / Jaar*.
+- Websocket `zephyr/savings`.
+- Tests: `zephyr/savings` (periods, week from Monday, incomplete and short days), day scale with an outlier, texts NL/EN.
+
 ### 0.8.19 — Holidays from Workday
 - New optional setting **Workday sensor** (*Werkdag-sensor*, planner group): a `binary_sensor` of the Workday integration. When set, the planner asks Workday (`workday.check_date`) per day whether it is a workday, so a public holiday such as Christmas or King's Day counts as a *weekend* day: in the plan for today and the next two days, and when learning the load profile (live and from the recorder). Without the setting nothing changes: Saturday and Sunday are weekend.
 - Setup suggests the Workday sensor when there is one. If Workday does not answer, the weekday decides.
