@@ -68,3 +68,32 @@ def test_series_to_hours_needs_every_counter() -> None:
     assert hours[1].solar_kwh == 0.6 and hours[1].discharge_kwh == 0.1
     assert backfill_days(hours, lambda d: Tariffs(), TZ).skipped == 1
     assert date(2026, 11, 10).isoformat() in backfill_days(hours, lambda d: Tariffs(), TZ).days
+
+
+def test_energyzero_answer_and_query() -> None:
+    from zephyr_core.backfill import energyzero_params, energyzero_prices
+
+    data = {
+        "Prices": [
+            {"readingDate": "2026-10-07T22:00:00Z", "price": 0.149195},
+            {"readingDate": "2026-10-07T23:00:00Z", "price": 0.129972503},
+            {"readingDate": "broken", "price": 0.1},
+            {"price": 0.2},
+        ],
+        "average": 0.12,
+    }
+    prices = energyzero_prices(data)
+    assert prices == {
+        datetime(2026, 10, 7, 22, tzinfo=ZoneInfo("UTC")): 0.149195,
+        datetime(2026, 10, 7, 23, tzinfo=ZoneInfo("UTC")): 0.129972503,
+    }
+    assert energyzero_prices(None) == {} and energyzero_prices({"Prices": None}) == {}
+    start = datetime(2026, 10, 8, tzinfo=TZ)
+    params = energyzero_params(start, start + timedelta(days=1) - timedelta(milliseconds=1))
+    assert params == {
+        "fromDate": "2026-10-07T22:00:00.000Z",
+        "tillDate": "2026-10-08T21:59:59.000Z",
+        "interval": "4",
+        "usageType": "1",
+        "inclBtw": "false",
+    }

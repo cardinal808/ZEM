@@ -11,6 +11,7 @@ from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
+from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.zephyr.const import DOMAIN
@@ -218,3 +219,63 @@ async def test_savings_before_the_cost_log_from_hourly_statistics(
     assert (await client.receive_json())["result"] == {"ok": False, "error": "no_battery_counters"}
     await client.send_json_auto_id({**msg_base, "charge_entity": "sensor.gone"})
     assert (await client.receive_json())["result"]["error"] == "entity_missing"
+
+
+async def test_backfill_with_energyzero_prices(
+    hass: HomeAssistant,
+    fake_sets: FakeSets,
+    freezer: FrozenDateTimeFactory,
+    hass_ws_client: WebSocketGenerator,
+    monkeypatch: pytest.MonkeyPatch,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """A price sensor without statistics (Bjorn's Nord Pool): prices per hour from EnergyZero instead."""
+    from custom_components.zephyr import planner_runner
+
+    charge, discharge = "sensor.set_energy_in", "sensor.set_energy_out"
+
+    async def fake_stats(hass: HomeAssistant, start: datetime, end: datetime, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+        assert PRICE not in ids  # the sensor is not asked
+        rows: dict[str, list[dict[str, Any]]] = {i: [] for i in ids}
+        t = start
+        while t < end:
+            evening = 17 <= dt_util.as_local(t).hour < 21
+            for entity, value in ((IMPORT[0], 0.6), (IMPORT[1], 0.0), (EXPORT[0], 0.0), (EXPORT[1], 0.0), (charge, 0.0)):
+                rows[entity].append({"start": t, "change": value})
+            rows[discharge].append({"start": t, "change": 0.5 if evening else 0.0})
+            t += timedelta(hours=1)
+        return rows
+
+    def day_prices(day: str) -> dict[str, Any]:
+        start = datetime.fromisoformat(f"{day}T00:00:00").replace(tzinfo=dt_util.get_default_time_zone())
+        hours = [dt_util.as_utc(start + timedelta(hours=h)) for h in range(24)]
+        return {"Prices": [{"readingDate": h.strftime("%Y-%m-%dT%H:%M:%SZ"), "price": 0.30} for h in hours]}
+
+    url = "https://api.energyzero.nl/v1/energyprices"
+    query = {"interval": "4", "usageType": "1", "inclBtw": "false"}
+    first = {"fromDate": "2026-11-22T23:00:00.000Z", "tillDate": "2026-11-23T22:59:59.000Z", **query}
+    second = {"fromDate": "2026-11-23T23:00:00.000Z", "tillDate": "2026-11-24T22:59:59.000Z", **query}
+    aioclient_mock.get(url, params=first, json=day_prices("2026-11-23"))
+    aioclient_mock.get(url, params=second, status=500)
+    monkeypatch.setattr(planner_runner, "hourly_statistics", fake_stats)
+    for entity in (*IMPORT, *EXPORT, charge, discharge):
+        hass.states.async_set(entity, "100.0", ENERGY)
+    client = await hass_ws_client(hass)
+    await _setup(hass, fake_sets, freezer, cost_import_counters=list(IMPORT), cost_export_counters=list(EXPORT))
+    await _run(hass, freezer, 10)
+
+    await client.send_json_auto_id({"type": "zephyr/savings"})
+    assert (await client.receive_json())["result"]["defaults"]["price_entity"] == "energyzero"  # no state_class on the test sensor
+    await client.send_json_auto_id(
+        {
+            "type": "zephyr/savings/backfill",
+            "first": "2026-11-23",
+            "charge_entity": charge,
+            "discharge_entity": discharge,
+            "price_entity": "energyzero",
+        }
+    )
+    result = (await client.receive_json())["result"]
+    assert result["ok"] is True and result["days"] == 2
+    assert result["priced_hours"] == 24 and result["price_failed_days"] == 1
+    assert aioclient_mock.call_count == 2

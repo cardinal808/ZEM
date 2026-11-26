@@ -350,7 +350,7 @@ class CostRecorder:
         self, first: date, charge_entity: str, discharge_entity: str, solar_entity: str | None, price_entity: str | None
     ) -> dict[str, Any]:
         """Work out the days from ``first`` up to the cost log again from hourly statistics (replaces an earlier run)."""
-        from .core.backfill import SOURCE_HOURLY, backfill_days, series_to_hours
+        from .core.backfill import PRICE_ENERGYZERO, SOURCE_HOURLY, backfill_days, series_to_hours
         from .planner_runner import hourly_statistics
 
         tz = dt_util.get_default_time_zone()
@@ -361,7 +361,8 @@ class CostRecorder:
         start = datetime.combine(first, datetime.min.time(), tz)
         end = datetime.combine(end_day, datetime.min.time(), tz)
         counters = [*self.import_counters, *self.export_counters, charge_entity, discharge_entity]
-        ids = [*counters, *([solar_entity] if solar_entity else []), *([price_entity] if price_entity else [])]
+        from_sensor = price_entity if price_entity and price_entity != PRICE_ENERGYZERO else None
+        ids = [*counters, *([solar_entity] if solar_entity else []), *([from_sensor] if from_sensor else [])]
         stats = await hourly_statistics(self.hass, start, end, list(dict.fromkeys(ids)))
 
         series: dict[str, dict[datetime, float]] = {}
@@ -375,6 +376,9 @@ class CostRecorder:
                 moment = begin if isinstance(begin, datetime) else datetime.fromtimestamp(float(begin), UTC)
                 rows[dt_util.as_utc(moment)] = float(value)
             series[entity] = rows
+        failed_days = 0
+        if price_entity == PRICE_ENERGYZERO:
+            series[PRICE_ENERGYZERO], failed_days = await self._energyzero(first, end_day, tz)
 
         starts = []
         t = dt_util.as_utc(start)
@@ -406,7 +410,37 @@ class CostRecorder:
             "priced_hours": sum(1 for h in hours if h.market is not None and h.import_kwh is not None),
             "first": keys[0] if keys else None,
             "last": keys[-1] if keys else None,
+            "price_failed_days": failed_days,
         }
+
+    async def _energyzero(self, first: date, end_day: date, tz: Any) -> tuple[dict[datetime, float], int]:
+        """Market prices per hour from EnergyZero, one request per day (small, and one bad day does not stop the rest)."""
+        import aiohttp
+        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+        from .core.backfill import ENERGYZERO_URL, energyzero_params, energyzero_prices
+
+        session = async_get_clientsession(self.hass)
+        prices: dict[datetime, float] = {}
+        failed = 0
+        day = first
+        while day < end_day:
+            start = datetime.combine(day, datetime.min.time(), tz)
+            stop = datetime.combine(day + timedelta(days=1), datetime.min.time(), tz) - timedelta(milliseconds=1)
+            try:
+                async with session.get(
+                    ENERGYZERO_URL, params=energyzero_params(start, stop), timeout=aiohttp.ClientTimeout(total=20)
+                ) as response:
+                    response.raise_for_status()
+                    found = energyzero_prices(await response.json(content_type=None))
+            except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+                LOGGER.warning("EnergyZero prices for %s not available: %s", day, err)
+                found = {}
+            if not found:
+                failed += 1
+            prices.update(found)
+            day += timedelta(days=1)
+        return prices, failed
 
     async def async_clear_backfill(self) -> int:
         """Remove the days worked out afterwards."""
