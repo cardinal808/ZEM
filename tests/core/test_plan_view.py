@@ -143,13 +143,46 @@ def test_past_quarters_from_the_cost_log() -> None:
             "solar_kwh": 0.0,
             "house_kwh": 0.1,
         },
-        q0 + QUARTER: {"market": None, "buy": None, "sell": None, "charge_kwh": 0.0, "discharge_kwh": 0.2, "soc": 51.0},
+        q0 + QUARTER: {
+            "market": None,
+            "buy": None,
+            "sell": None,
+            "charge_kwh": 0.0,
+            "discharge_kwh": 0.2,
+            "soc": 51.0,
+            "solar_kwh": 0.3,
+            "house_kwh": 0.5,
+            "excluded_kwh": 0.2,
+        },
         q0 + 5 * QUARTER: {"charge_kwh": 0.0, "discharge_kwh": 0.2, "soc": 40.0},  # not past yet: ignored
     }
     quarters = plan_quarters(None, prices, now, TZ, **_fns(), history=history)
     first, second, third = quarters[0], quarters[1], quarters[2]
     assert (first["action"], first["soc"], first["buy"], first["load"]) == ("charge", 52.5, 0.31, 0.1)
     assert second["action"] == "deliver" and second["soc"] == 51.0
+    # The cost log's house includes the air conditioner; the panel gets them apart, like the planner (B41).
+    assert (second["load"], second["excluded"]) == (0.3, 0.2)
+    assert first["excluded"] is None
     assert second["market"] == pytest.approx(0.2) and second["buy"] == pytest.approx(0.32)  # price from the sensor
     assert third["action"] is None  # no record (HA was off)
     assert quarters[4]["past"] is False and quarters[5]["action"] is None
+
+
+def test_future_quarters_carry_the_excluded_load() -> None:
+    today = datetime(2026, 11, 26, tzinfo=TZ)
+    now = today + timedelta(hours=12)
+    prices = market_slots({"raw_today": _raw(today, [0.2] * 24), "raw_tomorrow": []})
+    slots = build_horizon(
+        horizon_markets(prices, now, TZ),
+        now,
+        buy=lambda t, m: m + 0.12,
+        sell=lambda t, m, d: m,
+        load=lambda t, a: 0.1,
+        solar=lambda t: 0.3,
+        daylight=lambda t: True,
+        excluded=lambda t, a: 0.05,
+    )
+    outcome = make_plan(slots, BAT, now, PlannerSettings())
+    quarters = plan_quarters(outcome, prices, now, TZ, **_fns())
+    future = [q for q in quarters if not q["past"] and q["action"] is not None]
+    assert future and all((q["solar"], q["load"], q["excluded"]) == (0.3, 0.1, 0.05) for q in future)

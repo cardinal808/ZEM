@@ -94,7 +94,7 @@
     "tip_buy": "Inkoop {price}",
     "tip_sell": "Teruglevering {price}",
     "tip_soc": "SOC na dit kwartier {soc}",
-    "tip_energy": "Zon {solar} · verbruik {load}",
+    "tip_energy": "Zon {solar} · huis {load}",
     "aria": "Prijzen per kwartier; laagst {low} om {low_time}, hoogst {high} om {high_time}. Pijltjestoetsen tonen een kwartier.",
     "legend_price": "Prijs per kwartier",
     "legend_soc": "SOC verwacht",
@@ -105,7 +105,10 @@
     "actual": "werkelijk",
     "no_record": "Niet vastgelegd (HA stond uit)",
     "tip_soc_past": "SOC na dit kwartier {soc} (gemeten)",
-    "tip_energy_past": "Zon {solar} · huis {load}"
+    "tip_energy_past": "Zon {solar} · huis {load}",
+    "legend_solar": "Zon",
+    "tip_airco": "Airco {kwh} (niet uit de accu)",
+    "legend_solar_over": "Zon over (accu kan laden)"
   },
   "blocks": {
     "title": "Blokken",

@@ -14,6 +14,7 @@ import {
   quartersOf,
   scale,
   socPoints,
+  sunLane,
   stats,
   ticks,
   type Period,
@@ -233,10 +234,24 @@ export class ZephyrPricesPlan extends LitElement {
               ></div>`,
           )}
         </div>
+        ${this.sun(quarters)}
         <div class="ticks" aria-hidden="true">
           ${tickIdx.map((i) => html`<span style="left:${pct(i)}">${clock(quarters[i].start, this.locale, this.timeZone)}</span>`)}
         </div>
       </div>
+    </div>`;
+  }
+
+  /** Lane under the action band: solar per quarter as a small bar (design A, Bjorn 26-11); a green top = solar to spare. */
+  private sun(quarters: Quarter[]): TemplateResult | typeof nothing {
+    const lane = sunLane(quarters);
+    if (!lane) return nothing;
+    return html`<div class="sunlane" aria-hidden="true">
+      ${lane.map(
+        (q) => html`<div class="sq">
+          ${q.height > 0 ? html`<i class=${`${q.past ? "" : "fut"}${q.over ? " over" : ""}`} style="height:${q.height}%"></i>` : nothing}
+        </div>`,
+      )}
     </div>`;
   }
 
@@ -275,6 +290,7 @@ export class ZephyrPricesPlan extends LitElement {
       ${q.solar !== null && q.load !== null
         ? html`<span>${this.tr(q.past ? "plan.tip_energy_past" : "plan.tip_energy", { solar: kwh(q.solar, this.locale, 2), load: kwh(q.load, this.locale, 2) })}</span>`
         : nothing}
+      ${q.excluded ? html`<span>${this.tr("plan.tip_airco", { kwh: kwh(q.excluded, this.locale, 2) })}</span>` : nothing}
     </div>`;
   }
 
@@ -295,6 +311,7 @@ export class ZephyrPricesPlan extends LitElement {
     return html`<div class="legend">
       ${item("var(--z-bar)", "plan.legend_price")} ${item(actionFill("charge"), "action.charge")} ${item(actionFill("deliver"), "action.deliver")}
       ${item(actionFill("hold"), "action.hold")} ${item(actionFill("export"), "action.export")}
+      ${item("var(--z-solar)", "plan.legend_solar")} ${item("var(--z-solar)", "plan.legend_solar_over", "sw over")}
       <span class="li"><span class="line solid"></span>${this.tr("plan.legend_soc_past")}</span>
       <span class="li"><span class="line"></span>${this.tr("plan.legend_soc")}</span>
       <span class="li">${this.tr("plan.legend_past")}</span>
@@ -589,6 +606,35 @@ export class ZephyrPricesPlan extends LitElement {
       }
       .seg.past {
         opacity: 0.4;
+      }
+      .sunlane {
+        display: flex;
+        align-items: flex-end;
+        height: 18px;
+        margin-top: 2px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: var(--z-track);
+      }
+      .sq {
+        flex: 1 1 0;
+        height: 100%;
+        display: flex;
+        align-items: flex-end;
+      }
+      .sq i {
+        display: block;
+        width: 100%;
+        background: var(--z-solar);
+      }
+      .sq i.fut {
+        opacity: 0.55;
+      }
+      .sq i.over {
+        box-shadow: inset 0 2px 0 var(--z-export);
+      }
+      .sw.over {
+        box-shadow: inset 0 3px 0 var(--z-export);
       }
       .ticks {
         position: relative;
