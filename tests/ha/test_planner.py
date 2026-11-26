@@ -240,3 +240,41 @@ async def test_profile_first_fill_from_the_recorder(
     await _tick(hass, freezer, 10)
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["planner"]["inputs"]["profile_source"].startswith("recorder")
+
+
+async def test_pt2_pt6_pt12_night_with_price_reserve(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, caplog: pytest.LogCaptureFixture
+) -> None:
+    """22:00–03:00: the source does not move on at midnight and then goes empty; ZEPHYR plans on the
+    saved prices (Price reserve), also after a restart, and is back on the source as soon as it is."""
+    entry = await _setup(hass, fake_sets, freezer, (22, 0), price_entity=PRICE)
+    _set_prices(hass)
+    await _tick(hass, freezer, 10)
+    assert hass.states.get("sensor.zephyr_plan_state").state == "active"
+    planner = entry.runtime_data.planner
+    assert len(planner.reserve) >= 24
+
+    # 23:59 the source drops tomorrow and keeps "today" = yesterday after midnight (PT1/PT12).
+    await _tick(hass, freezer, 2 * 3600 - 60, step=30)
+    _set_prices(hass, tomorrow=False)
+    await _tick(hass, freezer, 60 + 600, step=30)
+    assert hass.states.get("sensor.zephyr_plan_state").state == "price_reserve"
+    assert hass.states.get("sensor.zephyr_plan_reason").state.startswith("Saved prices")
+    assert hass.states.get("sensor.zephyr_plan_action").attributes["timeline"]
+
+    # The source goes empty (PT2) and HA restarts (PT6): the reserve comes from the storage.
+    hass.states.async_set(PRICE, "unavailable", {})
+    await _tick(hass, freezer, 30)
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    await _tick(hass, freezer, 20)
+    assert hass.states.get("sensor.zephyr_plan_state").state == "price_reserve"
+    assert entry.runtime_data.planner.inputs["price_source"] == "reserve"
+
+    # 00:45: the source has today's prices again → plan on the source within a minute.
+    _set_prices(hass, tomorrow=False)  # start_of_local_day is now the new day
+    await _tick(hass, freezer, 60)
+    assert hass.states.get("sensor.zephyr_plan_state").state == "active"
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["planner"]["snapshots"]
+    assert not [r for r in caplog.records if r.levelname in ("ERROR", "CRITICAL") and "zephyr" in r.name]
