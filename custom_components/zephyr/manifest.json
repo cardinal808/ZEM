@@ -1,8 +1,8 @@
 {
   "domain": "zephyr",
   "name": "ZEPHYR",
-  "codeowners": ["@cardinal808"],
   "after_dependencies": ["recorder"],
+  "codeowners": ["@cardinal808"],
   "config_flow": true,
   "documentation": "https://github.com/cardinal808/ZEPHYR",
   "integration_type": "hub",
