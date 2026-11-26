@@ -234,3 +234,14 @@ def test_reason_mentions_saved_prices() -> None:
     outcome = make_plan(_horizon(markets, now), BAT, now, PlannerSettings())
     outcome.state = PlanState.PRICE_RESERVE
     assert reason(outcome, "nl", TZ).startswith("Bewaarde prijzen (de bron heeft nog geen prijs voor nu). ")
+
+
+def test_charge_with_a_full_battery_is_shown_as_hold() -> None:
+    """With a full battery the planner may keep 'charging' (same cost as holding): show H, state Full."""
+    markets, now = _night_and_evening()
+    full = BatteryInput(capacity_kwh=11.04, soc=95.0, min_soc=10.0, max_soc=95.0, charge_kw=2.4, deliver_kw=2.4)
+    outcome = make_plan(_horizon(markets, now, load=0.05), full, now, PlannerSettings(wear_cost=0.03))
+    for action, grid in zip(outcome.plan.actions, outcome.grid_kwh, strict=True):
+        assert action is not Action.CHARGE or grid >= 0.01
+    assert all(b.action is not Action.CHARGE or b.kwh >= 0.01 for b in outcome.blocks)
+    assert outcome.action is not Action.CHARGE

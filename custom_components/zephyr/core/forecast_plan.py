@@ -33,6 +33,8 @@ MIN_BLOCK_KWH: Final = 0.1
 """Deliver blocks below this energy are left out of the block list (§4)."""
 DEFAULT_LOAD_KWH_PER_HOUR: Final = 0.35
 """Consumption while nothing has been learned yet (≈ 3 000 kWh a year)."""
+MIN_GRID_CHARGE_KWH: Final = 0.01
+"""A planned L slot that takes less from the grid than this is shown and carried out as H."""
 NEAR_LIMIT_PERCENT: Final = 0.5
 """SOC within this many %-points of min/max counts as empty/full (state only)."""
 
@@ -416,10 +418,19 @@ def make_plan(
         outcome.grid_kwh.append(max(st.grid_import - hold.grid_import, 0.0) if action is Action.CHARGE else 0.0)
         outcome.export_kwh.append(max(st.grid_export - hold.grid_export, 0.0) if action is Action.EXPORT else 0.0)
         energy = st.energy_after
+    # L in a slot where nothing comes from the grid (battery full) costs the same as H: show and
+    # carry out H, so the plan never says "charge" while nothing charges.
+    full_now = False
+    for i, action in enumerate(result.actions):
+        if action is Action.CHARGE and outcome.grid_kwh[i] < MIN_GRID_CHARGE_KWH:
+            result.actions[i] = Action.HOLD
+            outcome.grid_kwh[i] = 0.0
+            full_now = full_now or i == 0
+    outcome.action = result.actions[0]
     outcome.blocks = blocks(outcome)
     if outcome.action is Action.DELIVER and bat.soc <= bat.min_soc + NEAR_LIMIT_PERCENT:
         outcome.state = PlanState.BATTERY_EMPTY
-    elif outcome.action is Action.CHARGE and bat.soc >= bat.max_soc - NEAR_LIMIT_PERCENT:
+    elif (outcome.action is Action.CHARGE or full_now) and bat.soc >= bat.max_soc - NEAR_LIMIT_PERCENT:
         outcome.state = PlanState.BATTERY_FULL
     return outcome
 
