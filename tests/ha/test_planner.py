@@ -381,3 +381,51 @@ async def test_b41_existing_profile_is_filled_again_when_the_air_conditioner_is_
     planner = entry.runtime_data.planner
     assert planner.profile.expected("workday", 12) == pytest.approx(0.5)  # without a climate entity: always aside
     assert planner.excluded_profile.expected("workday", 12) == pytest.approx(1.5)
+
+
+async def test_actions_recalculate_get_plan_and_reset_profile(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from homeassistant.exceptions import ServiceValidationError
+
+    from custom_components.zephyr import planner_runner
+
+    imp, exp = "sensor.meter_import", "sensor.meter_export"
+
+    async def fake_stats(hass: HomeAssistant, start: datetime, end: datetime, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+        rows: dict[str, list[dict[str, Any]]] = {i: [] for i in ids}
+        t = start
+        while t < end:
+            ts = dt_util.as_utc(t).timestamp()
+            rows[imp].append({"start": ts, "change": 0.4})
+            rows[exp].append({"start": ts, "change": 0.0})
+            rows["sensor.zephyr_power"].append({"start": ts, "mean": 0.0})
+            t += timedelta(hours=1)
+        return rows
+
+    monkeypatch.setattr(planner_runner, "hourly_statistics", fake_stats)
+    hass.config.components.add("recorder")
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (7, 30), price_entity=PRICE, cost_import_counters=[imp], cost_export_counters=[exp])
+    await _tick(hass, freezer, 10)
+    planner = entry.runtime_data.planner
+
+    plan = await hass.services.async_call(DOMAIN, "get_plan", {}, blocking=True, return_response=True)
+    assert plan["state"] == "active" and plan["blocks"] and len(plan["timeline"]) > 40
+
+    first = planner.outcome.calculated_at
+    freezer.tick(timedelta(seconds=30))
+    await hass.services.async_call(DOMAIN, "recalculate", {}, blocking=True)
+    await hass.async_block_till_done()
+    assert planner.outcome.calculated_at > first
+
+    planner.profile.learn("workday", 12, 5.0)
+    result = await hass.services.async_call(DOMAIN, "reset_profile", {}, blocking=True, return_response=True)
+    assert result["profile_source"].startswith("recorder")
+    assert planner.profile.expected("workday", 12) == pytest.approx(0.4)
+    result = await hass.services.async_call(DOMAIN, "reset_profile", {"refill": False}, blocking=True, return_response=True)
+    assert result == {"profile_source": "none", "hours": 0}
+
+    await hass.config_entries.async_unload(entry.entry_id)
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(DOMAIN, "recalculate", {}, blocking=True)

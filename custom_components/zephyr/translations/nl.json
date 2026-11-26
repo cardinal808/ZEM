@@ -373,6 +373,9 @@
     },
     "export_period": {
       "message": "De begindatum mag niet na de einddatum liggen."
+    },
+    "no_planner": {
+      "message": "De planner draait niet (kies een prijssensor in de opties)."
     }
   },
   "services": {
@@ -403,6 +406,24 @@
           "description": "Laatste dag (standaard: vandaag)."
         }
       }
+    },
+    "recalculate": {
+      "name": "Plan herberekenen",
+      "description": "Maakt nu een nieuw plan (anders rekent de planner elk kwartier en bij nieuwe prijzen)."
+    },
+    "reset_profile": {
+      "name": "Verbruiksprofiel resetten",
+      "description": "Vergeet het geleerde verbruik per uur. Standaard wordt het opnieuw gevuld uit de recorder (metertellers, laatste 28 dagen).",
+      "fields": {
+        "refill": {
+          "name": "Opnieuw vullen",
+          "description": "Het profiel opnieuw vullen uit de recorder. Uit: leeg beginnen en leren van de komende uren."
+        }
+      }
+    },
+    "get_plan": {
+      "name": "Plan ophalen",
+      "description": "Geeft het huidige plan: toestand, kerncijfers, blokken en de kwartieren met actie, prijzen, zon, verbruik en verwachte laadtoestand."
     }
   }
 }

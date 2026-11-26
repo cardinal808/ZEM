@@ -182,16 +182,7 @@ class PlanRunner:
             )
             self.excluded_profile = LoadProfile()
         if self.profile.mean_count < FILL_BELOW_HOURS or changed:
-            try:
-                filled = await self._learn_from_recorder()
-            except Exception:  # the recorder is a nice-to-have: never block the planner
-                LOGGER.exception("Consumption profile from the recorder failed")
-                filled = 0
-            # The cost log before B41 has no use of the excluded load: with a changed load the
-            # old profile stays until the recorder (or the live hours) give a better one.
-            if filled < MIN_FILL_HOURS and self.profile.mean_count == 0:
-                await self._learn_from_history()
-            self._store.async_delay_save(self._data, 10)
+            await self._fill_profile()
         assert self.price_entity is not None
         unsubs: list[Callable[[], None]] = [
             async_track_time_change(self.hass, self._on_minute, second=10),
@@ -207,6 +198,44 @@ class PlanRunner:
             ir.async_delete_issue(self.hass, DOMAIN, ISSUE_PRICE_FORMAT)
 
         return stop
+
+    async def _fill_profile(self) -> None:
+        """First fill (§2.3): the recorder, else the cost log if the profile is still empty."""
+        try:
+            filled = await self._learn_from_recorder()
+        except Exception:  # the recorder is a nice-to-have: never block the planner
+            LOGGER.exception("Consumption profile from the recorder failed")
+            filled = 0
+        # The cost log before B41 has no use of the excluded load: with a changed load the
+        # old profile stays until the recorder (or the live hours) give a better one.
+        if filled < MIN_FILL_HOURS and self.profile.mean_count == 0:
+            await self._learn_from_history()
+        self._store.async_delay_save(self._data, 10)
+
+    async def async_reset_profile(self, refill: bool = True) -> dict[str, Any]:
+        """Action ``zephyr.reset_profile`` (PT9): forget the learned consumption, optionally fill it again."""
+        self.profile, self.excluded_profile, self.hour = LoadProfile(), LoadProfile(), {}
+        self.profile_source = "none"
+        if refill:
+            await self._fill_profile()
+        else:
+            self._store.async_delay_save(self._data, 1)
+        LOGGER.info("Consumption profile reset (%s, %s hours)", self.profile_source, self.profile.mean_count)
+        self.async_request()
+        return {"profile_source": self.profile_source, "hours": self.profile.mean_count}
+
+    def plan_response(self) -> dict[str, Any]:
+        """Action ``zephyr.get_plan``: the current plan for automations (blocks, quarters, figures)."""
+        outcome = self.outcome
+        if outcome is None:
+            return {"state": None, "calculated_at": None, "blocks": [], "timeline": []}
+        return {
+            "state": str(outcome.state),
+            "calculated_at": outcome.calculated_at.isoformat(),
+            "summary": outcome.summary(),
+            "blocks": [b.as_dict() for b in outcome.blocks],
+            "timeline": outcome.timeline(),
+        }
 
     @callback
     def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:

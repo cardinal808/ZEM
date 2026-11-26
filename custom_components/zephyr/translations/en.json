@@ -373,6 +373,9 @@
     },
     "export_period": {
       "message": "The start date must not be after the end date."
+    },
+    "no_planner": {
+      "message": "The planner is not running (choose a price sensor in the options)."
     }
   },
   "services": {
@@ -403,6 +406,24 @@
           "description": "Last day (default: today)."
         }
       }
+    },
+    "recalculate": {
+      "name": "Recalculate plan",
+      "description": "Makes a new plan now (otherwise the planner calculates every quarter and on new prices)."
+    },
+    "reset_profile": {
+      "name": "Reset consumption profile",
+      "description": "Forgets the learned consumption per hour. By default it is filled again from the recorder (meter counters, last 28 days).",
+      "fields": {
+        "refill": {
+          "name": "Fill again",
+          "description": "Fill the profile again from the recorder. Off: start empty and learn from the coming hours."
+        }
+      }
+    },
+    "get_plan": {
+      "name": "Get plan",
+      "description": "Returns the current plan: state, figures, blocks and the quarters with action, prices, solar, consumption and expected state of charge."
     }
   }
 }

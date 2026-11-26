@@ -28,3 +28,11 @@ export_costs:
       required: false
       selector:
         date:
+recalculate:
+reset_profile:
+  fields:
+    refill:
+      default: true
+      selector:
+        boolean:
+get_plan:
