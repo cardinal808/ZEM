@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.6 — Cell balance judged near full (SPEC-celbalans.md)
+- **Correction of 0.8.4.** The cell difference of LiFePO4 says little in the middle of the charge (the voltage curve is flat there); an imbalance shows near full. The panel now judges the cell difference only when a battery is **near full** (SOC ≥ 95 % or highest cell ≥ 3.40 V) **with a small current** (≤ 0.1 C: ≈ 290 W for an AB3000L, 240 W for the built-in battery, 200 W for an unknown type).
+- Labels: **Good** (≤ 30 mV), **Balancing** (≤ 100 mV, normal near full; the set works it away) and **Imbalance** (> 100 mV). Outside a judged moment the value is shown with *judged when full*.
+- **Per day** the largest judged difference; days without a judged moment stay empty. The history of 0.8.4 (measured mid-curve) is dropped at the update.
+- **In short:** *stays out of balance* on 3 or more of the last 7 days (advice: let the set charge fully a few times, then Zendure), *out of balance now*, *was out of balance on …*, or *not (nearly) full this week*. The summary shows the cell difference now, or of the last judged day.
+- Written on the clean side: own thresholds from public LiFePO4 knowledge and own measurements; a separate review compares with other projects functionally (`OPDRACHT-toets-celbalans.md`).
+- Tests: judged moment (SOC, cell voltage, current per type), labels, the diagnostics of 26-11 (50/120/70/40 mV → Balancing/Imbalance/Balancing/Balancing), history incl. dropping the old rule; frontend summary.
+
 ### 0.8.5 — Panel: screen *Instellingen*, reading (SPEC-ui §4.4, UI-6)
 - **Screen *Instellingen*:** groups on the left (Battery and limits, Sources, Tariffs, Planner, Zero on the meter without planner, Test phase) with the number of changed fields; per field the label, a short help text, an **i button with more explanation** (tap, one open at a time, also with the keyboard), the value, and for a changed field a dot and *standard: …*. Sources show how they are doing (*reports every 1 s*, *96 prices in the sensor*, *not set*, *not found*); with a supplier the tariff fields show the amount *in use* from the tariff table.
 - Changing settings from the panel follows in UI-7; until then the screen points to the options flow. Users who are not administrators see a read-only note.

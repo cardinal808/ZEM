@@ -1,4 +1,4 @@
-"""Keeps the cell balance per pack per day and when a set was last full (UI-4).
+"""Keeps the cell balance per pack per day and when a set was last full (UI-4, SPEC-celbalans).
 
 Listens to the set coordinators; saves at most every 5 minutes in
 ``zephyr.<entry>.packs``. Serial numbers stay in Home Assistant's storage.
@@ -14,7 +14,8 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .core.packs import PackHistory, cell_delta_mv
+from .core.device_table import pack_info
+from .core.packs import PackHistory, cell_delta_mv, judged
 
 if TYPE_CHECKING:
     from . import ZephyrRuntime
@@ -55,6 +56,8 @@ class PackRecorder:
             changed |= self.history.note_set_full(report.serial, dt_util.as_utc(now).isoformat(), report.soc)
             for pack in report.packs:
                 delta = cell_delta_mv(pack.cell_voltage_min, pack.cell_voltage_max)
-                changed |= self.history.note_pack(pack.serial, today, pack.soc, delta)
+                info = pack_info(report.product, pack.pack_type, pack.serial)
+                ok = judged(pack.soc, pack.cell_voltage_max, pack.power, info.capacity_kwh if info else None)
+                changed |= self.history.note_pack(pack.serial, today, pack.soc, delta, ok)
         if changed:
             self._store.async_delay_save(self.history.as_dict, SAVE_DELAY_S)

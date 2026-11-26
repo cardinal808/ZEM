@@ -250,14 +250,15 @@ async def test_sets_command(hass: HomeAssistant, fake_sets: FakeSets, hass_ws_cl
     assert [p["number"] for p in packs] == [1, 1, 2, 3]
     built_in, first = packs[0], packs[1]
     assert built_in["capacity_kwh"] == pytest.approx(2.40)
-    assert built_in["cell_delta_mv"] == 10 and built_in["cell_status"] == "good"  # 3.27–3.28 V at 53 %
+    # 3.27–3.28 V at 53 %: shown, but not judged (middle of the curve, SPEC-celbalans)
+    assert built_in["cell_delta_mv"] == 10 and built_in["cell_judged"] is False and built_in["cell_status"] is None
     assert first["capacity_kwh"] == pytest.approx(2.88)
     assert first["cell_delta_mv"] == 0
     assert first["temp"] == pytest.approx(12.0)
     assert first["energy_kwh"] == pytest.approx(2.88 * 0.54, abs=0.01)
     assert len(first["history"]) == 7
-    assert built_in["history"][-1]["max_mv"] == 10  # recorded by the pack recorder
-    assert first["history"][-1]["max_mv"] == 0
+    assert built_in["history"][-1]["max_mv"] is None  # not judged at 53 %
+    assert first["history"][-1]["max_mv"] is None
     text = json.dumps(view)
     for serial in {p.serial for p in entry.runtime_data.coordinators[s["id"]].data.report.packs}:
         assert serial not in text
