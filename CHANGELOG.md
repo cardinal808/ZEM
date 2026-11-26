@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.1 — Planner: grid-charge threshold
+- **New option *Planner: grid-charge threshold*** (default **€0.01 per kWh**): charging from the grid must win at least this much per kWh before the planner plans it. It counts only in the planner's choice, not in the costs, and not for solar into the battery. Seen at a tester: 0.78 kWh charged from the grid at €0.51 at 10:30 for about a cent of gain from the solar bonus.
+- Backtest (1 Oct – 18 Nov 2026, learned consumption, Solcast, wear €0.03; costs incl. wear): €0 → 96.29 / 102.96, **€0.01 → 96.21 / 102.97**, €0.02 → 96.58 / 102.81, €0.05 → 98.18 / 103.84 (net metering 2026 / 2027). €0.01 is the lowest over both rules, with about 15 % less grid charging and fewer charge starts. Backtest tool: `--grid-charge`.
+- Diagnostics: `grid_charge_cost` in the planner settings. Tests: the threshold against brute force, no charge for a cent, solar charging untouched.
+
 ### 0.8.0 — M6: own panel in the sidebar, step 1 (SPEC-ui, UI-1)
 - **Panel *ZEPHYR*** in the Home Assistant sidebar (`/zephyr`), for every user. Header with logo, menu (Plan, Sets — *Accu* with one set —, Settings, Diagnostics), the mode and whether ZEPHYR controls (*In control*) or only calculates (*Shadow*). The Plan screen shows three cards:
   - **Now:** the action with power and the reason in one sentence, the grid power, and in shadow mode a note that this is what ZEPHYR would do.

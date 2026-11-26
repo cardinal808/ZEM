@@ -26,7 +26,7 @@ def objective(slots: list[Slot], actions: tuple[Action, ...], battery: Battery, 
         if group is Action.HOLD and prev is not Action.HOLD:
             total += cfg.hold_start_cost
         r = step(slot, battery, energy, a)
-        total += r.cost + cfg.wear_cost * r.delivered
+        total += r.cost + cfg.wear_cost * r.delivered + cfg.grid_charge_cost * r.grid_charged
         energy, prev = r.energy_after, group
     end_price = min(s.buy for s in slots) * (1.0 if cfg.allow_export else battery.eta_out)
     return total - energy * end_price
@@ -46,10 +46,10 @@ def _random_slots(rng: random.Random, n: int) -> list[Slot]:
     return out
 
 
-@pytest.mark.parametrize(("allow_export", "wear"), [(False, 0.0), (True, 0.0), (True, 0.04)])
-def test_within_half_a_cent_of_brute_force(allow_export: bool, wear: float) -> None:
+@pytest.mark.parametrize(("allow_export", "wear", "grid"), [(False, 0.0, 0.0), (True, 0.0, 0.0), (True, 0.04, 0.0), (False, 0.03, 0.02)])
+def test_within_half_a_cent_of_brute_force(allow_export: bool, wear: float, grid: float) -> None:
     rng = random.Random(7)
-    cfg = PlannerSettings(steps=100, allow_export=allow_export, wear_cost=wear)
+    cfg = PlannerSettings(steps=100, allow_export=allow_export, wear_cost=wear, grid_charge_cost=grid)
     for _ in range(12):
         slots = _random_slots(rng, 6 if allow_export else 7)
         energy = rng.uniform(0, BAT.capacity_kwh)
@@ -100,3 +100,17 @@ def test_wear_cost_stops_cycling_for_a_small_spread() -> None:
     slots = [Slot(1.0, 0.10, 0.0, 0.3, 0.0)] * 4 + [Slot(1.0, 0.30, 0.15, 0.8, 0.0)] * 4
     assert Action.CHARGE in plan(slots, Battery(4.0, 2.4, 2.4), 0.0).actions
     assert Action.CHARGE not in plan(slots, Battery(4.0, 2.4, 2.4), 0.0, PlannerSettings(wear_cost=0.25)).actions
+
+
+def test_grid_charge_cost_stops_charging_for_a_cent() -> None:
+    # Charge at 0.30 to save at 0.335 (η 0.92²): about a cent per kWh, gone with a €0.02 threshold.
+    slots = [Slot(1.0, 0.30, 0.0, 0.0, 0.0)] * 2 + [Slot(1.0, 0.36, 0.20, 1.0, 0.0)] * 4
+    assert Action.CHARGE in plan(slots, BAT, 0.0).actions
+    assert Action.CHARGE not in plan(slots, BAT, 0.0, PlannerSettings(grid_charge_cost=0.02)).actions
+
+
+def test_grid_charge_cost_leaves_solar_charging_alone() -> None:
+    # Solar into the battery is no grid charging: the threshold does not hold it back.
+    slots = [Slot(1.0, 0.30, 0.25, 0.1, 1.5)] * 2 + [Slot(1.0, 0.40, 0.30, 1.0, 0.0)] * 2
+    r = step(slots[0], BAT, 0.0, Action.DELIVER)
+    assert r.charged > 0 and r.grid_charged == 0
