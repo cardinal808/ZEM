@@ -16,8 +16,9 @@ plain dict in ZEPHYR's own storage, so a reset is immediate (§2.3).
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Final
 
 WORKDAY: Final = "workday"
@@ -97,3 +98,33 @@ class LoadProfile:
         profile.mean = float(data.get("mean", 0.0))
         profile.mean_count = int(data.get("mean_count", 0))
         return profile
+
+
+@dataclass(frozen=True, slots=True)
+class HourEnergy:
+    """Energy of one hour from the meter history (kWh): for the first fill of the profile."""
+
+    start: datetime
+    """Local start of the hour (aware)."""
+    import_kwh: float
+    export_kwh: float
+    solar_kwh: float
+    battery_kwh: float
+    """Into the battery (+) or out of it (−)."""
+
+    @property
+    def house_kwh(self) -> float:
+        return max(self.import_kwh - self.export_kwh + self.solar_kwh - self.battery_kwh, 0.0)
+
+
+def day_type_of(local: datetime) -> str:
+    return WEEKEND if local.weekday() >= 5 else WORKDAY
+
+
+def profile_from_history(hours: Iterable[HourEnergy]) -> LoadProfile:
+    """A profile learned from past hours, oldest first (§2.3: first fill)."""
+    profile = LoadProfile()
+    for hour in sorted(hours, key=lambda h: h.start):
+        profile.learn(day_type_of(hour.start), hour.start.hour, hour.house_kwh)
+    profile.recent.clear()  # steering is for the live hours only
+    return profile

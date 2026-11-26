@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.7.8 — Planner: consumption profile from the recorder at the start (SPEC-planner §2.3)
+- **First fill from the recorder's hourly statistics** (last 28 days) while fewer than 48 hours have been learned: house = import − export + solar − battery per hour, from the cost log's DSMR counters, the solar counter and the hourly mean of `sensor.zephyr_power`. Only complete hours count; the fill replaces the profile from 24 hours on. Without the recorder or the counters: the cost log as before.
+- Why: at a tester the profile had learned only five night hours (0.23 kWh/h) and used that for every hour of the day, so the planner saw far too little consumption.
+- Diagnostics: `profile_source` (recorder, cost log, stored). Manifest: `after_dependencies: recorder`.
+
 ### 0.7.7 — Test dashboard: view *Plan*
 - New view **Plan** in `dashboards/zephyr-test.yaml` (standard cards only): mode and live switch, plan now with reason next to what ZEPHYR does (live or shadow), key figures (planned grid charge and cost, export, battery empty at, expected grid cost), the blocks, a table **per hour** from the plan's timeline (actions per quarter, price, solar, consumption, grid, SOC at the end of the hour) and 24-hour history of plan vs ZEPHYR, SOC, setpoint and grid.
 - Fix: the block table used a folded YAML block (`>-`), which joined the table rows into one line; now a literal block (`|-`).

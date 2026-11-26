@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, State, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event, async_track_time_change
 from homeassistant.helpers.storage import Store
@@ -53,7 +54,7 @@ from .core.forecast_plan import (
     no_prices,
     solar_per_quarter,
 )
-from .core.load_profile import WEEKEND, WORKDAY, LoadProfile
+from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, profile_from_history
 from .core.planner import Action, PlannerSettings
 from .core.solar_history import parse_detailed_forecast
 
@@ -67,7 +68,11 @@ SNAPSHOTS = 120
 FIRST_RUN_DELAY = 5.0
 """s after startup, so the sets have reported."""
 LEARN_FROM_DAYS = 28
-"""First fill of the profile from the cost log (when the profile is empty)."""
+"""First fill of the profile: this many days of the recorder's hourly statistics, else of the cost log."""
+FILL_BELOW_HOURS = 48
+"""Fill from the recorder while fewer hours than this have been learned."""
+MIN_FILL_HOURS = 24
+"""A fill from the recorder replaces the profile only with at least this many hours."""
 ISSUE_PRICE_FORMAT = "price_format"
 
 
@@ -110,7 +115,9 @@ def house_kwh(record: Mapping[str, Any], solar_known: bool) -> float | None:
 class PlanRunner:
     def __init__(self, hass: HomeAssistant, entry_id: str, options: Mapping[str, Any], runtime: ZephyrRuntime) -> None:
         self.hass = hass
+        self.entry_id = entry_id
         self.runtime = runtime
+        self.profile_source = "none"
         self.price_entity: str | None = options.get(CONF_PRICE_ENTITY)
         self.solar_entities = solar_entities(options.get(CONF_SOLAR_FORECAST))
         self.settings = planner_settings(options)
@@ -139,8 +146,15 @@ class PlanRunner:
         stored = await self._store.async_load() or {}
         self.profile = LoadProfile.from_dict(stored.get("profile"))
         self.hour = dict(stored.get("hour") or {})
-        if self.profile.mean_count == 0:
-            await self._learn_from_history()
+        self.profile_source = str(stored.get("profile_source") or ("stored" if self.profile.mean_count else "none"))
+        if self.profile.mean_count < FILL_BELOW_HOURS:
+            try:
+                filled = await self._learn_from_recorder()
+            except Exception:  # the recorder is a nice-to-have: never block the planner
+                LOGGER.exception("Consumption profile from the recorder failed")
+                filled = 0
+            if filled < MIN_FILL_HOURS and self.profile.mean_count == 0:
+                await self._learn_from_history()
         assert self.price_entity is not None
         unsubs: list[Callable[[], None]] = [
             async_track_time_change(self.hass, self._on_minute, second=10),
@@ -312,6 +326,7 @@ class PlanRunner:
                     "eta_out": battery.eta_out,
                 },
                 "profile_hours_learned": self.profile.mean_count,
+                "profile_source": self.profile_source,
                 "previous_action": prev_action.value,
             },
         )
@@ -385,6 +400,69 @@ class PlanRunner:
                 self.profile.learn(day_type(local), local.hour, self.hour["kwh"])
             self.hour = {}
 
+    def _battery_entity(self) -> str:
+        registry = er.async_get(self.hass)
+        found = registry.async_get_entity_id("sensor", DOMAIN, f"{self.entry_id}_power")
+        return found or "sensor.zephyr_power"
+
+    async def _learn_from_recorder(self) -> int:
+        """First fill from the recorder's hourly statistics (§2.3): house = import − export + solar − battery.
+
+        Uses the cost log's DSMR counters, the solar counter and the mean of ZEPHYR's battery
+        power. Only complete hours (every counter and the battery known) count. Returns the
+        number of hours learned; the profile is replaced only from ``MIN_FILL_HOURS`` on.
+        """
+        costs = self.runtime.costs
+        if costs is None or not costs.import_counters or "recorder" not in self.hass.config.components:
+            return 0
+        battery = self._battery_entity()
+        solar = costs.solar_entity
+        ids = [*costs.import_counters, *costs.export_counters, battery, *([solar] if solar else [])]
+        end = dt_util.now().replace(minute=0, second=0, microsecond=0)
+        start = end - timedelta(days=LEARN_FROM_DAYS)
+        stats = await hourly_statistics(self.hass, start, end, ids)
+
+        def by_hour(entity: str, field: str) -> dict[float, float]:
+            out: dict[float, float] = {}
+            for row in stats.get(entity, []):
+                value = row.get(field)
+                begin = row.get("start")
+                if value is None or begin is None:
+                    continue
+                key = begin.timestamp() if isinstance(begin, datetime) else float(begin)
+                out[key] = float(value)
+            return out
+
+        imports = [by_hour(e, "change") for e in costs.import_counters]
+        exports = [by_hour(e, "change") for e in costs.export_counters]
+        solar_rows = by_hour(solar, "change") if solar else None
+        battery_rows = by_hour(battery, "mean")
+        hours: list[HourEnergy] = []
+        for key, mean_w in battery_rows.items():
+            parts = [rows.get(key) for rows in imports + exports]
+            sun = solar_rows.get(key) if solar_rows is not None else 0.0
+            if any(p is None for p in parts) or sun is None:
+                continue
+            n = len(imports)
+            hours.append(
+                HourEnergy(
+                    start=dt_util.as_local(dt_util.utc_from_timestamp(key)),
+                    import_kwh=sum(p for p in parts[:n] if p is not None),
+                    export_kwh=sum(p for p in parts[n:] if p is not None),
+                    solar_kwh=sun,
+                    battery_kwh=mean_w / 1000,
+                )
+            )
+        if len(hours) < MIN_FILL_HOURS:
+            LOGGER.debug("Recorder gave %s complete hours for the consumption profile: too few", len(hours))
+            return len(hours)
+        self.profile = profile_from_history(hours)
+        self.hour = {}
+        self.profile_source = f"recorder ({len(hours)} h)"
+        LOGGER.debug("Consumption profile filled from %s recorder hours", len(hours))
+        self._store.async_delay_save(self._data, 10)
+        return len(hours)
+
     async def _learn_from_history(self) -> None:
         costs = self.runtime.costs
         if costs is None:
@@ -395,11 +473,12 @@ class PlanRunner:
         for record in records:
             self._learn_quarter(datetime.fromisoformat(record["start"]), record, solar_known)
         if records:
+            self.profile_source = "cost log"
             LOGGER.debug("Consumption profile filled from %s cost quarters", len(records))
             self._store.async_delay_save(self._data, 10)
 
     def _data(self) -> dict[str, Any]:
-        return {"profile": self.profile.as_dict(), "hour": self.hour}
+        return {"profile": self.profile.as_dict(), "hour": self.hour, "profile_source": self.profile_source}
 
     def diagnostics(self) -> dict[str, Any]:
         outcome = self.outcome
@@ -431,3 +510,21 @@ def _price_key(state: State | None) -> tuple[Any, ...]:
         first = items[0].get("start") if items and isinstance(items[0], Mapping) else None
         key += [len(items), str(first)]
     return tuple(key)
+
+
+async def hourly_statistics(hass: HomeAssistant, start: datetime, end: datetime, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    """Hourly statistics (change for counters, mean for power) from the recorder."""
+    from homeassistant.components.recorder.statistics import statistics_during_period
+    from homeassistant.helpers.recorder import get_instance
+
+    result = await get_instance(hass).async_add_executor_job(
+        statistics_during_period,
+        hass,
+        start,
+        end,
+        set(ids),
+        "hour",
+        {"energy": "kWh", "power": "W"},
+        {"change", "mean"},
+    )
+    return {key: [dict(row) for row in rows] for key, rows in result.items()}

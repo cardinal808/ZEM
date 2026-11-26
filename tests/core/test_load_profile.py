@@ -50,3 +50,29 @@ def test_storage_round_trip_and_reset() -> None:
     assert q.expected(WEEKEND, 18) == p.expected(WEEKEND, 18)
     q.reset()
     assert q.expected(WEEKEND, 18) == 0.0 and q.mean_count == 0
+
+
+def test_first_fill_from_meter_history() -> None:
+    """House = import − export + solar − battery per hour; three workdays make an hour count (§2.3)."""
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    from zephyr_core.load_profile import WEEKEND, WORKDAY, HourEnergy, profile_from_history
+
+    tz = ZoneInfo("Europe/Amsterdam")
+    monday = datetime(2026, 11, 23, tzinfo=tz)
+    hours = []
+    for day in range(3):
+        for hour in range(24):
+            evening = 1.2 if 17 <= hour < 22 else 0.25
+            # Battery delivered 1.0 kWh in the evening: import is lower, the house is not.
+            battery = -1.0 if 17 <= hour < 22 else 0.0
+            hours.append(HourEnergy(monday + timedelta(days=day, hours=hour), evening + battery, 0.0, 0.0, battery))
+    noon = HourEnergy(monday + timedelta(hours=12), 0.1, 0.5, 0.9, 0.2)
+    assert noon.house_kwh == pytest.approx(0.3)
+    profile = profile_from_history(hours)
+    assert profile.mean_count == 72
+    assert profile.expected(WORKDAY, 18) == pytest.approx(1.2)
+    assert profile.expected(WORKDAY, 3) == pytest.approx(0.25)
+    assert profile.expected(WEEKEND, 18) == pytest.approx(profile.mean)  # nothing learned for weekends yet
+    assert profile.steering() == 1.0
