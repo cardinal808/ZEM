@@ -531,6 +531,14 @@ def ws_events(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, 
 SAVINGS_DAYS = 30
 
 
+def _backfill_price(costs: Any) -> str:
+    """Price for the backfill: the price sensor only if HA keeps statistics of it (state_class), otherwise EnergyZero."""
+    from .core.backfill import PRICE_ENERGYZERO
+
+    state = costs.hass.states.get(costs.price_entity) if costs.price_entity else None
+    return costs.price_entity if state is not None and state.attributes.get("state_class") else PRICE_ENERGYZERO
+
+
 def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
     """What the battery saved: today, this week, month and year, and the last 30 days (cost log, B38)."""
     from datetime import timedelta as _td
@@ -585,7 +593,7 @@ def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         "measured_since": costs.measured_since,
         "backfilled_days": sum(1 for v in stored.values() if v.get("source") is not None),
         "can_backfill": bool(costs.import_counters and costs.export_counters),
-        "defaults": {"solar_entity": costs.solar_entity, "price_entity": costs.price_entity},
+        "defaults": {"solar_entity": costs.solar_entity, "price_entity": _backfill_price(costs)},
         "saldering_until": tariffs.saldering_until.isoformat() if tariffs.saldering_until > today else None,
     }
 
@@ -649,7 +657,7 @@ async def ws_savings_backfill(hass: HomeAssistant, connection: ActiveConnection,
     if not entities["charge_entity"] or not entities["discharge_entity"]:
         connection.send_result(msg["id"], {"ok": False, "error": "no_battery_counters"})
         return
-    missing = [e for e in entities.values() if e and hass.states.get(e) is None]
+    missing = [e for e in entities.values() if e and e != "energyzero" and hass.states.get(e) is None]
     if missing:
         connection.send_result(msg["id"], {"ok": False, "error": "entity_missing", "entities": missing})
         return

@@ -596,7 +596,7 @@
     "bf_charge": "Accu geladen (energieteller, kWh)",
     "bf_discharge": "Accu geleverd (energieteller, kWh)",
     "bf_solar": "Zon (energieteller)",
-    "bf_price": "Prijssensor met statistiek",
+    "bf_price": "Prijs",
     "bf_help": "Kies de tellers van de set uit de periode vóór ZEPHYR, bijvoorbeeld die van de vorige integratie. Uren zonder tellerstand tellen niet mee; uren zonder prijs krijgen geen bedrag. Nog een keer terugrekenen vervangt de vorige keer.",
     "bf_run": "Terugrekenen",
     "bf_busy": "Bezig…",
@@ -608,6 +608,10 @@
     "bf_err_no_battery_counters": "Kies de laad- en leverteller van de accu.",
     "bf_err_entity_missing": "Niet gevonden: {entities}.",
     "bf_err_bad_date": "Ongeldige datum.",
-    "bf_err_no_connection": "Geen verbinding met Home Assistant."
+    "bf_err_no_connection": "Geen verbinding met Home Assistant.",
+    "bf_price_ez": "EnergyZero (marktprijs NL per uur, wordt opgehaald)",
+    "bf_price_sensor": "Een sensor met statistiek in HA",
+    "bf_price_pick": "Prijssensor",
+    "bf_ez_failed": "EnergyZero gaf voor {n} dag(en) geen prijzen; probeer het later nog eens."
   }
 }

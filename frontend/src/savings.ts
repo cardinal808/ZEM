@@ -50,6 +50,8 @@ export interface BackfillResult {
   hours?: number;
   skipped?: number;
   priced_hours?: number;
+  /** Days EnergyZero gave no prices for. */
+  price_failed_days?: number;
   first?: string | null;
   last?: string | null;
   removed?: number;
@@ -98,7 +100,8 @@ export class ZephyrSavings extends LitElement {
   @property({ attribute: false }) backfill?: (req: BackfillRequest | null) => Promise<BackfillResult>;
 
   @state() private period: SavingsPeriod = "month";
-  @state() private form: Partial<BackfillRequest> = {};
+  /** The last choice is kept in this browser, so a second run needs no picking again. */
+  @state() private form: Partial<BackfillRequest> = ZephyrSavings.storedForm();
   @state() private busy = false;
   @state() private result: BackfillResult | null = null;
 
@@ -180,8 +183,25 @@ export class ZephyrSavings extends LitElement {
     return d.toISOString().slice(0, 10);
   }
 
+  private static storedForm(): Partial<BackfillRequest> {
+    try {
+      const raw = window.localStorage.getItem("zephyr.backfill");
+      const data = raw ? (JSON.parse(raw) as Partial<BackfillRequest>) : {};
+      return { charge_entity: data.charge_entity, discharge_entity: data.discharge_entity, price_entity: data.price_entity };
+    } catch {
+      return {};
+    }
+  }
+
   private async run(req: BackfillRequest | null): Promise<void> {
     if (!this.backfill || this.busy) return;
+    if (req) {
+      try {
+        window.localStorage.setItem("zephyr.backfill", JSON.stringify(req));
+      } catch {
+        // Storage not available: nothing to keep.
+      }
+    }
     this.busy = true;
     this.result = null;
     try {
@@ -215,7 +235,23 @@ export class ZephyrSavings extends LitElement {
         ${this.picker("charge_entity", this.tr("savings.bf_charge"), energy, f.charge_entity, false)}
         ${this.picker("discharge_entity", this.tr("savings.bf_discharge"), energy, f.discharge_entity, false)}
         ${this.picker("solar_entity", this.tr("savings.bf_solar"), energy, f.solar_entity, true)}
-        ${this.picker("price_entity", this.tr("savings.bf_price"), this.choices(null), f.price_entity, true)}
+        <fieldset class="field price">
+          <legend>${this.tr("savings.bf_price")}</legend>
+          <label class="radio">
+            <input type="radio" name="bf-price" .checked=${f.price_entity === "energyzero"} @change=${() => (this.form = { ...this.form, price_entity: "energyzero" })} />
+            ${this.tr("savings.bf_price_ez")}
+          </label>
+          <label class="radio">
+            <input
+              type="radio"
+              name="bf-price"
+              .checked=${f.price_entity !== "energyzero"}
+              @change=${() => (this.form = { ...this.form, price_entity: view.defaults?.price_entity !== "energyzero" ? (view.defaults?.price_entity ?? null) : null })}
+            />
+            ${this.tr("savings.bf_price_sensor")}
+          </label>
+          ${f.price_entity !== "energyzero" ? this.picker("price_entity", this.tr("savings.bf_price_pick"), this.choices(null), f.price_entity, false) : nothing}
+        </fieldset>
       </div>
       <p class="muted small">${this.tr("savings.bf_help")}</p>
       <div class="buttons">
@@ -240,7 +276,7 @@ export class ZephyrSavings extends LitElement {
                       last: this.date(r.last as string),
                       skipped: r.skipped ?? 0,
                       unpriced: (r.hours ?? 0) - (r.priced_hours ?? 0),
-                    })
+                    }) + (r.price_failed_days ? ` ${this.tr("savings.bf_ez_failed", { n: r.price_failed_days })}` : "")
                   : this.tr("savings.bf_nothing")
               : this.tr(`savings.bf_err_${r.error}`, { entities: (r.entities ?? []).join(", ") })}
           </p>`
@@ -578,6 +614,29 @@ export class ZephyrSavings extends LitElement {
     .field em {
       font-weight: 400;
       color: var(--z-muted);
+    }
+    fieldset.field {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      min-width: 0;
+    }
+    fieldset.field legend {
+      padding: 0;
+      margin-bottom: 4px;
+    }
+    .radio {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      font-weight: 400;
+    }
+    .radio input {
+      min-height: 0;
+      width: 18px;
+      height: 18px;
+      margin: 0;
     }
     .field input {
       min-height: 40px;

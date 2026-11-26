@@ -596,7 +596,7 @@
     "bf_charge": "Battery charged (energy counter, kWh)",
     "bf_discharge": "Battery delivered (energy counter, kWh)",
     "bf_solar": "Solar (energy counter)",
-    "bf_price": "Price sensor with statistics",
+    "bf_price": "Price",
     "bf_help": "Choose the set's counters from the period before ZEPHYR, for example those of the previous integration. Hours without a counter reading do not count; hours without a price get no amount. Working out again replaces the previous run.",
     "bf_run": "Work out",
     "bf_busy": "Working…",
@@ -608,6 +608,10 @@
     "bf_err_no_battery_counters": "Choose the battery's charge and discharge counters.",
     "bf_err_entity_missing": "Not found: {entities}.",
     "bf_err_bad_date": "Invalid date.",
-    "bf_err_no_connection": "No connection with Home Assistant."
+    "bf_err_no_connection": "No connection with Home Assistant.",
+    "bf_price_ez": "EnergyZero (Dutch market price per hour, fetched)",
+    "bf_price_sensor": "A sensor with statistics in HA",
+    "bf_price_pick": "Price sensor",
+    "bf_ez_failed": "EnergyZero gave no prices for {n} day(s); try again later."
   }
 }

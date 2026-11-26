@@ -1213,7 +1213,7 @@ var qe = {
 			bf_charge: "Accu geladen (energieteller, kWh)",
 			bf_discharge: "Accu geleverd (energieteller, kWh)",
 			bf_solar: "Zon (energieteller)",
-			bf_price: "Prijssensor met statistiek",
+			bf_price: "Prijs",
 			bf_help: "Kies de tellers van de set uit de periode vóór ZEPHYR, bijvoorbeeld die van de vorige integratie. Uren zonder tellerstand tellen niet mee; uren zonder prijs krijgen geen bedrag. Nog een keer terugrekenen vervangt de vorige keer.",
 			bf_run: "Terugrekenen",
 			bf_busy: "Bezig…",
@@ -1225,7 +1225,11 @@ var qe = {
 			bf_err_no_battery_counters: "Kies de laad- en leverteller van de accu.",
 			bf_err_entity_missing: "Niet gevonden: {entities}.",
 			bf_err_bad_date: "Ongeldige datum.",
-			bf_err_no_connection: "Geen verbinding met Home Assistant."
+			bf_err_no_connection: "Geen verbinding met Home Assistant.",
+			bf_price_ez: "EnergyZero (marktprijs NL per uur, wordt opgehaald)",
+			bf_price_sensor: "Een sensor met statistiek in HA",
+			bf_price_pick: "Prijssensor",
+			bf_ez_failed: "EnergyZero gaf voor {n} dag(en) geen prijzen; probeer het later nog eens."
 		}
 	},
 	en: {
@@ -1826,7 +1830,7 @@ var qe = {
 			bf_charge: "Battery charged (energy counter, kWh)",
 			bf_discharge: "Battery delivered (energy counter, kWh)",
 			bf_solar: "Solar (energy counter)",
-			bf_price: "Price sensor with statistics",
+			bf_price: "Price",
 			bf_help: "Choose the set's counters from the period before ZEPHYR, for example those of the previous integration. Hours without a counter reading do not count; hours without a price get no amount. Working out again replaces the previous run.",
 			bf_run: "Work out",
 			bf_busy: "Working…",
@@ -1838,7 +1842,11 @@ var qe = {
 			bf_err_no_battery_counters: "Choose the battery's charge and discharge counters.",
 			bf_err_entity_missing: "Not found: {entities}.",
 			bf_err_bad_date: "Invalid date.",
-			bf_err_no_connection: "No connection with Home Assistant."
+			bf_err_no_connection: "No connection with Home Assistant.",
+			bf_price_ez: "EnergyZero (Dutch market price per hour, fetched)",
+			bf_price_sensor: "A sensor with statistics in HA",
+			bf_price_pick: "Price sensor",
+			bf_ez_failed: "EnergyZero gave no prices for {n} day(s); try again later."
 		}
 	}
 };
@@ -4534,17 +4542,20 @@ var Z = class extends D {
 };
 U([k({ attribute: !1 })], Z.prototype, "view", void 0), U([k({ attribute: !1 })], Z.prototype, "uiLang", void 0), U([k()], Z.prototype, "locale", void 0), U([k()], Z.prototype, "timeZone", void 0), U([k({ type: Boolean })], Z.prototype, "admin", void 0), U([k({ attribute: !1 })], Z.prototype, "download", void 0), U([k({ attribute: !1 })], Z.prototype, "exportCosts", void 0), U([k({ attribute: !1 })], Z.prototype, "refresh", void 0), U([A()], Z.prototype, "busy", void 0), U([A()], Z.prototype, "note", void 0), U([A()], Z.prototype, "dayKind", void 0), Z = U([O("zephyr-diagnostics")], Z);
 // src/savings.ts
-var Ot = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
-function kt(e) {
+var Ot, kt = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
+function At(e) {
 	let t = e.map((e) => e.savings_battery ?? 0), n = t.map(Math.abs).filter((e) => e > 0).sort((e, t) => e - t), r = n.length ? n[Math.floor(n.length * .75)] : .5, i = Math.max(.5, r * 2), a = Math.min(i, Math.max(0, ...t)), o = Math.max(-i, Math.min(0, ...t));
 	return {
-		top: Math.max(.5, Ot(a)),
-		bottom: -Ot(-o)
+		top: Math.max(.5, kt(a)),
+		bottom: -kt(-o)
 	};
 }
 var Q = class extends D {
+	static {
+		Ot = this;
+	}
 	constructor(...e) {
-		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = {}, this.busy = !1, this.result = null;
+		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = Ot.storedForm(), this.busy = !1, this.result = null;
 	}
 	tr(e, t = {}) {
 		return L(this.uiLang, e, t);
@@ -4623,8 +4634,23 @@ var Q = class extends D {
 		let t = e.measured_since ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), n = /* @__PURE__ */ new Date(`${t}T12:00:00Z`);
 		return n.setUTCDate(n.getUTCDate() - 30), n.toISOString().slice(0, 10);
 	}
+	static storedForm() {
+		try {
+			let e = window.localStorage.getItem("zephyr.backfill"), t = e ? JSON.parse(e) : {};
+			return {
+				charge_entity: t.charge_entity,
+				discharge_entity: t.discharge_entity,
+				price_entity: t.price_entity
+			};
+		} catch {
+			return {};
+		}
+	}
 	async run(e) {
 		if (this.backfill && !this.busy) {
+			if (e) try {
+				window.localStorage.setItem("zephyr.backfill", JSON.stringify(e));
+			} catch {}
 			this.busy = !0, this.result = null;
 			try {
 				this.result = await this.backfill(e);
@@ -4660,7 +4686,29 @@ var Q = class extends D {
         ${this.picker("charge_entity", this.tr("savings.bf_charge"), t, n.charge_entity, !1)}
         ${this.picker("discharge_entity", this.tr("savings.bf_discharge"), t, n.discharge_entity, !1)}
         ${this.picker("solar_entity", this.tr("savings.bf_solar"), t, n.solar_entity, !0)}
-        ${this.picker("price_entity", this.tr("savings.bf_price"), this.choices(null), n.price_entity, !0)}
+        <fieldset class="field price">
+          <legend>${this.tr("savings.bf_price")}</legend>
+          <label class="radio">
+            <input type="radio" name="bf-price" .checked=${n.price_entity === "energyzero"} @change=${() => this.form = {
+			...this.form,
+			price_entity: "energyzero"
+		}} />
+            ${this.tr("savings.bf_price_ez")}
+          </label>
+          <label class="radio">
+            <input
+              type="radio"
+              name="bf-price"
+              .checked=${n.price_entity !== "energyzero"}
+              @change=${() => this.form = {
+			...this.form,
+			price_entity: e.defaults?.price_entity === "energyzero" ? null : e.defaults?.price_entity ?? null
+		}}
+            />
+            ${this.tr("savings.bf_price_sensor")}
+          </label>
+          ${n.price_entity === "energyzero" ? w : this.picker("price_entity", this.tr("savings.bf_price_pick"), this.choices(null), n.price_entity, !1)}
+        </fieldset>
       </div>
       <p class="muted small">${this.tr("savings.bf_help")}</p>
       <div class="buttons">
@@ -4678,7 +4726,7 @@ var Q = class extends D {
 			last: this.date(i.last),
 			skipped: i.skipped ?? 0,
 			unpriced: (i.hours ?? 0) - (i.priced_hours ?? 0)
-		}) : this.tr("savings.bf_nothing") : this.tr("savings.bf_removed", { n: i.removed }) : this.tr(`savings.bf_err_${i.error}`, { entities: (i.entities ?? []).join(", ") })}
+		}) + (i.price_failed_days ? ` ${this.tr("savings.bf_ez_failed", { n: i.price_failed_days })}` : "") : this.tr("savings.bf_nothing") : this.tr("savings.bf_removed", { n: i.removed }) : this.tr(`savings.bf_err_${i.error}`, { entities: (i.entities ?? []).join(", ") })}
           </p>` : w}
     </section>`;
 	}
@@ -4716,7 +4764,7 @@ var Q = class extends D {
 	}
 	renderDays(e) {
 		if (!e.length) return S`<p class="muted">${this.tr("savings.no_data")}</p>`;
-		let { top: t, bottom: n } = kt(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
+		let { top: t, bottom: n } = At(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
 			weekday: "short",
 			day: "numeric",
 			month: "short",
@@ -5008,6 +5056,29 @@ var Q = class extends D {
       font-weight: 400;
       color: var(--z-muted);
     }
+    fieldset.field {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      min-width: 0;
+    }
+    fieldset.field legend {
+      padding: 0;
+      margin-bottom: 4px;
+    }
+    .radio {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      font-weight: 400;
+    }
+    .radio input {
+      min-height: 0;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+    }
     .field input {
       min-height: 40px;
       padding: 0 10px;
@@ -5183,9 +5254,9 @@ var Q = class extends D {
   `;
 	}
 };
-U([k({ attribute: !1 })], Q.prototype, "view", void 0), U([k({ attribute: !1 })], Q.prototype, "uiLang", void 0), U([k()], Q.prototype, "locale", void 0), U([k()], Q.prototype, "timeZone", void 0), U([k({ type: Boolean })], Q.prototype, "admin", void 0), U([k({ attribute: !1 })], Q.prototype, "states", void 0), U([k({ attribute: !1 })], Q.prototype, "backfill", void 0), U([A()], Q.prototype, "period", void 0), U([A()], Q.prototype, "form", void 0), U([A()], Q.prototype, "busy", void 0), U([A()], Q.prototype, "result", void 0), Q = U([O("zephyr-savings")], Q);
+U([k({ attribute: !1 })], Q.prototype, "view", void 0), U([k({ attribute: !1 })], Q.prototype, "uiLang", void 0), U([k()], Q.prototype, "locale", void 0), U([k()], Q.prototype, "timeZone", void 0), U([k({ type: Boolean })], Q.prototype, "admin", void 0), U([k({ attribute: !1 })], Q.prototype, "states", void 0), U([k({ attribute: !1 })], Q.prototype, "backfill", void 0), U([A()], Q.prototype, "period", void 0), U([A()], Q.prototype, "form", void 0), U([A()], Q.prototype, "busy", void 0), U([A()], Q.prototype, "result", void 0), Q = Ot = U([O("zephyr-savings")], Q);
 // src/zephyr-panel.ts
-var At = "/zephyr_static", jt = [
+var jt = "/zephyr_static", Mt = [
 	[
 		"Inter",
 		400,
@@ -5207,11 +5278,11 @@ var At = "/zephyr_static", jt = [
 		"space-grotesk-latin-700-normal.woff2"
 	]
 ];
-function Mt(e) {
+function Nt(e) {
 	let t = "zephyr-fonts";
 	if (document.getElementById(t)) return;
 	let n = document.createElement("style");
-	n.id = t, n.textContent = jt.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
+	n.id = t, n.textContent = Mt.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
 }
 var $ = class extends D {
 	constructor(...e) {
@@ -5262,7 +5333,7 @@ var $ = class extends D {
 		};
 	}
 	get base() {
-		return this.panel?.config?.static ?? At;
+		return this.panel?.config?.static ?? jt;
 	}
 	get uiLang() {
 		return Je(this.hass?.locale?.language ?? this.hass?.language);
@@ -5277,7 +5348,7 @@ var $ = class extends D {
 		return L(this.uiLang, e, t);
 	}
 	connectedCallback() {
-		super.connectedCallback(), Mt(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
+		super.connectedCallback(), Nt(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), window.clearInterval(this.clockTimer), window.clearInterval(this.planTimer), window.clearInterval(this.setsTimer), window.clearTimeout(this.retryTimer), this.watch(void 0), this.stop();

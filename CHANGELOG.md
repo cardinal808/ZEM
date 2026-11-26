@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.23 — Besparing: prices from EnergyZero for working out earlier days
+- Bjorn's first run (26-11): 48 days worked out, but 1 138 of the hours had no price, because his Nord Pool sensor has no `state_class` and so no hourly statistics in HA.
+- The form *Eerdere dagen terugrekenen* now offers **EnergyZero (marktprijs NL per uur)**: ZEPHYR fetches the bare Dutch day-ahead market price per hour from EnergyZero's public API (no key), one request per day, only when you press *Terugrekenen*. Default when the price sensor has no `state_class`; a sensor with statistics can still be chosen.
+- Days EnergyZero gives no prices for are named in the result (*probeer het later nog eens*); the rest goes on.
+- The last choices of the form are kept in the browser.
+- Tests: EnergyZero answer and query; in HA a run with a working and a failing day (mocked), the sensor's statistics not asked.
+
 ### 0.8.22 — Besparing: days before the cost log worked out from hourly statistics
 - **Screen *Besparing* → *Eerdere dagen terugrekenen*** (administrators, with P1 counters set): for the days before the cost log, ZEPHYR works out the savings again from Home Assistant's hourly statistics: grid import and export (the P1 counters), the battery's charge and discharge counters (for example those of the previous integration), solar and the price sensor. Every hour goes through the same calculation as a quarter of the cost log, so all days use one method (Bjorn, 26-11, choice 2).
 - Those days are marked: hatched in the day chart, *teruggerekend per uur* on hover, and a line in *Wat telt mee*. Hours without a counter reading do not count (the day is then incomplete); hours without a price get no amount. Working out again replaces the previous run; *Teruggerekende dagen weghalen* removes them. Days the cost log measured itself are never touched.

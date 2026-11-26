@@ -15,12 +15,15 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from datetime import date, datetime, tzinfo
+from datetime import UTC, date, datetime, tzinfo
 from typing import Any, Final
 
 from .costs import Pools, QuarterInput, Tariffs, add_to_day, evaluate
 
 SOURCE_HOURLY: Final = "hourly"
+PRICE_ENERGYZERO: Final = "energyzero"
+"""Price source for the backfill: EnergyZero's public API (Dutch day-ahead market price, per hour, excl. VAT)."""
+ENERGYZERO_URL: Final = "https://api.energyzero.nl/v1/energyprices"
 """Marks a day total that was worked out from hourly statistics."""
 
 QUARTERS_PER_HOUR: Final = 4
@@ -127,4 +130,26 @@ def series_to_hours(
                 market=series.get(price_id, {}).get(t) if price_id else None,
             )
         )
+    return out
+
+
+def energyzero_params(start: datetime, end: datetime) -> dict[str, str]:
+    """Query for EnergyZero: market price per hour (interval 4 = a day of hours), electricity, without VAT."""
+
+    def iso(t: datetime) -> str:
+        return t.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+    return {"fromDate": iso(start), "tillDate": iso(end), "interval": "4", "usageType": "1", "inclBtw": "false"}
+
+
+def energyzero_prices(data: Any) -> dict[datetime, float]:
+    """Hour start (UTC) → bare market price €/kWh from EnergyZero's answer; anything odd is skipped."""
+    out: dict[datetime, float] = {}
+    rows = data.get("Prices") if isinstance(data, dict) else None
+    for row in rows or []:
+        try:
+            moment = datetime.fromisoformat(str(row["readingDate"]).replace("Z", "+00:00")).astimezone(UTC)
+            out[moment] = float(row["price"])
+        except (KeyError, TypeError, ValueError):
+            continue
     return out
