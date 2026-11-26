@@ -25,7 +25,7 @@ from .const import CONF_PLAN_BUFFER, DOMAIN
 from .core.device_table import pack_info
 from .core.engine import Mode
 from .core.forecast_plan import ACTION_KEYS, PlanOutcome, reason
-from .core.packs import PackHistory, cell_delta_mv, cell_status
+from .core.packs import PackHistory, cell_delta_mv, cell_status, judged
 from .core.plan_view import past_action
 
 if TYPE_CHECKING:
@@ -238,6 +238,7 @@ def sets_view(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
             model = info.name if info is not None else None
             names[model or "?"] = names.get(model or "?", 0) + 1
             delta = cell_delta_mv(pack.cell_voltage_min, pack.cell_voltage_max)
+            is_judged = judged(pack.soc, pack.cell_voltage_max, pack.power, info.capacity_kwh if info else None)
             packs.append(
                 {
                     "index": index,
@@ -252,7 +253,8 @@ def sets_view(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
                     "cell_min_v": pack.cell_voltage_min,
                     "cell_max_v": pack.cell_voltage_max,
                     "cell_delta_mv": delta,
-                    "cell_status": cell_status(delta, pack.soc),
+                    "cell_judged": is_judged,
+                    "cell_status": cell_status(delta, is_judged),
                     "history": history.last_days(pack.serial, today),
                 }
             )
