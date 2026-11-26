@@ -119,14 +119,21 @@
     "what_deliver": "Delivering to the house",
     "what_hold": "Holding",
     "what_export": "Exporting from the battery",
-    "indicative": "indicative"
+    "indicative": "indicative",
+    "title_today": "Blocks today",
+    "title_tomorrow": "Blocks tomorrow",
+    "title_both": "Blocks, 48 hours",
+    "none_tomorrow": "No blocks for tomorrow yet."
   },
   "why": {
     "title": "Why this plan",
     "cheapest": "Cheapest charging: {time} ({price} on average).",
     "peak": "Most expensive moment: {time} ({price}). That is where the battery saves the most.",
     "no_charge": "Charging from the grid is not cheaper than waiting in this period; the battery uses what it has.",
-    "indicative": "Tomorrow is still indicative; prices usually come around 13:00 and the plan is then recalculated."
+    "indicative": "Tomorrow is still indicative; prices usually come around 13:00 and the plan is then recalculated.",
+    "title_today": "Why this plan, today",
+    "title_tomorrow": "Why this plan, tomorrow",
+    "title_both": "Why this plan"
   },
   "sets": {
     "none": "No set found yet.",

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.16 — Panel: Blokken and Waarom follow the chosen period
+- The cards *Blokken* and *Waarom dit plan* now follow *Vandaag / Morgen / 48 uur* like the chart (Bjorn, 26-11). *Vandaag*: what is still to come today, a block over midnight included. *Morgen*: every block that touches tomorrow (or *Nog geen blokken voor morgen*). *48 uur*: everything still to come. The cheapest charge time and the most expensive moment are taken from the same period; the plan's reason (about now) is left out for *Morgen*. Titles say which period.
+- The period is kept by the panel (`zephyr-prices-plan` reports a change); still remembered in the browser.
+- Test: `blocksFor` for the three periods, also over midnight.
 ### 0.8.15 — Vacation (B42)
 - **`switch.zephyr_vacation`** (*Vacation*) with **`datetime.zephyr_vacation_until`** (*Vacation until*): set an end and the switch goes off by itself at that moment.
 - **Option *Vacation when nobody is home*** (default off): on by itself after 24 hours with nobody home (`zone.home` = 0), off as soon as someone is back.
