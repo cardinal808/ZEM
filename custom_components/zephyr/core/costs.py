@@ -99,11 +99,26 @@ class QuarterMeter:
     battery_seconds: float = 0.0
     _last_t: float | None = None
     _grid_w: float | None = None
-    _battery_w: float | None = None
+    _charge_w: float | None = None
+    _deliver_w: float = 0.0
     _solar_w: float = 0.0
+    _battery_complete: bool = True
 
-    def sample(self, now: float, grid_w: float | None, battery_w: float | None, set_solar_w: float = 0.0) -> None:
-        """``grid_w``: + import, − export (None = no fresh P1). ``battery_w``: + charging, − delivering (AC)."""
+    def sample(
+        self,
+        now: float,
+        grid_w: float | None,
+        charge_w: float | None,
+        deliver_w: float = 0.0,
+        set_solar_w: float = 0.0,
+        battery_complete: bool = True,
+    ) -> None:
+        """``grid_w``: + import, − export (None = no fresh P1).
+
+        ``charge_w`` / ``deliver_w``: AC power into and out of the batteries, both ≥ 0
+        (``charge_w`` None = no set counts). ``set_solar_w``: the sets' own PV. A sample
+        counts towards the battery coverage only when ``battery_complete`` (all sets counted).
+        """
         if self._last_t is not None:
             dt = now - self._last_t
             if 0 < dt <= MAX_SAMPLE_GAP:
@@ -112,17 +127,19 @@ class QuarterMeter:
                     self.grid_seconds += dt
                     self.import_kwh += max(self._grid_w, 0.0) / 1000 * hours
                     self.export_kwh += max(-self._grid_w, 0.0) / 1000 * hours
-                if self._battery_w is not None:
-                    self.battery_seconds += dt
-                    self.charge_kwh += max(self._battery_w, 0.0) / 1000 * hours
-                    self.discharge_kwh += max(-self._battery_w, 0.0) / 1000 * hours
+                if self._charge_w is not None:
+                    if self._battery_complete:
+                        self.battery_seconds += dt
+                    self.charge_kwh += max(self._charge_w, 0.0) / 1000 * hours
+                    self.discharge_kwh += max(self._deliver_w, 0.0) / 1000 * hours
                     self.set_solar_kwh += max(self._solar_w, 0.0) / 1000 * hours
         self._last_t = now
-        self._grid_w, self._battery_w, self._solar_w = grid_w, battery_w, set_solar_w
+        self._grid_w, self._charge_w, self._deliver_w = grid_w, charge_w, deliver_w
+        self._solar_w, self._battery_complete = set_solar_w, battery_complete
 
     def take(self, now: float) -> QuarterMeter:
         """Close the quarter at ``now``: return what was measured and start a new one (values held)."""
-        self.sample(now, self._grid_w, self._battery_w, self._solar_w)
+        self.sample(now, self._grid_w, self._charge_w, self._deliver_w, self._solar_w, self._battery_complete)
         done = replace(self)
         self.import_kwh = self.export_kwh = self.charge_kwh = self.discharge_kwh = self.set_solar_kwh = 0.0
         self.grid_seconds = self.battery_seconds = 0.0

@@ -170,6 +170,7 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
             capacity_kwh=data.capacity.capacity_kwh if data.capacity else 0.0,
             online=data.online,
             offline_since=self.health.offline_since,
+            last_success=self.health.last_success,
         )
 
 

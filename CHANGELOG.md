@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.26 — Cost log: battery from the pack powers, set PV once (B44 T0)
+- **No double count of the sets' own PV.** The cost log took the battery from the set's net exchange with the house (`gridInputPower − outputHomePower`), which includes the PV inputs of the set, and also counted those PV inputs as solar. 500 W from the set's own panels counted as 500 W *delivered from the battery* plus 500 W solar: the house use 500 W too high and the savings too high. Now: charged = Σ `outputPackPower`, delivered = Σ `packInputPower` (AC, MEET-zensdk W1), set PV only as solar. Without PV nothing changes.
+- **Hold of 60 s per set:** a set that cannot be read keeps its last pack and PV power in the cost log for 60 s after its last good report, also when the controller already counts it as offline. With several sets an unreadable set no longer drops out silently: the battery coverage of the quarter (`complete`) only counts while every set is counted.
+- Regulation unchanged (still the set's net exchange with the house).
+- Tests: set PV with an idle battery, hold within and beyond 60 s, coverage with a missing set. Spec: `SPEC-tellers.md` (own energy counters, T1–T4 follow).
+
 ### 0.8.25 — Live: safer second-controller stop, set left alone while calibrating
 From the check before going live (26-11, `TOETS-live-basis.md`).
 - **Second controller detected:** ZEPHYR now writes 0 W once before going back to shadow mode, as when the switch is turned off by hand. Before, the set stayed at ZEPHYR's last power (for example 2 kW delivering).

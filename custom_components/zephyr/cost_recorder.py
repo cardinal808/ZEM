@@ -202,9 +202,11 @@ class CostRecorder:
         grid: float | None = None
         if control is not None and control.p1_at is not None and now - control.p1_at <= P1_FRESH:
             grid = control.p1_watts
-        totals = self.runtime.totals()
-        battery = totals.power if totals.sets_online else None
-        self.meter.sample(now, grid, battery, totals.solar_power)
+        flows = self.runtime.cost_flows()
+        if flows is None:
+            self.meter.sample(now, grid, None)
+        else:
+            self.meter.sample(now, grid, flows.charge, flows.deliver, flows.solar, flows.complete)
 
     def _open(self, start: datetime) -> None:
         self.open_start = start

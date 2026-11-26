@@ -21,6 +21,8 @@ class SetSnapshot:
     online: bool
     enabled: bool = True
     offline_since: float | None = None
+    last_success: float | None = None
+    """Monotonic time of the last good report (for the cost log's hold, B44 T0)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,4 +79,42 @@ def compute_totals(sets: Iterable[SetSnapshot], now: float) -> Totals:
         solar_power=round(solar, 1),
         sets_online=len(power_sets),
         sets_configured=len(sets),
+    )
+
+
+COST_HOLD_SECONDS: Final = 60.0
+"""The cost log keeps counting a set's last power this long after its last good report (B44 HOLD)."""
+
+
+@dataclass(frozen=True, slots=True)
+class CostFlows:
+    """Power flows of the sets as the cost log integrates them (B44 T0), W ≥ 0."""
+
+    charge: float
+    """Σ ``outputPackPower``: AC power into the batteries."""
+    deliver: float
+    """Σ ``packInputPower``: AC power out of the batteries."""
+    solar: float
+    """Σ ``solarInputPower``: the sets' own PV inputs."""
+    complete: bool
+    """Every enabled set counted (none beyond the hold)."""
+
+
+def cost_flows(sets: Iterable[SetSnapshot], now: float, hold: float = COST_HOLD_SECONDS) -> CostFlows | None:
+    """Battery and set-PV flows for the cost log; None when no set counts.
+
+    Battery energy comes from the pack powers (``outputPackPower`` / ``packInputPower``), not
+    from the set's net exchange with the house: that one includes the set's own PV, which
+    the cost log counts as solar (otherwise it is counted twice). A set that cannot be read
+    keeps its last values for ``hold`` seconds after its last good report.
+    """
+    enabled = [s for s in sets if s.enabled]
+    counted = [s for s in enabled if s.report is not None and (s.online or (s.last_success is not None and now - s.last_success <= hold))]
+    if not counted:
+        return None
+    return CostFlows(
+        charge=sum(max(s.report.charge_power_ac, 0.0) for s in counted if s.report is not None),
+        deliver=sum(max(s.report.deliver_power_ac, 0.0) for s in counted if s.report is not None),
+        solar=sum(max(s.report.solar_power, 0.0) for s in counted if s.report is not None),
+        complete=len(counted) == len(enabled),
     )
