@@ -48,6 +48,11 @@ Requirements: HEMS turned off in the Zendure app; Home Assistant 2026.1 or newer
 - Optionally the meter's kWh counters (tariff 1 and 2) for import and export; without them ZEPHYR integrates the P1 power. With a solar counter also the savings from solar.
 - Entities: `sensor.zephyr_costs_today|month|year` and `sensor.zephyr_savings_today|month|year` (€), with the breakdown as attributes. Action `zephyr.export_costs` writes the quarters as CSV to `config/zephyr/`.
 
+## Panel (0.8, under construction)
+- **ZEPHYR** in the Home Assistant sidebar: what the battery does now and why, the state of charge with its limits, and the next step of the plan. Light and dark follow Home Assistant; Dutch or English follows your profile.
+- Built step by step: the plan with today's prices, the sets and the settings follow in the next versions. Until then the test dashboard stays available.
+- Source in `frontend/` (TypeScript + Lit); the built panel is in `custom_components/zephyr/frontend/`. Build: `cd frontend && npm ci && npm run build`. Fonts: Inter and Space Grotesk (SIL Open Font License).
+
 ## Supported sets and batteries
 - Sets with the local zenSDK API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro and 4000 AC+. Tested so far: 2400 Pro and 2400 AC+. Turn HEMS off in the Zendure app.
 - Batteries are recognised by their serial number: AB1000, AB1000S, AB2000(S/X), AB3000X, AB3000L and the built-in batteries of the 2400 Pro, 2400 AC+, 4000 AC+ and AIO 2400.
@@ -60,7 +65,6 @@ Requirements: HEMS turned off in the Zendure app; Home Assistant 2026.1 or newer
 - One to three sets, with the grid demand distributed over the sets.
 - Planner for today and tomorrow (dynamic prices, solar forecast, learned consumption).
 - Efficiency measured per set, no manual input.
-- Own panel in the Home Assistant sidebar.
 - Shadow mode: ZEPHYR calculates alongside an existing setup without controlling the battery.
 
 ## Origin

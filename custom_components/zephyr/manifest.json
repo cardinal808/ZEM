@@ -1,7 +1,7 @@
 {
   "domain": "zephyr",
   "name": "ZEPHYR",
-  "after_dependencies": ["recorder"],
+  "after_dependencies": ["frontend", "http", "panel_custom", "recorder", "websocket_api"],
   "codeowners": ["@cardinal808"],
   "config_flow": true,
   "documentation": "https://github.com/cardinal808/ZEPHYR",
@@ -9,6 +9,6 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/cardinal808/ZEPHYR/issues",
   "requirements": [],
-  "version": "0.7.10",
+  "version": "0.8.0",
   "zeroconf": ["_zendure._tcp.local."]
 }

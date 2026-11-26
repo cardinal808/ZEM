@@ -96,6 +96,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.services.async_register(
         DOMAIN, SERVICE_EXPORT_COSTS, export_costs, schema=EXPORT_COSTS_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
+    from .websocket_api import async_setup as async_setup_websocket
+
+    async_setup_websocket(hass)
     return True
 
 
@@ -141,13 +144,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
         entry.async_on_unload(await runtime.solar.async_start())
     if runtime.planner is not None:
         entry.async_on_unload(await runtime.planner.async_start())
+    from .panel import async_register_panel
+
+    await async_register_panel(hass, entry.entry_id)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bool:
+    from .panel import async_remove_panel
+
+    async_remove_panel(hass, entry.entry_id, final=entry.disabled_by is not None)
     if entry.runtime_data.costs is not None:
         await entry.runtime_data.costs.async_save()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> None:
+    from .panel import async_remove_panel
+
+    async_remove_panel(hass, entry.entry_id, final=True)
 
 
 async def _async_reload(hass: HomeAssistant, entry: ZephyrConfigEntry) -> None:
