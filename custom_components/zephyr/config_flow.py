@@ -17,6 +17,7 @@ from homeassistant.config_entries import (
     SubentryFlowResult,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
@@ -58,6 +59,7 @@ from .const import (
     CONF_TARIFF_SUPPLIER,
     CONF_TARIFF_VAT,
     CONF_VACATION_AWAY,
+    CONF_WORKDAY_ENTITY,
     DEFAULT_EXCLUDED_MODES,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_PLAN_GRID_CHARGE_COST,
@@ -316,6 +318,19 @@ def suggest_price(hass: HomeAssistant) -> str | None:
     )
 
 
+def suggest_workday(hass: HomeAssistant) -> str | None:
+    """The binary sensor of the Workday integration, if there is one."""
+    registry = er.async_get(hass)
+    return next(
+        (
+            e.entity_id
+            for e in sorted(registry.entities.values(), key=lambda e: e.entity_id)
+            if e.platform == "workday" and e.domain == "binary_sensor"
+        ),
+        None,
+    )
+
+
 def suggest_solar(hass: HomeAssistant) -> tuple[str | None, str | None]:
     """A day-ahead forecast sensor with half-hour detail (Solcast) and a solar production counter."""
     forecast = next(
@@ -399,6 +414,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                     CONF_SOLAR_ENERGY,
                     CONF_EXCLUDED_ENERGY,
                     CONF_EXCLUDED_CLIMATE,
+                    CONF_WORKDAY_ENTITY,
                     CONF_PRICE_ENTITY,
                     CONF_COST_IMPORT_COUNTERS,
                     CONF_COST_EXPORT_COUNTERS,
@@ -501,6 +517,9 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Required(CONF_PLAN_ALLOW_EXPORT, default=options.get(CONF_PLAN_ALLOW_EXPORT, False)): bool,
                 vol.Required(CONF_PLAN_LOAD_MARGIN, default=options.get(CONF_PLAN_LOAD_MARGIN, 0)): _percent(0, 50),
                 vol.Required(CONF_PLAN_BUFFER, default=options.get(CONF_PLAN_BUFFER, 0)): _percent(0, 50),
+                vol.Optional(
+                    CONF_WORKDAY_ENTITY, description={"suggested_value": options.get(CONF_WORKDAY_ENTITY) or suggest_workday(self.hass)}
+                ): (selector.EntitySelector(selector.EntitySelectorConfig(domain="binary_sensor", integration="workday"))),
                 vol.Required(CONF_VACATION_AWAY, default=options.get(CONF_VACATION_AWAY, False)): bool,
                 vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, True)): bool,
             }

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.19 — Holidays from Workday
+- New optional setting **Workday sensor** (*Werkdag-sensor*, planner group): a `binary_sensor` of the Workday integration. When set, the planner asks Workday (`workday.check_date`) per day whether it is a workday, so a public holiday such as Christmas or King's Day counts as a *weekend* day: in the plan for today and the next two days, and when learning the load profile (live and from the recorder). Without the setting nothing changes: Saturday and Sunday are weekend.
+- Setup suggests the Workday sensor when there is one. If Workday does not answer, the weekday decides.
+- Diagnostics: `planner.inputs.day_types` shows the day type per day.
+- Tests: `day_type_of` with holidays; the planner with a mocked `workday.check_date`.
+
 ### 0.8.18 — Panel: battery % in Nu, spread, use profile in Diagnose
 - **Card *Nu*:** a battery chip next to the action (*46 %*, orange at 20 % or less), so on a phone it is clear at once how full the battery is.
 - **Prices:** today and tomorrow show the **spread** as a percentage of the cheapest quarter (*spread 81 %*), with an explanation on hover; with prices around zero or below, the difference in euro.

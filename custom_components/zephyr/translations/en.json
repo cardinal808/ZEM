@@ -307,7 +307,8 @@
           "plan_allow_export": "Planner: allow export from the battery",
           "plan_load_margin": "Planner: load margin",
           "plan_buffer": "Planner: buffer above the minimum",
-          "vacation_when_away": "Vacation when nobody is home"
+          "vacation_when_away": "Vacation when nobody is home",
+          "workday_entity": "Workday sensor (holidays)"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -340,7 +341,8 @@
           "plan_allow_export": "The planner may deliver at full power and export the rest when that pays (action Export). Off by default.",
           "plan_load_margin": "The planner chooses as if the house uses this much more (buffer against a low estimate). Not in the costs. 0 = off.",
           "plan_buffer": "The planner never plans below the minimum state of charge plus this buffer; the controller may use it when the house uses more than expected. 0 = off.",
-          "vacation_when_away": "Switches the vacation on by itself when nobody has been home (zone.home = 0) for 24 hours, and off when someone is back. While on vacation the planner uses the standby use, the air conditioner counts as off, and the hours are learned apart from the normal profile."
+          "vacation_when_away": "Switches the vacation on by itself when nobody has been home (zone.home = 0) for 24 hours, and off when someone is back. While on vacation the planner uses the standby use, the air conditioner counts as off, and the hours are learned apart from the normal profile.",
+          "workday_entity": "Optional. The binary sensor of the Workday integration. Holidays then count as weekend days in the consumption profile (learning and planning). Without it: Monday-Friday are workdays."
         }
       }
     },

@@ -181,6 +181,9 @@ def _example(hass: HomeAssistant, key: str, suppliers: list[str]) -> dict[str, A
         return {key: next(o for o in field.options if o != field.default)} | (
             {"p1_import_entity": "sensor.p1_in", "p1_export_entity": "sensor.p1_out"} if key == "p1_source" else {}
         )
+    if field.domain == "binary_sensor":
+        hass.states.async_set("binary_sensor.workday_sensor", "on")
+        return {key: "binary_sensor.workday_sensor"}
     if key == "excluded_climate_entity":
         return {key: "climate.living", "excluded_energy_entity": "sensor.counter"}
     if field.kind == "entities":

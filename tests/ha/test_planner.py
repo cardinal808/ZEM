@@ -439,3 +439,29 @@ async def test_actions_recalculate_get_plan_and_reset_profile(
     await hass.config_entries.async_unload(entry.entry_id)
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call(DOMAIN, "recalculate", {}, blocking=True)
+
+
+async def test_holidays_from_workday_count_as_weekend(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    from homeassistant.core import ServiceCall, SupportsResponse
+
+    asked: list[str] = []
+
+    async def check_date(call: ServiceCall) -> dict[str, Any]:
+        day = call.data["check_date"]
+        asked.append(str(day))
+        return {call.data["entity_id"]: {"workday": str(day) != "2026-11-27"}}  # tomorrow a holiday
+
+    hass.services.async_register("workday", "check_date", check_date, supports_response=SupportsResponse.ONLY)
+    hass.states.async_set("binary_sensor.workday_sensor", "on")
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (9, 0), price_entity=PRICE, workday_entity="binary_sensor.workday_sensor")
+    await _tick(hass, freezer, 10)
+    planner = entry.runtime_data.planner
+    assert {"2026-11-26", "2026-11-27"} <= set(asked)
+    assert planner.inputs["day_types"]["2026-11-26"] == "workday"
+    assert planner.inputs["day_types"]["2026-11-27"] == "weekend"
+    # Learning on that day goes into the weekend profile.
+    holiday = datetime(2026, 11, 27, 10, tzinfo=dt_util.get_default_time_zone())
+    for q in range(4):
+        planner.quarter_closed(holiday + timedelta(minutes=15 * q), {"complete": True, "house_kwh": 0.5}, False)
+    assert planner.profile.counts["weekend"][10] == 1 and planner.profile.counts["workday"][10] == 0

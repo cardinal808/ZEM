@@ -42,6 +42,7 @@ from .const import (
     CONF_PLAN_WEAR_COST,
     CONF_PRICE_ENTITY,
     CONF_SOLAR_FORECAST,
+    CONF_WORKDAY_ENTITY,
     DEFAULT_EXCLUDED_MODES,
     DEFAULT_PLAN_GRID_CHARGE_COST,
     DEFAULT_PLAN_WEAR_COST,
@@ -66,7 +67,7 @@ from .core.forecast_plan import (
     remember,
     solar_per_quarter,
 )
-from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, blocked_share, profile_from_history
+from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, blocked_share, day_type_of, profile_from_history
 from .core.plan_view import local_midnight, plan_view
 from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
@@ -102,8 +103,8 @@ def planner_settings(options: Mapping[str, Any]) -> PlannerSettings:
     )
 
 
-def day_type(local: datetime) -> str:
-    return WEEKEND if local.weekday() >= 5 else WORKDAY
+def day_type(local: datetime, workdays: Mapping[date, bool] | None = None) -> str:
+    return day_type_of(local, workdays)
 
 
 def solar_entities(entity: str | None) -> list[str]:
@@ -147,6 +148,9 @@ class PlanRunner:
         self.excluded_modes: list[str] = list(options.get(CONF_EXCLUDED_MODES, DEFAULT_EXCLUDED_MODES))
         self.excluded_profile = LoadProfile()
         """That load's use per hour while excluded; the house profile is without it."""
+        self.workday_entity: str | None = options.get(CONF_WORKDAY_ENTITY)
+        self.workdays: dict[date, bool] = {}
+        """Day → workday (True) or not, from the Workday integration (holidays count as weekend)."""
         self.vacation_profile = LoadProfile()
         """B42: use per hour while on vacation (kept apart from the normal profile)."""
         self.hour: dict[str, Any] = {}
@@ -350,7 +354,7 @@ class PlanRunner:
 
     def _vacation_load(self, local: datetime) -> float:
         """kWh per hour while away (B42): the learned vacation use, else the standby use of the normal profile."""
-        kind, hour = day_type(local), local.hour
+        kind, hour = day_type(local, self.workdays), local.hour
         if self.vacation_profile.counts[kind][hour] >= MIN_VACATION_COUNT:
             return self.vacation_profile.values[kind][hour]
         night = [self.profile.expected(k, h) for k in (WORKDAY, WEEKEND) for h in range(6)] if self.profile.mean_count else []
@@ -363,14 +367,14 @@ class PlanRunner:
         if self.profile.mean_count == 0:
             return DEFAULT_LOAD_KWH_PER_HOUR * hours
         local = dt_util.as_local(start)
-        return self.profile.forecast(day_type(local), local.hour, ahead) * hours
+        return self.profile.forecast(day_type(local, self.workdays), local.hour, ahead) * hours
 
     def _excluded(self, start: datetime, ahead: float) -> float:
         """Expected use of the excluded load (B41) in this quarter."""
         if self.excluded_profile.mean_count == 0 or self._on_vacation(start):
             return 0.0  # B42: the air conditioner is off while away
         local = dt_util.as_local(start)
-        return self.excluded_profile.forecast(day_type(local), local.hour, ahead) * QUARTER.total_seconds() / 3600
+        return self.excluded_profile.forecast(day_type(local, self.workdays), local.hour, ahead) * QUARTER.total_seconds() / 3600
 
     def _buy(self, start: datetime, market: float) -> float:
         tariffs = self.runtime.tariffs
@@ -432,6 +436,7 @@ class PlanRunner:
             self.reserve = reserve
             self._store.async_delay_save(self._data, 10)
         prices = merge_reserve(source, self.reserve)
+        await self._check_days([dt_util.as_local(now).date() + timedelta(days=d) for d in range(3)])
         from_reserve = price_at(source, quarter_floor(now)) is None and price_at(prices, quarter_floor(now)) is not None
         markets = horizon_markets(prices, now, tz)
         previous = self.outcome
@@ -487,6 +492,9 @@ class PlanRunner:
                 "profile_hours_learned": self.profile.mean_count,
                 "profile_source": self.profile_source,
                 "vacation": self._on_vacation(now),
+                "day_types": {
+                    d.isoformat(): (WORKDAY if w else WEEKEND) for d, w in sorted(self.workdays.items()) if d >= dt_util.now().date()
+                },
                 "previous_action": prev_action.value,
             },
         )
@@ -565,17 +573,41 @@ class PlanRunner:
             if self.hour["quarters"] == 4 and self.hour.get("vacation"):
                 # B42: away hours go into the vacation profile only (house and air conditioner together).
                 total = self.hour["kwh"] + self.hour.get("excluded_kwh", 0.0)
-                self.vacation_profile.learn(day_type(local), local.hour, total)
+                self.vacation_profile.learn(day_type(local, self.workdays), local.hour, total)
             elif self.hour["quarters"] == 4:
-                self.profile.learn(day_type(local), local.hour, self.hour["kwh"])
+                self.profile.learn(day_type(local, self.workdays), local.hour, self.hour["kwh"])
                 if self.excluded_entity:
-                    self.excluded_profile.learn(day_type(local), local.hour, self.hour.get("excluded_kwh", 0.0))
+                    self.excluded_profile.learn(day_type(local, self.workdays), local.hour, self.hour.get("excluded_kwh", 0.0))
             self.hour = {}
 
     def _battery_entity(self) -> str:
         registry = er.async_get(self.hass)
         found = registry.async_get_entity_id("sensor", DOMAIN, f"{self.entry_id}_power")
         return found or "sensor.zephyr_power"
+
+    async def _check_days(self, days: list[date]) -> None:
+        """Ask the Workday integration (action ``workday.check_date``) about days not known yet."""
+        if not self.workday_entity:
+            return
+        for day in days:
+            if day in self.workdays:
+                continue
+            try:
+                response = await self.hass.services.async_call(
+                    "workday",
+                    "check_date",
+                    {"entity_id": self.workday_entity, "check_date": day},
+                    blocking=True,
+                    return_response=True,
+                )
+            except Exception as err:  # Workday missing or not loaded: the weekday rule stays
+                LOGGER.debug("Workday check for %s failed: %s", day, err)
+                return
+            answer = (response or {}).get(self.workday_entity)
+            if isinstance(answer, Mapping) and "workday" in answer:
+                self.workdays[day] = bool(answer["workday"])
+        for old in [d for d in self.workdays if d < dt_util.now().date() - timedelta(days=LEARN_FROM_DAYS + 2)]:
+            del self.workdays[old]
 
     async def _learn_from_recorder(self) -> int:
         """First fill from the recorder's hourly statistics (§2.3): house = import − export + solar − battery.
@@ -594,6 +626,7 @@ class PlanRunner:
         end = dt_util.now().replace(minute=0, second=0, microsecond=0)
         start = end - timedelta(days=LEARN_FROM_DAYS)
         stats = await hourly_statistics(self.hass, start, end, ids)
+        await self._check_days([start.date() + timedelta(days=d) for d in range(LEARN_FROM_DAYS + 1)])
         modes: list[tuple[datetime, str | None]] | None = None
         if excluded and self.excluded_climate:
             modes = await climate_history(self.hass, start, end, self.excluded_climate)
@@ -645,9 +678,9 @@ class PlanRunner:
         if len(hours) < MIN_FILL_HOURS:
             LOGGER.debug("Recorder gave %s complete hours for the consumption profile: too few", len(hours))
             return len(hours)
-        self.profile = profile_from_history(hours)
+        self.profile = profile_from_history(hours, workdays=self.workdays)
         if excluded:
-            self.excluded_profile = profile_from_history(hours, excluded=True)
+            self.excluded_profile = profile_from_history(hours, excluded=True, workdays=self.workdays)
         self.hour = {}
         self.profile_source = f"recorder ({len(hours)} h)"
         LOGGER.debug("Consumption profile filled from %s recorder hours", len(hours))
