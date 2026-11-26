@@ -292,6 +292,7 @@
           "tariff_solar_bonus": "Solar bonus on export",
           "tariff_supplier": "Energy supplier",
           "plan_wear_cost": "Planner: wear cost",
+          "plan_grid_charge_cost": "Planner: grid-charge threshold",
           "plan_allow_export": "Planner: allow export from the battery",
           "plan_load_margin": "Planner: load margin",
           "plan_buffer": "Planner: buffer above the minimum"
@@ -320,6 +321,7 @@
           "tariff_solar_bonus": "Optional: extra % on (market + export margin) for export between sunrise and sunset, only when that amount is positive. Zonneplan: 10 %.",
           "tariff_supplier": "Choose your supplier: ZEPHYR then takes the margins, solar bonus, energy tax and VAT from its tariff table (fetched from GitHub once a month). Only suppliers whose amounts a user has checked are listed. With \"Own tariffs\" the fields below apply; the fixed costs per month apply in both cases.",
           "plan_wear_cost": "Advanced. Cost per kWh delivered by the battery that the planner weighs in its choice (not in the costs), so it does not cycle the battery for a few cents. Default €0.03.",
+          "plan_grid_charge_cost": "Advanced. Gain per kWh that charging from the grid must bring before the planner does it (only in its choice, not in the costs), so it does not buy at an expensive moment for a cent. Default €0.01.",
           "plan_allow_export": "The planner may deliver at full power and export the rest when that pays (action Export). Off by default.",
           "plan_load_margin": "The planner chooses as if the house uses this much more (buffer against a low estimate). Not in the costs. 0 = off.",
           "plan_buffer": "The planner never plans below the minimum state of charge plus this buffer; the controller may use it when the house uses more than expected. 0 = off."

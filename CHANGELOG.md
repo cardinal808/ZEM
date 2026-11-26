@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.3 — Planner: grid-charge threshold
+- **New option *Planner: grid-charge threshold*** (default **€0.01 per kWh**): charging from the grid must win at least this much per kWh before the planner plans it. It counts only in the planner's choice, not in the costs, and not for solar into the battery. Seen at a tester: 0.78 kWh charged from the grid at €0.51 at 10:30 for about a cent of gain from the solar bonus.
+- Backtest (1 Oct – 18 Nov 2026, learned consumption, Solcast, wear €0.03; costs incl. wear): €0 → 96.29 / 102.96, **€0.01 → 96.21 / 102.97**, €0.02 → 96.58 / 102.81, €0.05 → 98.18 / 103.84 (net metering 2026 / 2027). €0.01 is the lowest over both rules, with about 15 % less grid charging and fewer charge starts. Backtest tool: `--grid-charge`.
+- Diagnostics: `grid_charge_cost` in the planner settings. Tests: the threshold against brute force, no charge for a cent, solar charging untouched.
+- Tests: the planner tests in Home Assistant now always start on 26-11-2026 in Amsterdam; they failed depending on the real time of day (prices were set for the real day before the clock was frozen).
+
 ### 0.8.2 — Panel: what happened today (SPEC-ui §3.2, UI-3)
 - **Prices and plan before now** come from the cost log: the band under the chart shows what the battery actually did per quarter (charge, deliver, hold; export when the plan said X and energy went to the grid), lighter than the plan. Less than 0.05 kWh in or out of the battery counts as holding. A quarter without a record (HA was off) stays empty, with *Not recorded* in the tooltip.
 - **Measured SOC** as a solid line before now, joining the dashed expected line at *now*; broken where a quarter is missing. Prices before now as they were in the cost log (falls back to the price sensor).

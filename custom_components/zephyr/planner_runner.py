@@ -33,10 +33,12 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_PLAN_ALLOW_EXPORT,
     CONF_PLAN_BUFFER,
+    CONF_PLAN_GRID_CHARGE_COST,
     CONF_PLAN_LOAD_MARGIN,
     CONF_PLAN_WEAR_COST,
     CONF_PRICE_ENTITY,
     CONF_SOLAR_FORECAST,
+    DEFAULT_PLAN_GRID_CHARGE_COST,
     DEFAULT_PLAN_WEAR_COST,
     DOMAIN,
     LOGGER,
@@ -86,6 +88,7 @@ ISSUE_PRICE_FORMAT = "price_format"
 def planner_settings(options: Mapping[str, Any]) -> PlannerSettings:
     return PlannerSettings(
         wear_cost=float(options.get(CONF_PLAN_WEAR_COST, DEFAULT_PLAN_WEAR_COST)),
+        grid_charge_cost=float(options.get(CONF_PLAN_GRID_CHARGE_COST, DEFAULT_PLAN_GRID_CHARGE_COST)),
         allow_export=bool(options.get(CONF_PLAN_ALLOW_EXPORT, False)),
         load_margin=float(options.get(CONF_PLAN_LOAD_MARGIN, 0.0)) / 100,
     )
@@ -553,6 +556,7 @@ class PlanRunner:
         return {
             "settings": {
                 "wear_cost": self.settings.wear_cost,
+                "grid_charge_cost": self.settings.grid_charge_cost,
                 "allow_export": self.settings.allow_export,
                 "load_margin": self.settings.load_margin,
                 "buffer": self.buffer,

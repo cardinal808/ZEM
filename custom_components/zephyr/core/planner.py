@@ -76,6 +76,10 @@ class PlannerSettings:
     wear_cost: float = 0.0
     """€ per kWh delivered by the battery (PU3): weighs wear in the choice, not in the grid costs.
     Keeps the planner from cycling the battery for a few cents (especially with X)."""
+    grid_charge_cost: float = 0.0
+    """€ per kWh charged from the grid (L), in the choice only: grid charging must win at least
+    this much per kWh. Keeps the planner from buying at an expensive moment for a cent of gain
+    that rests on a forecast (e.g. topping up before the sun to export the solar with a bonus)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +94,8 @@ class Step:
     """kWh into the battery (AC side)."""
     delivered: float
     """kWh out of the battery (AC side)."""
+    grid_charged: float = 0.0
+    """kWh from the grid into the battery (L, AC side)."""
 
 
 def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margin: float = 0.0) -> Step:
@@ -103,7 +109,7 @@ def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margi
     into = min(surplus, room / battery.eta_in) if room > 0 else 0.0
     s1 = energy + into * battery.eta_in
     spill = surplus - into
-    charged, delivered = into, 0.0
+    charged, delivered, grid_charged = into, 0.0, 0.0
     imp, exp = need, spill
     if action is Action.CHARGE:
         extra = min(battery.charge_kw * slot.hours, (battery.capacity_kwh - s1) / battery.eta_in)
@@ -111,6 +117,7 @@ def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margi
         s1 += extra * battery.eta_in
         imp += extra
         charged += extra
+        grid_charged = extra
     elif action is Action.DELIVER:
         out = min(need, s1 * battery.eta_out, battery.deliver_kw * slot.hours)
         s1 -= out / battery.eta_out
@@ -126,7 +133,7 @@ def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margi
     # A negative export price: surplus solar is curtailed (gridReverse), it earns nothing.
     sell = slot.sell if slot.sell > 0 or action is Action.EXPORT else 0.0
     cost = imp * slot.buy - exp * sell
-    return Step(max(min(s1, battery.capacity_kwh), 0.0), imp, exp, cost, charged, delivered)
+    return Step(max(min(s1, battery.capacity_kwh), 0.0), imp, exp, cost, charged, delivered, grid_charged)
 
 
 @dataclass(slots=True)
@@ -135,6 +142,11 @@ class Plan:
     steps: list[Step] = field(default_factory=list)
     cost: float = 0.0
     """Expected net cost over the horizon (grid only, without switching costs or end value)."""
+
+
+def _choice(cfg: PlannerSettings, r: Step) -> float:
+    """Costs that only steer the choice (not in the grid costs): wear and the grid-charge threshold."""
+    return cfg.wear_cost * r.delivered + cfg.grid_charge_cost * r.grid_charged
 
 
 def _interp(values: list[float], energy: float, capacity: float, n: int) -> float:
@@ -181,7 +193,7 @@ def plan(
             row = []
             for a in options:
                 r = step(slot, battery, e, a, cfg.load_margin)
-                row.append((a, r.cost + cfg.wear_cost * r.delivered + _interp(future[_group(a)], r.energy_after, cap, n)))
+                row.append((a, r.cost + _choice(cfg, r) + _interp(future[_group(a)], r.energy_after, cap, n)))
             after.append(row)
         current = {prev: [min(v + switch(prev, a) for a, v in row) for row in after] for prev in GROUPS}
         tables.append(current)
@@ -195,7 +207,7 @@ def plan(
         best: tuple[float, Action, Step] | None = None
         for a in options:
             r = step(slot, battery, energy, a, cfg.load_margin)
-            total = r.cost + cfg.wear_cost * r.delivered + switch(prev, a) + _interp(tables[t + 1][_group(a)], r.energy_after, cap, n)
+            total = r.cost + _choice(cfg, r) + switch(prev, a) + _interp(tables[t + 1][_group(a)], r.energy_after, cap, n)
             if best is None or total < best[0] - 1e-12:
                 best = (total, a, r)
         assert best is not None

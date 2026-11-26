@@ -38,6 +38,7 @@ from .const import (
     CONF_P1_SOURCE,
     CONF_PLAN_ALLOW_EXPORT,
     CONF_PLAN_BUFFER,
+    CONF_PLAN_GRID_CHARGE_COST,
     CONF_PLAN_LOAD_MARGIN,
     CONF_PLAN_WEAR_COST,
     CONF_PRICE_ENTITY,
@@ -54,6 +55,7 @@ from .const import (
     CONF_TARIFF_SUPPLIER,
     CONF_TARIFF_VAT,
     DEFAULT_EXPENSIVE_HOURS,
+    DEFAULT_PLAN_GRID_CHARGE_COST,
     DEFAULT_PLAN_WEAR_COST,
     DEFAULT_RESERVE_SOC,
     DOMAIN,
@@ -472,6 +474,9 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Required(CONF_PLAN_WEAR_COST, default=options.get(CONF_PLAN_WEAR_COST, DEFAULT_PLAN_WEAR_COST)): _box(
                     0, 0.5, 0.001, "€/kWh"
                 ),
+                vol.Required(
+                    CONF_PLAN_GRID_CHARGE_COST, default=options.get(CONF_PLAN_GRID_CHARGE_COST, DEFAULT_PLAN_GRID_CHARGE_COST)
+                ): _box(0, 0.5, 0.001, "€/kWh"),
                 vol.Required(CONF_PLAN_ALLOW_EXPORT, default=options.get(CONF_PLAN_ALLOW_EXPORT, False)): bool,
                 vol.Required(CONF_PLAN_LOAD_MARGIN, default=options.get(CONF_PLAN_LOAD_MARGIN, 0)): _percent(0, 50),
                 vol.Required(CONF_PLAN_BUFFER, default=options.get(CONF_PLAN_BUFFER, 0)): _percent(0, 50),

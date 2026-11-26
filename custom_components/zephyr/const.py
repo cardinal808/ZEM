@@ -61,5 +61,8 @@ CONF_PLAN_WEAR_COST: Final = "plan_wear_cost"
 CONF_PLAN_ALLOW_EXPORT: Final = "plan_allow_export"
 CONF_PLAN_LOAD_MARGIN: Final = "plan_load_margin"
 CONF_PLAN_BUFFER: Final = "plan_buffer"
+CONF_PLAN_GRID_CHARGE_COST: Final = "plan_grid_charge_cost"
 DEFAULT_PLAN_WEAR_COST: Final = 0.03
 """€ per kWh out of the battery (B39)."""
+DEFAULT_PLAN_GRID_CHARGE_COST: Final = 0.01
+"""€ per kWh charged from the grid that grid charging must win (B40, BACKTEST-1 §grid charge)."""
