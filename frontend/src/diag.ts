@@ -23,8 +23,29 @@ export interface DiagSet {
   last_error: string | null;
 }
 
+export interface ProfileDay {
+  /** kWh per hour of the day (0–23), house without the air conditioner. */
+  house: number[];
+  /** kWh per hour of the air conditioner outside the battery (B41); empty without the counter. */
+  airco: number[];
+  /** Hours measured per hour of the day. */
+  counts: number[];
+  /** Measurements before an hour counts (workday 3, weekend 2); until then the planner uses the mean. */
+  min_count: number;
+}
+
+export interface ProfileView {
+  source: string;
+  hours: number;
+  /** kWh per hour the planner uses for an hour that is not learned yet. */
+  mean: number;
+  workday: ProfileDay;
+  weekend: ProfileDay;
+}
+
 export interface EventsView {
   entry_id: string;
+  profile?: ProfileView | null;
   shadow: boolean;
   events: DiagEvent[];
   sets: DiagSet[];
@@ -95,4 +116,12 @@ export function blockerText(blocker: string, lang: Lang): string {
     if (m) return t(lang, `control.blocker.${key}`, { set: m[1] ?? "" });
   }
   return blocker;
+}
+
+/** Day total and top of the hour scale (rounded up to 0,5 kWh) of a profile day. */
+export function profileStats(d: ProfileDay): { total: number; aircoTotal: number; top: number; learned: number } {
+  const total = d.house.reduce((a, b) => a + b, 0);
+  const aircoTotal = d.airco.reduce((a, b) => a + b, 0);
+  const peak = Math.max(0, ...d.house.map((h, i) => h + (d.airco[i] ?? 0)));
+  return { total, aircoTotal, top: Math.max(0.5, Math.ceil(peak * 2) / 2), learned: d.counts.filter((c) => c >= d.min_count).length };
 }

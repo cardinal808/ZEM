@@ -480,7 +480,38 @@ def events_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
             }
         )
     # In shadow mode the engine counts what it would send; nothing reaches the set.
-    return {"entry_id": entry.entry_id, "shadow": control.shadow, "events": events_from_log(control.log), "sets": sets}
+    return {
+        "entry_id": entry.entry_id,
+        "shadow": control.shadow,
+        "events": events_from_log(control.log),
+        "sets": sets,
+        "profile": _profile(runtime.planner),
+    }
+
+
+def _profile(planner: Any) -> dict[str, Any] | None:
+    """The learned use per hour the planner works with (house, and the air conditioner apart; B41)."""
+    from .core.load_profile import MIN_COUNT, WEEKEND, WORKDAY
+
+    if planner is None:
+        return None
+    house, airco = planner.profile, planner.excluded_profile
+
+    def day(kind: str) -> dict[str, Any]:
+        return {
+            "house": [round(v, 3) for v in house.values[kind]],
+            "airco": [round(v, 3) for v in airco.values[kind]] if planner.excluded_entity else [],
+            "counts": list(house.counts[kind]),
+            "min_count": MIN_COUNT[kind],
+        }
+
+    return {
+        "source": planner.profile_source,
+        "hours": house.mean_count,
+        "mean": round(house.mean, 3),
+        "workday": day(WORKDAY),
+        "weekend": day(WEEKEND),
+    }
 
 
 @websocket_command({vol.Required("type"): "zephyr/events"})

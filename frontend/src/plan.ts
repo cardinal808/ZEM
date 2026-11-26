@@ -220,3 +220,9 @@ export function sunLane(quarters: Quarter[]): SunQuarter[] | null {
     };
   });
 }
+
+/** Spread as a percentage of the lowest price; null when the lowest price is not above zero (then % means nothing). */
+export function spreadPct(low: number, high: number): number | null {
+  if (low <= 0.005) return null;
+  return Math.round(((high - low) / low) * 100);
+}

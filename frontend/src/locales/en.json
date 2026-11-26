@@ -33,7 +33,8 @@
     "title": "Now",
     "waiting": "Waiting for the first measurement…",
     "grid": "Grid {value}",
-    "shadow_note": "What ZEPHYR would do (shadow mode)."
+    "shadow_note": "What ZEPHYR would do (shadow mode).",
+    "battery_title": "How full the battery is now"
   },
   "battery": {
     "title": "Battery",
@@ -108,7 +109,9 @@
     "tip_energy_past": "Solar {solar} · house {load}",
     "legend_solar": "Solar",
     "tip_airco": "Air con {kwh} (not from the battery)",
-    "legend_solar_over": "Solar to spare (battery can charge)"
+    "legend_solar_over": "Solar to spare (battery can charge)",
+    "spread": "spread {value}",
+    "spread_title": "How much more the most expensive quarter costs than the cheapest. A rough measure of what charging and delivering later can earn, before losses (about 14 %) and wear. With prices around zero or negative: the difference in euro."
   },
   "blocks": {
     "title": "Blocks",
@@ -526,6 +529,18 @@
       "test": "write test"
     },
     "counters_shadow": "Commands, last 24 hours (shadow)",
-    "shadow_counts": "Shadow mode: counted what ZEPHYR would send. Nothing was written to the set; Failed only counts real writes."
+    "shadow_counts": "Shadow mode: counted what ZEPHYR would send. Nothing was written to the set; Failed only counts real writes.",
+    "profile": "Use profile",
+    "workday": "Workday",
+    "weekend": "Weekend",
+    "profile_source": "Learned use per hour that the planner works with. Source: {source}.",
+    "profile_total": "House per day: {kwh} kWh",
+    "profile_airco": "air con {kwh} kWh (not from the battery)",
+    "profile_house": "House (without air con)",
+    "profile_airco_legend": "Air con",
+    "profile_learned": "not learned yet ({n} of 24 are): the planner uses the mean there, {mean} kWh per hour",
+    "profile_hour": "{hour}:00 · house {house} kWh · air con {airco} kWh · measured {n}×",
+    "profile_empty_workday": "No workdays learned yet. Until then the planner uses the mean for every hour ({mean} kWh).",
+    "profile_empty_weekend": "No weekend days learned yet. Until then the planner uses the mean for every hour on Saturday and Sunday ({mean} kWh)."
   }
 }

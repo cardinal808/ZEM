@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { blockerText, eventKind, eventText, fastButtons, type DiagEvent } from "../src/diag";
+import { blockerText, eventKind, eventText, fastButtons, profileStats, type DiagEvent } from "../src/diag";
 import en from "../src/locales/en.json";
 import nl from "../src/locales/nl.json";
 
@@ -49,5 +49,19 @@ describe("diagnose", () => {
     expect(blockerText("set 2 is offline", "nl")).toBe("Set 2 is offline.");
     expect(blockerText("P1 is not reporting", "nl")).toBe("De P1-sensor meldt niets.");
     expect(blockerText("something new", "nl")).toBe("something new");
+  });
+
+  it("sums the profile and counts the learned hours", () => {
+    const house = Array(24).fill(0.5);
+    const airco = Array(24).fill(0);
+    airco[12] = 1.2;
+    const counts = Array(24).fill(3);
+    counts[13] = 2;
+    const st = profileStats({ house, airco, counts, min_count: 3 });
+    expect(st.total).toBeCloseTo(12);
+    expect(st.aircoTotal).toBeCloseTo(1.2);
+    expect(st.top).toBe(2); // 1,7 rounded up to 0,5
+    expect(st.learned).toBe(23);
+    expect(profileStats({ house: Array(24).fill(0), airco: [], counts: Array(24).fill(0), min_count: 2 }).learned).toBe(0);
   });
 });

@@ -11,6 +11,7 @@ import {
   quartersOf,
   scale,
   socPoints,
+  spreadPct,
   stats,
   sunLane,
   ticks,
@@ -143,5 +144,12 @@ describe("plan helpers", () => {
     expect(lane?.map((x) => x.height)).toEqual([0, 50, 100, 100]);
     expect(lane?.map((x) => x.over)).toEqual([false, true, false, true]);
     expect(lane?.[0].past).toBe(true);
+  });
+
+  it("gives the spread as a percentage of the lowest price", () => {
+    expect(spreadPct(0.21, 0.38)).toBe(81);
+    expect(spreadPct(0.2, 0.2)).toBe(0);
+    expect(spreadPct(0, 0.3)).toBeNull();
+    expect(spreadPct(-0.05, 0.3)).toBeNull();
   });
 });

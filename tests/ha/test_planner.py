@@ -344,6 +344,16 @@ async def test_b41_profile_without_the_air_conditioner(
     assert diag["planner"]["excluded_profile"] is not None
     assert all("excluded" in q for q in diag["planner"]["timeline"])
 
+    # The screen Diagnose shows the same profile per hour, the air conditioner apart.
+    from custom_components.zephyr.websocket_api import events_view
+
+    profile = events_view(entry)["profile"]
+    assert profile["source"] == planner.profile_source and profile["hours"] == planner.profile.mean_count
+    assert profile["workday"]["house"][12] == pytest.approx(0.4, abs=0.01)
+    assert profile["workday"]["airco"][12] == pytest.approx(1.8, abs=0.01)
+    assert (profile["workday"]["min_count"], profile["weekend"]["min_count"]) == (3, 2)
+    assert len(profile["weekend"]["counts"]) == 24
+
 
 async def test_b41_existing_profile_is_filled_again_when_the_air_conditioner_is_added(
     hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, monkeypatch: pytest.MonkeyPatch

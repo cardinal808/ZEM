@@ -2,7 +2,7 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { eventKind, eventText, type EventsView } from "./diag";
+import { eventKind, eventText, profileStats, type EventsView, type ProfileView } from "./diag";
 import { clock, day, sameDay } from "./format";
 import { t, type Lang } from "./i18n";
 
@@ -21,6 +21,7 @@ export class ZephyrDiagnostics extends LitElement {
 
   @state() private busy: "download" | "export" | null = null;
   @state() private note: { text: string; error: boolean } | null = null;
+  @state() private dayKind: "workday" | "weekend" = "workday";
 
   private tr(key: string, params: Record<string, string | number> = {}): string {
     return t(this.uiLang, key, params);
@@ -62,6 +63,7 @@ export class ZephyrDiagnostics extends LitElement {
         ${this.note ? html`<p class=${this.note.error ? "note error" : "note"} role="status">${this.note.text}</p>` : nothing}
         ${view ? this.renderCounters(view) : html`<div class="skeleton"></div>`}
       </section>
+      ${view?.profile ? this.renderProfile(view.profile) : nothing}
       <section class="card events" aria-labelledby="events-title">
         <div class="head">
           <h2 id="events-title">${this.tr("diag.events")}</h2>
@@ -105,6 +107,49 @@ export class ZephyrDiagnostics extends LitElement {
         </tbody>
       </table>
       <p class="muted small">${this.tr("diag.counters_note")}</p>`;
+  }
+
+  private renderProfile(p: ProfileView): TemplateResult {
+    const d = p[this.dayKind];
+    const st = profileStats(d);
+    const nf = (v: number, digits = 1) => new Intl.NumberFormat(this.locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(v);
+    const hasAirco = d.airco.some((v) => v > 0) || p.workday.airco.some((v) => v > 0);
+    return html`<section class="card profile" aria-labelledby="profile-title">
+      <div class="head">
+        <h2 id="profile-title">${this.tr("diag.profile")}</h2>
+        <div class="tabs" role="group">
+          ${(["workday", "weekend"] as const).map(
+            (k) => html`<button type="button" class=${this.dayKind === k ? "on" : ""} aria-pressed=${this.dayKind === k ? "true" : "false"} @click=${() => (this.dayKind = k)}>
+              ${this.tr(`diag.${k}`)}
+            </button>`,
+          )}
+        </div>
+      </div>
+      <p class="muted">${this.tr("diag.profile_source", { source: p.source, hours: p.hours })}</p>
+      ${st.learned === 0
+        ? html`<p class="note">${this.tr(`diag.profile_empty_${this.dayKind}`, { mean: nf(p.mean, 2) })}</p>`
+        : html`<p class="sum">
+              ${this.tr("diag.profile_total", { kwh: nf(st.total) })}${hasAirco ? html` · ${this.tr("diag.profile_airco", { kwh: nf(st.aircoTotal) })}` : nothing}
+            </p>
+            <div class="pchart" role="img" aria-label=${this.tr("diag.profile_total", { kwh: nf(st.total) })}>
+              <div class="paxis"><span>${nf(st.top)}</span><span>0</span></div>
+              <div class="pbars">
+                ${d.house.map((h, i) => {
+                  const a = d.airco[i] ?? 0;
+                  return html`<div class=${d.counts[i] >= d.min_count ? "pcol" : "pcol none"} title=${this.tr("diag.profile_hour", { hour: i, house: nf(h, 2), airco: nf(a, 2), n: d.counts[i] })}>
+                    ${a > 0 ? html`<i class="air" style="height:${(a / st.top) * 100}%"></i>` : nothing}
+                    <i class="house" style="height:${(h / st.top) * 100}%"></i>
+                  </div>`;
+                })}
+              </div>
+              <div class="pticks">${[0, 6, 12, 18, 23].map((h) => html`<span style="left:${((h + 0.5) / 24) * 100}%">${String(h).padStart(2, "0")}</span>`)}</div>
+            </div>
+            <div class="plegend">
+              <span><i class="sw house"></i>${this.tr("diag.profile_house")}</span>
+              ${hasAirco ? html`<span><i class="sw air"></i>${this.tr("diag.profile_airco_legend")}</span>` : nothing}
+              <span><i class="sw house faint"></i>${this.tr("diag.profile_learned", { n: st.learned, mean: nf(p.mean, 2) })}</span>
+            </div>`}
+    </section>`;
   }
 
   private renderEvents(view: EventsView): TemplateResult {
@@ -154,6 +199,128 @@ export class ZephyrDiagnostics extends LitElement {
     }
     .events {
       flex: 999 1 480px;
+    }
+    .profile {
+      flex: 999 1 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .tabs {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 999px;
+      background: var(--z-track);
+    }
+    .tabs button {
+      min-height: 32px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--z-text);
+      font-weight: 500;
+    }
+    .tabs button.on {
+      background: var(--z-text);
+      color: var(--z-on-text);
+      font-weight: 600;
+    }
+    .sum {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .pchart {
+      position: relative;
+      height: 150px;
+      margin: 6px 0 28px 40px;
+    }
+    .paxis {
+      position: absolute;
+      left: -40px;
+      top: -6px;
+      bottom: -6px;
+      width: 34px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 11px;
+      color: var(--z-muted);
+    }
+    .pbars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 100%;
+      border-bottom: 1px solid var(--z-border);
+    }
+    .pcol {
+      flex: 1 1 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .pcol i {
+      display: block;
+      width: 100%;
+    }
+    .pcol .house {
+      background: var(--z-charge);
+      border-radius: 0 0 2px 2px;
+    }
+    .pcol .air {
+      background: repeating-linear-gradient(45deg, var(--z-deliver) 0 2px, transparent 2px 5px);
+      border: 1px solid var(--z-deliver);
+      border-bottom: 0;
+      box-sizing: border-box;
+      border-radius: 2px 2px 0 0;
+    }
+    .pcol.none i {
+      opacity: 0.35;
+    }
+    .pticks {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -18px;
+      font-size: 11px;
+      color: var(--z-muted);
+    }
+    .pticks span {
+      position: absolute;
+      transform: translateX(-50%);
+    }
+    .plegend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      font-size: 12px;
+      color: var(--z-muted);
+    }
+    .plegend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sw {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .sw.house {
+      background: var(--z-charge);
+    }
+    .sw.faint {
+      opacity: 0.35;
+    }
+    .sw.air {
+      background: repeating-linear-gradient(45deg, var(--z-deliver) 0 2px, transparent 2px 4px);
+      border: 1px solid var(--z-deliver);
+      box-sizing: border-box;
     }
     h2 {
       margin: 0;

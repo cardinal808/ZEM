@@ -288,6 +288,7 @@ async def test_events_for_the_screen_diagnose(
     view = msg["result"]
     assert view["entry_id"] == entry.entry_id
     assert view["shadow"] is True
+    assert view["profile"] is None  # no planner without a price sensor
     assert any(e["kind"] == "reason" and e["text"] is not None for e in view["events"])
     assert any(e["kind"] == "mode" and e["mode"] == "standby" for e in view["events"])
     assert all("time" in e for e in view["events"])

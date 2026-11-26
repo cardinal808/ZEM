@@ -33,7 +33,8 @@
     "title": "Nu",
     "waiting": "Wacht op de eerste meting…",
     "grid": "Net {value}",
-    "shadow_note": "Zo zou ZEPHYR het doen (schaduwmodus)."
+    "shadow_note": "Zo zou ZEPHYR het doen (schaduwmodus).",
+    "battery_title": "Hoe vol de accu nu is"
   },
   "battery": {
     "title": "Accu",
@@ -108,7 +109,9 @@
     "tip_energy_past": "Zon {solar} · huis {load}",
     "legend_solar": "Zon",
     "tip_airco": "Airco {kwh} (niet uit de accu)",
-    "legend_solar_over": "Zon over (accu kan laden)"
+    "legend_solar_over": "Zon over (accu kan laden)",
+    "spread": "spread {value}",
+    "spread_title": "Hoeveel duurder het duurste kwartier is dan het goedkoopste. Ruwe maat voor wat laden en later leveren kan opleveren, vóór verlies (± 14 %) en slijtage. Bij prijzen rond nul of negatief: het verschil in euro."
   },
   "blocks": {
     "title": "Blokken",
@@ -526,6 +529,18 @@
       "test": "schrijftest"
     },
     "counters_shadow": "Opdrachten, laatste 24 uur (schaduw)",
-    "shadow_counts": "Schaduwmodus: geteld wat ZEPHYR zou sturen. Er is niets naar de set geschreven; Mislukt telt alleen echte schrijfacties."
+    "shadow_counts": "Schaduwmodus: geteld wat ZEPHYR zou sturen. Er is niets naar de set geschreven; Mislukt telt alleen echte schrijfacties.",
+    "profile": "Verbruiksprofiel",
+    "workday": "Werkdag",
+    "weekend": "Weekend",
+    "profile_source": "Geleerd verbruik per uur, waarmee de planner rekent. Bron: {source}.",
+    "profile_total": "Huis per dag: {kwh} kWh",
+    "profile_airco": "airco {kwh} kWh (niet uit de accu)",
+    "profile_house": "Huis (zonder airco)",
+    "profile_airco_legend": "Airco",
+    "profile_learned": "nog niet geleerd ({n} van 24 wel): de planner rekent daar met het gemiddelde, {mean} kWh per uur",
+    "profile_hour": "{hour}:00 · huis {house} kWh · airco {airco} kWh · {n}× gemeten",
+    "profile_empty_workday": "Nog geen werkdagen geleerd. Tot dan rekent de planner elk uur met het gemiddelde ({mean} kWh).",
+    "profile_empty_weekend": "Nog geen weekenddagen geleerd. Tot dan rekent de planner op zaterdag en zondag elk uur met het gemiddelde ({mean} kWh)."
   }
 }
