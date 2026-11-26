@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { blockerText, eventKind, eventText, fastButtons, profileStats, type DiagEvent } from "../src/diag";
+import { blockerText, eventKind, eventText, fastButtons, profileStats, relDiff, type DiagEvent } from "../src/diag";
 import en from "../src/locales/en.json";
 import nl from "../src/locales/nl.json";
 
@@ -63,5 +63,15 @@ describe("diagnose", () => {
     expect(st.top).toBe(2); // 1,7 rounded up to 0,5
     expect(st.learned).toBe(23);
     expect(profileStats({ house: Array(24).fill(0), airco: [], counts: Array(24).fill(0), min_count: 2 }).learned).toBe(0);
+  });
+});
+
+describe("relDiff", () => {
+  it("is the reality's difference from the plan as a fraction", () => {
+    expect(relDiff({ expected: 10, actual: 12, diff: 2 })).toBeCloseTo(0.2);
+    expect(relDiff({ expected: 10, actual: 8, diff: -2 })).toBeCloseTo(-0.2);
+  });
+  it("has no answer for an empty plan", () => {
+    expect(relDiff({ expected: 0, actual: 3, diff: 3 })).toBeNull();
   });
 });

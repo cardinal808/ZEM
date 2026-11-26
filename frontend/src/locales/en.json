@@ -215,7 +215,8 @@
       "planner": "Planner",
       "corrections": "Corrections",
       "zero_meter": "Zero on the meter without planner",
-      "testing": "Test phase"
+      "testing": "Test phase",
+      "vacation": "Vacation"
     },
     "modified_n": "{n} changed",
     "default": "standard: {value}",
@@ -451,7 +452,17 @@
       "excluded_needs_counter": "The climate entity only works together with the air conditioner's energy counter. Choose the counter or clear the climate entity.",
       "failed": "Saving failed. Please try again.",
       "range": "Choose a value from {min} to {max}{unit}."
-    }
+    },
+    "vac_active": "On vacation",
+    "vac_home": "At home",
+    "vac_off": "The planner uses the normal use.",
+    "vac_until": "Until {until}. Until then the planner uses the use while away and charges in time for the return.",
+    "vac_open": "Without an end date; switch it off when you are back.",
+    "vac_auto": "On by itself since {since}: nobody has been home for 24 hours (option below). Goes off as soon as someone comes home.",
+    "vac_until_label": "Back on",
+    "vac_start": "Start vacation",
+    "vac_stop": "End vacation",
+    "vac_help": "During a vacation the planner uses the standby use and learns it apart; the normal use profile stays clean. An end date is optional."
   },
   "airco": {
     "blocked": "Air conditioner {kw} kW · not from the battery",
@@ -546,7 +557,21 @@
     "profile_learned": "not learned yet ({n} of 24 are): the planner uses the mean there, {mean} kWh per hour",
     "profile_hour": "{hour}:00 · house {house} kWh · air con {airco} kWh · measured {n}×",
     "profile_empty_workday": "No workdays learned yet. Until then the planner uses the mean for every hour ({mean} kWh).",
-    "profile_empty_weekend": "No weekend days learned yet. Until then the planner uses the mean for every hour on Saturday and Sunday ({mean} kWh)."
+    "profile_empty_weekend": "No weekend days learned yet. Until then the planner uses the mean for every hour on Saturday and Sunday ({mean} kWh).",
+    "check_title": "Plan against reality",
+    "check_intro": "What the plan of the evening before expected, next to what happened. Last {n} whole days; only quarters that had a plan.",
+    "check_none": "No whole day with a plan from the day before yet. This fills from tomorrow.",
+    "check_expected": "Expected",
+    "check_actual": "Measured",
+    "check_diff": "Difference",
+    "check_daily": "Mean miss per day",
+    "check_per_day": "Per day: {metric}",
+    "check_partial": "{n} of {of} quarters with a plan",
+    "m_load": "House use",
+    "m_solar": "Solar",
+    "m_import": "Import",
+    "m_export": "Export",
+    "m_cost": "Cost"
   },
   "savings": {
     "title": "Savings from the battery",

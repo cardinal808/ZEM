@@ -16,6 +16,7 @@ import type { SetResult } from "./settings-edit";
 import { blockerText, fastButtons, type EventsView } from "./diag";
 import "./diagnostics";
 import "./savings";
+import type { PlanCheckView } from "./diag";
 import type { BackfillRequest, BackfillResult, SavingsView } from "./savings";
 import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
@@ -61,6 +62,7 @@ export class ZephyrPanel extends LitElement {
   @state() private period: Period = storedPeriod();
   @state() private eventsView?: EventsView;
   @state() private savingsView?: SavingsView;
+  @state() private planCheck?: PlanCheckView;
   @state() private confirmLive = false;
   @state() private controlBusy = false;
   @state() private controlError: string | null = null;
@@ -231,6 +233,7 @@ export class ZephyrPanel extends LitElement {
     if (!this.hass || this.view !== "diagnostics") return;
     try {
       this.eventsView = await this.hass.callWS<EventsView>({ type: "zephyr/events" });
+      this.planCheck = await this.hass.callWS<PlanCheckView>({ type: "zephyr/plan_check", days: 14 });
     } catch {
       // Not loaded: the banner says so.
     }
@@ -294,6 +297,26 @@ export class ZephyrPanel extends LitElement {
       return_response: true,
     });
     return result.response;
+  };
+
+  /** Vacation through ZEPHYR's own entities (switch and end time), like an automation would (B42). */
+  private setVacation = async (on: boolean, until: string | null): Promise<void> => {
+    const ent = this.settingsView?.vacation?.entities;
+    if (!this.hass || !ent?.switch) return;
+    this.controlError = null;
+    try {
+      if (on && until && ent.until)
+        await this.hass.callWS({
+          type: "call_service",
+          domain: "datetime",
+          service: "set_value",
+          service_data: { entity_id: ent.until, datetime: `${until.replace("T", " ")}:00` },
+        });
+      await this.hass.callWS({ type: "call_service", domain: "switch", service: on ? "turn_on" : "turn_off", service_data: { entity_id: ent.switch } });
+    } catch (err) {
+      this.controlError = (err as { message?: string })?.message ?? String(err);
+    }
+    await this.loadSettings();
   };
 
   private saveSettings = async (changes: Record<string, unknown>, reset: string[]): Promise<SetResult> => {
@@ -505,6 +528,7 @@ export class ZephyrPanel extends LitElement {
         .friendlyName=${(id: string) => this.hass?.states?.[id]?.attributes?.friendly_name as string | undefined}
         .states=${this.hass?.states}
         .save=${this.saveSettings}
+        .setVacation=${this.setVacation}
       ></zephyr-settings>`;
     }
     if (this.view === "savings") {
@@ -530,6 +554,7 @@ export class ZephyrPanel extends LitElement {
         .download=${this.downloadDiagnostics}
         .exportCosts=${this.exportCosts}
         .refresh=${() => void this.loadEvents()}
+        .planCheck=${this.planCheck}
       ></zephyr-diagnostics>`;
     }
     return this.renderComing();

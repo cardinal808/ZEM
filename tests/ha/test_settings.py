@@ -85,6 +85,10 @@ async def test_settings_get(hass: HomeAssistant, fake_sets: FakeSets, hass_ws_cl
     assert fields["tariff_energy_tax"]["active"] is True
     assert fields["tariff_energy_tax"]["in_use"] == fields["tariff_energy_tax"]["value"]
     assert fields["p1_entity"]["reload"] is True and fields["min_soc"]["reload"] is False
+    vacation = view["vacation"]
+    assert vacation["active"] is False and vacation["until"] is None
+    assert vacation["entities"]["switch"].startswith("switch.")
+    assert vacation["entities"]["until"].startswith("datetime.")
 
 
 async def test_settings_get_read_only_for_other_users(

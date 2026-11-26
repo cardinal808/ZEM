@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.24 — Diagnose: plan tegen werkelijkheid; Instellingen: vakantie
+- Diagnose has a card **Plan tegen werkelijkheid** for the last 14 days (from `zephyr/plan_check`): expected against actual for house use, sun, import, export and costs, with the difference in %, plus a small pair of bars per day.
+- Instellingen has a group **Vakantie**: status (on by hand, automatic, since when, until when), a *Terug op* time and buttons to start or stop. The panel switches ZEPHYR's own vacation switch and end-time entity, so automations and the panel go one way (B42). The option *vakantie bij afwezigheid* moved into this group.
+- `zephyr/settings/get` returns the vacation state and its two entities.
+- Tests: vacation in the settings view; difference % of the plan check.
+
 ### 0.8.23 — Besparing: prices from EnergyZero for working out earlier days
 - Bjorn's first run (26-11): 48 days worked out, but 1 138 of the hours had no price, because his Nord Pool sensor has no `state_class` and so no hourly statistics in HA.
 - The form *Eerdere dagen terugrekenen* now offers **EnergyZero (marktprijs NL per uur)**: ZEPHYR fetches the bare Dutch day-ahead market price per hour from EnergyZero's public API (no key), one request per day, only when you press *Terugrekenen*. Default when the price sensor has no `state_class`; a sensor with statistics can still be chosen.
