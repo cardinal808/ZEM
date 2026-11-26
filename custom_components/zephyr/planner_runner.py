@@ -162,6 +162,18 @@ class PlanRunner:
         self._listeners.append(listener)
         return lambda: self._listeners.remove(listener)
 
+    def action_at(self, moment: datetime) -> Action | None:
+        """The plan's action for ``moment``: N without prices, None without a plan for that quarter."""
+        outcome = self.outcome
+        if outcome is None:
+            return None
+        if outcome.state == PlanState.NO_PRICES:
+            return Action.DELIVER
+        for slot, action in zip(outcome.slots, outcome.plan.actions, strict=False):
+            if slot.start <= moment < slot.start + QUARTER:
+                return action
+        return None
+
     # --- triggers (§5) -------------------------------------------------------------
 
     @callback

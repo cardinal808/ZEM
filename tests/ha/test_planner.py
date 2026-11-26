@@ -160,3 +160,36 @@ async def test_profile_learns_from_the_cost_log(hass: HomeAssistant, fake_sets: 
     assert planner.profile.mean_count == 1
     # House: 300 W import + 760 W from the battery ≈ 1.06 kWh in the hour.
     assert planner.profile.mean == pytest.approx(1.06, abs=0.03)
+
+
+async def test_mode_dynamic_forecasting_follows_the_plan_in_shadow(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    """The mode exists only with a price sensor; in shadow mode the engine follows the plan, nothing is sent."""
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (1, 0), price_entity=PRICE)
+    options = hass.states.get("select.zephyr_mode").attributes["options"]
+    assert "dynamic_forecasting" in options
+    fake_sets.answers["10.0.0.10"]["properties"]["electricLevel"] = 15  # nearly empty before the cheap night
+    await _tick(hass, freezer, 10)
+    writes = len(fake_sets.writes)
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": "select.zephyr_mode", "option": "dynamic_forecasting"}, blocking=True
+    )
+    await _tick(hass, freezer, 10, step=1)
+    assert hass.states.get("select.zephyr_mode").state == "dynamic_forecasting"
+    plan = hass.states.get("sensor.zephyr_plan_action").attributes["code"]
+    control = entry.runtime_data.control
+    assert control.runtime.planner.action_at(dt_util.utcnow()).value == plan
+    result = control.result
+    # Cheap night, expensive evening: charge from the grid at full power.
+    assert plan == "L"
+    assert result.reason.code.value == "plan_charge"
+    assert result.setpoint == 2400
+    assert hass.states.get("sensor.zephyr_action").state == "charge"
+    assert len(fake_sets.writes) == writes  # shadow: nothing sent
+
+
+async def test_no_forecast_mode_without_price_sensor(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    await _setup(hass, fake_sets, freezer, (10, 0))
+    assert "dynamic_forecasting" not in hass.states.get("select.zephyr_mode").attributes["options"]

@@ -11,8 +11,8 @@ from . import ZephyrConfigEntry, ZephyrRuntime
 from .core.engine import Mode
 from .entity import ZephyrControlEntity
 
-# Dynamic Forecasting follows with the planner (M5).
 MODES = [Mode.STANDBY, Mode.ZERO_METER, Mode.FAST_CHARGE, Mode.FAST_DISCHARGE]
+"""Dynamic Forecasting is added when the planner runs (a price sensor is chosen)."""
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
@@ -20,10 +20,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async
 
 
 class ZephyrModeSelect(ZephyrControlEntity, SelectEntity, RestoreEntity):
-    _attr_options: list[str] = [m.value for m in MODES]  # noqa: RUF012
-
     def __init__(self, runtime: ZephyrRuntime, entry: ZephyrConfigEntry) -> None:
         super().__init__(runtime, entry, "mode", "select")
+        modes = [*MODES, Mode.FORECAST] if runtime.planner is not None else MODES
+        self._attr_options = [m.value for m in modes]
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()

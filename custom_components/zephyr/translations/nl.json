@@ -226,7 +226,8 @@
           "standby": "Standby",
           "zero_meter": "Nul op de meter",
           "fast_charge": "Snel opladen",
-          "fast_discharge": "Snel ontladen"
+          "fast_discharge": "Snel ontladen",
+          "dynamic_forecasting": "Dynamische Forecasting"
         }
       }
     },

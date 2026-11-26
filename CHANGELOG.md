@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### 0.7.6 — M5: mode Dynamic Forecasting carries out the plan (SPEC-planner §7)
+- **New mode `dynamic_forecasting`** (Dynamische Forecasting) in `select.zephyr_mode`, only when the planner runs (a price sensor is chosen). The engine takes the plan's action for the running quarter:
+  - **L** (charge from the grid): full charge power. Starts only after 2 minutes without grid charging; keeps going 10 s after the plan stops saying L; at max SOC it holds instead (the plan may still say L with a full battery).
+  - **H** (hold): zero on the meter without delivering; charging from solar surplus continues.
+  - **N** (deliver) and no plan: zero on the meter.
+  - **X** (export, only with the option on): full deliver power, not within 2 minutes after grid charging, stops at min SOC.
+  - No price for now: the plan says N, so never grid charging without a price.
+- New reasons: *Plan: laadt … W uit het net*, *Plan: laden uit het net start na een pauze van 2 minuten*, *Plan: vasthouden*, *Plan: levert … W terug uit de accu*.
+- The plan is recalculated on a mode change (§5).
+- Shadow mode as always: the twin carries out what ZEPHYR would do; live with `switch.zephyr_control`.
+- Not yet: price reserve after midnight (c), the restart check of §7 (with ZEPHYR as the only controller the next step overwrites any charge or export left from before a restart).
+- Tests: `tests/core/test_engine_forecast.py`, `tests/ha/test_planner.py` (mode follows the plan in shadow; no mode without a price sensor).
+
 ### 0.7.5 — M5: the planner in Home Assistant, shadow only (SPEC-planner §2, §4, §5)
 - **The plan is calculated and shown, not carried out.** With a price sensor (Nord Pool) in the options, ZEPHYR plans every quarter (at :10 s), when the prices change (tomorrow known), after a restart and, while there is no price for now, every minute. The mode *Dynamic Forecasting* that carries out the plan follows in the next step.
 - **Inputs:** Nord Pool prices by start time (€/kWh, €/MWh or cents recognised), per quarter to the end of tomorrow; hour prices count for all four quarters; before tomorrow's prices are known today's pattern stands in (*indicative*, not in the totals). All-in prices from the tariff table or own tariffs (with the solar bonus in daylight). Solar from Solcast's half-hour detail of the chosen forecast sensor and its sibling (`…_forecast_today` / `…_forecast_tomorrow`); without it yesterday's production per hour, else no solar. Consumption from the learned profile (per hour, workday/weekend), learned from the cost log (house = import − export + solar − charged + delivered; complete hours only) and filled once from the last 28 days of the cost log; 0.35 kWh/h until something is learned. Battery: capacity × (max SOC − min SOC − buffer), power limits of the online sets within the settings, efficiency 0.93 per direction.
