@@ -61,8 +61,19 @@ export interface SettingsGroup {
   modified: number;
 }
 
+export interface VacationView {
+  active: boolean;
+  /** Switched on by hand (else: on by itself because nobody is home). */
+  manual: boolean;
+  auto: boolean;
+  until: string | null;
+  started: string | null;
+  entities?: { switch: string | null; until: string | null };
+}
+
 export interface SettingsView {
   groups: SettingsGroup[];
+  vacation?: VacationView | null;
   supplier: string;
   tariffs_source: string | null;
   can_edit: boolean;
@@ -224,11 +235,47 @@ export class ZephyrSettings extends LitElement {
         ${current.key === "tariffs" && view.supplier !== "own"
           ? html`<p class="muted">${this.tr("settings.supplier_note", { source: view.tariffs_source ?? "–" })}</p>`
           : nothing}
+        ${current.key === "vacation" && view.vacation ? this.renderVacation(view.vacation, view.can_edit) : nothing}
         <ul>
           ${current.fields.map((f) => this.renderField(f))}
         </ul>
         ${this.renderBar()}
       </section>
+    </div>`;
+  }
+
+  @property({ attribute: false }) setVacation?: (on: boolean, until: string | null) => Promise<void>;
+  @state() private vacUntil: string | null = null;
+
+  private renderVacation(v: VacationView, canEdit: boolean): TemplateResult {
+    const fmt = (iso: string) =>
+      new Intl.DateTimeFormat(this.locale, { weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+    const status = v.active
+      ? v.auto
+        ? this.tr("settings.vac_auto", { since: v.started ? fmt(v.started) : "–" })
+        : v.until
+          ? this.tr("settings.vac_until", { until: fmt(v.until) })
+          : this.tr("settings.vac_open")
+      : this.tr("settings.vac_off");
+    const until = this.vacUntil ?? (v.until ? v.until.slice(0, 16) : "");
+    return html`<div class=${v.active ? "vac on" : "vac"}>
+      <div class="vachead">
+        <span class="vacdot" aria-hidden="true"></span>
+        <div>
+          <strong>${this.tr(v.active ? "settings.vac_active" : "settings.vac_home")}</strong>
+          <p>${status}</p>
+        </div>
+      </div>
+      ${canEdit
+        ? html`<div class="vacrow">
+            <label for="vac-until">${this.tr("settings.vac_until_label")}</label>
+            <input id="vac-until" type="datetime-local" .value=${until} @change=${(e: Event) => (this.vacUntil = (e.target as HTMLInputElement).value || null)} />
+            ${v.active
+              ? html`<button type="button" class="ghost" @click=${() => void this.setVacation?.(false, null)}>${this.tr("settings.vac_stop")}</button>`
+              : html`<button type="button" class="primary" @click=${() => void this.setVacation?.(true, until || null)}>${this.tr("settings.vac_start")}</button>`}
+          </div>
+          <p class="muted">${this.tr("settings.vac_help")}</p>`
+        : nothing}
     </div>`;
   }
 
@@ -710,6 +757,67 @@ export class ZephyrSettings extends LitElement {
       max-width: 320px;
       overflow-wrap: anywhere;
       text-align: right;
+    }
+    .vac {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--z-border);
+      background: var(--z-bg);
+      margin-bottom: 8px;
+    }
+    .vac.on {
+      border-color: var(--z-charge);
+      background: var(--z-info-bg);
+    }
+    .vachead {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .vachead p {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--z-muted);
+    }
+    .vacdot {
+      width: 12px;
+      height: 12px;
+      margin-top: 4px;
+      border-radius: 50%;
+      background: var(--z-muted);
+      flex: none;
+    }
+    .vac.on .vacdot {
+      background: var(--z-charge);
+    }
+    .vacrow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      font-size: 14px;
+    }
+    .vacrow input {
+      min-width: 220px;
+      min-height: 40px;
+      padding: 0 10px;
+      border: 1px solid var(--z-border);
+      border-radius: 10px;
+      background: var(--z-card);
+      color: var(--z-text);
+      font: inherit;
+    }
+    .vacrow button {
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: 10px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
     }
     .pending,
     .saved {

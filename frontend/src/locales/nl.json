@@ -215,7 +215,8 @@
       "planner": "Planner",
       "corrections": "Correcties",
       "zero_meter": "Nul op de meter zonder planner",
-      "testing": "Testfase"
+      "testing": "Testfase",
+      "vacation": "Vakantie"
     },
     "modified_n": "{n} gewijzigd",
     "default": "standaard: {value}",
@@ -451,7 +452,17 @@
       "excluded_needs_counter": "De klimaat-entiteit werkt alleen samen met de energieteller van de airco. Kies de teller of maak de klimaat-entiteit leeg.",
       "failed": "Bewaren lukte niet. Probeer het opnieuw.",
       "range": "Kies een waarde van {min} tot en met {max}{unit}."
-    }
+    },
+    "vac_active": "Op vakantie",
+    "vac_home": "Thuis",
+    "vac_off": "De planner rekent met het gewone verbruik.",
+    "vac_until": "Tot {until}. De planner rekent tot dan met het verbruik bij afwezigheid en laadt op tijd voor de terugkomst.",
+    "vac_open": "Zonder einddatum; zet het uit als je terug bent.",
+    "vac_auto": "Vanzelf aan sinds {since}: niemand is 24 uur thuis geweest (optie hieronder). Gaat uit zodra iemand thuiskomt.",
+    "vac_until_label": "Terug op",
+    "vac_start": "Vakantie aanzetten",
+    "vac_stop": "Vakantie uitzetten",
+    "vac_help": "Tijdens een vakantie rekent de planner met het sluimerverbruik en leert hij dat apart; het gewone verbruiksprofiel blijft schoon. Een einddatum is optioneel."
   },
   "airco": {
     "blocked": "Airco {kw} kW · niet uit de accu",
@@ -546,7 +557,21 @@
     "profile_learned": "nog niet geleerd ({n} van 24 wel): de planner rekent daar met het gemiddelde, {mean} kWh per uur",
     "profile_hour": "{hour}:00 · huis {house} kWh · airco {airco} kWh · {n}× gemeten",
     "profile_empty_workday": "Nog geen werkdagen geleerd. Tot dan rekent de planner elk uur met het gemiddelde ({mean} kWh).",
-    "profile_empty_weekend": "Nog geen weekenddagen geleerd. Tot dan rekent de planner op zaterdag en zondag elk uur met het gemiddelde ({mean} kWh)."
+    "profile_empty_weekend": "Nog geen weekenddagen geleerd. Tot dan rekent de planner op zaterdag en zondag elk uur met het gemiddelde ({mean} kWh).",
+    "check_title": "Plan tegen werkelijkheid",
+    "check_intro": "Wat het plan van de avond ervoor verwachtte, naast wat er gebeurde. Laatste {n} hele dagen; alleen kwartieren waarvoor een plan was.",
+    "check_none": "Nog geen hele dag met een plan van de dag ervoor. Dit vult zich vanaf morgen.",
+    "check_expected": "Verwacht",
+    "check_actual": "Gemeten",
+    "check_diff": "Verschil",
+    "check_daily": "Gem. per dag ernaast",
+    "check_per_day": "Per dag: {metric}",
+    "check_partial": "{n} van {of} kwartieren met een plan",
+    "m_load": "Verbruik huis",
+    "m_solar": "Zon",
+    "m_import": "Afname",
+    "m_export": "Teruglevering",
+    "m_cost": "Kosten"
   },
   "savings": {
     "title": "Besparing door de accu",

@@ -125,3 +125,30 @@ export function profileStats(d: ProfileDay): { total: number; aircoTotal: number
   const peak = Math.max(0, ...d.house.map((h, i) => h + (d.airco[i] ?? 0)));
   return { total, aircoTotal, top: Math.max(0.5, Math.ceil(peak * 2) / 2), learned: d.counts.filter((c) => c >= d.min_count).length };
 }
+
+export type CheckMetric = "load" | "solar" | "import" | "export" | "cost";
+
+export interface CheckPair {
+  expected: number;
+  actual: number;
+  diff: number;
+  mean_abs_day?: number;
+}
+
+export interface CheckDay extends Partial<Record<CheckMetric, CheckPair>> {
+  date: string;
+  /** Quarters with an expectation, out of the day's quarters. */
+  quarters: number;
+  of: number;
+  soc_end?: { expected: number; actual: number | null };
+}
+
+export interface PlanCheckView {
+  days: CheckDay[];
+  summary: Partial<Record<CheckMetric, CheckPair>> & { days: number };
+}
+
+/** Difference as a share of what was expected (null when nothing was expected). */
+export function relDiff(p: CheckPair): number | null {
+  return Math.abs(p.expected) < 0.05 ? null : (p.actual - p.expected) / Math.abs(p.expected);
+}

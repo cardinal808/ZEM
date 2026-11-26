@@ -63,7 +63,7 @@ from .const import (
 from .core.costs import Tariffs
 from .core.settings import Settings
 
-GROUPS: Final = ("battery", "sources", "tariffs", "planner", "corrections", "zero_meter", "testing")
+GROUPS: Final = ("battery", "sources", "tariffs", "planner", "corrections", "vacation", "zero_meter", "testing")
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,7 +148,7 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_PLAN_LOAD_MARGIN, "planner", "number", 0, "%", 0, 50, 1),
     Field(CONF_PLAN_BUFFER, "planner", "number", 0, "%", 0, 50, 1),
     Field(CONF_WORKDAY_ENTITY, "planner", "entity", optional=True, reload=True, domain="binary_sensor"),
-    Field(CONF_VACATION_AWAY, "planner", "bool", False, reload=True),
+    Field(CONF_VACATION_AWAY, "vacation", "bool", False, reload=True),
     Field(CONF_EXPENSIVE_HOURS, "zero_meter", "number", DEFAULT_EXPENSIVE_HOURS, "h", 1, 12, 1),
     Field(CONF_RESERVE_SOC, "zero_meter", "number", DEFAULT_RESERVE_SOC, "%", 0, 80, 1),
     Field(CONF_MIN_PRICE, "zero_meter", "number", None, "€/kWh", -1, 2, 0.01, optional=True),

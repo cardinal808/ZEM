@@ -2,7 +2,7 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { eventKind, eventText, profileStats, type EventsView, type ProfileView } from "./diag";
+import { eventKind, eventText, profileStats, relDiff, type CheckMetric, type EventsView, type PlanCheckView, type ProfileView } from "./diag";
 import { clock, day, sameDay } from "./format";
 import { t, type Lang } from "./i18n";
 
@@ -18,10 +18,12 @@ export class ZephyrDiagnostics extends LitElement {
   @property({ attribute: false }) download?: () => Promise<void>;
   @property({ attribute: false }) exportCosts?: () => Promise<ExportResult>;
   @property({ attribute: false }) refresh?: () => void;
+  @property({ attribute: false }) planCheck?: PlanCheckView;
 
   @state() private busy: "download" | "export" | null = null;
   @state() private note: { text: string; error: boolean } | null = null;
   @state() private dayKind: "workday" | "weekend" = "workday";
+  @state() private metric: CheckMetric = "load";
 
   private tr(key: string, params: Record<string, string | number> = {}): string {
     return t(this.uiLang, key, params);
@@ -63,7 +65,7 @@ export class ZephyrDiagnostics extends LitElement {
         ${this.note ? html`<p class=${this.note.error ? "note error" : "note"} role="status">${this.note.text}</p>` : nothing}
         ${view ? this.renderCounters(view) : html`<div class="skeleton"></div>`}
       </section>
-      ${view?.profile ? this.renderProfile(view.profile) : nothing}
+      ${this.planCheck ? this.renderCheck(this.planCheck) : nothing} ${view?.profile ? this.renderProfile(view.profile) : nothing}
       <section class="card events" aria-labelledby="events-title">
         <div class="head">
           <h2 id="events-title">${this.tr("diag.events")}</h2>
@@ -107,6 +109,72 @@ export class ZephyrDiagnostics extends LitElement {
         </tbody>
       </table>
       <p class="muted small">${this.tr("diag.counters_note")}</p>`;
+  }
+
+  private renderCheck(pc: PlanCheckView): TemplateResult {
+    const metrics: CheckMetric[] = ["load", "solar", "import", "export", "cost"];
+    const fmt = (m: CheckMetric, v: number, sign = false) => {
+      const s = sign && v > 0 ? "+" : v < 0 ? "−" : "";
+      const a = Math.abs(v);
+      return m === "cost"
+        ? `${s}€ ${new Intl.NumberFormat(this.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(a)}`
+        : `${s}${new Intl.NumberFormat(this.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(a)} kWh`;
+    };
+    const days = pc.days.filter((d) => d[this.metric]);
+    const top = Math.max(0.1, ...days.flatMap((d) => [d[this.metric]?.expected ?? 0, d[this.metric]?.actual ?? 0].map(Math.abs)));
+    const dayLabel = (iso: string) =>
+      new Intl.DateTimeFormat(this.locale, { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T12:00:00Z`));
+    return html`<section class="card check" aria-labelledby="pc-title">
+      <h2 id="pc-title">${this.tr("diag.check_title")}</h2>
+      <p class="muted">${this.tr("diag.check_intro", { n: pc.summary.days })}</p>
+      ${pc.summary.days === 0
+        ? html`<p class="note">${this.tr("diag.check_none")}</p>`
+        : html`<table class="ctable">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                <th scope="col">${this.tr("diag.check_expected")}</th>
+                <th scope="col">${this.tr("diag.check_actual")}</th>
+                <th scope="col">${this.tr("diag.check_diff")}</th>
+                <th scope="col">${this.tr("diag.check_daily")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${metrics.map((m) => {
+                const r = pc.summary[m];
+                if (!r) return nothing;
+                const rel = relDiff(r);
+                return html`<tr class=${m === this.metric ? "on" : ""} @click=${() => (this.metric = m)}>
+                  <th scope="row"><button type="button" class="linkish" aria-pressed=${m === this.metric ? "true" : "false"}>${this.tr(`diag.m_${m}`)}</button></th>
+                  <td>${fmt(m, r.expected)}</td>
+                  <td>${fmt(m, r.actual)}</td>
+                  <td class=${rel !== null && Math.abs(rel) > 0.15 ? "warnc" : ""}>
+                    ${fmt(m, r.diff, true)}${rel !== null ? html` <small>(${rel > 0 ? "+" : "−"}${Math.round(Math.abs(rel) * 100)} %)</small>` : nothing}
+                  </td>
+                  <td>${r.mean_abs_day !== undefined ? fmt(m, r.mean_abs_day) : "–"}</td>
+                </tr>`;
+              })}
+            </tbody>
+          </table>
+          <h3>${this.tr("diag.check_per_day", { metric: this.tr(`diag.m_${this.metric}`).toLowerCase() })}</h3>
+          <div class="cbars" role="img" aria-label=${this.tr("diag.check_per_day", { metric: this.tr(`diag.m_${this.metric}`) })}>
+            ${days.map((d) => {
+              const r = d[this.metric] as { expected: number; actual: number; diff: number };
+              const partial = d.quarters < d.of - 4;
+              return html`<div class="cday" title=${`${dayLabel(d.date)}: ${this.tr("diag.check_expected").toLowerCase()} ${fmt(this.metric, r.expected)}, ${this.tr("diag.check_actual").toLowerCase()} ${fmt(this.metric, r.actual)}${partial ? ` (${this.tr("diag.check_partial", { n: d.quarters, of: d.of })})` : ""}`}>
+                <div class="cpair">
+                  <i class="exp" style=${`height:${(Math.abs(r.expected) / top) * 100}%`}></i>
+                  <i class=${partial ? "act part" : "act"} style=${`height:${(Math.abs(r.actual) / top) * 100}%`}></i>
+                </div>
+                <span>${dayLabel(d.date)}</span>
+              </div>`;
+            })}
+          </div>
+          <div class="plegend">
+            <span><i class="sw exp"></i>${this.tr("diag.check_expected")}</span>
+            <span><i class="sw act"></i>${this.tr("diag.check_actual")}</span>
+          </div>`}
+    </section>`;
   }
 
   private renderProfile(p: ProfileView): TemplateResult {
@@ -199,6 +267,85 @@ export class ZephyrDiagnostics extends LitElement {
     }
     .events {
       flex: 999 1 480px;
+    }
+    .check {
+      flex: 999 1 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .ctable td,
+    .ctable th {
+      padding: 8px 6px;
+    }
+    .ctable tbody tr {
+      cursor: pointer;
+    }
+    .ctable tr.on {
+      background: var(--z-info-bg);
+    }
+    .ctable small {
+      color: var(--z-muted);
+      font-weight: 400;
+    }
+    .warnc {
+      color: var(--z-warn-text);
+      font-weight: 700;
+    }
+    .linkish {
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cbars {
+      display: flex;
+      gap: 6px;
+      height: 130px;
+      align-items: stretch;
+    }
+    .cday {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .cday span {
+      font-size: 10px;
+      color: var(--z-muted);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .cpair {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      border-bottom: 1px solid var(--z-border);
+    }
+    .cpair i {
+      flex: 1;
+      border-radius: 2px 2px 0 0;
+    }
+    i.exp,
+    .sw.exp {
+      background: transparent;
+      border: 2px dashed var(--z-muted);
+      border-bottom: 0;
+      box-sizing: border-box;
+    }
+    i.act,
+    .sw.act {
+      background: var(--z-charge);
+    }
+    i.act.part {
+      opacity: 0.45;
     }
     .profile {
       flex: 999 1 480px;

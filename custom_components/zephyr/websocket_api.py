@@ -405,7 +405,33 @@ def settings_view(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, An
                 item["status"] = _source_status(hass, entry, field.key, value)
             fields.append(item)
         groups.append({"key": group, "fields": fields, "modified": sum(1 for f in fields if f["modified"])})
-    return {"groups": groups, "supplier": supplier, "tariffs_source": in_use.get("source")}
+    return {"groups": groups, "supplier": supplier, "tariffs_source": in_use.get("source"), "vacation": _vacation(hass, entry)}
+
+
+def _vacation(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any] | None:
+    """Vacation now (B42) and the entities the panel switches it with (one path, like automations)."""
+    from homeassistant.helpers import entity_registry as er
+
+    vacation = entry.runtime_data.vacation
+    if vacation is None:
+        return None
+    state = vacation.state
+    registry = er.async_get(hass)
+
+    def iso(moment: Any) -> str | None:
+        return None if moment is None else dt_util.as_local(moment).isoformat()
+
+    return {
+        "active": vacation.active(),
+        "manual": state.manual,
+        "auto": state.auto,
+        "until": iso(state.until),
+        "started": iso(state.started),
+        "entities": {
+            "switch": registry.async_get_entity_id("switch", DOMAIN, f"{entry.entry_id}_vacation"),
+            "until": registry.async_get_entity_id("datetime", DOMAIN, f"{entry.entry_id}_vacation_until"),
+        },
+    }
 
 
 @websocket_command({vol.Required("type"): "zephyr/settings/get"})
