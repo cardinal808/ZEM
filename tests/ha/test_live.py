@@ -221,6 +221,29 @@ async def test_second_controller_stops_live(hass: HomeAssistant, fake_sets: Fake
         await _p1(hass, freezer, 20)
     await hass.async_block_till_done()
     assert hass.states.get("switch.zephyr_control").state == "off"
+    # Once 0 W before letting go: the set must not stay at ZEPHYR's last power.
+    assert fake_sets.writes[-1][1] == {"inputLimit": 0, "outputLimit": 0, "smartMode": 1}
     from homeassistant.helpers import issue_registry as ir
 
     assert ir.async_get(hass).async_get_issue(DOMAIN, "second_controller") is not None
+
+
+async def test_calibrating_set_is_left_alone(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # The set calibrates itself (socStatus 1) and sets its own limits: no second controller, and
+    # ZEPHYR writes nothing to it (SPEC-basis §8), also not after the 5 minutes to standby.
+    await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 20)
+    await _switch(hass, True)
+    for _ in range(3):
+        await _p1(hass, freezer, 20)
+    count = len(fake_sets.writes)
+    answer = fake_sets.answers["10.0.0.10"]
+    answer["properties"].update({"socStatus": 1, "outputLimit": 1500, "inputLimit": 0})
+    for i in range(40):
+        answer["timestamp"] = 1795500000 + i
+        freezer.tick(timedelta(seconds=10))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+        await _p1(hass, freezer, 20)
+    assert hass.states.get("switch.zephyr_control").state == "on"
+    assert fake_sets.writes[count:] == []

@@ -359,11 +359,17 @@ class ZephyrControl:
         self.async_step()
 
     async def _all_to_zero(self) -> None:
-        keys = [key for key in self.writers if self._online(key)]
+        keys = [key for key in self.writers if self._online(key) and not self._busy_itself(key)]
         now = time.monotonic()
         for key in keys:
             self.engine.counters_record(key, "power", now)
         await asyncio.gather(*(self.writers[key].send_now(power_command(0, include_ac_mode=False)) for key in keys))
+
+    def _busy_itself(self, key: str) -> bool:
+        """The set calibrates itself or is in bypass: ZEPHYR leaves it alone (SPEC-basis §8)."""
+        data = self.runtime.coordinators[key].data
+        report = data.report if data else None
+        return bool(report and (report.calibrating or report.bypass))
 
     def _online(self, key: str) -> bool:
         data = self.runtime.coordinators[key].data
@@ -567,6 +573,11 @@ class ZephyrControl:
             if now - writer.last_at < self.SETTLE_FOR_CHECK or self._checked_report.get(key) == report.timestamp:
                 continue
             sent = writer.last_props
+            if report.calibrating or report.bypass or report.fault:
+                # The set itself changes its limits (own calibration, bypass, a fault): not a second
+                # controller. ZEPHYR leaves such a set alone and checks again afterwards.
+                self._checked_report[key] = report.timestamp
+                continue
             limits_sent = "inputLimit" in sent and "outputLimit" in sent
             mismatch = limits_sent and (
                 abs(report.input_limit - sent["inputLimit"]) > 20 or abs(report.output_limit - sent["outputLimit"]) > 20
@@ -600,6 +611,8 @@ class ZephyrControl:
         self.shadow = True
         self.live_since = None
         self.engine.set_live(False, time.monotonic(), self._views())
+        # Once 0 W, as when switching off by hand: the set must not stay at ZEPHYR's last power.
+        await self._all_to_zero()
         self._log_event("second_controller")
         ir.async_create_issue(
             self.hass, DOMAIN, "second_controller", is_fixable=False, severity=ir.IssueSeverity.ERROR, translation_key="second_controller"

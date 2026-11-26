@@ -347,3 +347,20 @@ def test_flash_safety_net_uses_ram_instead_of_standby() -> None:
     assert any(c.kind == "power" and c.props.get("smartMode") == 1 for c in r.commands)
     assert e.counters(10)["a"]["flash_paused"] == 1
     assert e.counters(10)["a"]["flash_standby_24h"] == 2
+
+
+def test_calibrating_or_bypass_set_gets_no_commands() -> None:
+    # SPEC-basis §8: no 0 W and no standby while the set calibrates itself or is in bypass.
+    from dataclasses import replace
+
+    from sim.device import SimSet
+
+    for flag in ("calibrating", "bypass"):
+        for mode in (Mode.ZERO_METER, Mode.STANDBY):
+            eng = ZephyrEngine(Settings(), mode)
+            eng.set_live(True, 0.0, [])
+            rep = replace(SimSet(soc=60).report(0), **{flag: True})
+            for t in range(400):
+                eng.p1_reported(float(t), 300.0)
+                r = eng.step(float(t), [SetView("0", 1, rep, True)])
+                assert r.commands == (), (flag, mode, t, r.commands)
