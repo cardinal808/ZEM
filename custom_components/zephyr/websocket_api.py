@@ -83,6 +83,39 @@ def _plan(hass: HomeAssistant, outcome: PlanOutcome) -> dict[str, Any]:
     return data
 
 
+def _excluded(control: Any) -> dict[str, Any] | None:
+    """The air conditioner that may not run on the battery (B41, SPEC-ui-airco §2.1); None when not set up."""
+    load = control.excluded
+    if load is None:
+        return None
+    now = time.monotonic()
+    diag = load.diagnostics(now)
+    since = diag["seconds_since_step"]
+    interval = diag["mean_step_interval_s"]
+    active = bool(diag["active"])
+    if not diag["has_climate"]:
+        quality = "no_climate"
+    elif active and not diag["last_step_kwh"]:
+        quality = "starting"  # running, no counter step since the start: power of the previous run
+    elif since is not None and interval and since > 2 * interval:
+        quality = "fading"  # the counter is late: the estimate drops
+    else:
+        quality = "ok"
+    return {
+        "active": active,
+        "power_w": round(load.power(now)),
+        "excluded_w": round(control.engine.excluded_now),
+        "mode": diag["mode"],
+        "action": diag["action"],
+        "blocked_modes": diag["blocked_modes"],
+        "has_climate": diag["has_climate"],
+        "seconds_since_step": since,
+        "mean_step_interval_s": interval,
+        "last_step_kwh": diag["last_step_kwh"],
+        "quality": quality,
+    }
+
+
 def now_snapshot(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
     """Everything the cards *Nu*, *Accu* and *Volgende stap* need."""
     runtime = entry.runtime_data
@@ -115,6 +148,7 @@ def now_snapshot(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any
         "sets_online": totals.sets_online,
         "sets_total": totals.sets_configured,
         "price_entity": bool(control.price_entity),
+        "excluded": _excluded(control),
         "plan": None if outcome is None else _plan(hass, outcome),
     }
 
@@ -336,7 +370,7 @@ def settings_view(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, An
             if field.tariff:
                 item["active"] = supplier == TARIFF_OWN
                 item["in_use"] = in_use.get(field.key.removeprefix("tariff_"))
-            if field.group == "sources" and field.kind in ("entity", "entities"):
+            if field.group in ("sources", "corrections") and field.kind in ("entity", "entities"):
                 item["status"] = _source_status(hass, entry, field.key, value)
             fields.append(item)
         groups.append({"key": group, "fields": fields, "modified": sum(1 for f in fields if f["modified"])})

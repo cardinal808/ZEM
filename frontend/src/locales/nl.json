@@ -197,6 +197,7 @@
       "sources": "Bronnen",
       "tariffs": "Tarieven",
       "planner": "Planner",
+      "corrections": "Correcties",
       "zero_meter": "Nul op de meter zonder planner",
       "testing": "Testfase"
     },
@@ -382,5 +383,13 @@
         "more": "Voor de testfase: na elke herstart zet je live sturen zelf weer aan."
       }
     }
+  },
+  "airco": {
+    "blocked": "Airco {kw} kW · niet uit de accu",
+    "blocked_unknown": "Airco · niet uit de accu",
+    "kept_off": "({kw} kW nu buiten de accu)",
+    "allowed": "Airco {mode} · mag uit de accu",
+    "estimate": "schatting",
+    "estimate_more": "Geschat uit de energieteller van de airco (stappen van {kwh} kWh). Tussen twee stappen zakt de schatting vanzelf; stoppen ziet ZEPHYR direct aan de klimaat-entiteit."
   }
 }

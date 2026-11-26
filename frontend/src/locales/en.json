@@ -197,6 +197,7 @@
       "sources": "Sources",
       "tariffs": "Tariffs",
       "planner": "Planner",
+      "corrections": "Corrections",
       "zero_meter": "Zero on the meter without planner",
       "testing": "Test phase"
     },
@@ -382,5 +383,13 @@
         "more": "For the test phase: after every restart you switch control on yourself."
       }
     }
+  },
+  "airco": {
+    "blocked": "Air conditioner {kw} kW · not from the battery",
+    "blocked_unknown": "Air conditioner · not from the battery",
+    "kept_off": "({kw} kW kept off the battery now)",
+    "allowed": "Air conditioner {mode} · may use the battery",
+    "estimate": "estimate",
+    "estimate_more": "Estimated from the air conditioner's energy counter (steps of {kwh} kWh). Between two steps the estimate drops by itself; ZEPHYR sees a stop at once from the climate entity."
   }
 }
