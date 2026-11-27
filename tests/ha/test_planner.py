@@ -499,3 +499,23 @@ async def test_plan_check_websocket(hass: HomeAssistant, fake_sets: FakeSets, fr
     day = msg["result"]["days"][0]
     assert day["date"] == "2026-11-25" and day["load"]["diff"] == pytest.approx(0.1)
     assert msg["result"]["summary"]["cost"]["actual"] == pytest.approx(0.1)
+
+
+async def test_stroom_websocket(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, hass_ws_client: Any) -> None:
+    """Screen Stroom: routes of today's quarters and the zero score of the controller."""
+    client = await hass_ws_client(hass)
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (14, 0), price_entity=PRICE)
+    await _tick(hass, freezer, 5)
+    costs = entry.runtime_data.costs
+    tz = dt_util.get_default_time_zone()
+    start = dt_util.as_utc(datetime(2026, 11, 26, 13, 0, tzinfo=tz)).isoformat()
+    costs.current.append({"start": start, "solar_kwh": 0.4, "house_kwh": 0.3, "charge_kwh": 0.1, "buy": 0.2})
+    await client.send_json({"id": 1, "type": "zephyr/stroom"})
+    msg = await client.receive_json()
+    assert msg["success"], msg
+    result = msg["result"]
+    assert result["today"]["routes"]["solar_house"] == pytest.approx(0.3)
+    assert result["today"]["routes"]["solar_battery"] == pytest.approx(0.1)
+    assert result["zero"]["date"] == "2026-11-26" and len(result["zero"]["buckets"]) == 288
+    assert result["live"] is False and result["zero"]["steering_s"] == 0  # shadow mode does not steer

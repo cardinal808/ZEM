@@ -46,6 +46,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_savings)
     async_register_command(hass, ws_plan_check)
     async_register_command(hass, ws_savings_backfill)
+    async_register_command(hass, ws_stroom)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -644,6 +645,33 @@ def ws_plan_check(hass: HomeAssistant, connection: ActiveConnection, msg: dict[s
         connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
         return
     connection.send_result(msg["id"], entry.runtime_data.costs.plan_check(msg["days"]))
+
+
+def stroom_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
+    """Screen Stroom: energy per route and airco today (closed quarters), and the zero score."""
+    from .core import stroom
+
+    runtime = entry.runtime_data
+    start = dt_util.as_utc(dt_util.start_of_local_day())
+    records = list(runtime.costs.records_since(start).values()) if runtime.costs is not None else []
+    control = runtime.control
+    return {
+        "today": stroom.routes(records),
+        "zero": control.zero.view() if control is not None else None,
+        "live": control is not None and not control.shadow,
+        "airco_set": control is not None and control.excluded is not None,
+    }
+
+
+@websocket_command({vol.Required("type"): "zephyr/stroom"})
+@callback
+def ws_stroom(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Energy per route and how well the meter stayed at zero, today (screen Stroom)."""
+    entry = _entry(hass)
+    if entry is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    connection.send_result(msg["id"], stroom_view(entry))
 
 
 @websocket_command(
