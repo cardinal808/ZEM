@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 STORAGE_VERSION = 1
 AIRCO = "airco"
 # Items of the house picture: each can get a box and a spot on an own picture.
-PICTURE_ITEMS = ("roof", "shed_solar", "battery", "grid", "ev", "attic", "first", "ground", "shed")
+PICTURE_ITEMS = ("roof", "shed_solar", "battery", "grid", "ev", "home", "attic", "first", "ground", "shed")
 PICTURE_MAX_BYTES = 3_000_000
 _MAGIC = ((b"\xff\xd8\xff", "image/jpeg"), (b"\x89PNG", "image/png"))
 

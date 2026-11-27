@@ -869,7 +869,19 @@
     "ev_sub": "(elektrische auto)",
     "import_l": "(afname)",
     "export_t": "Net → op nul",
-    "export_l": "(teruglevering)"
+    "export_l": "(teruglevering)",
+    "home": "Huis",
+    "total": "Totaal",
+    "rest_of": "waarvan overig",
+    "to_battery": "→ accu",
+    "to_house": "→ huis",
+    "to_grid": "→ net",
+    "src_sun": "Zon",
+    "src_batt": "Accu",
+    "src_grid": "Net",
+    "dst_house": "huis",
+    "dst_battery": "accu",
+    "dst_grid": "net"
   },
   "picture": {
     "title": "Plaatje op Stroom",

@@ -869,7 +869,19 @@
     "ev_sub": "(electric car)",
     "import_l": "(import)",
     "export_t": "Grid → zero",
-    "export_l": "(export)"
+    "export_l": "(export)",
+    "home": "House",
+    "total": "Total",
+    "rest_of": "of which other",
+    "to_battery": "→ battery",
+    "to_house": "→ house",
+    "to_grid": "→ grid",
+    "src_sun": "Sun",
+    "src_batt": "Battery",
+    "src_grid": "Grid",
+    "dst_house": "house",
+    "dst_battery": "battery",
+    "dst_grid": "grid"
   },
   "picture": {
     "title": "Picture on Power",
