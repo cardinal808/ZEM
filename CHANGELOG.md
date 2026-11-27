@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.55 — Write and relay counters over a restart; no 0 W at a restart
+- **A restart of Home Assistant no longer sets the sets to 0 W** while live: they keep their last command and ZEPHYR takes over again after the start (B35, B47). 0 W opened the relay and drew from the grid for the minute of the restart. A real stop still writes 0 W.
+- **Counters kept over a restart** (OPDRACHT-tellers-relais-flash): the write and relay events of the last 24 hours and the totals per day (7 days) are stored (`zephyr.<entry>.writes`, every 5 minutes, at a stop and an unload). The 1 h and 24 h windows run on after a restart.
+- **Live, a write counts once the set accepted it**; a queued command that a newer one replaced counts as `superseded`. RAM + flash now match `writes.ok`. In shadow mode the counters stay what ZEPHYR would send.
+- **Relay in three kinds:** `relay` (changes of `acStatus` in the reports, as before; the last one is kept over a restart), `relay_commanded` (commands that turn the direction against the reported `acMode`) and `pack_state` (changes between idle, charging and delivering). Per day `relay_mismatch` when relay and commanded differ by more than 2.
+- **`flash_by_cause`** with every cause, also at 0: standby, SOC limits, `startup` (SOC limits when a set is first seen), `gridReverse`, write test. Per day in `days`.
+- The decision log's `sent` is only true when commands were really sent.
+
 ### 0.8.54 — Appliance plugs left out of the house profile
 - The consumption profile no longer holds what the appliances on a smart plug used (B36): planned runs are added on top, so a planned wash was counted twice. Live, every closed quarter subtracts the plug energy (integrated from the plug's power); the first fill from the recorder subtracts the plugs' hourly mean power (an hour without plug statistics counts as 0). Vacation hours keep the plugs in, as before.
 - When the set of plugs changes, the profile is filled again from the recorder once (like a changed air-conditioner counter, B41). Appliances without a plug (e.g. a dishwasher) leave the profile as it is.

@@ -13,9 +13,10 @@ import time
 from collections import deque
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfEnergy, UnitOfPower
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, RESTART_EXIT_CODE, STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfEnergy, UnitOfPower
 from homeassistant.core import Event, EventStateChangedData, EventStateReportedData, HomeAssistant, State, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
@@ -105,6 +106,11 @@ class ZephyrControl:
         self._listeners: list[Callable[[], None]] = []
         self._previous_mode = Mode.ZERO_METER
         self.writers = {key: SetWriter(hass, c) for key, c in runtime.coordinators.items()}
+        for key, writer in self.writers.items():
+            writer.on_written = partial(self._count_written, key)
+            writer.on_superseded = partial(self._count_superseded, key)
+        self.engine.day_of = lambda _now: dt_util.now().date().isoformat()
+        self._writes_store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.writes")
         self.live_since: float | None = None
         self.price_entity: str | None = options.get(CONF_PRICE_ENTITY)
         self.expensive_hours = int(options.get(CONF_EXPENSIVE_HOURS, DEFAULT_EXPENSIVE_HOURS))
@@ -200,6 +206,13 @@ class ZephyrControl:
         unsubs.append(async_track_time_interval(self.hass, self._save_zero, timedelta(minutes=5)))
         unsubs.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_stop))
         self.hass.async_create_task(self._restore_zero(), "zephyr: restore the zero score")
+        self.hass.async_create_task(self._restore_writes(), "zephyr: restore the write counters")
+        unsubs.append(async_track_time_interval(self.hass, self._save_writes, timedelta(minutes=5)))
+
+        def save_writes() -> None:
+            self.hass.async_create_task(self._save_writes(), "zephyr: save the write counters")
+
+        unsubs.append(save_writes)
         self._apply_poll_interval()
 
         def stop() -> None:
@@ -442,9 +455,28 @@ class ZephyrControl:
         return bool(data and data.online)
 
     async def _on_stop(self, _event: Event) -> None:
-        if not self.shadow:
+        if not self.shadow and self.hass.exit_code == RESTART_EXIT_CODE:
+            # A restart: the sets keep their last command and ZEPHYR takes over again after
+            # the start (B35, B47). 0 W would open the relay and draw from the grid meanwhile.
+            LOGGER.info("Home Assistant restarts: the sets keep their last command")
+        elif not self.shadow:
             await self._all_to_zero()
         await self._save_zero()
+        await self._save_writes()
+
+    def _count_written(self, key: str, kinds: list[str]) -> None:
+        now = time.monotonic()
+        for kind in kinds:
+            self.engine.counters_record(key, kind, now)
+
+    def _count_superseded(self, key: str, kinds: list[str]) -> None:
+        self.engine.counters_record(key, "superseded", time.monotonic())
+
+    async def _restore_writes(self) -> None:
+        self.engine.counters_restore(await self._writes_store.async_load(), time.monotonic(), time.time())
+
+    async def _save_writes(self, _now: datetime | None = None) -> None:
+        await self._writes_store.async_save(self.engine.counters_export(time.monotonic(), time.time()))
 
     async def _restore_zero(self) -> None:
         data = await self._zero_store.async_load()
@@ -544,6 +576,7 @@ class ZephyrControl:
         excluded = self.excluded.power(now) if self.excluded is not None else 0.0
         self._track_peaks()
         curtail = self.runtime.curtail
+        self.engine.count_commands = self.shadow  # live: counted once the set accepted the write
         result = self.engine.step(
             now,
             views,
@@ -559,7 +592,7 @@ class ZephyrControl:
             for command in result.commands:
                 writer = self.writers.get(command.key)
                 if writer is not None:
-                    writer.send(command.props)
+                    writer.send(command.props, command.kinds)
         if result.mode_finished:
             LOGGER.debug("Fast mode finished, back to %s", self._previous_mode)
             self.engine.set_mode(self._previous_mode, now)
@@ -586,7 +619,7 @@ class ZephyrControl:
                     **({"reason_params": result.reason.params} if result.reason.params else {}),
                     **({"excluded": round(self.engine.excluded_now)} if self.engine.excluded_now else {}),
                     "commands": [{"set": self.runtime.coordinators[c.key].number, "kind": c.kind, **c.props} for c in result.commands],
-                    "sent": not self.shadow,
+                    "sent": not self.shadow and bool(result.commands),
                 }
             )
         for listener in list(self._listeners):

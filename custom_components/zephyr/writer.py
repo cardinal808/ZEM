@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import deque
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from homeassistant.core import HomeAssistant
@@ -61,24 +61,37 @@ class SetWriter:
         still shows these, it has not applied the command yet (a start from 0 W takes 9-17 s)."""
         self._task: asyncio.Task[None] | None = None
         self._on_done = on_done
+        self._pending_kinds: list[str] = []
+        self.on_written: Callable[[list[str]], None] | None = None
+        """Called with the command's kinds once the set accepted a queued command (counters)."""
+        self.on_superseded: Callable[[list[str]], None] | None = None
+        """Called with the kinds of a queued command a newer one replaced before it was sent."""
 
-    def send(self, props: Mapping[str, int]) -> None:
+    def send(self, props: Mapping[str, int], kinds: Sequence[str] = ()) -> None:
         """Queue a command; replaces a waiting one."""
-        self._pending = dict(props)
+        self._drop_pending()
+        self._pending, self._pending_kinds = dict(props), list(kinds)
         if self._task is None or self._task.done():
             self._task = self.hass.async_create_background_task(self._run(), f"zephyr write set {self.coordinator.number}")
 
     async def send_now(self, props: Mapping[str, int]) -> bool:
         """Write and wait (shutdown, leaving live mode, test command). Returns success."""
         if self._task is not None and not self._task.done():
-            self._pending = None
+            self._drop_pending()
             await asyncio.wait([self._task])
         return await self._write(dict(props))
 
+    def _drop_pending(self) -> None:
+        if self._pending is not None and self._pending_kinds and self.on_superseded is not None:
+            self.on_superseded(self._pending_kinds)
+        self._pending, self._pending_kinds = None, []
+
     async def _run(self) -> None:
         while self._pending is not None:
-            props, self._pending = self._pending, None
-            await self._write(props)
+            props, kinds = self._pending, self._pending_kinds
+            self._pending, self._pending_kinds = None, []
+            if await self._write(props) and kinds and self.on_written is not None:
+                self.on_written(kinds)
 
     async def _write(self, props: dict[str, int]) -> bool:
         started = time.monotonic()

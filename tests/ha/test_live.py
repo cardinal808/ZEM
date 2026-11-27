@@ -247,3 +247,49 @@ async def test_calibrating_set_is_left_alone(hass: HomeAssistant, fake_sets: Fak
         await _p1(hass, freezer, 20)
     assert hass.states.get("switch.zephyr_control").state == "on"
     assert fake_sets.writes[count:] == []
+
+
+async def test_restart_while_live_keeps_the_last_command(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    """OPDRACHT-tellers-relais-flash: a restart of HA writes no 0 W (no relay switch, no grid draw)."""
+    from homeassistant.const import RESTART_EXIT_CODE
+
+    await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    await _p1(hass, freezer, 300)
+    count = len(fake_sets.writes)
+    hass.exit_code = RESTART_EXIT_CODE
+    try:
+        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+        await hass.async_block_till_done()
+    finally:
+        hass.exit_code = 0
+    assert len(fake_sets.writes) == count
+
+
+async def test_live_counters_match_the_writes_and_survive_a_reload(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    shadow = next(iter(diag["control"]["counters"].values()))  # what ZEPHYR would have sent
+    await _switch(hass, True)
+    for watts in (300, 500, 200, 400):
+        await _p1(hass, freezer, watts)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    counts = next(iter(diag["control"]["counters"].values()))
+    writes = next(iter(diag["control"]["live"]["writes"].values()))
+    live = counts["ram_24h"] + counts["flash_24h"] - shadow["ram_24h"] - shadow["flash_24h"]
+    assert live == writes["ok_24h"] > 0
+    assert counts["days"] and counts["days"][-1]["ram"] == counts["ram_24h"]
+    decisions = diag["control"]["decisions"]
+    assert all(d["commands"] for d in decisions if d.get("sent"))
+    assert any(d.get("sent") for d in decisions)
+
+    before = counts["ram_24h"]
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert next(iter(diag["control"]["counters"].values()))["ram_24h"] >= before
