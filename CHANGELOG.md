@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.61 — Settings suggest sources by integration
+- **P1:** a power sensor of a smart-meter reader (DSMR, DSMR Reader, P1 Monitor, SlimmeLezer, the HomeWizard P1 meter — not its plugs) is suggested whatever its name; per-phase sensors are skipped. The name hints stay as fallback.
+- **Solar counter:** a production counter of an inverter integration (SolarEdge, SolarEdge Modbus, Enphase, Fronius, SMA, Growatt, Huawei, GoodWe, Solax, Sungrow, Solarman, FoxESS, APsystems, Hoymiles, OpenDTU) wins over a name match; forecast sensors are skipped.
+- **Meter counters for the cost log:** without per-tariff counters, the import and export total of a meter reader (e.g. HomeWizard P1).
+
 ### 0.8.58 — Stroom: flows on an own picture
 - On an own picture, place the item *Huis* (the meter cupboard) with its spot: then every flow runs through that spot like the main line on the default picture: roof and shed panels, battery and grid to *Huis* (battery and grid reverse when charging or exporting), and from *Huis* to the floors and the charge point, with moving dots and the colour of the biggest source. Each box then only points at its spot with a thin line.
 - The *Huis* box shows the total, the rest and the flows in words. Without a *Huis* spot the picture works as before.
