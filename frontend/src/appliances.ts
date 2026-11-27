@@ -311,3 +311,9 @@ export class ZephyrAppliances extends LitElement {
     }
   `;
 }
+
+/** Group of an appliance kind for texts and icons: both dryer kinds are "dryer". */
+export function iconKey(kind: string): string {
+  if (kind.startsWith("dryer")) return "dryer";
+  return ["washer", "dishwasher"].includes(kind) ? kind : "other";
+}

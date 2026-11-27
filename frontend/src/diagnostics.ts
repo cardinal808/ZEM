@@ -15,8 +15,12 @@ import {
   type EventsView,
   type PlanCheckView,
   type ProfileView,
+  peakStats,
+  type PeakDay,
 } from "./diag";
-import { clock, day, percent, sameDay } from "./format";
+import type { AppliancesView, ApplianceItem } from "./appliances";
+import { iconKey } from "./appliances";
+import { clock, day, kwh, percent, sameDay } from "./format";
 import { t, type Lang } from "./i18n";
 
 export type ExportResult = { path: string; rows: number };
@@ -27,6 +31,8 @@ export class ZephyrDiagnostics extends LitElement {
   @property({ attribute: false }) uiLang: Lang = "en";
   @property() locale = "en";
   @property() timeZone = "UTC";
+  @property({ attribute: false }) appliances?: AppliancesView;
+  @state() private peakInfo = false;
   @property({ type: Boolean }) admin = false;
   @property({ attribute: false }) download?: () => Promise<void>;
   @property({ attribute: false }) exportCosts?: () => Promise<ExportResult>;
@@ -102,6 +108,8 @@ export class ZephyrDiagnostics extends LitElement {
         ${this.note ? html`<p class=${this.note.error ? "note error" : "note"} role="status">${this.note.text}</p>` : nothing}
         ${view ? this.renderCounters(view) : html`<div class="skeleton"></div>`}
       </section>
+      ${view?.peaks ? this.renderPeaks(view.peaks) : nothing}
+      ${this.appliances ? this.renderAppliances(this.appliances) : nothing}
       ${view?.energy ? this.renderEnergy(view.energy) : nothing}
       ${this.planCheck ? this.renderCheck(this.planCheck) : nothing}
       ${view?.profile ? this.renderProfile(view.profile) : nothing}
@@ -163,6 +171,130 @@ export class ZephyrDiagnostics extends LitElement {
         </tbody>
       </table>
       <p class="muted small">${this.tr("diag.counters_note")}</p>`;
+  }
+
+  private renderPeaks(days: PeakDay[]): TemplateResult {
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: this.timeZone,
+    }).format(new Date());
+    const st = peakStats(days, today);
+    const max = Math.max(0.05, ...days.map((d) => d.kwh));
+    const k2 = (v: number) => kwh(v, this.locale, 2);
+    return html`<section class="card" aria-labelledby="pk-title">
+      <div class="head">
+        <h2 id="pk-title">${this.tr("diag.peaks_title")}</h2>
+        <button
+          type="button"
+          class="ghost small info"
+          aria-expanded=${this.peakInfo ? "true" : "false"}
+          @click=${() => (this.peakInfo = !this.peakInfo)}
+        >
+          i
+        </button>
+      </div>
+      ${this.peakInfo ? html`<p class="note">${this.tr("diag.peaks_info")}</p>` : nothing}
+      <p>
+        ${this.tr("diag.peaks_line", {
+          today: k2(st.today?.kwh ?? 0),
+          n: st.today?.holds ?? 0,
+          mean: st.mean === null ? "–" : k2(st.mean),
+        })}
+      </p>
+      ${
+        days.length
+          ? html`<div
+              class="pbars"
+              role="img"
+              aria-label=${this.tr("diag.peaks_bars")}
+            >
+              ${days.map(
+                (d) =>
+                  html`<div
+                    class="pb"
+                    title=${`${d.day}: ${k2(d.kwh)} (${d.holds}×)`}
+                  >
+                    <i
+                      class=${d.day === today ? "today" : ""}
+                      style="height:${Math.max(2, (d.kwh / max) * 100)}%"
+                    ></i>
+                    <span
+                      >${new Intl.DateTimeFormat(this.locale, { day: "numeric", timeZone: "UTC" }).format(new Date(`${d.day}T12:00:00Z`))}</span
+                    >
+                  </div>`,
+              )}
+            </div>`
+          : nothing
+      }
+      <p class="muted small">${this.tr("diag.peaks_note")}</p>
+    </section>`;
+  }
+
+  private renderAppliances(v: AppliancesView): TemplateResult {
+    return html`<section class="card" aria-labelledby="ap-title">
+      <h2 id="ap-title">${this.tr("diag.appl_title")}</h2>
+      ${
+        v.appliances.length
+          ? html`<ul class="appl">
+              ${v.appliances.map((a) => this.applianceRow(a))}
+            </ul>`
+          : html`<p class="muted">${this.tr("diag.appl_empty")}</p>`
+      }
+    </section>`;
+  }
+
+  private applianceRow(a: ApplianceItem): TemplateResult {
+    const h = Math.floor(a.minutes / 60);
+    const m = a.minutes % 60;
+    const dur = h
+      ? `${h} ${this.uiLang === "nl" ? "u" : "h"}${m ? ` ${m} min` : ""}`
+      : `${m} min`;
+    const facts = [
+      a.profile === "learned"
+        ? this.tr("diag.appl_learned", { n: a.runs_seen })
+        : this.tr("diag.appl_default"),
+      this.tr("diag.appl_per_run", {
+        kwh: kwh(a.kwh, this.locale, 2),
+        time: dur,
+      }),
+      this.tr(a.plug ? "diag.appl_plug" : "diag.appl_noplug"),
+    ];
+    return html`<li>
+      <div class="ahead">
+        <b>${a.name}</b>
+        <span class="muted small"
+          >${this.tr(`diag.kind_${iconKey(a.kind)}`)}</span
+        >
+        ${a.running ? html`<span class="chip on">${this.tr("diag.appl_running")}</span>` : nothing}
+      </div>
+      <p class="muted small">${facts.join(" · ")}</p>
+      ${a.profile_w && a.profile_w.length ? this.profileChart(a.profile_w) : nothing}
+    </li>`;
+  }
+
+  private profileChart(w: number[]): TemplateResult {
+    const max = Math.max(100, ...w);
+    const n = w.length;
+    const pts = w
+      .map(
+        (v, i) =>
+          `${((i / Math.max(1, n - 1)) * 300).toFixed(1)},${(60 - (v / max) * 56).toFixed(1)}`,
+      )
+      .join(" ");
+    return html`<svg
+        class="aprof"
+        viewBox="0 0 300 64"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label=${this.tr("diag.appl_chart", { max: Math.round(max) })}
+      >
+        <polygon points=${`0,60 ${pts} 300,60`} class="area"></polygon>
+        <polyline points=${pts} class="line"></polyline>
+      </svg>
+      <div class="aaxis muted small">
+        <span>0</span
+        ><span>${this.tr("diag.appl_max", { w: Math.round(max) })}</span
+        ><span>${Math.round(n)} min</span>
+      </div>`;
   }
 
   private renderEnergy(e: EnergyView): TemplateResult {
@@ -831,6 +963,93 @@ export class ZephyrDiagnostics extends LitElement {
     td.bad {
       color: var(--z-bad-text, #b3261e);
       font-weight: 700;
+    }
+    .pbars {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 80px;
+      margin: 6px 0;
+    }
+    .pb {
+      flex: 1 1 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 2px;
+    }
+    .pb i {
+      width: 100%;
+      max-width: 22px;
+      border-radius: 3px 3px 0 0;
+      background: var(--z-bar);
+    }
+    .pb i.today {
+      background: var(--z-deliver);
+    }
+    .pb span {
+      font-size: 10px;
+      color: var(--z-muted);
+    }
+    button.info {
+      width: 28px;
+      min-width: 28px;
+      padding: 0;
+      border-radius: 50%;
+      font-style: italic;
+      font-weight: 700;
+    }
+    ul.appl {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    ul.appl li {
+      display: block;
+      padding: 12px 0;
+      border-top: 1px solid var(--z-border);
+    }
+    ul.appl li:first-child {
+      border-top: 0;
+    }
+    .ahead {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    ul.appl p {
+      margin: 2px 0 6px;
+    }
+    .chip.on {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--z-charge);
+      background: color-mix(in srgb, var(--z-charge) 12%, transparent);
+      border-radius: 99px;
+      padding: 1px 8px;
+    }
+    .aprof {
+      width: 100%;
+      max-width: 420px;
+      height: 64px;
+      display: block;
+    }
+    .aprof .area {
+      fill: color-mix(in srgb, var(--z-charge) 18%, transparent);
+    }
+    .aprof .line {
+      fill: none;
+      stroke: var(--z-charge);
+      stroke-width: 1.5;
+      vector-effect: non-scaling-stroke;
+    }
+    .aaxis {
+      display: flex;
+      justify-content: space-between;
+      max-width: 420px;
     }
     .gaps {
       list-style: none;

@@ -104,8 +104,31 @@ export function allGaps(
     .sort((a, b) => b.end.localeCompare(a.end));
 }
 
+export interface PeakDay {
+  day: string;
+  kwh: number;
+  holds: number;
+}
+
+/** Short peaks (B20): today and the mean per day over the days known (today included). */
+export function peakStats(
+  days: PeakDay[],
+  today: string,
+): { today: PeakDay | null; mean: number | null } {
+  const t = days.find((d) => d.day === today) ?? null;
+  const done = days.filter((d) => d.day !== today);
+  const pool = done.length ? done : days;
+  return {
+    today: t,
+    mean: pool.length
+      ? pool.reduce((s, d) => s + d.kwh, 0) / pool.length
+      : null,
+  };
+}
+
 export interface EventsView {
   entry_id: string;
+  peaks?: PeakDay[];
   energy?: EnergyView | null;
   profile?: ProfileView | null;
   shadow: boolean;
