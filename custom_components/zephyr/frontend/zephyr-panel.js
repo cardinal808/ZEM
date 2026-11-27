@@ -7432,12 +7432,13 @@ var Z = class extends E {
         display: none;
       }
       .bar {
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         row-gap: 14px;
       }
       .bar > div {
-        flex: 0 0 33.3%;
         border: 0;
+        min-width: 0;
       }
       .list {
         display: block;
