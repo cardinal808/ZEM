@@ -270,17 +270,23 @@ class BatteryInput:
 
     @property
     def floor(self) -> float:
-        return min(self.min_soc + self.buffer, self.max_soc)
+        """SOC (%) of energy 0 in the planner: min_SOC. The buffer sits above it (``reserve_kwh``)."""
+        return self.min_soc
+
+    @property
+    def reserve_kwh(self) -> float:
+        """The buffer (B37) in kWh: never planned to deliver from, refilled when cheap."""
+        return self.capacity_kwh * min(max(self.buffer, 0.0), max(self.max_soc - self.min_soc, 0.0)) / 100
 
     def battery(self) -> Battery:
-        usable = self.capacity_kwh * max(self.max_soc - self.floor, 0.0) / 100
-        return Battery(usable, self.charge_kw, self.deliver_kw, self.eta_in, self.eta_out)
+        usable = self.capacity_kwh * max(self.max_soc - self.min_soc, 0.0) / 100
+        return Battery(usable, self.charge_kw, self.deliver_kw, self.eta_in, self.eta_out, self.reserve_kwh)
 
     @property
     def energy_now(self) -> float:
-        """kWh above the planning floor (min_SOC + buffer), bounded to the usable energy."""
-        usable = self.capacity_kwh * max(self.max_soc - self.floor, 0.0) / 100
-        return min(max(self.capacity_kwh * (self.soc - self.floor) / 100, 0.0), usable)
+        """kWh above min_SOC, bounded to the usable energy."""
+        usable = self.capacity_kwh * max(self.max_soc - self.min_soc, 0.0) / 100
+        return min(max(self.capacity_kwh * (self.soc - self.min_soc) / 100, 0.0), usable)
 
 
 # --- the outcome --------------------------------------------------------------------------
@@ -360,9 +366,38 @@ class PlanOutcome:
     def empty_at(self) -> datetime | None:
         """End of the first slot in which delivering empties the battery (to the planning floor)."""
         for slot, action, st in zip(self.slots, self.plan.actions, self.plan.steps, strict=False):
-            if action in (Action.DELIVER, Action.EXPORT) and st.delivered > 0 and st.energy_after <= 0.01:
+            if action in (Action.DELIVER, Action.EXPORT) and st.delivered > 0 and st.energy_after <= self._reserve + 0.01:
                 return slot.start + QUARTER
         return None
+
+    @property
+    def _reserve(self) -> float:
+        return self.battery.reserve_kwh if self.battery is not None else 0.0
+
+    @property
+    def buffer(self) -> dict[str, Any] | None:
+        """The buffer (B37): how full it is now, and when and how the plan refills it.
+
+        ``reason`` when it is short and not refilled in the horizon: no hour in which charging
+        from the grid is cheaper than buying the shortfall later, and no solar surplus.
+        """
+        reserve = self._reserve
+        if reserve <= 0 or self.battery is None or not self.plan.steps:
+            return None
+        now = min(self.battery.energy_now, reserve)
+        out: dict[str, Any] = {"kwh": round(reserve, 3), "now_kwh": round(now, 3), "short": now < reserve - 0.01}
+        if not out["short"]:
+            return out
+        grid = False
+        for slot, st, from_grid in zip(self.slots, self.plan.steps, self.grid_kwh, strict=False):
+            grid = grid or from_grid > 0
+            if st.energy_after >= reserve - 0.01:
+                out["refill_at"] = (slot.start + QUARTER).isoformat()
+                out["refill_by"] = "grid" if grid else "solar"
+                return out
+        out["refill_at"] = None
+        out["reason"] = "no_cheap_moment"
+        return out
 
     def step_at(self, start: datetime) -> tuple[Action, Step, HorizonSlot] | None:
         for slot, action, st in zip(self.slots, self.plan.actions, self.plan.steps, strict=False):
@@ -413,6 +448,7 @@ class PlanOutcome:
             "expected_cost": round(self.expected_cost, 3),
             "empty_at": None if self.empty_at is None else self.empty_at.isoformat(),
             "no_prices_since": None if self.no_prices_since is None else self.no_prices_since.isoformat(),
+            "buffer": self.buffer,
         }
 
 

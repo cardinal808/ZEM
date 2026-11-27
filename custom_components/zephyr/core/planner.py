@@ -62,6 +62,10 @@ class Battery:
     deliver_kw: float
     eta_in: float = 0.93
     eta_out: float = 0.93
+    reserve_kwh: float = 0.0
+    """Buffer (B37): the bottom part of ``capacity_kwh`` the planner never plans to deliver from.
+    Charging into it is allowed; energy in it is worth the mean buy price (``plan``), so it is
+    refilled when that is cheaper than buying the shortfall later."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,12 +129,12 @@ def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margi
         charged += extra
         grid_charged = extra
     elif action is Action.DELIVER:
-        out = min(need, s1 * battery.eta_out, battery.deliver_kw * slot.hours)
+        out = min(need, max(s1 - battery.reserve_kwh, 0.0) * battery.eta_out, battery.deliver_kw * slot.hours)
         s1 -= out / battery.eta_out
         imp -= out
         delivered = out
     elif action is Action.EXPORT:
-        out = min(s1 * battery.eta_out, battery.deliver_kw * slot.hours)
+        out = min(max(s1 - battery.reserve_kwh, 0.0) * battery.eta_out, battery.deliver_kw * slot.hours)
         s1 -= out / battery.eta_out
         house = min(need, out)
         imp -= house
@@ -186,7 +190,14 @@ def plan(
     grid = [cap * i / n for i in range(n + 1)]
     # End value: what is left is worth the cheapest price in the horizon (§3.3).
     end_price = min(s.buy for s in slots) * (1.0 if cfg.allow_export else battery.eta_out)
-    future: dict[Action, list[float]] = {g: [-e * end_price for e in grid] for g in GROUPS}
+    # B37: energy in the buffer is worth what a shortfall would cost later (mean buy price).
+    reserve = min(battery.reserve_kwh, cap)
+    reserve_price = max(sum(s.buy for s in slots) / len(slots) * battery.eta_out, end_price)
+
+    def end_value(e: float) -> float:
+        return -(min(e, reserve) * reserve_price + max(e - reserve, 0.0) * end_price)
+
+    future: dict[Action, list[float]] = {g: [end_value(e) for e in grid] for g in GROUPS}
 
     def switch(prev: Action, action: Action) -> float:
         if action is Action.CHARGE and prev is not Action.CHARGE:
