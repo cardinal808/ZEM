@@ -16,8 +16,11 @@ export interface SetResult {
 export function parseNumber(text: string, locale: string): number | null {
   let s = text.trim().replace(/\s/g, "");
   if (!s) return null;
-  const decimal = new Intl.NumberFormat(locale).format(1.5).includes(",") ? "," : ".";
-  if (decimal === ",") s = s.replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
+  const decimal = new Intl.NumberFormat(locale).format(1.5).includes(",")
+    ? ","
+    : ".";
+  if (decimal === ",")
+    s = s.replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
   else s = s.replace(/,(?=\d{3}(\D|$))/g, "");
   if (!/^[-+]?\d*\.?\d+$/.test(s)) return null;
   const n = Number(s);
@@ -32,20 +35,32 @@ export function entityChoices(
 ): EntityChoice[] {
   if (!states) return [];
   return Object.entries(states)
-    .filter(([id, st]) => id.startsWith(`${domain}.`) && (!deviceClass || st.attributes?.device_class === deviceClass))
-    .map(([id, st]) => ({ id, name: String(st.attributes?.friendly_name ?? id) }))
+    .filter(
+      ([id, st]) =>
+        id.startsWith(`${domain}.`) &&
+        (!deviceClass || st.attributes?.device_class === deviceClass),
+    )
+    .map(([id, st]) => ({
+      id,
+      name: String(st.attributes?.friendly_name ?? id),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
 }
 
 /** The entity id behind what was typed or picked: an id, or a friendly name that is unique. */
-export function resolveEntity(text: string, choices: EntityChoice[]): string | null {
+export function resolveEntity(
+  text: string,
+  choices: EntityChoice[],
+): string | null {
   const s = text.trim();
   if (!s) return null;
   const byId = choices.find((c) => c.id === s);
   if (byId) return byId.id;
   const inLabel = /\(([a-z0-9_]+\.[a-z0-9_]+)\)$/.exec(s);
   if (inLabel && choices.some((c) => c.id === inLabel[1])) return inLabel[1];
-  const byName = choices.filter((c) => c.name.toLowerCase() === s.toLowerCase());
+  const byName = choices.filter(
+    (c) => c.name.toLowerCase() === s.toLowerCase(),
+  );
   return byName.length === 1 ? byName[0].id : null;
 }
 
@@ -56,13 +71,20 @@ export function choiceLabel(c: EntityChoice): string {
 
 /** Same value (lists compared item by item). */
 export function sameValue(a: unknown, b: unknown): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => v === b[i]);
+  if (Array.isArray(a) && Array.isArray(b))
+    return a.length === b.length && a.every((v, i) => v === b[i]);
   return (a ?? null) === (b ?? null);
 }
 
 /** A choice in a multi-select switched on or off, in the order of the options. */
-export function toggleChoice(value: string[], option: string, options: string[]): string[] {
-  const on = value.includes(option) ? value.filter((v) => v !== option) : [...value, option];
+export function toggleChoice(
+  value: string[],
+  option: string,
+  options: string[],
+): string[] {
+  const on = value.includes(option)
+    ? value.filter((v) => v !== option)
+    : [...value, option];
   return options.filter((o) => on.includes(o));
 }
 
@@ -70,4 +92,45 @@ export function toggleChoice(value: string[], option: string, options: string[])
 export function stepInterval(seconds: number, locale: string): string {
   if (seconds < 90) return `${Math.round(seconds)} s`;
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(seconds / 60)} min`;
+}
+
+/**
+ * Choices that match what was typed: every word must occur in the name or the id (any part,
+ * any case), best first: a match at the start of the name, then at the start of a word.
+ */
+export function searchChoices(
+  choices: EntityChoice[],
+  query: string,
+  limit = 8,
+): EntityChoice[] {
+  const words = query
+    .toLowerCase()
+    .split(/[\s()]+/)
+    .filter(Boolean);
+  if (!words.length) return choices.slice(0, limit);
+  const scored: [number, EntityChoice][] = [];
+  for (const c of choices) {
+    const name = c.name.toLowerCase();
+    const id = c.id.toLowerCase();
+    if (!words.every((w) => name.includes(w) || id.includes(w))) continue;
+    const first = words[0];
+    const score = name.startsWith(first)
+      ? 0
+      : new RegExp(
+            `(^|[\\s._-])${first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+          ).test(`${name} ${id}`)
+        ? 1
+        : 2;
+    scored.push([score, c]);
+  }
+  return scored
+    .sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name))
+    .slice(0, limit)
+    .map(([, c]) => c);
+}
+
+/** The domain of an entity id that was typed for a field of another domain; null otherwise. */
+export function wrongDomain(text: string, domain: string): string | null {
+  const m = /^([a-z_]+)\.[a-z0-9_]+$/.exec(text.trim());
+  return m && m[1] !== domain ? m[1] : null;
 }

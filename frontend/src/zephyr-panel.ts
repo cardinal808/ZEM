@@ -99,6 +99,8 @@ export class ZephyrPanel extends LitElement {
   @state() private savingsView?: SavingsView;
   @state() private stroomView?: StroomView;
   @state() private appliancesView?: AppliancesView;
+  /** Group to open in Instellingen (a link from elsewhere, e.g. the negative-price notice). */
+  @state() private openGroup: string | null = null;
   private appliancesFor: number | null = null;
   @state() private planCheck?: PlanCheckView;
   @state() private confirmLive = false;
@@ -816,6 +818,7 @@ export class ZephyrPanel extends LitElement {
         .save=${this.saveSettings}
         .setVacation=${this.setVacation}
         .saveHouse=${this.saveHouse}
+        .openGroup=${this.openGroup}
         .appliances=${this.appliancesView}
         .saveAppliances=${this.saveAppliances}
       ></zephyr-settings>`;
@@ -901,6 +904,10 @@ export class ZephyrPanel extends LitElement {
         .period=${this.period}
         .runs=${this.runInputs()}
         @zephyr-period=${(e: CustomEvent<Period>) => (this.period = e.detail)}
+        @zephyr-open-settings=${(e: CustomEvent<string>) => {
+          this.openGroup = e.detail;
+          this.show("settings");
+        }}
         ><zephyr-appliances
           .view=${this.appliancesView}
           .quarters=${this.planView?.quarters ?? []}

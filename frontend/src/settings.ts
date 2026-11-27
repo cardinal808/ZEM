@@ -16,6 +16,8 @@ import { customElement, property, state } from "lit/decorators.js";
 import { t, type Lang } from "./i18n";
 import {
   choiceLabel,
+  searchChoices,
+  wrongDomain,
   entityChoices,
   parseNumber,
   resolveEntity,
@@ -84,6 +86,12 @@ export interface VacationView {
   entities?: { switch: string | null; until: string | null };
 }
 
+const CURTAIL_FIELDS = [
+  "curtail_switch",
+  "curtail_number",
+  "curtail_inverter_w",
+];
+
 export interface SettingsView {
   groups: SettingsGroup[];
   house?: HouseDevice[];
@@ -123,6 +131,24 @@ export class ZephyrSettings extends LitElement {
   @property({ attribute: false }) save?: SaveSettings;
 
   @state() private group = 0;
+  /** Open this group once (set from a link elsewhere in the panel). */
+  @property({ attribute: false }) openGroup: string | null = null;
+  private openedFor: string | null = null;
+
+  private applyOpenGroup(changed: Map<string, unknown>): void {
+    if (
+      (changed.has("openGroup") || changed.has("view")) &&
+      this.openGroup &&
+      this.view &&
+      this.openedFor !== this.openGroup
+    ) {
+      const i = this.view.groups.findIndex((g) => g.key === this.openGroup);
+      if (i >= 0) {
+        this.group = i;
+        this.openedFor = this.openGroup;
+      }
+    }
+  }
   @state() private tip: string | null = null;
   /** Unsaved changes of fields that need a restart (value, or RESET for the standard value). */
   @state() private draft: Record<string, unknown> = {};
@@ -136,6 +162,7 @@ export class ZephyrSettings extends LitElement {
     // A fresh view after a restart: the drafts are saved, the note can go.
     if (changed.has("view") && changed.get("view") !== undefined)
       this.restarting = false;
+    this.applyOpenGroup(changed);
   }
 
   private get editable(): boolean {
@@ -565,36 +592,70 @@ export class ZephyrSettings extends LitElement {
     </div>`;
   }
 
+  /** The inverter fields only count when ZEPHYR curtails (B45, SPEC-ui-planner §2.3). */
+  private curtailOff(f: SettingField): boolean {
+    if (!CURTAIL_FIELDS.includes(f.key)) return false;
+    const mode = this.view?.groups
+      .flatMap((g) => g.fields)
+      .find((x) => x.key === "curtail_negative");
+    return !mode || this.shown(mode) !== "curtail_zephyr";
+  }
+
+  /** Limit set but no rated power: ZEPHYR cannot limit in % (a warning at the rated power). */
+  private curtailWarning(f: SettingField): boolean {
+    if (f.key !== "curtail_inverter_w" || this.curtailOff(f)) return false;
+    const number = this.view?.groups
+      .flatMap((g) => g.fields)
+      .find((x) => x.key === "curtail_number");
+    return !!number && !!this.shown(number) && !this.shown(f);
+  }
+
   private renderField(f: SettingField): TemplateResult {
     const open = this.tip === f.key;
     const id = `f-${f.key}`;
-    return html`<li class=${f.active === false ? "inactive" : ""}>
-      <div class="text">
-        <div class="labelrow">
-          <label for=${id}>${this.label(f.key)}</label>
-          <button
-            type="button"
-            class=${open ? "info on" : "info"}
-            aria-expanded=${open ? "true" : "false"}
-            aria-label=${this.tr("settings.more", { label: this.label(f.key) })}
-            @click=${() => (this.tip = open ? null : f.key)}
-          >
-            i
-          </button>
-          ${this.isModified(f) ? html`<span class="dot" title=${this.defaultText(f)}></span>` : nothing}
-          ${f.key in this.draft ? html`<span class="pending">${this.tr("settings.not_saved")}</span>` : nothing}
-          ${this.saved === f.key ? html`<span class="saved" role="status">${this.tr("settings.saved")}</span>` : nothing}
+    const off = this.curtailOff(f);
+    return html`${
+        f.key === "curtail_switch"
+          ? html`<li class="subhead">
+              <b>${this.tr("settings.curtail_head")}</b
+              >${off ? html`<span class="muted">${this.tr("settings.curtail_only")}</span>` : nothing}
+            </li>`
+          : nothing
+      }
+      <li class=${f.active === false || off ? "inactive" : ""}>
+        <div class="text">
+          <div class="labelrow">
+            <label for=${id}>${this.label(f.key)}</label>
+            <button
+              type="button"
+              class=${open ? "info on" : "info"}
+              aria-expanded=${open ? "true" : "false"}
+              aria-label=${this.tr("settings.more", { label: this.label(f.key) })}
+              @click=${() => (this.tip = open ? null : f.key)}
+            >
+              i
+            </button>
+            ${this.isModified(f) ? html`<span class="dot" title=${this.defaultText(f)}></span>` : nothing}
+            ${f.key in this.draft ? html`<span class="pending">${this.tr("settings.not_saved")}</span>` : nothing}
+            ${this.saved === f.key ? html`<span class="saved" role="status">${this.tr("settings.saved")}</span>` : nothing}
+          </div>
+          <span class="help">${this.tr(`settings.fields.${f.key}.help`)}</span>
+          ${open ? html`<div class="more" role="note">${this.tr(`settings.fields.${f.key}.more`)}</div>` : nothing}
+          ${this.meta(f)}
+          ${this.errors[f.key] ? html`<span class="error" role="alert">${this.errorText(f, this.errors[f.key])}</span>` : nothing}
+          ${this.curtailWarning(f) ? html`<span class="warnline" role="note">${this.tr("settings.curtail_rated_missing")}</span>` : nothing}
         </div>
-        <span class="help">${this.tr(`settings.fields.${f.key}.help`)}</span>
-        ${open ? html`<div class="more" role="note">${this.tr(`settings.fields.${f.key}.more`)}</div>` : nothing}
-        ${this.meta(f)}
-        ${this.errors[f.key] ? html`<span class="error" role="alert">${this.errorText(f, this.errors[f.key])}</span>` : nothing}
-      </div>
-      <div class="control">${this.control(f, id)}</div>
-    </li>`;
+        <div class="control">${this.control(f, id)}</div>
+      </li>`;
   }
 
+  @state() private domainErrors: Record<string, string> = {};
+
   private errorText(f: SettingField, code: string): string {
+    if (code === "entity_domain")
+      return this.tr("settings.errors.entity_domain", {
+        domain: this.domainErrors[f.key] ?? f.domain,
+      });
     if (code === "out_of_range" && f.min !== null && f.max !== null)
       return this.tr("settings.errors.range", {
         min: formatNumber(f.min, f.step, this.locale),
@@ -712,7 +773,10 @@ export class ZephyrSettings extends LitElement {
 
   private control(f: SettingField, id: string): TemplateResult {
     const disabled =
-      !this.editable || this.busy || (f.active === false && f.tariff);
+      !this.editable ||
+      this.busy ||
+      (f.active === false && f.tariff) ||
+      this.curtailOff(f);
     const value = this.shown(f);
     switch (f.kind) {
       case "bool":
@@ -809,6 +873,11 @@ export class ZephyrSettings extends LitElement {
     return entityChoices(this.states, f.domain, f.device_class);
   }
 
+  @state() private pickFor: string | null = null;
+  @state() private pickQuery = "";
+  @state() private pickIndex = 0;
+
+  /** Entity picker with its own list: filters on any part of the name and the id (works in the apps too). */
   private picker(
     f: SettingField,
     id: string,
@@ -817,24 +886,89 @@ export class ZephyrSettings extends LitElement {
     pick: (entityId: string | null, raw: string) => void,
   ): TemplateResult {
     const choices = this.choices(f);
-    return html`<input
+    const open = this.pickFor === id;
+    const hits = open ? searchChoices(choices, this.pickQuery) : [];
+    const commit = (raw: string) => {
+      this.pickFor = null;
+      const other = wrongDomain(raw, f.domain);
+      const resolved = resolveEntity(raw, choices);
+      if (!resolved && other) {
+        this.domainErrors = { ...this.domainErrors, [f.key]: f.domain };
+        this.localError(f, "entity_domain");
+        return;
+      }
+      pick(resolved, raw);
+    };
+    const choose = (c: EntityChoice) => {
+      this.pickFor = null;
+      pick(c.id, c.id);
+    };
+    return html`<span class="pickwrap">
+      <input
         id=${id}
         class="pick"
         type="text"
-        list=${`${id}-list`}
+        role="combobox"
+        aria-expanded=${open && hits.length ? "true" : "false"}
+        aria-controls=${`${id}-list`}
+        aria-autocomplete="list"
         placeholder=${this.tr("settings.choose_entity")}
         autocomplete="off"
-        .value=${text}
+        .value=${open ? this.pickQuery : text}
         ?disabled=${disabled}
         aria-invalid=${this.errors[f.key] ? "true" : "false"}
-        @change=${(e: Event) => {
-          const raw = (e.target as HTMLInputElement).value;
-          pick(resolveEntity(raw, choices), raw);
+        @focus=${(e: Event) => {
+          this.pickFor = id;
+          this.pickQuery = "";
+          this.pickIndex = 0;
+          (e.target as HTMLInputElement).select();
+        }}
+        @input=${(e: Event) => {
+          this.pickQuery = (e.target as HTMLInputElement).value;
+          this.pickIndex = 0;
+        }}
+        @keydown=${(e: KeyboardEvent) => {
+          if (!open) return;
+          if (e.key === "ArrowDown")
+            this.pickIndex = Math.min(hits.length - 1, this.pickIndex + 1);
+          else if (e.key === "ArrowUp")
+            this.pickIndex = Math.max(0, this.pickIndex - 1);
+          else if (e.key === "Enter") {
+            if (hits[this.pickIndex] && this.pickQuery.trim())
+              choose(hits[this.pickIndex]);
+            else commit(this.pickQuery);
+          } else if (e.key === "Escape") this.pickFor = null;
+          else return;
+          e.preventDefault();
+        }}
+        @blur=${() => {
+          if (this.pickFor !== id) return;
+          const raw = this.pickQuery;
+          this.pickFor = null;
+          if (raw.trim()) commit(raw);
         }}
       />
-      <datalist id=${`${id}-list`}>
-        ${choices.map((c) => html`<option value=${choiceLabel(c)}></option>`)}
-      </datalist>`;
+      ${
+        open && hits.length
+          ? html`<ul class="picklist" id=${`${id}-list`} role="listbox">
+              ${hits.map(
+                (c, i) =>
+                  html`<li
+                    role="option"
+                    aria-selected=${i === this.pickIndex ? "true" : "false"}
+                    class=${i === this.pickIndex ? "on" : ""}
+                    @mousedown=${(e: Event) => {
+                      e.preventDefault(); // keep the focus until the choice is made
+                      choose(c);
+                    }}
+                  >
+                    <span>${c.name}</span><small>${c.id}</small>
+                  </li>`,
+              )}
+            </ul>`
+          : nothing
+      }
+    </span>`;
   }
 
   private entity(
@@ -1309,6 +1443,63 @@ export class ZephyrSettings extends LitElement {
       background: var(--z-card);
       color: var(--z-text);
       font: inherit;
+    }
+    li.subhead {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 14px 0 0;
+    }
+    .warnline {
+      color: var(--z-warn-text, #7a4a06);
+      background: var(--z-warn-bg, #fdf0dc);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12.5px;
+    }
+    .pickwrap {
+      position: relative;
+      display: inline-block;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .pickwrap .pick {
+      width: 100%;
+    }
+    .picklist {
+      position: absolute;
+      z-index: 5;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      background: var(--z-card);
+      border: 1px solid var(--z-border);
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      max-height: 300px;
+      overflow: auto;
+    }
+    .picklist li {
+      display: flex;
+      flex-direction: column;
+      padding: 8px 10px;
+      border-top: 1px solid var(--z-border);
+      cursor: pointer;
+    }
+    .picklist li:first-child {
+      border-top: 0;
+    }
+    .picklist li.on,
+    .picklist li:hover {
+      background: color-mix(in srgb, var(--z-charge) 10%, var(--z-card));
+    }
+    .picklist small {
+      color: var(--z-muted);
+      font-size: 11.5px;
+      word-break: break-all;
     }
     .entityrow {
       display: inline-flex;

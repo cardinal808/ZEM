@@ -448,8 +448,8 @@
           "plan_buffer": "The planner never plans below the minimum state of charge plus this buffer; the controller may use it when the house uses more than expected. 0 = off.",
           "vacation_when_away": "Switches the vacation on by itself when nobody has been home (zone.home = 0) for 24 hours, and off when someone is back. While on vacation the planner uses the standby use, the air conditioner counts as off, and the hours are learned apart from the normal profile.",
           "workday_entity": "Optional. The binary sensor of the Workday integration. Holidays then count as weekend days in the consumption profile (learning and planning). Without it: Monday-Friday are workdays.",
-          "curtail_negative": "What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and turns on the switch below.",
-          "curtail_switch": "On while the export price is negative (only with ZEPHYR).",
+          "curtail_negative": "What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and curtails the inverter: with the switch or with the power limit below (one of the two).",
+          "curtail_switch": "On while the export price is negative. Alternative to the power limit.",
           "curtail_number": "Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.",
           "curtail_inverter_w": "Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set."
         }

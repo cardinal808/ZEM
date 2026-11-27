@@ -114,7 +114,15 @@
     "spread": "spread {value}",
     "spread_title": "Hoeveel duurder het duurste kwartier is dan het goedkoopste. Ruwe maat voor wat laden en later leveren kan opleveren, vóór verlies (± 14 %) en slijtage. Bij prijzen rond nul of negatief: het verschil in euro.",
     "tip_appliances": "Apparaten: {kwh}",
-    "runs_label": "Geplande apparaten"
+    "runs_label": "Geplande apparaten",
+    "curtail_mark": "Zonoverschot wordt afgeknepen",
+    "tip_curtail": "Terugleverprijs {price}: zonoverschot {kwh} wordt afgeknepen",
+    "tip_export_cost": "Teruglevering kost {euro} (geen afknijpen ingesteld)",
+    "neg_today": "Vandaag {hours} uur negatieve terugleverprijs. Afknijpen staat uit; dat kost naar verwachting {euro}.",
+    "neg_tomorrow": "Morgen {hours} uur negatieve terugleverprijs. Afknijpen staat uit; dat kost naar verwachting {euro}.",
+    "neg_both": "Vandaag en morgen {hours} uur negatieve terugleverprijs. Afknijpen staat uit; dat kost naar verwachting {euro}.",
+    "neg_link": "Instelling aanpassen →",
+    "legend_negative": "Negatieve terugleverprijs"
   },
   "blocks": {
     "title": "Blokken",
@@ -421,12 +429,12 @@
       },
       "curtail_negative": {
         "label": "Zonoverschot bij negatieve prijs",
-        "help": "Wat er met zonoverschot gebeurt als de terugleverprijs onder nul is. Uit: het gaat het net op en kost geld, de planner maakt eerst ruimte in de accu. Ander systeem: een omvormerbegrenzer knijpt zelf af. ZEPHYR: ZEPHYR blokkeert teruglevering van de eigen panelen van de sets en zet de schakelaar hieronder aan.",
+        "help": "Wat er met zonoverschot gebeurt als de terugleverprijs onder nul is. Uit: het gaat het net op en kost geld, de planner maakt eerst ruimte in de accu. Ander systeem: een omvormerbegrenzer knijpt zelf af. ZEPHYR: ZEPHYR blokkeert teruglevering van de eigen panelen van de sets en knijpt de omvormer af: met de schakelaar of met de vermogensbegrenzing hieronder (één van beide).",
         "more": "Met saldering (tot 2027) is de terugleverprijs zelden negatief (de energiebelasting zit erin); zonder saldering gebeurt het op zonnige middagen in voorjaar en zomer. De eigen panelen van de sets blokkeert ZEPHYR met gridReverse; een omvormer zoals een SolarEdge heeft een schakelaar nodig (bijv. een sjabloon-schakelaar voor een exportbegrenzer)."
       },
       "curtail_switch": {
         "label": "Schakelaar omvormer afknijpen",
-        "help": "Aan zolang de terugleverprijs negatief is (alleen met ZEPHYR).",
+        "help": "Aan zolang de terugleverprijs negatief is. Alternatief voor de vermogensbegrenzing.",
         "more": "ZEPHYR zet deze schakelaar aan aan het begin van een kwartier met een negatieve terugleverprijs en daarna weer uit. Een sjabloon-schakelaar kan elk script aanroepen of de modus van een exportbegrenzer zetten."
       },
       "solar_power_entities": {
@@ -483,7 +491,8 @@
       "p1_pair_same": "Afname en teruglevering moeten twee verschillende sensoren zijn.",
       "excluded_needs_counter": "De klimaat-entiteit werkt alleen samen met de energieteller van de airco. Kies de teller of maak de klimaat-entiteit leeg.",
       "failed": "Bewaren lukte niet. Probeer het opnieuw.",
-      "range": "Kies een waarde van {min} tot en met {max}{unit}."
+      "range": "Kies een waarde van {min} tot en met {max}{unit}.",
+      "entity_domain": "Dit veld verwacht een {domain}-entiteit"
     },
     "vac_active": "Op vakantie",
     "vac_home": "Thuis",
@@ -513,7 +522,10 @@
     "appl_until": "Klaar om",
     "appl_shown": "Tonen op Stroom",
     "appl_after": "Altijd na de was",
-    "appl_after_help": "plan de droger mee (één keer, na de laatste was) als je de was plant"
+    "appl_after_help": "plan de droger mee (één keer, na de laatste was) als je de was plant",
+    "curtail_head": "Omvormer buiten de sets (kies één)",
+    "curtail_only": "Alleen bij “ZEPHYR knijpt af”.",
+    "curtail_rated_missing": "Vul het nominale vermogen in, anders begrenst ZEPHYR niet."
   },
   "airco": {
     "blocked": "Airco {kw} kW · niet uit de accu",
@@ -749,7 +761,10 @@
     "charging": "Accu laadt",
     "delivering": "Accu levert",
     "battery": "Accu",
-    "estimated": "geschat"
+    "estimated": "geschat",
+    "curtailed": "Afgeknepen tot {pct} %",
+    "inverter_off": "Omvormer uit",
+    "export_blocked": "Teruglevering geblokkeerd"
   },
   "stroom": {
     "zero_title": "Nul op de meter vandaag",
