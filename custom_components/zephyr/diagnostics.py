@@ -121,6 +121,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
     return {
         "options": async_redact_data(dict(entry.options), TO_REDACT),
         "foreign_entities": foreign_entities(hass, entry.options),
+        "prices": runtime.prices.diagnostics() if runtime.prices is not None else None,
         "totals": dataclasses.asdict(runtime.totals()),
         "sets": sets,
         "control": control_info,
