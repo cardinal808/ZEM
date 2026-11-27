@@ -210,6 +210,9 @@ class ZephyrEngine:
         self._p1_interval: float | None = None
         self._block_since: float | None = None
         self._export_blocked: bool | None = None
+        self.peak_kwh = 0.0
+        """Energy of short peaks the step filter (B20) left to the grid, since the start (PLANNING 1.3)."""
+        self._peak_at: tuple[float, float] | None = None
         self._price_block: Reason | None = None
         self._align_p1 = False
         self._grid_history: deque[tuple[float, float]] = deque(maxlen=100)
@@ -747,6 +750,15 @@ class ZephyrEngine:
         self._grid_reverse(now, sets, commands)
         return commands
 
+    def _count_peak(self, now: float, held_w: float) -> None:
+        """Integrate the part of the grid power the controller does not see (a held peak)."""
+        if self._peak_at is not None:
+            t, w = self._peak_at
+            dt = now - t
+            if 0 < dt <= self.settings.step_hold + 5 and w > 0:
+                self.peak_kwh += w / 1000 * dt / 3600
+        self._peak_at = (now, max(held_w, 0.0))
+
     def _grid_reverse(self, now: float, sets: Sequence[SetView], commands: list[Command]) -> None:
         """Keep ``gridReverse`` of every set as wanted; rides along with a command of this step."""
         if self._export_blocked is None:
@@ -805,6 +817,7 @@ class ZephyrEngine:
         assert self._p1_value is not None
         charging_side = battery > 0 or self.controller.charging_side
         value = self._p1_value if filtered is None or (charging_side and self.grid_filter.holding) else filtered
+        self._count_peak(now, self._p1_value - value)
         if not self._align_p1:
             return value
         # Live: the grid as it was when the set's report was made (see ``set_live``).

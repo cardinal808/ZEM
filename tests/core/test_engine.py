@@ -415,3 +415,24 @@ def test_grid_reverse_rides_along_with_a_power_command() -> None:
     e.p1_reported(0, 600)
     result = e.step(0, [_view()], export_blocked=True)
     assert [(c.kind, c.props["gridReverse"]) for c in result.commands] == [("power", 2)]  # one write, not two
+
+
+def test_short_peak_left_to_the_grid_is_counted() -> None:
+    """A 2 kW tap for 6 s while delivering: the step filter holds it, the engine counts it."""
+    e = ZephyrEngine(Settings(min_soc=10, max_soc=100))
+    view = _view()
+    t = 0.0
+    for _ in range(10):
+        e.p1_reported(t, 100)
+        e.step(t, [view])
+        t += 1.0
+    for _ in range(6):
+        e.p1_reported(t, 2100)
+        e.step(t, [view])
+        t += 1.0
+    for _ in range(5):
+        e.p1_reported(t, 100)
+        e.step(t, [view])
+        t += 1.0
+    assert e.grid_filter.holds == 1
+    assert e.peak_kwh == pytest.approx(2.0 * 6 / 3600, rel=0.2)
