@@ -57,7 +57,7 @@ class EnergyRecorder:
         unsubs: list[Callable[[], None]] = []
         for coordinator in self.runtime.coordinators.values():
             unsubs.append(coordinator.async_add_listener(self._updated(coordinator)))
-        unsubs.append(async_track_time_interval(self.hass, lambda _now: self._save(), SAVE_EVERY))
+        unsubs.append(async_track_time_interval(self.hass, self._on_interval, SAVE_EVERY))
 
         def stop() -> None:
             for unsub in unsubs:
@@ -65,6 +65,12 @@ class EnergyRecorder:
             self.hass.async_create_task(self._store.async_save(self.counters.as_dict()))
 
         return stop
+
+    @callback
+    def _on_interval(self, _now: datetime) -> None:
+        # A plain lambda here ran in a worker thread (not a callback, not a coroutine) and
+        # scheduled the store's timer from there: the loop's timer heap broke now and then.
+        self._save()
 
     def _save(self) -> None:
         self._store.async_delay_save(self.counters.as_dict, 1)

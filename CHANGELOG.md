@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.56 — Energy counters saved from the event loop (flaky tests fixed)
+- The energy counters' save every 5 minutes was given to Home Assistant as a plain lambda; HA ran it in a worker thread, which scheduled the store's timer on the event loop from there. The loop's timer heap is not thread-safe: now and then it broke with "list changed size during iteration" (the known flaky HA test, a different test each time; in a running HA possibly a rare error in the log). Now a `@callback` method on the event loop.
+- HA tests: a guard fails any test in which a timer is scheduled from another thread.
+
 ### 0.8.55 — Write and relay counters over a restart; no 0 W at a restart
 - **A restart of Home Assistant no longer sets the sets to 0 W** while live: they keep their last command and ZEPHYR takes over again after the start (B35, B47). 0 W opened the relay and drew from the grid for the minute of the restart. A real stop still writes 0 W.
 - **Counters kept over a restart** (OPDRACHT-tellers-relais-flash): the write and relay events of the last 24 hours and the totals per day (7 days) are stored (`zephyr.<entry>.writes`, every 5 minutes, at a stop and an unload). The 1 h and 24 h windows run on after a restart.
