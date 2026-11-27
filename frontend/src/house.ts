@@ -218,6 +218,12 @@ export function ownLine(box: [number, number], point: [number, number], w: numbe
   return [[x, y], [px, y], [px, py]];
 }
 
+/** A flow line on an own picture from a spot to the Huis spot: level first, then straight. */
+export function hubPath(from: Pt, hub: Pt): Pt[] {
+  if (from[0] === hub[0] || from[1] === hub[1]) return [from, hub];
+  return [from, [hub[0], from[1]], hub];
+}
+
 @customElement("zephyr-house")
 export class ZephyrHouse extends LitElement {
   @property({ attribute: false }) now?: Now;
@@ -345,18 +351,23 @@ export class ZephyrHouse extends LitElement {
 
   @state() private dom: Source | null = null;
 
+  /** Colour of the main line: the source that supplies the most now (with a margin). */
+  private mainColor(f: ReturnType<typeof flows>): string {
+    const dom = dominant(
+      { sun: f.solar - f.paths.solar_battery, batt: Math.max(0, -f.battery), grid: Math.max(0, f.grid) },
+      this.dom,
+    );
+    if (dom !== this.dom) queueMicrotask(() => (this.dom = dom));
+    return dom ? SOURCE_COLOR[dom] : COLORS.house;
+  }
+
   /** The default house: every source runs to the main line, from there to the floors and the house. */
   private defaultStage(it: Record<ItemKey, Item>): TemplateResult {
     const L = LAYOUT;
     const now = this.now!;
     const airco = now.excluded?.active ? (now.excluded.power_w ?? 0) : 0;
     const f = flows(now.solar_w, now.grid_w, now.battery_w, airco);
-    const dom = dominant(
-      { sun: f.solar - f.paths.solar_battery, batt: Math.max(0, -f.battery), grid: Math.max(0, f.grid) },
-      this.dom,
-    );
-    if (dom !== this.dom) queueMicrotask(() => (this.dom = dom));
-    const c = dom ? SOURCE_COLOR[dom] : COLORS.house;
+    const c = this.mainColor(f);
     const rev = (pts: Pt[], yes: boolean): Pt[] => (yes ? [...pts].reverse() : pts);
     const bat = f.battery;
     const busOn = f.house >= 10 || Math.abs(bat) >= 10 || Math.abs(f.grid) >= 10;
@@ -403,21 +414,60 @@ export class ZephyrHouse extends LitElement {
     const shown = ITEM_KEYS.filter(
       (k) => !own.hidden.includes(k) && own.items[k]?.box,
     );
+    const now = this.now!;
+    const airco = now.excluded?.active ? (now.excluded.power_w ?? 0) : 0;
+    const f = flows(now.solar_w, now.grid_w, now.battery_w, airco);
+    const px = (k: ItemKey): Pt | null => {
+      const p = own.items[k]?.point;
+      return p && shown.includes(k) ? [p[0] * w, p[1] * h] : null;
+    };
+    // With a Huis spot, every flow runs through it: sources to it, consumers from it.
+    const hub = px("home");
+    const c = this.mainColor(f);
+    const flowsSvg = hub
+      ? svg`${(
+          [
+            ["roof", COLORS.sun, it.roof.power, false],
+            ["shed_solar", COLORS.sun, it.shed_solar.power, false],
+            ["battery", COLORS.batt, Math.abs(f.battery), f.battery > 0],
+            ["grid", COLORS.grid, Math.abs(f.grid), f.grid < 0],
+          ] as [ItemKey, string, number, boolean][]
+        ).map(([k, color, power, back]) => {
+          const at = px(k);
+          if (!at) return nothing;
+          const pts = hubPath(at, hub);
+          return this.line(back ? [...pts].reverse() : pts, color, power);
+        })}
+        ${(["ev", "attic", "first", "ground"] as ItemKey[]).map((k) => {
+          const at = px(k);
+          return at && (k !== "ev" || it.ev.active) ? this.line(hubPath(at, hub).reverse(), c, it[k].power) : nothing;
+        })}
+        ${this.dot(hub, c)}`
+      : nothing;
     return html`<div class="stage own" style=${`aspect-ratio:${w}/${h}`}>
       ${this.ownUrl ? html`<img src=${this.ownUrl} alt="" draggable="false" />` : nothing}
       <svg viewBox="0 0 ${w} ${h}" aria-hidden="true">
+        ${flowsSvg}
         ${shown.map((k) => {
           const place = own.items[k];
           if (!place?.point || !place.box) return nothing;
           const pts = ownLine(place.box, place.point, w, h);
           const end = pts[pts.length - 1];
-          return svg`${this.line(pts, it[k].color, it[k].power)}${this.dot(end, it[k].color)}`;
+          const color = k === "home" ? c : it[k].color;
+          // With a Huis spot the box only points at its spot; the flow runs on the hub lines.
+          return hub
+            ? svg`<path d=${`M${pts.map((q) => q.join(" ")).join(" L")}`} class="pointer" stroke=${color}></path>${this.dot(end, color)}`
+            : svg`${this.line(pts, color, it[k].power)}${this.dot(end, color)}`;
         })}
       </svg>
       <div class="boxes">
         ${shown.map((k) => {
           const [x, y] = own.items[k]?.box ?? [0, 0];
-          return this.placed(x, y, it[k]);
+          const item =
+            k === "home"
+              ? { ...it.home, color: c, lines: [...it.home.lines, ...(flowParts(f.paths).length ? this.header(f.paths).lines : [])] }
+              : it[k];
+          return this.placed(x, y, item);
         })}
       </div>
     </div>`;
@@ -691,6 +741,11 @@ export class ZephyrHouse extends LitElement {
       stroke-dasharray: 3 14;
       opacity: 0.85;
       animation: run 1s linear infinite;
+    }
+    .stage > svg .pointer {
+      fill: none;
+      stroke-width: 2;
+      opacity: 0.7;
     }
     .stage > svg text.tag {
       font: 700 26px var(--z-font);

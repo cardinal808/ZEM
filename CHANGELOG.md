@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.58 — Stroom: flows on an own picture
+- On an own picture, place the item *Huis* (the meter cupboard) with its spot: then every flow runs through that spot like the main line on the default picture: roof and shed panels, battery and grid to *Huis* (battery and grid reverse when charging or exporting), and from *Huis* to the floors and the charge point, with moving dots and the colour of the biggest source. Each box then only points at its spot with a thin line.
+- The *Huis* box shows the total, the rest and the flows in words. Without a *Huis* spot the picture works as before.
+- Test: the line from a spot to *Huis* (vitest).
+
 ### 0.8.57 — Stroom: all power flows on the house picture
 - New default picture: the floors moved right so a **main line** runs between the house and the floors. Every source runs to it (battery and shed panels along the top, roof panels straight across, grid from the *Net* box); from it branches go to floors with a measured consumer, into the house (the rest, labelled *Overig*) and to the charge point. Moving dots show the direction: battery charging/delivering and grid import/export reverse their line (Bjorn 27-11: the battery's 540 W "went nowhere").
 - The main line, its branches and the *Huis* box take the colour of the source that supplies the most now (sun yellow, battery green, grid red); another source takes over only when it is 50 W bigger. Grid is red now.
