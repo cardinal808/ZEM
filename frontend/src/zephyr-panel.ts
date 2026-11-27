@@ -1,11 +1,36 @@
 // ZEPHYR panel (M6, SPEC-ui). UI-1: header, menu and the three cards of *Now* on the Plan screen.
-import { LitElement, css, html, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
+import {
+  LitElement,
+  css,
+  html,
+  nothing,
+  svg,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { clock, euro, kwh, minutesUntil, percent, sameDay, signedWatts, watts } from "./format";
+import {
+  clock,
+  euro,
+  kwh,
+  minutesUntil,
+  percent,
+  sameDay,
+  signedWatts,
+  watts,
+} from "./format";
 import { language, t, type Lang } from "./i18n";
 import { aircoLine } from "./airco";
-import { blocksFor, days, quartersOf, stats, type Period, type PlanBlock, type PlanView } from "./plan";
+import {
+  blocksFor,
+  days,
+  quartersOf,
+  stats,
+  type Period,
+  type PlanBlock,
+  type PlanView,
+} from "./plan";
 import { storedPeriod } from "./prices-plan";
 import "./prices-plan";
 import "./sets";
@@ -16,13 +41,21 @@ import type { SetResult } from "./settings-edit";
 import { blockerText, fastButtons, type EventsView } from "./diag";
 import "./diagnostics";
 import "./savings";
+import "./stroom";
+import type { StroomView } from "./stroom";
 import type { PlanCheckView } from "./diag";
 import type { BackfillRequest, BackfillResult, SavingsView } from "./savings";
 import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
-import type { HomeAssistant, Now, PanelInfo, PlanNow, SubscribeEvent } from "./types";
+import type {
+  HomeAssistant,
+  Now,
+  PanelInfo,
+  PlanNow,
+  SubscribeEvent,
+} from "./types";
 
-type View = "plan" | "sets" | "savings" | "settings" | "diagnostics";
+type View = "plan" | "stroom" | "sets" | "savings" | "settings" | "diagnostics";
 type Status = "loading" | "ok" | "not_loaded" | "disconnected" | "reloading";
 
 const DEFAULT_STATIC = "/zephyr_static";
@@ -62,6 +95,7 @@ export class ZephyrPanel extends LitElement {
   @state() private period: Period = storedPeriod();
   @state() private eventsView?: EventsView;
   @state() private savingsView?: SavingsView;
+  @state() private stroomView?: StroomView;
   @state() private planCheck?: PlanCheckView;
   @state() private confirmLive = false;
   @state() private controlBusy = false;
@@ -94,19 +128,31 @@ export class ZephyrPanel extends LitElement {
   }
 
   private get timeZone(): string {
-    return this.hass?.config.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return (
+      this.hass?.config.time_zone ??
+      Intl.DateTimeFormat().resolvedOptions().timeZone
+    );
   }
 
-  private tr(key: string, params: Record<string, string | number> = {}): string {
+  private tr(
+    key: string,
+    params: Record<string, string | number> = {},
+  ): string {
     return t(this.uiLang, key, params);
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     loadFonts(this.base);
-    this.clockTimer = window.setInterval(() => (this.clockMs = Date.now()), 30_000);
+    this.clockTimer = window.setInterval(
+      () => (this.clockMs = Date.now()),
+      30_000,
+    );
     // The running quarter moves on even without a new plan.
-    this.planTimer = window.setInterval(() => void this.loadPlan(true), 300_000);
+    this.planTimer = window.setInterval(
+      () => void this.loadPlan(true),
+      300_000,
+    );
     if (this.hass) void this.subscribe();
   }
 
@@ -123,8 +169,14 @@ export class ZephyrPanel extends LitElement {
   protected override updated(changed: PropertyValues<this>): void {
     if (!changed.has("hass") || !this.hass) return;
     this.toggleAttribute("dark", Boolean(this.hass.themes?.darkMode));
-    if (this.hass.connection !== this.watchedConnection) this.watch(this.hass.connection);
-    if (!this.unsubscribe && !this.subscribing && this.status !== "disconnected") void this.subscribe();
+    if (this.hass.connection !== this.watchedConnection)
+      this.watch(this.hass.connection);
+    if (
+      !this.unsubscribe &&
+      !this.subscribing &&
+      this.status !== "disconnected"
+    )
+      void this.subscribe();
   }
 
   // --- connection ------------------------------------------------------------
@@ -141,7 +193,10 @@ export class ZephyrPanel extends LitElement {
 
   private watch(connection: HomeAssistant["connection"] | undefined): void {
     this.watchedConnection?.removeEventListener("ready", this.onReady);
-    this.watchedConnection?.removeEventListener("disconnected", this.onDisconnected);
+    this.watchedConnection?.removeEventListener(
+      "disconnected",
+      this.onDisconnected,
+    );
     this.watchedConnection = connection;
     connection?.addEventListener("ready", this.onReady);
     connection?.addEventListener("disconnected", this.onDisconnected);
@@ -152,11 +207,16 @@ export class ZephyrPanel extends LitElement {
     this.subscribing = true;
     window.clearTimeout(this.retryTimer);
     try {
-      this.unsubscribe = await this.hass.connection.subscribeMessage<SubscribeEvent>((event) => this.onEvent(event), {
-        type: "zephyr/subscribe",
-      });
+      this.unsubscribe =
+        await this.hass.connection.subscribeMessage<SubscribeEvent>(
+          (event) => this.onEvent(event),
+          {
+            type: "zephyr/subscribe",
+          },
+        );
     } catch (err) {
-      if ((err as { code?: string }).code === "not_loaded") this.status = "not_loaded";
+      if ((err as { code?: string }).code === "not_loaded")
+        this.status = "not_loaded";
       this.retry(10_000);
     } finally {
       this.subscribing = false;
@@ -202,19 +262,36 @@ export class ZephyrPanel extends LitElement {
     }
   }
 
+  private async loadStroom(): Promise<void> {
+    if (!this.hass || this.view !== "stroom") return;
+    try {
+      this.stroomView = await this.hass.callWS<StroomView>({
+        type: "zephyr/stroom",
+      });
+    } catch {
+      // keep the last view; the header shows when the connection is gone
+    }
+  }
+
   private async loadSavings(): Promise<void> {
     if (!this.hass || this.view !== "savings") return;
     try {
-      this.savingsView = await this.hass.callWS<SavingsView>({ type: "zephyr/savings" });
+      this.savingsView = await this.hass.callWS<SavingsView>({
+        type: "zephyr/savings",
+      });
     } catch {
       // Not loaded: the banner says so.
     }
   }
 
-  private backfillSavings = async (req: BackfillRequest | null): Promise<BackfillResult> => {
+  private backfillSavings = async (
+    req: BackfillRequest | null,
+  ): Promise<BackfillResult> => {
     if (!this.hass) return { ok: false, error: "no_connection" };
     const result = await this.hass.callWS<BackfillResult>(
-      req ? { type: "zephyr/savings/backfill", ...req } : { type: "zephyr/savings/backfill", clear: true },
+      req
+        ? { type: "zephyr/savings/backfill", ...req }
+        : { type: "zephyr/savings/backfill", clear: true },
     );
     if (result.ok) await this.loadSavings();
     return result;
@@ -223,7 +300,9 @@ export class ZephyrPanel extends LitElement {
   private async loadSettings(): Promise<void> {
     if (!this.hass) return;
     try {
-      this.settingsView = await this.hass.callWS<SettingsView>({ type: "zephyr/settings/get" });
+      this.settingsView = await this.hass.callWS<SettingsView>({
+        type: "zephyr/settings/get",
+      });
     } catch {
       // Not loaded: the banner says so.
     }
@@ -232,8 +311,13 @@ export class ZephyrPanel extends LitElement {
   private async loadEvents(): Promise<void> {
     if (!this.hass || this.view !== "diagnostics") return;
     try {
-      this.eventsView = await this.hass.callWS<EventsView>({ type: "zephyr/events" });
-      this.planCheck = await this.hass.callWS<PlanCheckView>({ type: "zephyr/plan_check", days: 14 });
+      this.eventsView = await this.hass.callWS<EventsView>({
+        type: "zephyr/events",
+      });
+      this.planCheck = await this.hass.callWS<PlanCheckView>({
+        type: "zephyr/plan_check",
+        days: 14,
+      });
     } catch {
       // Not loaded: the banner says so.
     }
@@ -244,12 +328,21 @@ export class ZephyrPanel extends LitElement {
   }
 
   /** Control through ZEPHYR's own entities (mode select, live switch), the same path as automations (SPEC-ui §3). */
-  private async callService(domain: string, service: string, data: Record<string, unknown>): Promise<void> {
+  private async callService(
+    domain: string,
+    service: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
     if (!this.hass || this.controlBusy) return;
     this.controlBusy = true;
     this.controlError = null;
     try {
-      await this.hass.callWS({ type: "call_service", domain, service, service_data: data });
+      await this.hass.callWS({
+        type: "call_service",
+        domain,
+        service,
+        service_data: data,
+      });
     } catch (err) {
       this.controlError = (err as { message?: string })?.message ?? String(err);
     } finally {
@@ -263,14 +356,23 @@ export class ZephyrPanel extends LitElement {
     // Until the new mode shows (updates come every 2 s), the fast buttons wait: no double taps.
     this.pendingMode = mode;
     window.clearTimeout(this.pendingTimer);
-    this.pendingTimer = window.setTimeout(() => (this.pendingMode = null), 5000);
-    void this.callService("select", "select_option", { entity_id: entity, option: mode });
+    this.pendingTimer = window.setTimeout(
+      () => (this.pendingMode = null),
+      5000,
+    );
+    void this.callService("select", "select_option", {
+      entity_id: entity,
+      option: mode,
+    });
   }
 
   private async setLive(on: boolean): Promise<void> {
     const entity = this.now?.entities.live;
     this.confirmLive = false;
-    if (entity) await this.callService("switch", on ? "turn_on" : "turn_off", { entity_id: entity });
+    if (entity)
+      await this.callService("switch", on ? "turn_on" : "turn_off", {
+        entity_id: entity,
+      });
   }
 
   private downloadDiagnostics = async (): Promise<void> => {
@@ -300,7 +402,10 @@ export class ZephyrPanel extends LitElement {
   };
 
   /** Vacation through ZEPHYR's own entities (switch and end time), like an automation would (B42). */
-  private setVacation = async (on: boolean, until: string | null): Promise<void> => {
+  private setVacation = async (
+    on: boolean,
+    until: string | null,
+  ): Promise<void> => {
     const ent = this.settingsView?.vacation?.entities;
     if (!this.hass || !ent?.switch) return;
     this.controlError = null;
@@ -310,18 +415,33 @@ export class ZephyrPanel extends LitElement {
           type: "call_service",
           domain: "datetime",
           service: "set_value",
-          service_data: { entity_id: ent.until, datetime: `${until.replace("T", " ")}:00` },
+          service_data: {
+            entity_id: ent.until,
+            datetime: `${until.replace("T", " ")}:00`,
+          },
         });
-      await this.hass.callWS({ type: "call_service", domain: "switch", service: on ? "turn_on" : "turn_off", service_data: { entity_id: ent.switch } });
+      await this.hass.callWS({
+        type: "call_service",
+        domain: "switch",
+        service: on ? "turn_on" : "turn_off",
+        service_data: { entity_id: ent.switch },
+      });
     } catch (err) {
       this.controlError = (err as { message?: string })?.message ?? String(err);
     }
     await this.loadSettings();
   };
 
-  private saveSettings = async (changes: Record<string, unknown>, reset: string[]): Promise<SetResult> => {
+  private saveSettings = async (
+    changes: Record<string, unknown>,
+    reset: string[],
+  ): Promise<SetResult> => {
     if (!this.hass) return { ok: false, errors: { base: "failed" } };
-    const result = await this.hass.callWS<SetResult>({ type: "zephyr/settings/set", changes, reset });
+    const result = await this.hass.callWS<SetResult>({
+      type: "zephyr/settings/set",
+      changes,
+      reset,
+    });
     if (result.ok) {
       if (result.reload) {
         // ZEPHYR restarts: ask again once it is back.
@@ -342,6 +462,9 @@ export class ZephyrPanel extends LitElement {
       void this.loadSettings();
     } else if (view === "savings") {
       void this.loadSavings();
+    } else if (view === "stroom") {
+      void this.loadStroom();
+      this.setsTimer = window.setInterval(() => void this.loadStroom(), 60_000);
     } else if (view === "diagnostics") {
       void this.loadEvents();
       this.setsTimer = window.setInterval(() => void this.loadEvents(), 15_000);
@@ -384,6 +507,7 @@ export class ZephyrPanel extends LitElement {
     const oneSet = (now?.sets_total ?? 1) <= 1;
     const items: [View, string][] = [
       ["plan", "menu.plan"],
+      ["stroom", "menu.stroom"],
       ["sets", oneSet ? "menu.battery" : "menu.sets"],
       ["savings", "menu.savings"],
       ["settings", "menu.settings"],
@@ -410,7 +534,9 @@ export class ZephyrPanel extends LitElement {
         </nav>
         <div class="meta">
           ${now ? this.renderControls(now) : nothing}
-          <span class="time">${clock(new Date(this.clockMs).toISOString(), this.locale, this.timeZone)}</span>
+          <span class="time"
+            >${clock(new Date(this.clockMs).toISOString(), this.locale, this.timeZone)}</span
+          >
         </div>
       </header>
     `;
@@ -420,16 +546,25 @@ export class ZephyrPanel extends LitElement {
     const canMode = this.admin && Boolean(now.entities?.mode);
     const canLive = this.admin && Boolean(now.entities?.live);
     const liveText = this.tr(now.live ? "header.live" : "header.shadow");
-    const liveTitle = this.tr(now.live ? "header.live_title" : "header.shadow_title");
-    return html`${canMode
+    const liveTitle = this.tr(
+      now.live ? "header.live_title" : "header.shadow_title",
+    );
+    return html`${
+      canMode
         ? html`<label class="chipselect">
             <span class="sr">${this.tr("control.mode")}</span>
-            <select class="chip" ?disabled=${this.controlBusy} @change=${(e: Event) => this.setMode((e.target as HTMLSelectElement).value)}>
+            <select
+              class="chip"
+              ?disabled=${this.controlBusy}
+              @change=${(e: Event) => this.setMode((e.target as HTMLSelectElement).value)}
+            >
               ${now.modes.map((m) => html`<option value=${m} ?selected=${m === now.mode}>${this.tr(`mode.${m}`)}</option>`)}
             </select>
           </label>`
-        : html`<span class="chip">${this.tr(`mode.${now.mode}`)}</span>`}
-      ${canLive
+        : html`<span class="chip">${this.tr(`mode.${now.mode}`)}</span>`
+    }
+    ${
+      canLive
         ? html`<span class="livewrap">
             <button
               type="button"
@@ -444,18 +579,42 @@ export class ZephyrPanel extends LitElement {
             </button>
             ${this.confirmLive && !now.live ? this.renderConfirmLive(now) : nothing}
           </span>`
-        : html`<span class=${now.live ? "chip live" : "chip"} title=${liveTitle}>${liveText}</span>`}`;
+        : html`<span class=${now.live ? "chip live" : "chip"} title=${liveTitle}
+            >${liveText}</span
+          >`
+    }`;
   }
 
   private renderConfirmLive(now: Now): TemplateResult {
     const blocked = now.blockers.length > 0;
-    return html`<div class="popover" role="dialog" aria-label=${this.tr("control.live_title")}>
+    return html`<div
+      class="popover"
+      role="dialog"
+      aria-label=${this.tr("control.live_title")}
+    >
       <strong>${this.tr("control.live_title")}</strong>
       <p>${this.tr(blocked ? "control.live_blocked" : "control.live_text")}</p>
-      ${blocked ? html`<ul>${now.blockers.map((b) => html`<li>${blockerText(b, this.uiLang)}</li>`)}</ul>` : nothing}
+      ${
+        blocked
+          ? html`<ul>
+              ${now.blockers.map((b) => html`<li>${blockerText(b, this.uiLang)}</li>`)}
+            </ul>`
+          : nothing
+      }
       <div class="row">
-        <button type="button" class="ghost" @click=${() => (this.confirmLive = false)}>${this.tr("control.cancel")}</button>
-        <button type="button" class="primary" ?disabled=${blocked || this.controlBusy} @click=${() => void this.setLive(true)}>
+        <button
+          type="button"
+          class="ghost"
+          @click=${() => (this.confirmLive = false)}
+        >
+          ${this.tr("control.cancel")}
+        </button>
+        <button
+          type="button"
+          class="primary"
+          ?disabled=${blocked || this.controlBusy}
+          @click=${() => void this.setLive(true)}
+        >
           ${this.tr("control.live_start")}
         </button>
       </div>
@@ -467,23 +626,33 @@ export class ZephyrPanel extends LitElement {
     const buttons = fastButtons(now.mode, now.modes, now.previous_mode);
     const waiting = this.pendingMode !== null && this.pendingMode !== now.mode;
     const running = buttons.find((b) => b.active);
-    return html`<div class="fast" role="group" aria-label=${this.tr("control.fast")}>
+    return html`<div
+      class="fast"
+      role="group"
+      aria-label=${this.tr("control.fast")}
+    >
       ${buttons.map(
-        (b) => html`<button
-          type="button"
-          class=${b.active ? "primary" : "ghost"}
-          aria-pressed=${b.active ? "true" : "false"}
-          ?disabled=${this.controlBusy || waiting}
-          @click=${() => this.setMode(b.target)}
-        >
-          ${b.active ? this.tr("control.stop_fast", { mode: this.tr(`control.${b.mode}`) }) : this.tr(`control.${b.mode}`)}
-        </button>`,
+        (b) =>
+          html`<button
+            type="button"
+            class=${b.active ? "primary" : "ghost"}
+            aria-pressed=${b.active ? "true" : "false"}
+            ?disabled=${this.controlBusy || waiting}
+            @click=${() => this.setMode(b.target)}
+          >
+            ${b.active ? this.tr("control.stop_fast", { mode: this.tr(`control.${b.mode}`) }) : this.tr(`control.${b.mode}`)}
+          </button>`,
       )}
-      ${running
-        ? html`<span class="fastnote">${this.tr(`control.running_${running.mode}`)} ${this.tr("control.back_to", {
-            mode: this.tr(`mode.${running.target}`),
-          })}</span>`
-        : nothing}
+      ${
+        running
+          ? html`<span class="fastnote"
+              >${this.tr(`control.running_${running.mode}`)}
+              ${this.tr("control.back_to", {
+                mode: this.tr(`mode.${running.target}`),
+              })}</span
+            >`
+          : nothing
+      }
       ${now.live ? nothing : html`<span class="fastnote">${this.tr("control.shadow_note")}</span>`}
     </div>`;
   }
@@ -492,13 +661,23 @@ export class ZephyrPanel extends LitElement {
     if (this.controlError && this.status === "ok")
       return html`<div class="banner" role="alert">
         ${this.tr("control.failed", { error: this.controlError })}
-        <button type="button" class="link" @click=${() => (this.controlError = null)}>${this.tr("control.close")}</button>
+        <button
+          type="button"
+          class="link"
+          @click=${() => (this.controlError = null)}
+        >
+          ${this.tr("control.close")}
+        </button>
       </div>`;
     switch (this.status) {
       case "not_loaded":
-        return html`<div class="banner" role="status">${this.tr("status.not_loaded")}</div>`;
+        return html`<div class="banner" role="status">
+          ${this.tr("status.not_loaded")}
+        </div>`;
       case "reloading":
-        return html`<div class="banner info" role="status">${this.tr("status.reloading")}</div>`;
+        return html`<div class="banner info" role="status">
+          ${this.tr("status.reloading")}
+        </div>`;
       case "disconnected":
         return html`<div class="banner" role="status">
           ${this.tr("status.disconnected", { time: this.now ? clock(this.now.updated_at, this.locale, this.timeZone) : "–" })}
@@ -531,6 +710,16 @@ export class ZephyrPanel extends LitElement {
         .setVacation=${this.setVacation}
       ></zephyr-settings>`;
     }
+    if (this.view === "stroom") {
+      return html`<zephyr-stroom
+        class=${this.status === "ok" ? "" : "stale"}
+        .now=${this.now}
+        .view=${this.stroomView}
+        .uiLang=${this.uiLang}
+        .locale=${this.locale}
+        .timeZone=${this.timeZone}
+      ></zephyr-stroom>`;
+    }
     if (this.view === "savings") {
       return html`<zephyr-savings
         class=${this.status === "ok" ? "" : "stale"}
@@ -561,7 +750,9 @@ export class ZephyrPanel extends LitElement {
   }
 
   private renderComing(): TemplateResult {
-    return html`<section class="card coming">${this.tr("status.coming")}</section>`;
+    return html`<section class="card coming">
+      ${this.tr("status.coming")}
+    </section>`;
   }
 
   private renderPlan(): TemplateResult {
@@ -572,15 +763,21 @@ export class ZephyrPanel extends LitElement {
       </section>`;
     }
     const stale = this.status === "ok" ? "" : "stale";
-    return html`<section class="cards ${stale}" aria-label=${this.tr("now.title")}>
-        ${this.renderNow(now)} ${this.renderBattery(now)} ${this.renderNext(now)}
+    return html`<section
+        class="cards ${stale}"
+        aria-label=${this.tr("now.title")}
+      >
+        ${this.renderNow(now)} ${this.renderBattery(now)}
+        ${this.renderNext(now)}
       </section>
-      ${this.renderFast(now)} ${now.price_entity ? this.renderPlanParts(now, stale) : nothing}`;
+      ${this.renderFast(now)}
+      ${now.price_entity ? this.renderPlanParts(now, stale) : nothing}`;
   }
 
   private renderPlanParts(now: Now, stale: string): TemplateResult {
     let note: string | null = null;
-    if (now.mode !== "dynamic_forecasting") note = this.tr("plan.mode_note", { mode: this.tr(`mode.${now.mode}`) });
+    if (now.mode !== "dynamic_forecasting")
+      note = this.tr("plan.mode_note", { mode: this.tr(`mode.${now.mode}`) });
     else if (!now.live) note = this.tr("plan.shadow_note");
     return html`${note ? html`<div class="banner info" role="note">${note}</div>` : nothing}
       <zephyr-prices-plan
@@ -602,49 +799,85 @@ export class ZephyrPanel extends LitElement {
     const tomorrow = `${this.tr("blocks.tomorrow")} `;
     const startToday = sameDay(b.start, this.clockMs, this.timeZone);
     // The end of a block is exclusive: a block that ends at 00:00 tomorrow ends today.
-    const endToday = sameDay(new Date(b.end).getTime() - 1, this.clockMs, this.timeZone);
+    const endToday = sameDay(
+      new Date(b.end).getTime() - 1,
+      this.clockMs,
+      this.timeZone,
+    );
     return `${startToday ? "" : tomorrow}${from}–${startToday && !endToday ? tomorrow : ""}${to}`;
   }
 
   private shownBlocks(view: PlanView): PlanBlock[] {
     const tomorrow = days(view.quarters, this.timeZone)[1] ?? null;
-    return blocksFor(view.blocks, this.period, new Date(this.clockMs).toISOString(), tomorrow, this.timeZone);
+    return blocksFor(
+      view.blocks,
+      this.period,
+      new Date(this.clockMs).toISOString(),
+      tomorrow,
+      this.timeZone,
+    );
   }
 
   private renderBlocks(view: PlanView): TemplateResult {
     const blocks = this.shownBlocks(view).slice(0, 12);
     return html`<article class="card">
       <h2>${this.tr(`blocks.title_${this.period}`)}</h2>
-      ${blocks.length
-        ? html`<ul class="blocks">
-            ${blocks.map(
-              (b) => html`<li>
-                <span class="when">${this.range(b)}</span>
-                <span class="swatch" style="background:${actionFill(b.action)}"></span>
-                <span class="what"
-                  >${this.tr(`blocks.what_${b.action}`)}${b.indicative ? html` <em>(${this.tr("blocks.indicative")})</em>` : nothing}</span
-                >
-                <span class="detail">${this.tr(`blocks.${b.action}`, { kwh: kwh(b.kwh, this.locale), price: euro(b.price, this.locale) })}</span>
-              </li>`,
-            )}
-          </ul>`
-        : html`<p class="text">${this.tr(this.period === "tomorrow" ? "blocks.none_tomorrow" : "blocks.none")}</p>`}
+      ${
+        blocks.length
+          ? html`<ul class="blocks">
+              ${blocks.map(
+                (b) =>
+                  html`<li>
+                    <span class="when">${this.range(b)}</span>
+                    <span
+                      class="swatch"
+                      style="background:${actionFill(b.action)}"
+                    ></span>
+                    <span class="what"
+                      >${this.tr(`blocks.what_${b.action}`)}${b.indicative ? html` <em>(${this.tr("blocks.indicative")})</em>` : nothing}</span
+                    >
+                    <span class="detail"
+                      >${this.tr(`blocks.${b.action}`, { kwh: kwh(b.kwh, this.locale), price: euro(b.price, this.locale) })}</span
+                    >
+                  </li>`,
+              )}
+            </ul>`
+          : html`<p class="text">
+              ${this.tr(this.period === "tomorrow" ? "blocks.none_tomorrow" : "blocks.none")}
+            </p>`
+      }
     </article>`;
   }
 
   private renderWhy(view: PlanView): TemplateResult {
     const lines: string[] = [];
     // The plan's reason is about now: not for tomorrow.
-    if (view.reason && this.period !== "tomorrow") lines.push(view.reason[this.uiLang]);
+    if (view.reason && this.period !== "tomorrow")
+      lines.push(view.reason[this.uiLang]);
     const blocks = this.shownBlocks(view).filter((b) => !b.indicative);
-    const charge = blocks.filter((b) => b.action === "charge").sort((a, b) => a.price - b.price)[0];
-    if (charge) lines.push(this.tr("why.cheapest", { time: this.range(charge), price: euro(charge.price, this.locale) }));
+    const charge = blocks
+      .filter((b) => b.action === "charge")
+      .sort((a, b) => a.price - b.price)[0];
+    if (charge)
+      lines.push(
+        this.tr("why.cheapest", {
+          time: this.range(charge),
+          price: euro(charge.price, this.locale),
+        }),
+      );
     else if (blocks.length) lines.push(this.tr("why.no_charge"));
-    const future = quartersOf(view.quarters, this.period, this.timeZone).filter((q) => !q.past);
+    const future = quartersOf(view.quarters, this.period, this.timeZone).filter(
+      (q) => !q.past,
+    );
     const peak = stats(future)?.max;
     if (peak && peak.action === "deliver") {
       const time = `${sameDay(peak.start, this.clockMs, this.timeZone) ? "" : `${this.tr("blocks.tomorrow")} `}${clock(peak.start, this.locale, this.timeZone)}`;
-      lines.push(this.tr("why.peak", { time, price: euro(peak.buy as number, this.locale) }));
+      lines.push(
+        this.tr("why.peak", {
+          time,
+          price: euro(peak.buy as number, this.locale),
+        }),
+      );
     }
     if (future.some((q) => q.indicative)) lines.push(this.tr("why.indicative"));
     return html`<article class="card">
@@ -657,11 +890,20 @@ export class ZephyrPanel extends LitElement {
 
   private renderNow(now: Now): TemplateResult {
     const action = now.action ?? "standby";
-    const power = now.battery_w !== null && Math.abs(now.battery_w) >= 10 ? ` · ${watts(now.battery_w, this.locale)}` : "";
+    const power =
+      now.battery_w !== null && Math.abs(now.battery_w) >= 10
+        ? ` · ${watts(now.battery_w, this.locale)}`
+        : "";
     return html`<article class="card">
-      <div class="label"><span class="dot" style="background:${actionFill(action)}"></span>${this.tr("now.title")}</div>
-      <div class="big">${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}</div>
-      ${now.reason ? html`<p class="text">${now.reason[this.uiLang]}</p>` : nothing} ${this.renderAirco(now)}
+      <div class="label">
+        <span class="dot" style="background:${actionFill(action)}"></span
+        >${this.tr("now.title")}
+      </div>
+      <div class="big">
+        ${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}
+      </div>
+      ${now.reason ? html`<p class="text">${now.reason[this.uiLang]}</p>` : nothing}
+      ${this.renderAirco(now)}
       <div class="foot">
         ${now.grid_w !== null ? html`<span>${this.tr("now.grid", { value: signedWatts(now.grid_w, this.locale) })}</span>` : nothing}
         ${now.live ? nothing : html`<span>${this.tr("now.shadow_note")}</span>`}
@@ -681,11 +923,17 @@ export class ZephyrPanel extends LitElement {
     return html`<p class=${line.allowed ? "airco allowed" : "airco"}>
       ${line.icon ? html`<svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg>` : nothing}
       <span
-        >${line.text}${line.estimate
-          ? html` <span class="estimate" tabindex="0" title=${line.estimate} aria-label=${`${this.tr("airco.estimate")}: ${line.estimate}`}
+        >${line.text}${
+          line.estimate
+            ? html` <span
+                class="estimate"
+                tabindex="0"
+                title=${line.estimate}
+                aria-label=${`${this.tr("airco.estimate")}: ${line.estimate}`}
                 >${this.tr("airco.estimate")}</span
               >`
-          : nothing}</span
+            : nothing
+        }</span
       >
     </p>`;
   }
@@ -704,16 +952,21 @@ export class ZephyrPanel extends LitElement {
         ? now.sets_online >= 1
           ? this.tr("battery.set")
           : this.tr("battery.set_offline")
-        : this.tr("battery.sets", { online: now.sets_online, total: now.sets_total });
+        : this.tr("battery.sets", {
+            online: now.sets_online,
+            total: now.sets_total,
+          });
     return html`<article class="card">
       <div class="label">${this.tr("battery.title")}</div>
       <div class="big-row">
         <span class="big">${percent(soc, this.locale)}</span>
-        ${now.energy_kwh !== null && now.capacity_kwh !== null
-          ? html`<span class="muted"
-              >${this.tr("battery.of", { energy: kwh(now.energy_kwh, this.locale), capacity: kwh(now.capacity_kwh, this.locale) })}</span
-            >`
-          : nothing}
+        ${
+          now.energy_kwh !== null && now.capacity_kwh !== null
+            ? html`<span class="muted"
+                >${this.tr("battery.of", { energy: kwh(now.energy_kwh, this.locale), capacity: kwh(now.capacity_kwh, this.locale) })}</span
+              >`
+            : nothing
+        }
       </div>
       <div
         class="bar"
@@ -724,17 +977,24 @@ export class ZephyrPanel extends LitElement {
         aria-label=${this.tr("battery.title")}
       >
         <div class="fill" style="width:${soc}%"></div>
-        ${buffer > 0
-          ? html`<div class="buffer" style="left:${now.min_soc}%;width:${Math.min(buffer, 100 - now.min_soc)}%"></div>`
-          : nothing}
+        ${
+          buffer > 0
+            ? html`<div
+                class="buffer"
+                style="left:${now.min_soc}%;width:${Math.min(buffer, 100 - now.min_soc)}%"
+              ></div>`
+            : nothing
+        }
         <div class="mark" style="left:${now.min_soc}%"></div>
         <div class="mark" style="left:${now.max_soc}%"></div>
       </div>
       <div class="foot">
         <span
-          >${this.tr("battery.limits", { min: Math.round(now.min_soc), max: Math.round(now.max_soc) })}${buffer > 0
-            ? ` · ${this.tr("battery.buffer", { value: Math.round(buffer) })}`
-            : ""}</span
+          >${this.tr("battery.limits", { min: Math.round(now.min_soc), max: Math.round(now.max_soc) })}${
+            buffer > 0
+              ? ` · ${this.tr("battery.buffer", { value: Math.round(buffer) })}`
+              : ""
+          }</span
         >
         <span>${sets}</span>
       </div>
@@ -745,27 +1005,47 @@ export class ZephyrPanel extends LitElement {
     const plan = now.plan;
     const label = (extra = ""): TemplateResult =>
       html`<div class="label">
-        <span class="dot" style="background:${actionFill(plan?.next?.action)}"></span>${this.tr("next.title")}${extra}
+        <span
+          class="dot"
+          style="background:${actionFill(plan?.next?.action)}"
+        ></span
+        >${this.tr("next.title")}${extra}
       </div>`;
     if (!now.price_entity) {
-      return html`<article class="card">${label()}<p class="text">${this.tr("next.no_price_source")}</p></article>`;
+      return html`<article class="card">
+        ${label()}
+        <p class="text">${this.tr("next.no_price_source")}</p>
+      </article>`;
     }
     if (!plan) {
-      return html`<article class="card">${label()}<p class="text">${this.tr("status.loading")}</p></article>`;
+      return html`<article class="card">
+        ${label()}
+        <p class="text">${this.tr("status.loading")}</p>
+      </article>`;
     }
     if (plan.state === "no_prices") {
       const since = plan.no_prices_since ?? plan.calculated_at;
       return html`<article class="card">
         ${label()}
-        <p class="text warn">${this.tr("next.no_prices", { time: since ? clock(since, this.locale, this.timeZone) : "–" })}</p>
+        <p class="text warn">
+          ${this.tr("next.no_prices", { time: since ? clock(since, this.locale, this.timeZone) : "–" })}
+        </p>
       </article>`;
     }
     const next = plan.next;
     const priceNow = plan.price_now
-      ? html`<div class="foot"><span>${this.tr("next.price_now", { price: euro(plan.price_now.import, this.locale) })}</span></div>`
+      ? html`<div class="foot">
+          <span
+            >${this.tr("next.price_now", { price: euro(plan.price_now.import, this.locale) })}</span
+          >
+        </div>`
       : nothing;
     if (!next) {
-      return html`<article class="card">${label()}<p class="text">${this.tr("next.none")}</p>${priceNow}</article>`;
+      return html`<article class="card">
+        ${label()}
+        <p class="text">${this.tr("next.none")}</p>
+        ${priceNow}
+      </article>`;
     }
     const minutes = minutesUntil(next.start, this.clockMs);
     const until =
@@ -774,7 +1054,10 @@ export class ZephyrPanel extends LitElement {
         : this.tr("next.in", {
             time:
               minutes >= 60
-                ? this.tr("next.hours", { h: Math.floor(minutes / 60), m: minutes % 60 })
+                ? this.tr("next.hours", {
+                    h: Math.floor(minutes / 60),
+                    m: minutes % 60,
+                  })
                 : this.tr("next.minutes", { m: minutes }),
           });
     const time = clock(next.start, this.locale, this.timeZone);
@@ -786,14 +1069,18 @@ export class ZephyrPanel extends LitElement {
       ${label(` · ${until}`)}
       <div class="big">${headline}</div>
       <p class="text">${this.detail(plan)}</p>
-      ${next.indicative ? html`<p class="text muted">${this.tr("next.indicative")}</p>` : nothing} ${priceNow}
+      ${next.indicative ? html`<p class="text muted">${this.tr("next.indicative")}</p>` : nothing}
+      ${priceNow}
     </article>`;
   }
 
   private detail(plan: PlanNow): string {
     const next = plan.next;
     if (!next) return "";
-    const params = { kwh: kwh(next.kwh, this.locale), price: euro(next.price, this.locale) };
+    const params = {
+      kwh: kwh(next.kwh, this.locale),
+      price: euro(next.price, this.locale),
+    };
     return this.tr(`next.${next.action}`, params);
   }
 
@@ -1119,7 +1406,12 @@ export class ZephyrPanel extends LitElement {
       }
       .skeleton {
         min-height: 150px;
-        background: linear-gradient(90deg, var(--z-card), var(--z-track), var(--z-card));
+        background: linear-gradient(
+          90deg,
+          var(--z-card),
+          var(--z-track),
+          var(--z-card)
+        );
         background-size: 200% 100%;
         animation: shimmer 1.4s linear infinite;
       }
@@ -1241,7 +1533,11 @@ export class ZephyrPanel extends LitElement {
         position: absolute;
         top: 0;
         bottom: 0;
-        background: repeating-linear-gradient(45deg, var(--z-hold-a) 0 3px, transparent 3px 6px);
+        background: repeating-linear-gradient(
+          45deg,
+          var(--z-hold-a) 0 3px,
+          transparent 3px 6px
+        );
         opacity: 0.8;
       }
       .mark {
