@@ -2,13 +2,49 @@
 
 const MINUS = "−";
 
+// Creating an Intl formatter is slow (the 48-hour chart formats hundreds of dates per render):
+// keep one per locale and options.
+const dateFormats = new Map<string, Intl.DateTimeFormat>();
+const numberFormats = new Map<string, Intl.NumberFormat>();
+
+/** A cached ``Intl.DateTimeFormat``. */
+export function dateFormat(
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let f = dateFormats.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, options);
+    dateFormats.set(key, f);
+  }
+  return f;
+}
+
+/** A cached ``Intl.NumberFormat``. */
+export function numberFormat(
+  locale: string,
+  options: Intl.NumberFormatOptions,
+): Intl.NumberFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let f = numberFormats.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat(locale, options);
+    numberFormats.set(key, f);
+  }
+  return f;
+}
+
 function number(value: number, locale: string, digits: number): string {
-  return new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+  return numberFormat(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
 }
 
 /** Price per kWh: two decimals, true minus sign. */
 export function euro(value: number, locale: string): string {
-  const text = new Intl.NumberFormat(locale, {
+  const text = numberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
@@ -40,12 +76,22 @@ export function percent(value: number, locale: string): string {
 
 /** Clock time hh:mm in the Home Assistant time zone. */
 export function clock(iso: string, locale: string, timeZone: string): string {
-  return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hour12: false, timeZone }).format(new Date(iso));
+  return dateFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone,
+  }).format(new Date(iso));
 }
 
 /** "vr 20 nov" / "Fri 20 Nov". */
 export function day(iso: string, locale: string, timeZone: string): string {
-  return new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", timeZone }).format(new Date(iso));
+  return dateFormat(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone,
+  }).format(new Date(iso));
 }
 
 /** Minutes until ``iso`` from ``nowMs``, never negative. */
@@ -54,7 +100,16 @@ export function minutesUntil(iso: string, nowMs: number): number {
 }
 
 /** Two dates on the same calendar day in ``timeZone``. */
-export function sameDay(a: string | number, b: string | number, timeZone: string): boolean {
-  const f = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone });
+export function sameDay(
+  a: string | number,
+  b: string | number,
+  timeZone: string,
+): boolean {
+  const f = dateFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone,
+  });
   return f.format(new Date(a)) === f.format(new Date(b));
 }

@@ -1,4 +1,5 @@
 // Calculations for the chart "Prijzen en plan" (SPEC-ui §4.2). Pure functions, tested with vitest.
+import { dateFormat } from "./format";
 import type { PlanAction } from "./types";
 
 export interface Quarter {
@@ -41,7 +42,7 @@ export interface PlanView {
 export type Period = "today" | "tomorrow" | "both";
 
 export const dayKey = (iso: string, timeZone: string): string =>
-  new Intl.DateTimeFormat("en-CA", {
+  dateFormat("en-CA", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -163,7 +164,7 @@ export function ticks(
   everyHours: number,
   timeZone: string,
 ): number[] {
-  const hour = new Intl.DateTimeFormat("en-GB", {
+  const hour = dateFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
