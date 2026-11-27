@@ -84,6 +84,10 @@ class ZephyrControl:
     """Owns the engine and feeds it."""
 
     def __init__(self, hass: HomeAssistant, entry: ZephyrConfigEntry, runtime: ZephyrRuntime) -> None:
+        self.peak_days: dict[str, dict[str, float]] = {}
+        """Short peaks the step filter left to the grid, per local day (kWh, holds)."""
+        self._peak_day: str | None = None
+        self._peak_base: tuple[float, int] | None = None
         self.hass = hass
         self.entry = entry
         self.runtime = runtime
@@ -134,6 +138,17 @@ class ZephyrControl:
     # --- lifecycle ----------------------------------------------------------
 
     @callback
+    def _track_peaks(self) -> None:
+        """Short peaks left to the grid per local day (PLANNING 1.3), 14 days in memory."""
+        today = dt_util.now().date().isoformat()
+        kwh, holds = self.engine.peak_kwh, self.engine.grid_filter.holds
+        if self._peak_day != today or self._peak_base is None:
+            self._peak_day, self._peak_base = today, (kwh, holds)
+        base_kwh, base_holds = self._peak_base
+        self.peak_days[today] = {"kwh": round(kwh - base_kwh, 4), "holds": holds - base_holds}
+        for day in sorted(self.peak_days)[:-14]:
+            del self.peak_days[day]
+
     def apply_options(self, options: Mapping[str, Any]) -> None:
         """Battery limits and zero-meter settings changed without a reload (UI-7)."""
         self.engine.update_settings(self.engine.settings.with_changes(**_limits(options)))
@@ -523,6 +538,7 @@ class ZephyrControl:
         if self.engine.mode is Mode.FORECAST and planner is not None:
             plan_action = planner.action_at(dt_util.utcnow())
         excluded = self.excluded.power(now) if self.excluded is not None else 0.0
+        self._track_peaks()
         curtail = self.runtime.curtail
         result = self.engine.step(
             now,

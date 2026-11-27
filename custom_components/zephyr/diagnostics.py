@@ -92,7 +92,11 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
             }
             if result
             else None,
-            "p1_filter": {"step_holds": control.engine.grid_filter.holds},
+            "p1_filter": {
+                "step_holds": control.engine.grid_filter.holds,
+                "peak_kwh": round(control.engine.peak_kwh, 4),
+                "days": control.peak_days,
+            },
             "twin": control.engine.twin_summary(),
             "excluded_load": None
             if control.excluded is None

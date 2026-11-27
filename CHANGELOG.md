@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.37 — Short peaks counted (PLANNING 1.3)
+- The step filter (B20) leaves short peaks (a boiling-water tap, a kettle) to the grid for up to 10 s; ZEPHYR now counts the energy of those peaks: the part of the grid power the controller did not see while a peak was held (not while charging, where the filter does not apply).
+- Diagnostics `control.p1_filter`: `peak_kwh` (since the start), and per local day `kwh` and `holds` (last 14 days, in memory). Basis for the panel (Besparing) later.
+- Tests: a 2 kW peak of 6 s counted; per day in the HA diagnostics.
+
 ### 0.8.36 — Solar now from inverters the sets do not see
 - Bjorn 27-11: *Nu* showed sun 0 W at noon, because ZEPHYR only knew the PV on the Zendure set. The house was too low by the same amount.
 - New option **Zonnepanelen-vermogen** (Instellingen → Bronnen, also in the options flow): one or more power sensors (W or kW) of inverters that are not on a set, e.g. SolarEdge. They are added up and added to the sets' PV. Live, no reload. ZEPHYR's own sensors are skipped (the sets' PV is already counted).
