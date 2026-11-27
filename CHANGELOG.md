@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.44 — Notice for entities of another Zendure integration
+- A repair notice lists every setting that uses an entity of another Zendure integration (by integration, device maker or a `zendure` entity name), with what to use instead: set PV is read by ZEPHYR itself (otherwise counted twice), the inverter's counter for solar energy, the smart meter for P1 and cost counters, `sensor.zephyr_energy_charged`/`_discharged` for the battery. Checked at start and after every settings change.
+- Diagnostics: all options and the list `foreign_entities`.
+
 ### 0.8.43 — Panel data for appliances, curtailing and short peaks
 - New websocket commands `zephyr/appliances`, `zephyr/appliances/plan` and `zephyr/appliances/clear` (one run by index, one appliance, or all) for the panel (SPEC-ui-planner §4.1). The view gives per appliance the profile (watt per minute when learned), window and plug, and per planned run the advised start and saving.
 - `zephyr/plan`: per future quarter `curtail_kwh` (surplus the planner counts as curtailed at a negative export price) and `export_cost` (what exporting it costs when nothing curtails); `curtail_mode` in the head.

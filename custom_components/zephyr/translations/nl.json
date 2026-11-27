@@ -361,6 +361,10 @@
     "live_not_resumed": {
       "title": "ZEPHYR heeft live sturen niet hervat",
       "description": "Live sturen stond aan voor de herstart, maar kon binnen 10 minuten niet weer starten: {reasons}. Zet \"ZEPHYR stuurt de accu\" weer aan als dat is opgelost."
+    },
+    "foreign_entities": {
+      "title": "ZEPHYR gebruikt entiteiten van een andere Zendure-integratie",
+      "description": "Deze instellingen verwijzen naar een entiteit van een andere Zendure-integratie:\n{entities}\n\nZEPHYR leest de sets zelf uit en heeft eigen energietellers. Vervang ze in de instellingen van ZEPHYR:\n- Zonnepanelen-vermogen: alleen omvormers buiten de sets. De PV van de set telt ZEPHYR al; met de sensor van de set telt die dubbel.\n- Zonneteller: de energieteller van de omvormer.\n- P1 en kostentellers: de slimme meter (DSMR).\n- Laden en leveren van de accu: sensor.zephyr_energy_charged en sensor.zephyr_energy_discharged.\nDeze melding verdwijnt zodra geen instelling meer zo'n entiteit gebruikt."
     }
   },
   "options": {
