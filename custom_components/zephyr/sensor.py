@@ -35,7 +35,7 @@ from .core.models import SetStatus
 from .core.totals import Totals
 from .cost_recorder import CostRecorder
 from .energy_recorder import EnergyRecorder
-from .entity import ZephyrControlEntity, ZephyrSetEntity, ZephyrTotalEntity, installation_device
+from .entity import ZephyrApplianceEntity, ZephyrControlEntity, ZephyrSetEntity, ZephyrTotalEntity, installation_device
 from .planner_runner import PlanRunner
 
 StateValue = float | int | str | None
@@ -228,6 +228,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async
             c.data is not None and c.data.report is not None and c.data.report.solar_power_inputs for c in runtime.coordinators.values()
         )
         async_add_entities(ZephyrEnergyTotalSensor(energy, entry, key) for key in ENERGY_TOTALS if key != "solar" or with_solar)
+    appliances = runtime.appliances
+    if appliances is not None:
+        for appliance in appliances.appliances.values():
+            async_add_entities(
+                [
+                    ZephyrAppliancePlannedSensor(appliances, appliance, entry, "planned", "sensor"),
+                    ZephyrApplianceBestStartSensor(appliances, appliance, entry, "best_start", "sensor"),
+                ],
+                config_subentry_id=appliance.id,
+            )
     for subentry_id, coordinator in runtime.coordinators.items():
         if energy is not None:
             report = coordinator.data.report if coordinator.data is not None else None
@@ -678,3 +688,50 @@ class ZephyrEnergyTotalSensor(_EnergySensorBase):
 
     def _value(self) -> float | None:
         return self._energy.counters.totals[self._counter]
+
+
+# --- planned appliances (B36) ------------------------------------------------------------
+
+
+class ZephyrAppliancePlannedSensor(ZephyrApplianceEntity, SensorEntity):
+    """Number of planned runs; attributes: windows and expected energy."""
+
+    _attr_icon = "mdi:washing-machine"
+
+    @property
+    def native_value(self) -> int:
+        return len(self.manager.runs_of(self.appliance.id))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        runs = self.manager.runs_of(self.appliance.id)
+        return {
+            "windows": [[r.window_start.isoformat(), r.window_end.isoformat()] for r in runs],
+            "kwh_per_run": round(sum(self.appliance.profile()) / 60000, 3),
+            "minutes": len(self.appliance.profile()),
+            "profile": self.appliance.profile_source,
+            "runs_seen": len(self.appliance.runs),
+        }
+
+
+class ZephyrApplianceBestStartSensor(ZephyrApplianceEntity, SensorEntity):
+    """Advised start of the next planned run."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:clock-start"
+
+    def _next(self) -> Any:
+        runs = [r for r in self.manager.runs_of(self.appliance.id) if r.best_start is not None]
+        return min(runs, key=lambda r: r.best_start or r.window_start) if runs else None
+
+    @property
+    def native_value(self) -> datetime | None:
+        run = self._next()
+        return None if run is None else run.best_start
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        run = self._next()
+        if run is None:
+            return None
+        return {**run.details, "starts": [r.best_start.isoformat() for r in self.manager.runs_of(self.appliance.id) if r.best_start]}

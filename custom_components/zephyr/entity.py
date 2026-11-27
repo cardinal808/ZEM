@@ -14,6 +14,7 @@ from .const import DOMAIN, MANUFACTURER
 from .coordinator import SetCoordinator
 
 if TYPE_CHECKING:
+    from .appliances import Appliance, ApplianceManager
     from .vacation import VacationManager
 
 
@@ -119,3 +120,30 @@ class ZephyrVacationEntity(Entity):
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(self._vacation.async_add_listener(self.async_write_ha_state))
+
+
+class ZephyrApplianceEntity(Entity):
+    """Entity of a planned appliance (B36): device per appliance, id ``<platform>.zephyr_<slug>_<key>``."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(self, manager: ApplianceManager, appliance: Appliance, entry: ZephyrConfigEntry, key: str, platform: str) -> None:
+        from homeassistant.util import slugify
+
+        self.manager = manager
+        self.appliance = appliance
+        self._attr_unique_id = f"{appliance.id}_{key}"
+        self._attr_translation_key = f"appliance_{key}"
+        self.entity_id = f"{platform}.zephyr_{slugify(appliance.name)}_{key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, appliance.id)},
+            name=appliance.name,
+            manufacturer=MANUFACTURER,
+            model="Planned appliance",
+            via_device=(DOMAIN, entry.entry_id),
+        )
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(self.manager.async_add_listener(self.async_write_ha_state))

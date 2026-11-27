@@ -62,6 +62,53 @@
         "max_sets": "ZEPHYR ondersteunt maximaal 3 sets.",
         "reconfigure_successful": "De capaciteit is opgeslagen."
       }
+    },
+    "appliance": {
+      "initiate_flow": {
+        "user": "Apparaat toevoegen"
+      },
+      "entry_type": "Apparaat",
+      "step": {
+        "user": {
+          "title": "Gepland apparaat",
+          "description": "Een apparaat waarvan je de runs vooraf aangeeft (vaatwasser, wasmachine, droger). ZEPHYR telt de run mee in het plan en adviseert de goedkoopste start.",
+          "data": {
+            "name": "Naam",
+            "kind": "Soort"
+          },
+          "data_description": {
+            "name": "Bijvoorbeeld Wasmachine. Ook de naam voor de acties.",
+            "kind": "Bepaalt het eerste profiel tot ZEPHYR het van een slimme stekker heeft geleerd."
+          }
+        },
+        "details": {
+          "title": "Stekker en venster",
+          "data": {
+            "power_entity": "Vermogenssensor (slimme stekker)",
+            "energy_entity": "Energiesensor (zelfde stekker)",
+            "window_from": "Venster vanaf",
+            "window_until": "Klaar om"
+          },
+          "data_description": {
+            "power_entity": "Optioneel. ZEPHYR leert het echte profiel uit de historie (meteen de laatste 10 dagen) en uit latere runs.",
+            "energy_entity": "Optioneel, voor later.",
+            "window_from": "Wanneer een run die met de knop is gepland mag starten. Leeg = vanaf nu.",
+            "window_until": "De run moet dan klaar zijn; vroeger dan de start = de volgende dag."
+          }
+        },
+        "reconfigure": {
+          "title": "Stekker en venster",
+          "data": {
+            "power_entity": "Vermogenssensor (slimme stekker)",
+            "energy_entity": "Energiesensor (zelfde stekker)",
+            "window_from": "Venster vanaf",
+            "window_until": "Klaar om"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Opgeslagen."
+      }
     }
   },
   "entity": {
@@ -227,6 +274,12 @@
       },
       "output_home_energy": {
         "name": "Energie naar het huis"
+      },
+      "appliance_planned": {
+        "name": "Geplande runs"
+      },
+      "appliance_best_start": {
+        "name": "Beste start"
       }
     },
     "binary_sensor": {
@@ -241,6 +294,9 @@
       },
       "expensive_hour": {
         "name": "Duur uur (leveren toegestaan)"
+      },
+      "appliance_running": {
+        "name": "Draait"
       }
     },
     "select": {
@@ -266,6 +322,14 @@
     "datetime": {
       "vacation_until": {
         "name": "Vakantie tot"
+      }
+    },
+    "button": {
+      "appliance_plan": {
+        "name": "Run plannen"
+      },
+      "appliance_clear": {
+        "name": "Geplande runs wissen"
       }
     }
   },
@@ -410,6 +474,15 @@
         "curtail_external": "Ander systeem knijpt af",
         "curtail_zephyr": "ZEPHYR knijpt af"
       }
+    },
+    "appliance_kind": {
+      "options": {
+        "dishwasher": "Vaatwasser",
+        "washer": "Wasmachine",
+        "dryer_heat_pump": "Droger (warmtepomp)",
+        "dryer_condenser": "Droger (condens)",
+        "other": "Overig"
+      }
     }
   },
   "exceptions": {
@@ -430,6 +503,9 @@
     },
     "no_planner": {
       "message": "De planner draait niet (kies een prijssensor in de opties)."
+    },
+    "no_appliance": {
+      "message": "Geen gepland apparaat met de naam {name}."
     }
   },
   "services": {
@@ -478,6 +554,42 @@
     "get_plan": {
       "name": "Plan ophalen",
       "description": "Geeft het huidige plan: toestand, kerncijfers, blokken en de kwartieren met actie, prijzen, zon, verbruik en verwachte laadtoestand."
+    },
+    "plan_appliance": {
+      "name": "Apparaatrun plannen",
+      "description": "Geeft runs van een gepland apparaat door; de planner telt ze mee en adviseert de goedkoopste start.",
+      "fields": {
+        "appliance": {
+          "name": "Apparaat",
+          "description": "Naam van het apparaat zoals ingesteld in ZEPHYR."
+        },
+        "runs": {
+          "name": "Runs",
+          "description": "Aantal runs (na elkaar)."
+        },
+        "start_after": {
+          "name": "Start na",
+          "description": "Optioneel; anders het standaardvenster van het apparaat."
+        },
+        "done_before": {
+          "name": "Klaar voor",
+          "description": "Optioneel; anders het standaardvenster van het apparaat."
+        },
+        "fixed_start": {
+          "name": "Vaste start",
+          "description": "Optioneel: je start hem zelf op dit moment; ZEPHYR telt hem alleen mee."
+        }
+      }
+    },
+    "clear_appliance": {
+      "name": "Apparaatruns wissen",
+      "description": "Haalt de geplande runs van een apparaat weg.",
+      "fields": {
+        "appliance": {
+          "name": "Apparaat",
+          "description": "Naam van het apparaat zoals ingesteld in ZEPHYR."
+        }
+      }
     }
   }
 }

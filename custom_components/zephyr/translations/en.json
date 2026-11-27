@@ -62,6 +62,53 @@
         "max_sets": "ZEPHYR supports at most 3 sets.",
         "reconfigure_successful": "The capacity has been saved."
       }
+    },
+    "appliance": {
+      "initiate_flow": {
+        "user": "Add appliance"
+      },
+      "entry_type": "Appliance",
+      "step": {
+        "user": {
+          "title": "Planned appliance",
+          "description": "An appliance whose runs you announce in advance (dishwasher, washing machine, dryer). ZEPHYR counts the run in the plan and advises the cheapest start.",
+          "data": {
+            "name": "Name",
+            "kind": "Kind"
+          },
+          "data_description": {
+            "name": "For example Washing machine. Also the name for the actions.",
+            "kind": "Decides the first profile until ZEPHYR has learned it from a smart plug."
+          }
+        },
+        "details": {
+          "title": "Plug and window",
+          "data": {
+            "power_entity": "Power sensor (smart plug)",
+            "energy_entity": "Energy sensor (same plug)",
+            "window_from": "Window from",
+            "window_until": "Done by"
+          },
+          "data_description": {
+            "power_entity": "Optional. ZEPHYR learns the real profile from its history (the last 10 days at once) and later runs.",
+            "energy_entity": "Optional, for later use.",
+            "window_from": "When a run planned with the button may start. Empty = from now.",
+            "window_until": "The run must be done by then; earlier than the start = the next day."
+          }
+        },
+        "reconfigure": {
+          "title": "Plug and window",
+          "data": {
+            "power_entity": "Power sensor (smart plug)",
+            "energy_entity": "Energy sensor (same plug)",
+            "window_from": "Window from",
+            "window_until": "Done by"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Saved."
+      }
     }
   },
   "entity": {
@@ -227,6 +274,12 @@
       },
       "output_home_energy": {
         "name": "Energy to the house"
+      },
+      "appliance_planned": {
+        "name": "Planned runs"
+      },
+      "appliance_best_start": {
+        "name": "Best start"
       }
     },
     "binary_sensor": {
@@ -241,6 +294,9 @@
       },
       "expensive_hour": {
         "name": "Expensive hour (delivering allowed)"
+      },
+      "appliance_running": {
+        "name": "Running"
       }
     },
     "select": {
@@ -266,6 +322,14 @@
     "datetime": {
       "vacation_until": {
         "name": "Vacation until"
+      }
+    },
+    "button": {
+      "appliance_plan": {
+        "name": "Plan run"
+      },
+      "appliance_clear": {
+        "name": "Clear planned runs"
       }
     }
   },
@@ -410,6 +474,15 @@
         "curtail_external": "Another system curtails",
         "curtail_zephyr": "ZEPHYR curtails"
       }
+    },
+    "appliance_kind": {
+      "options": {
+        "dishwasher": "Dishwasher",
+        "washer": "Washing machine",
+        "dryer_heat_pump": "Dryer (heat pump)",
+        "dryer_condenser": "Dryer (condenser)",
+        "other": "Other"
+      }
     }
   },
   "exceptions": {
@@ -430,6 +503,9 @@
     },
     "no_planner": {
       "message": "The planner is not running (choose a price sensor in the options)."
+    },
+    "no_appliance": {
+      "message": "No planned appliance named {name}."
     }
   },
   "services": {
@@ -478,6 +554,42 @@
     "get_plan": {
       "name": "Get plan",
       "description": "Returns the current plan: state, figures, blocks and the quarters with action, prices, solar, consumption and expected state of charge."
+    },
+    "plan_appliance": {
+      "name": "Plan appliance run",
+      "description": "Announces runs of a planned appliance; the planner counts them and advises the cheapest start.",
+      "fields": {
+        "appliance": {
+          "name": "Appliance",
+          "description": "Name of the appliance as set up in ZEPHYR."
+        },
+        "runs": {
+          "name": "Runs",
+          "description": "Number of runs (one after another)."
+        },
+        "start_after": {
+          "name": "Start after",
+          "description": "Optional; otherwise the appliance's standard window."
+        },
+        "done_before": {
+          "name": "Done before",
+          "description": "Optional; otherwise the appliance's standard window."
+        },
+        "fixed_start": {
+          "name": "Fixed start",
+          "description": "Optional: you start it at this time yourself; ZEPHYR only counts it."
+        }
+      }
+    },
+    "clear_appliance": {
+      "name": "Clear appliance runs",
+      "description": "Removes the planned runs of an appliance.",
+      "fields": {
+        "appliance": {
+          "name": "Appliance",
+          "description": "Name of the appliance as set up in ZEPHYR."
+        }
+      }
     }
   }
 }

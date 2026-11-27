@@ -24,9 +24,17 @@ from .const import DOMAIN, SUBENTRY_SET
 from .coordinator import SetCoordinator
 from .core.totals import CostFlows, Totals, compute_totals, cost_flows
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT, Platform.SWITCH, Platform.DATETIME]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.SELECT,
+    Platform.SWITCH,
+    Platform.DATETIME,
+    Platform.BUTTON,
+]
 
 if TYPE_CHECKING:
+    from .appliances import ApplianceManager
     from .control import ZephyrControl
     from .cost_recorder import CostRecorder
     from .curtail import CurtailManager
@@ -52,6 +60,7 @@ class ZephyrRuntime:
     vacation: VacationManager | None = None
     energy: EnergyRecorder | None = None
     curtail: CurtailManager | None = None
+    appliances: ApplianceManager | None = None
     options: dict[str, Any] = field(default_factory=dict)
     """The options in use; a change of only live fields is applied without a reload (UI-7)."""
 
@@ -79,6 +88,15 @@ SERVICE_EXPORT_COSTS = "export_costs"
 EXPORT_COSTS_SCHEMA = vol.Schema({vol.Optional("start"): cv.date, vol.Optional("end"): cv.date})
 
 SERVICE_RECALCULATE = "recalculate"
+PLAN_APPLIANCE_SCHEMA = vol.Schema(
+    {
+        vol.Required("appliance"): cv.string,
+        vol.Optional("runs", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=5)),
+        vol.Optional("start_after"): cv.datetime,
+        vol.Optional("done_before"): cv.datetime,
+        vol.Optional("fixed_start"): cv.datetime,
+    }
+)
 SERVICE_RESET_PROFILE = "reset_profile"
 RESET_PROFILE_SCHEMA = vol.Schema({vol.Optional("refill", default=True): cv.boolean})
 SERVICE_GET_PLAN = "get_plan"
@@ -151,6 +169,34 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         return response
 
     hass.services.async_register(DOMAIN, SERVICE_GET_PLAN, get_plan, supports_response=SupportsResponse.ONLY)
+
+    def _appliance(name: str) -> tuple[Any, Any]:
+        for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+            manager = entry.runtime_data.appliances
+            if manager is not None and (appliance := manager.by_name(name)) is not None:
+                return manager, appliance
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_appliance", translation_placeholders={"name": name})
+
+    async def plan_appliance(call: ServiceCall) -> ServiceResponse:
+        """Announce runs of an appliance (B36); the planner advises the best start."""
+        manager, appliance = _appliance(call.data["appliance"])
+        added = manager.plan(
+            appliance.id,
+            call.data.get("runs", 1),
+            start_after=call.data.get("start_after"),
+            done_before=call.data.get("done_before"),
+            fixed_start=call.data.get("fixed_start"),
+        )
+        return {"planned": [r.as_dict() for r in added]}
+
+    async def clear_appliance(call: ServiceCall) -> None:
+        manager, appliance = _appliance(call.data["appliance"])
+        manager.clear(appliance.id)
+
+    hass.services.async_register(
+        DOMAIN, "plan_appliance", plan_appliance, schema=PLAN_APPLIANCE_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+    hass.services.async_register(DOMAIN, "clear_appliance", clear_appliance, schema=vol.Schema({vol.Required("appliance"): cv.string}))
     from .websocket_api import async_setup as async_setup_websocket
 
     async_setup_websocket(hass)
@@ -192,6 +238,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
     entry.async_on_unload(await runtime.vacation.async_start())
     if runtime.planner is not None:
         entry.async_on_unload(runtime.vacation.async_add_listener(runtime.planner.async_request))
+    from .appliances import ApplianceManager
+
+    runtime.appliances = ApplianceManager(hass, entry)
+    entry.async_on_unload(
+        await runtime.appliances.async_start(runtime.planner.async_request if runtime.planner is not None else lambda: None)
+    )
     from .energy_recorder import EnergyRecorder
 
     runtime.energy = EnergyRecorder(hass, entry.entry_id, runtime)

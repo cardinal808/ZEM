@@ -61,11 +61,13 @@ from .core.forecast_plan import (
     market_slots,
     merge_reserve,
     no_prices,
+    plan_appliances,
     price_at,
     quarter_floor,
     reason,
     remember,
     solar_per_quarter,
+    with_appliances,
 )
 from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, blocked_share, day_type_of, profile_from_history
 from .core.plan_check import expectations, record_fields
@@ -468,6 +470,14 @@ class PlanRunner:
         )
         prev_action = previous.action if previous is not None and previous.slots else Action.DELIVER
         began = time.perf_counter()
+        appliances = self.runtime.appliances
+        if appliances is not None and appliances.planned:
+            # B36: best start of every planned run on the whole plan, then plan with them.
+            extra = await self.hass.async_add_executor_job(
+                plan_appliances, slots, battery, now, self.settings, list(appliances.planned), appliances.profiles(), prev_action
+            )
+            slots = with_appliances(slots, extra)
+            appliances.published()
         outcome = await self.hass.async_add_executor_job(make_plan, slots, battery, now, self.settings, prev_action)
         outcome.duration_s = time.perf_counter() - began
         if from_reserve:

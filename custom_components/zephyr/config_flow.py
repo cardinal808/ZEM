@@ -23,6 +23,12 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
+    CONF_APPLIANCE_ENERGY,
+    CONF_APPLIANCE_FROM,
+    CONF_APPLIANCE_KIND,
+    CONF_APPLIANCE_NAME,
+    CONF_APPLIANCE_POWER,
+    CONF_APPLIANCE_UNTIL,
     CONF_CAPACITY_OVERRIDE,
     CONF_COST_EXPORT_COUNTERS,
     CONF_COST_IMPORT_COUNTERS,
@@ -77,9 +83,13 @@ from .const import (
     MAX_SETS,
     P1_SOURCE_PAIR,
     P1_SOURCE_SINGLE,
+    SUBENTRY_APPLIANCE,
     SUBENTRY_SET,
     TARIFF_OWN,
 )
+from .core.appliances import DISHWASHER, WASHER
+from .core.appliances import KINDS as APPLIANCE_KINDS
+from .core.appliances import OTHER as OTHER_APPLIANCE
 from .core.client import ZendureClient, ZendureError
 from .core.costs import Tariffs
 from .core.device_table import model_info, set_capacity
@@ -148,7 +158,7 @@ class ZephyrConfigFlow(ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry[Any]) -> dict[str, type[ConfigSubentryFlow]]:
-        return {SUBENTRY_SET: SetSubentryFlow}
+        return {SUBENTRY_SET: SetSubentryFlow, SUBENTRY_APPLIANCE: ApplianceSubentryFlow}
 
     def _existing_entry(self) -> ConfigEntry[Any] | None:
         entries = self._async_current_entries(include_ignore=False)
@@ -272,6 +282,69 @@ class SetSubentryFlow(ConfigSubentryFlow):
             }
         )
         return self.async_show_form(step_id="reconfigure", data_schema=schema)
+
+
+def _appliance_details_schema(kind: str, data: dict[str, Any]) -> vol.Schema:
+    dishwasher = kind == DISHWASHER
+    default_from = data.get(CONF_APPLIANCE_FROM, "" if dishwasher else "08:00:00")
+    default_until = data.get(CONF_APPLIANCE_UNTIL, "07:00:00" if dishwasher else "20:00:00")
+    return vol.Schema(
+        {
+            vol.Optional(CONF_APPLIANCE_POWER, description={"suggested_value": data.get(CONF_APPLIANCE_POWER)}): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class="power")
+            ),
+            vol.Optional(CONF_APPLIANCE_ENERGY, description={"suggested_value": data.get(CONF_APPLIANCE_ENERGY)}): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class="energy")
+            ),
+            vol.Optional(CONF_APPLIANCE_FROM, description={"suggested_value": default_from or None}): selector.TimeSelector(),
+            vol.Required(CONF_APPLIANCE_UNTIL, default=default_until): selector.TimeSelector(),
+        }
+    )
+
+
+class ApplianceSubentryFlow(ConfigSubentryFlow):
+    """A planned appliance (B36): dishwasher, washing machine, dryer, ..."""
+
+    def __init__(self) -> None:
+        self._base: dict[str, Any] = {}
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        if user_input is not None:
+            self._base = {
+                CONF_APPLIANCE_NAME: user_input[CONF_APPLIANCE_NAME].strip(),
+                CONF_APPLIANCE_KIND: user_input[CONF_APPLIANCE_KIND],
+            }
+            return await self.async_step_details()
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_APPLIANCE_NAME): selector.TextSelector(),
+                vol.Required(CONF_APPLIANCE_KIND, default=WASHER): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=list(APPLIANCE_KINDS), translation_key="appliance_kind")
+                ),
+            }
+        )
+        return self.async_show_form(step_id="user", data_schema=schema)
+
+    async def async_step_details(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        kind = self._base[CONF_APPLIANCE_KIND]
+        if user_input is not None:
+            data = {**self._base, **{k: v for k, v in user_input.items() if v not in (None, "")}}
+            entry = self._get_entry()
+            self.hass.config_entries.async_schedule_reload(entry.entry_id)
+            return self.async_create_entry(title=self._base[CONF_APPLIANCE_NAME], data=data)
+        return self.async_show_form(step_id="details", data_schema=_appliance_details_schema(kind, {}))
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        entry = self._get_entry()
+        subentry = self._get_reconfigure_subentry()
+        kind = subentry.data.get(CONF_APPLIANCE_KIND, OTHER_APPLIANCE)
+        if user_input is not None:
+            keep = {CONF_APPLIANCE_NAME: subentry.data.get(CONF_APPLIANCE_NAME), CONF_APPLIANCE_KIND: kind}
+            data = {**keep, **{k: v for k, v in user_input.items() if v not in (None, "")}}
+            result = self.async_update_and_abort(entry, subentry, data=data)
+            self.hass.config_entries.async_schedule_reload(entry.entry_id)
+            return result
+        return self.async_show_form(step_id="reconfigure", data_schema=_appliance_details_schema(kind, dict(subentry.data)))
 
 
 P1_HINTS = ("p1", "power_consumption", "net_power", "grid_power", "electricity_meter", "homewizard")
