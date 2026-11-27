@@ -141,7 +141,6 @@ BASE = {"p1_entity": P1}
         ({"p1_entity": None}, ("base", "p1_missing")),
         ({"p1_source": "import_export", "p1_import_entity": "sensor.in"}, ("base", "p1_pair_incomplete")),
         ({"p1_source": "import_export", "p1_import_entity": "sensor.in", "p1_export_entity": "sensor.in"}, ("base", "p1_pair_same")),
-        ({"excluded_climate_entity": "climate.living"}, ("base", "excluded_needs_counter")),
     ],
 )
 def test_apply_changes_rejects(changes: dict[str, Any], error: tuple[str, str]) -> None:
@@ -311,3 +310,33 @@ async def test_options_flow_needs_the_counter_for_a_climate_entity(hass: HomeAss
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "excluded_needs_counter"}
+
+
+def test_show_if_points_at_real_fields_and_choices() -> None:
+    """Every condition names an existing field and one of its choices ("*" = an entity filled in)."""
+    from custom_components.zephyr.settings_schema import BY_KEY, FIELDS
+
+    conditional = [f for f in FIELDS if f.show_if]
+    assert {f.key for f in conditional} >= {
+        "p1_entity",
+        "p1_import_entity",
+        "p1_export_entity",
+        "curtail_switch",
+        "curtail_number",
+        "curtail_inverter_w",
+        "excluded_climate_entity",
+        "excluded_hvac_modes",
+    }
+    for field in conditional:
+        key, values = field.show_if  # type: ignore[misc]
+        other = BY_KEY[key]
+        assert other.show_if is None, field.key  # no chains
+        for value in values:
+            assert value in other.options if value != "*" else other.kind in ("entity", "entities"), field.key
+        assert field.as_dict()["show_if"] == {"key": key, "values": list(values)}
+
+
+def test_climate_without_counter_is_kept_not_refused() -> None:
+    """Hidden in the panel and not used by control.py; the options flow still asks for the counter."""
+    result = apply_changes(BASE, {"excluded_climate_entity": "climate.living"}, entity_ok=lambda e: True)
+    assert result.errors == {}

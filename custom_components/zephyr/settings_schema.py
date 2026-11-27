@@ -57,6 +57,7 @@ from .const import (
     CONF_WORKDAY_ENTITY,
     CURTAIL_MODES,
     CURTAIL_OFF,
+    CURTAIL_ZEPHYR,
     DEFAULT_EXCLUDED_MODES,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_PLAN_GRID_CHARGE_COST,
@@ -96,6 +97,8 @@ class Field:
     """Entity domain for entity fields."""
     multiple: bool = False
     """A select with a list value (at least one choice)."""
+    show_if: tuple[str, tuple[str, ...]] | None = None
+    """Only shown when another field has one of these values ("*" = filled in); hidden values are kept."""
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -113,8 +116,15 @@ class Field:
             "tariff": self.tariff,
             "domain": self.domain,
             "multiple": self.multiple,
+            "show_if": {"key": self.show_if[0], "values": list(self.show_if[1])} if self.show_if else None,
         }
 
+
+# Fields that only apply with a certain choice (OPDRACHT-ui-velden-voorwaarde).
+_P1_SINGLE: Final = (CONF_P1_SOURCE, (P1_SOURCE_SINGLE,))
+_P1_PAIR: Final = (CONF_P1_SOURCE, (P1_SOURCE_PAIR,))
+_ZEPHYR_CURTAILS: Final = (CONF_CURTAIL_MODE, (CURTAIL_ZEPHYR,))
+_HAS_COUNTER: Final = (CONF_EXCLUDED_ENERGY, ("*",))
 
 _S = Settings()
 _T = Tariffs()
@@ -123,15 +133,15 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_MIN_SOC, "battery", "number", _S.min_soc, "%", 5, 50, 1),
     Field(CONF_MAX_SOC, "battery", "number", _S.max_soc, "%", 70, 100, 1),
     Field(CONF_P1_SOURCE, "sources", "select", P1_SOURCE_SINGLE, options=(P1_SOURCE_SINGLE, P1_SOURCE_PAIR), reload=True),
-    Field(CONF_P1_ENTITY, "sources", "entity", device_class="power", optional=True, reload=True),
-    Field(CONF_P1_IMPORT, "sources", "entity", device_class="power", optional=True, reload=True),
-    Field(CONF_P1_EXPORT, "sources", "entity", device_class="power", optional=True, reload=True),
+    Field(CONF_P1_ENTITY, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_SINGLE),
+    Field(CONF_P1_IMPORT, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_PAIR),
+    Field(CONF_P1_EXPORT, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_PAIR),
     Field(CONF_PRICE_ENTITY, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_FORECAST, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True),
     Field(CONF_SOLAR_POWER, "sources", "entities", device_class="power", optional=True),
     Field(CONF_EXCLUDED_ENERGY, "corrections", "entity", device_class="energy", optional=True, reload=True),
-    Field(CONF_EXCLUDED_CLIMATE, "corrections", "entity", optional=True, reload=True, domain="climate"),
+    Field(CONF_EXCLUDED_CLIMATE, "corrections", "entity", optional=True, reload=True, domain="climate", show_if=_HAS_COUNTER),
     Field(
         CONF_EXCLUDED_MODES,
         "corrections",
@@ -140,6 +150,7 @@ FIELDS: Final[tuple[Field, ...]] = (
         options=tuple(HVAC_MODE_CHOICES),
         reload=True,
         multiple=True,
+        show_if=_HAS_COUNTER,
     ),
     Field(CONF_COST_IMPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True),
     Field(CONF_COST_EXPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True),
@@ -157,9 +168,9 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_PLAN_BUFFER, "planner", "number", 0, "%", 0, 50, 1),
     Field(CONF_WORKDAY_ENTITY, "planner", "entity", optional=True, reload=True, domain="binary_sensor"),
     Field(CONF_CURTAIL_MODE, "planner", "select", CURTAIL_OFF, options=CURTAIL_MODES, reload=True),
-    Field(CONF_CURTAIL_SWITCH, "planner", "entity", optional=True, reload=True, domain="switch"),
-    Field(CONF_CURTAIL_NUMBER, "planner", "entity", optional=True, reload=True, domain="number"),
-    Field(CONF_CURTAIL_INVERTER_W, "planner", "number", 0, "W", 0, 100000, 100, reload=True),
+    Field(CONF_CURTAIL_SWITCH, "planner", "entity", optional=True, reload=True, domain="switch", show_if=_ZEPHYR_CURTAILS),
+    Field(CONF_CURTAIL_NUMBER, "planner", "entity", optional=True, reload=True, domain="number", show_if=_ZEPHYR_CURTAILS),
+    Field(CONF_CURTAIL_INVERTER_W, "planner", "number", 0, "W", 0, 100000, 100, reload=True, show_if=_ZEPHYR_CURTAILS),
     Field(CONF_VACATION_AWAY, "vacation", "bool", False, reload=True),
     Field(CONF_EXPENSIVE_HOURS, "zero_meter", "number", DEFAULT_EXPENSIVE_HOURS, "h", 1, 12, 1),
     Field(CONF_RESERVE_SOC, "zero_meter", "number", DEFAULT_RESERVE_SOC, "%", 0, 80, 1),
@@ -241,8 +252,8 @@ def cross_errors(options: Mapping[str, Any]) -> str | None:
             return "p1_pair_same"
     elif not options.get(CONF_P1_ENTITY):
         return "p1_missing"
-    if options.get(CONF_EXCLUDED_CLIMATE) and not options.get(CONF_EXCLUDED_ENERGY):
-        return "excluded_needs_counter"
+    # A climate entity without the counter is hidden in the panel and not used (control.py), so it is
+    # kept rather than refused; the options flow of HA still asks for the counter.
     return None
 
 
