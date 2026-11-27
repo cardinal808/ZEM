@@ -18,6 +18,7 @@ from .test_live import _switch
 from .test_shadow import _install_with_p1
 
 SWITCH = "switch.export_limiter"
+NUMBER = "number.solaredge_active_power_limit"
 
 
 def _prices(hass: HomeAssistant, value: float) -> None:
@@ -75,3 +76,44 @@ async def test_zephyr_blocks_export_and_turns_the_switch_on(
     assert calls[-1] == ("turn_off", SWITCH)
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["curtail"]["mode"] == "curtail_zephyr" and diag["curtail"]["switch_set"] is True
+
+
+async def test_zephyr_limits_the_inverter_power(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    values: list[float] = []
+
+    async def set_value(call: ServiceCall) -> None:
+        values.append(call.data["value"])
+        hass.states.async_set(NUMBER, str(call.data["value"]))
+
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(datetime(2026, 11, 25, 11, 59, 50, tzinfo=dt_util.get_default_time_zone()))
+    entry = await _install_with_p1(hass, fake_sets)
+    hass.states.async_set("sensor.inverter_power", "3000", {"unit_of_measurement": "W"})
+    _prices(hass, -0.50)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            "p1_entity": P1,
+            "price_entity": PRICE,
+            "solar_power_entities": ["sensor.inverter_power"],
+            "curtail_negative": "curtail_zephyr",
+            "curtail_number": NUMBER,
+            "curtail_inverter_w": 5000,
+        },
+    )
+    await hass.async_block_till_done()
+    hass.services.async_register("number", "set_value", set_value)
+    hass.states.async_set(NUMBER, "100")
+    await _run(hass, freezer, 30, watts=-1000.0)
+    assert entry.runtime_data.curtail.negative
+    room = entry.runtime_data.curtail._charge_room()
+    assert room > 0  # the set is not full: it may still charge from the surplus
+    assert values and values[-1] == round((3000 + room - 1000 - 50) / 5000 * 100)
+    assert planner_curtails(dict(entry.options))
+    _prices(hass, 0.10)
+    freezer.move_to(datetime(2026, 11, 25, 12, 15, 4, tzinfo=dt_util.get_default_time_zone()))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    await _run(hass, freezer, 20, watts=-1000.0)
+    assert values[-1] == 100

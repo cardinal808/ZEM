@@ -90,3 +90,7 @@ CURTAIL_ZEPHYR: Final = "curtail_zephyr"
 CURTAIL_MODES: Final = (CURTAIL_OFF, CURTAIL_EXTERNAL, CURTAIL_ZEPHYR)
 CONF_CURTAIL_SWITCH: Final = "curtail_switch"
 """Switch that limits the inverter's export (on = limited), e.g. a template switch for a limiter."""
+CONF_CURTAIL_NUMBER: Final = "curtail_number"
+"""Number entity limiting the inverter's active power in % (e.g. SolarEdge Modbus), set by ZEPHYR."""
+CONF_CURTAIL_INVERTER_W: Final = "curtail_inverter_w"
+"""Rated AC power of that inverter (W), to turn the wanted production into a %."""

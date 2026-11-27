@@ -430,6 +430,16 @@
         "label": "Solar panel power",
         "help": "Power sensors (W) of inverters, added up.",
         "more": "For inverters that are not on a Zendure set, such as SolarEdge. ZEPHYR adds them to the sets' PV and shows that in Now and Power. Do not choose the Zendure set's own PV here: ZEPHYR already reads it from the set. Empty: ZEPHYR estimates the power from the solar energy counter (coarser, lags behind)."
+      },
+      "curtail_number": {
+        "label": "Inverter power limit",
+        "help": "Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.",
+        "more": "While the export price is negative ZEPHYR sets it every 10 s so the inverter produces what the house and the battery take (the grid stays at a small import), and back to 100 % after. Needs the rated power below and a solar power sensor (Sources)."
+      },
+      "curtail_inverter_w": {
+        "label": "Inverter rated power",
+        "help": "Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.",
+        "more": "For a SolarEdge the nominal power of the inverter model, e.g. 5000 W for an SE5K."
       }
     },
     "restarting": "ZEPHYR is restarting with the new settings…",

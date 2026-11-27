@@ -20,7 +20,9 @@ from typing import Any, Final
 from .const import (
     CONF_COST_EXPORT_COUNTERS,
     CONF_COST_IMPORT_COUNTERS,
+    CONF_CURTAIL_INVERTER_W,
     CONF_CURTAIL_MODE,
+    CONF_CURTAIL_NUMBER,
     CONF_CURTAIL_SWITCH,
     CONF_EXCLUDED_CLIMATE,
     CONF_EXCLUDED_ENERGY,
@@ -156,6 +158,8 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_WORKDAY_ENTITY, "planner", "entity", optional=True, reload=True, domain="binary_sensor"),
     Field(CONF_CURTAIL_MODE, "planner", "select", CURTAIL_OFF, options=CURTAIL_MODES, reload=True),
     Field(CONF_CURTAIL_SWITCH, "planner", "entity", optional=True, reload=True, domain="switch"),
+    Field(CONF_CURTAIL_NUMBER, "planner", "entity", optional=True, reload=True, domain="number"),
+    Field(CONF_CURTAIL_INVERTER_W, "planner", "number", 0, "W", 0, 100000, 100, reload=True),
     Field(CONF_VACATION_AWAY, "vacation", "bool", False, reload=True),
     Field(CONF_EXPENSIVE_HOURS, "zero_meter", "number", DEFAULT_EXPENSIVE_HOURS, "h", 1, 12, 1),
     Field(CONF_RESERVE_SOC, "zero_meter", "number", DEFAULT_RESERVE_SOC, "%", 0, 80, 1),
