@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.64 — P1 profile: slow meters (DSMR 4) without the step filter
+- **P1 profile** from the measured meter interval (OPDRACHT-p1-profiel): fast (≤ 2 s), medium (≤ 7 s), slow (≤ 25 s), too slow. Medium until 10 intervals are known; a change only after 10 minutes in the new range and 20 % past the bound (slow → medium below 5.6 s).
+- **Slow profile:** the step filter (B20) is off. With one sample per 10 s it held a real rise for a whole extra sample; on such a meter a boiling-water tap's peak is mostly not seen anyway.
+- **Times follow the interval:** *P1 stale* after 3 × the interval (was 2.5 ×; a DSMR 4 gap of 20 s no longer comes close), the check for a second controller over at least 2 samples. Lost after 6 × and the hold at a balanced P1 stayed as they were; one decision per new sample and the slow control (B26) too.
+- **Diagnostics** `control.p1_profile`: interval, samples, profile and since when, step filter on/off, the times in use, *P1 stale* per 24 h, timestamp source, and the DSMR version of a HomeWizard P1 meter.
+
 ### 0.8.63 — Appliance plugs: only real runs leave the house profile
 - Since 0.8.54 all energy of an appliance's plug was taken out of the house profile; on a plug that also feeds a boiling-water tap (a dishwasher plug with a Quooker), the tap's pulses left the profile too, while nothing plans them. Now only **real runs** count: live, an on-period counts once it lasts 10 minutes (then from its start, ending after 5 minutes off); the first fill from the recorder uses the energy per hour of the runs found in the plug's history (the planner waits up to 30 s for them). Short pulses stay house use.
 - **Appliance without a plug:** its usual runs are already in the house profile, so a planned run now counts for half on top of it (SPEC-geplande-verbruikers §3.2). The run's full kWh is still shown (`kwh`), with `counted_kwh`.

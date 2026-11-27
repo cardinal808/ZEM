@@ -156,7 +156,8 @@ class ZeroMeterController:
         if abs(inp.battery_power - self.setpoint) > s.deviation_limit:
             if self._deviation_since is None:
                 self._deviation_since = inp.now
-            if inp.now - self._deviation_since >= s.deviation_time:
+            # At least two meter samples: a slow meter (DSMR 4) reports every 10 s.
+            if inp.now - self._deviation_since >= max(s.deviation_time, 2 * inp.p1_interval):
                 return inp.battery_power
         else:
             self._deviation_since = None

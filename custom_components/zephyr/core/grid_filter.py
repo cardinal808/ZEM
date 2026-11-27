@@ -38,6 +38,8 @@ class GridFilter:
         self._out: float | None = None
         self.holds = 0
         """Number of steps held back (diagnostics)."""
+        self.step_enabled = True
+        """Off for a slow meter (P1 profile): one sample per 10 s would hold a real rise 10 s more."""
 
     def reset(self) -> None:
         self._hold_value = None
@@ -64,11 +66,11 @@ class GridFilter:
         # --- step filter ---
         if self._hold_value is not None:
             assert self._hold_since is not None
-            if raw <= self._hold_value + s.step_threshold / 2 or now - self._hold_since >= s.step_hold:
+            if not self.step_enabled or raw <= self._hold_value + s.step_threshold / 2 or now - self._hold_since >= s.step_hold:
                 self._hold_value = None  # peak over, or it stays: follow again
                 self._hold_since = None
                 self._samples.clear()
-        elif s.step_threshold > 0 and previous is not None and raw - max(previous, 0.0) > s.step_threshold:
+        elif self.step_enabled and s.step_threshold > 0 and previous is not None and raw - max(previous, 0.0) > s.step_threshold:
             self._hold_value = previous
             self._hold_since = now
             self.holds += 1

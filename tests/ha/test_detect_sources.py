@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import Any
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -49,3 +52,19 @@ async def test_meter_counters_without_tariffs_by_integration(hass: HomeAssistant
     imp = _entity(hass, "homewizard", "import", "meterkast_energy_import", ENERGY, model="HWE-P1")
     exp = _entity(hass, "homewizard", "export", "meterkast_energy_export", ENERGY, model="HWE-P1")
     assert suggest_meter_counters(hass) == ([imp], [exp])
+
+
+async def test_diagnostics_show_the_p1_profile_and_dsmr_version(hass: HomeAssistant, fake_sets: Any) -> None:
+    from custom_components.zephyr.diagnostics import _dsmr_version
+
+    meter = _entity(hass, "homewizard", "p1_power", "meterkast_vermogen", POWER, model="HWE-P1")
+    device_id = er.async_get(hass).async_get(meter).device_id
+    version = (
+        er.async_get(hass)
+        .async_get_or_create("sensor", "homewizard", "p1_dsmr_version", suggested_object_id="meterkast_dsmr_version", device_id=device_id)
+        .entity_id
+    )
+    hass.states.async_set(version, "42")
+    control = SimpleNamespace(p1_entity=meter, p1_pair=None)
+    assert _dsmr_version(hass, control) == "42"
+    assert _dsmr_version(hass, SimpleNamespace(p1_entity="sensor.other", p1_pair=None)) is None

@@ -8,6 +8,7 @@ from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from . import ZephyrConfigEntry
 from .const import CONF_HOST, CONF_SERIAL
@@ -27,6 +28,19 @@ def _redact_report(raw: dict[str, Any]) -> dict[str, Any]:
             if isinstance(p, dict)
         ]
     return report
+
+
+def _dsmr_version(hass: HomeAssistant, control: Any) -> str | None:
+    """The DSMR version a meter reader (e.g. HomeWizard P1) reports on the P1 sensor's device, if any."""
+    entity = control.p1_entity or (control.p1_pair[0] if control.p1_pair else None)
+    reg = er.async_get(hass).async_get(entity) if entity else None
+    if reg is None or reg.device_id is None:
+        return None
+    for other in er.async_entries_for_device(er.async_get(hass), reg.device_id):
+        if "dsmr_version" in other.entity_id or "dsmr_version" in (other.unique_id or ""):
+            state = hass.states.get(other.entity_id)
+            return None if state is None else state.state
+    return None
 
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
@@ -92,6 +106,8 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
             }
             if result
             else None,
+            "p1_profile": control.engine.p1_profile_view(time.monotonic())
+            | {"timestamps": "last_reported", "dsmr_version": _dsmr_version(hass, control)},
             "p1_filter": {
                 "step_holds": control.engine.grid_filter.holds,
                 "peak_kwh": round(control.engine.peak_kwh, 4),
