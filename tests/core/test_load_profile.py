@@ -22,7 +22,7 @@ def test_daily_mean_until_enough_measurements() -> None:
     assert p.expected(WORKDAY, 18) == pytest.approx(sum(SHAPE) / 24)
     _days(p, WORKDAY, 1, SHAPE)
     assert p.expected(WORKDAY, 18) == pytest.approx(1.0)
-    assert p.expected(WEEKEND, 18) == pytest.approx(sum(SHAPE) / 24)  # weekend still unknown
+    assert p.expected(WEEKEND, 18) == pytest.approx(1.0)  # weekend still unknown: the workday's hour
 
 
 def test_profile_follows_a_change_within_weeks() -> None:
@@ -74,7 +74,7 @@ def test_first_fill_from_meter_history() -> None:
     assert profile.mean_count == 72
     assert profile.expected(WORKDAY, 18) == pytest.approx(1.2)
     assert profile.expected(WORKDAY, 3) == pytest.approx(0.25)
-    assert profile.expected(WEEKEND, 18) == pytest.approx(profile.mean)  # nothing learned for weekends yet
+    assert profile.expected(WEEKEND, 18) == pytest.approx(1.2)  # no weekends yet: the workday's shape
     assert profile.steering() == 1.0
 
 
@@ -87,3 +87,9 @@ def test_workday_overrides_the_weekday() -> None:
     assert day_type_of(christmas) == WORKDAY
     assert day_type_of(christmas, {date(2026, 12, 25): False}) == WEEKEND
     assert day_type_of(datetime(2026, 12, 26, 12), {date(2026, 12, 25): False}) == WEEKEND  # Saturday by the weekday
+
+
+def test_without_either_day_type_the_mean() -> None:
+    p = LoadProfile()
+    _days(p, WORKDAY, 1, SHAPE)
+    assert p.expected(WEEKEND, 18) == pytest.approx(p.mean)

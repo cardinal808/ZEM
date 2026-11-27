@@ -43,8 +43,16 @@ class LoadProfile:
     """(measured, expected) of the last hours, for steering."""
 
     def expected(self, day_type: str, hour: int) -> float:
+        """Learned value for the hour; before that the other day type's hour, then the mean.
+
+        The other day type keeps the shape of the day (a quiet night, a busy evening) while
+        e.g. the weekend profile is still empty, instead of a flat mean.
+        """
         if self.counts[day_type][hour] >= MIN_COUNT[day_type]:
             return self.values[day_type][hour]
+        other = WEEKEND if day_type == WORKDAY else WORKDAY
+        if self.counts[other][hour] >= MIN_COUNT[other]:
+            return self.values[other][hour]
         return self.mean
 
     def learn(self, day_type: str, hour: int, kwh: float) -> None:
