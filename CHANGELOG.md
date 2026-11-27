@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.59 — Solar forecast from the Energy dashboard
+- Without a forecast sensor, ZEPHYR now takes the solar forecast of Home Assistant's **Energy dashboard**: every forecast integration set there (Forecast.Solar, Solcast, Open-Meteo, Helios Forecast if it provides one, …), summed over the solar sources. Read at the start and every 30 minutes. Per hour (or the source's own step) and without the 10/90 % bounds; Solcast via its sensor stays the richer choice (half hours and bounds, B32).
+- The planner and the day-ahead history (23:00, B31) use the same forecast; its source is in the diagnostics (`planner.inputs.solar_forecast_source`, `solar.forecast_source`, `energy:<integrations>`).
+- Settings text for *Solar forecast* says what an empty field does.
+
 ### 0.8.58 — Stroom: flows on an own picture
 - On an own picture, place the item *Huis* (the meter cupboard) with its spot: then every flow runs through that spot like the main line on the default picture: roof and shed panels, battery and grid to *Huis* (battery and grid reverse when charging or exporting), and from *Huis* to the floors and the charge point, with moving dots and the colour of the biggest source. Each box then only points at its spot with a thin line.
 - The *Huis* box shows the total, the rest and the flows in words. Without a *Huis* spot the picture works as before.
