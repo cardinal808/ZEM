@@ -6935,106 +6935,115 @@ var mn = {
 };
 V([O({ attribute: !1 })], Y.prototype, "now", void 0), V([O({ attribute: !1 })], Y.prototype, "uiLang", void 0), V([O()], Y.prototype, "locale", void 0), V([k()], Y.prototype, "narrow", void 0), Y = V([D("zephyr-flow")], Y);
 // src/house.ts
-var hn = 1284, gn = 1048, _n = {
+var hn = 1614, gn = 1225, _n = {
 	header: [
 		20,
 		16,
-		330,
-		76
+		420,
+		70
 	],
-	roof: {
+	battery: {
 		box: [
-			40,
-			138,
-			270,
-			70
+			20,
+			126,
+			420,
+			84
 		],
 		line: [
-			[245, 208],
-			[245, 341],
-			[772, 341]
-		]
+			[440, 166],
+			[530, 166],
+			[530, 172]
+		],
+		dot: [530, 174]
 	},
 	shedSolar: {
 		box: [
-			680,
-			34,
-			258,
-			64
+			860,
+			16,
+			300,
+			70
 		],
-		line: [[772, 98], [772, 341]]
+		line: [
+			[860, 51],
+			[735, 51],
+			[735, 158]
+		],
+		dot: [735, 160]
 	},
-	sunBus: [[772, 341], [772, 912]],
-	battery: {
+	roof: {
 		box: [
-			362,
-			34,
-			310,
-			64
+			20,
+			340,
+			262,
+			80
 		],
-		line: [[527, 98], [527, 152]],
-		dot: [527, 154]
+		line: [[282, 380], [318, 380]],
+		dot: [320, 380]
 	},
 	grid: {
 		box: [
-			676,
-			944,
-			242,
-			86
+			20,
+			1100,
+			270,
+			90
 		],
-		line: [[588, 912], [828, 912]]
+		line: [
+			[290, 1145],
+			[370, 1145],
+			[370, 1002]
+		],
+		dot: [370, 1e3]
 	},
 	ev: {
 		box: [
-			314,
-			944,
-			168,
-			62
+			705,
+			1110,
+			230,
+			70
 		],
 		line: [
-			[480, 975],
-			[588, 975],
-			[588, 900]
+			[705, 1145],
+			[685, 1145],
+			[685, 972]
 		],
-		dot: [588, 900]
+		dot: [685, 970]
 	},
-	houseBus: [[845, 207], [845, 945]],
 	floors: {
 		attic: {
 			box: [
-				938,
-				250,
-				296,
-				72
+				1262,
+				215,
+				330,
+				80
 			],
-			y: 207
+			line: [[1262, 255], [1226, 255]]
 		},
 		first: {
 			box: [
-				934,
-				510,
-				308,
-				72
+				1262,
+				442,
+				330,
+				80
 			],
-			y: 441
+			line: [[1262, 482], [1238, 482]]
 		},
 		ground: {
 			box: [
-				932,
-				775,
-				318,
-				72
+				1262,
+				692,
+				330,
+				80
 			],
-			y: 693
+			line: [[1262, 732], [1246, 732]]
 		},
 		shed: {
 			box: [
-				940,
-				975,
-				298,
-				70
+				1262,
+				945,
+				330,
+				80
 			],
-			y: 0
+			line: [[1262, 985], [1214, 985]]
 		}
 	}
 }, X = {
@@ -7077,23 +7086,18 @@ var Z = class extends E {
       <div class="stage">
         <img src=${`${this.base}/house.webp`} alt="" draggable="false" />
         <svg viewBox="0 0 ${hn} ${gn}" aria-hidden="true">
-          ${this.line(d.roof.line, X.sun, c)}
-          ${this.line(d.shedSolar.line, X.sun, l)}
-          ${this.line(d.sunBus, X.sun, r.solar)}
-          ${this.line(d.battery.line, X.batt, Math.abs(r.battery))}
-          ${x`<circle cx=${d.battery.dot[0]} cy=${d.battery.dot[1]} r="6" fill=${X.batt}></circle>`}
-          ${this.line(d.grid.line, X.grid, Math.abs(r.grid))}
-          ${this.line(d.ev.line, X.batt, i?.power_w ?? 0)}
-          ${x`<circle cx=${d.ev.dot[0]} cy=${d.ev.dot[1]} r="6" fill=${X.batt}></circle>`}
-          ${this.line(d.houseBus, X.house, r.house)}
-          ${[369, 563].map((e) => x`${this.line([[845, e], [790, e]], X.house, r.house)}${r.house >= 10 ? this.arrowLeft(784, e, X.house) : C}`)}
+          ${this.line(d.roof.line, X.sun, c)}${this.dot(d.roof.dot, X.sun)}
+          ${this.line(d.shedSolar.line, X.sun, l)}${this.dot(d.shedSolar.dot, X.sun)}
+          ${this.line(d.battery.line, X.batt, Math.abs(r.battery))}${this.dot(d.battery.dot, X.batt)}
+          ${this.line(d.grid.line, X.grid, Math.abs(r.grid))}${this.dot(d.grid.dot, X.grid)}
+          ${i ? x`${this.line(d.ev.line, X.batt, i.power_w ?? 0)}${this.dot(d.ev.dot, X.batt)}` : C}
           ${[
 			"attic",
 			"first",
 			"ground"
 		].map((e) => {
-			let t = d.floors[e].y;
-			return x`${this.line([[845, t], [925, t]], X.house, f(e))}${f(e) >= 10 ? this.arrow(930, t, X.house) : C}`;
+			let t = d.floors[e].line, n = t[t.length - 1];
+			return f(e) >= 10 ? x`${this.line(t, X.house, f(e))}${this.arrowLeft(n[0], n[1], X.house)}` : C;
 		})}
         </svg>
         <div class="boxes">
@@ -7152,11 +7156,11 @@ var Z = class extends E {
       <path d=${r} class="core" stroke=${t}></path>
       <path d=${r} class="dots" style=${`animation-duration:${Math.max(.5, 1.6 - n / 3e3)}s`}></path>`;
 	}
+	dot(e, t) {
+		return x`<circle cx=${e[0]} cy=${e[1]} r="6" fill=${t}></circle>`;
+	}
 	arrowLeft(e, t, n) {
 		return x`<path d=${`M${e} ${t} l12 -6 l0 12 z`} fill=${n}></path>`;
-	}
-	arrow(e, t, n) {
-		return x`<path d=${`M${e} ${t} l-12 -6 l0 12 z`} fill=${n}></path>`;
 	}
 	bar(e, t) {
 		return b`<div class="bar">
@@ -7234,8 +7238,8 @@ var Z = class extends E {
     :host {
       display: block;
       grid-column: 1 / -1;
-      /* Picture plus totals bar fit in one screen: 1284/1048 is the picture's aspect ratio. */
-      --house-max: calc((100vh - 300px) * 1.2252 + 30px);
+      /* Picture plus totals bar fit in one screen: 1614/1225 is the picture's aspect ratio. */
+      --house-max: calc((100vh - 300px) * 1.3176 + 30px);
     }
     .card {
       container: house / inline-size;
@@ -7247,6 +7251,13 @@ var Z = class extends E {
       padding: 14px;
       color: #eef2f5;
       font-family: var(--z-font);
+      /* Next to the today cards: as high as they are, the bar at the bottom. */
+      box-sizing: border-box;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
     }
     .skeleton {
       min-height: 400px;
@@ -7373,7 +7384,6 @@ var Z = class extends E {
     }
     .bar {
       display: flex;
-      margin-top: 12px;
       background: #0f1f2a;
       border: 1px solid #23435a;
       border-radius: 16px;
@@ -7432,6 +7442,7 @@ var Z = class extends E {
       color: #9fb3c2;
     }
     @container house (max-width: 680px) {
+      .stage > svg,
       .boxes {
         display: none;
       }
@@ -7997,8 +8008,9 @@ var Dn = [
     @container (min-width: 1200px) {
       /* Wide panel: picture on the left (as high as the screen allows), today's cards next to it. */
       .layout {
-        grid-template-columns: minmax(0, calc((100vh - 300px) * 1.2252 + 30px)) minmax(360px, 1fr);
+        grid-template-columns: minmax(0, calc((100vh - 300px) * 1.3176 + 30px)) minmax(360px, 1fr);
         grid-template-rows: auto 1fr;
+        align-items: stretch;
       }
       zephyr-house {
         grid-column: 1;

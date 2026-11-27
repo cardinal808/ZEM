@@ -11,67 +11,68 @@ import { t, type Lang } from "./i18n";
 import type { HouseDevice, StroomView } from "./stroom";
 import type { Now } from "./types";
 
-export const W = 1284;
-export const H = 1048;
+export const W = 1614;
+export const H = 1225;
 
 type Pt = [number, number];
 type Box = [number, number, number, number];
 
-/** Where things are in the default picture. */
+/**
+ * Where things are in the default picture (Bjorn's clean render, widened on the right with
+ * background so the floor boxes sit next to their floor). Every line runs from its box to the
+ * spot it belongs to; a dot marks that spot.
+ */
 export const LAYOUT = {
-  header: [20, 16, 330, 76] as Box,
-  roof: {
-    box: [40, 138, 270, 70] as Box,
+  header: [20, 16, 420, 70] as Box,
+  battery: {
+    box: [20, 126, 420, 84] as Box,
     line: [
-      [245, 208],
-      [245, 341],
-      [772, 341],
+      [440, 166],
+      [530, 166],
+      [530, 172],
     ] as Pt[],
+    dot: [530, 174] as Pt,
   },
   shedSolar: {
-    box: [680, 34, 258, 64] as Box,
+    box: [860, 16, 300, 70] as Box,
     line: [
-      [772, 98],
-      [772, 341],
+      [860, 51],
+      [735, 51],
+      [735, 158],
     ] as Pt[],
+    dot: [735, 160] as Pt,
   },
-  sunBus: [
-    [772, 341],
-    [772, 912],
-  ] as Pt[],
-  battery: {
-    box: [362, 34, 310, 64] as Box,
+  roof: {
+    box: [20, 340, 262, 80] as Box,
     line: [
-      [527, 98],
-      [527, 152],
+      [282, 380],
+      [318, 380],
     ] as Pt[],
-    dot: [527, 154] as Pt,
+    dot: [320, 380] as Pt,
   },
   grid: {
-    box: [676, 944, 242, 86] as Box,
+    box: [20, 1100, 270, 90] as Box,
     line: [
-      [588, 912],
-      [828, 912],
+      [290, 1145],
+      [370, 1145],
+      [370, 1002],
     ] as Pt[],
+    dot: [370, 1000] as Pt,
   },
   ev: {
-    box: [314, 944, 168, 62] as Box,
+    box: [705, 1110, 230, 70] as Box,
     line: [
-      [480, 975],
-      [588, 975],
-      [588, 900],
+      [705, 1145],
+      [685, 1145],
+      [685, 972],
     ] as Pt[],
-    dot: [588, 900] as Pt,
+    dot: [685, 970] as Pt,
   },
-  houseBus: [
-    [845, 207],
-    [845, 945],
-  ] as Pt[],
   floors: {
-    attic: { box: [938, 250, 296, 72] as Box, y: 207 },
-    first: { box: [934, 510, 308, 72] as Box, y: 441 },
-    ground: { box: [932, 775, 318, 72] as Box, y: 693 },
-    shed: { box: [940, 975, 298, 70] as Box, y: 0 },
+    attic: { box: [1262, 215, 330, 80] as Box, line: [[1262, 255], [1226, 255]] as Pt[] },
+    first: { box: [1262, 442, 330, 80] as Box, line: [[1262, 482], [1238, 482]] as Pt[] },
+    ground: { box: [1262, 692, 330, 80] as Box, line: [[1262, 732], [1246, 732]] as Pt[] },
+    shed: { box: [1262, 945, 330, 80] as Box, line: [[1262, 985], [1214, 985]] as Pt[] },
   },
 };
 
@@ -144,26 +145,17 @@ export class ZephyrHouse extends LitElement {
       <div class="stage">
         <img src=${`${this.base}/house.webp`} alt="" draggable="false" />
         <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
-          ${this.line(L.roof.line, COLORS.sun, roofW)}
-          ${this.line(L.shedSolar.line, COLORS.sun, shedW)}
-          ${this.line(L.sunBus, COLORS.sun, f.solar)}
-          ${this.line(L.battery.line, COLORS.batt, Math.abs(f.battery))}
-          ${svg`<circle cx=${L.battery.dot[0]} cy=${L.battery.dot[1]} r="6" fill=${COLORS.batt}></circle>`}
-          ${this.line(L.grid.line, COLORS.grid, Math.abs(f.grid))}
-          ${this.line(L.ev.line, COLORS.batt, ev?.power_w ?? 0)}
-          ${svg`<circle cx=${L.ev.dot[0]} cy=${L.ev.dot[1]} r="6" fill=${COLORS.batt}></circle>`}
-          ${this.line(L.houseBus, COLORS.house, f.house)}
-          ${[369, 563].map((y) => svg`${this.line([[845, y], [790, y]], COLORS.house, f.house)}${f.house >= 10 ? this.arrowLeft(784, y, COLORS.house) : nothing}`)}
+          ${this.line(L.roof.line, COLORS.sun, roofW)}${this.dot(L.roof.dot, COLORS.sun)}
+          ${this.line(L.shedSolar.line, COLORS.sun, shedW)}${this.dot(L.shedSolar.dot, COLORS.sun)}
+          ${this.line(L.battery.line, COLORS.batt, Math.abs(f.battery))}${this.dot(L.battery.dot, COLORS.batt)}
+          ${this.line(L.grid.line, COLORS.grid, Math.abs(f.grid))}${this.dot(L.grid.dot, COLORS.grid)}
+          ${ev ? svg`${this.line(L.ev.line, COLORS.batt, ev.power_w ?? 0)}${this.dot(L.ev.dot, COLORS.batt)}` : nothing}
           ${(["attic", "first", "ground"] as const).map((k) => {
-            const y = L.floors[k].y;
-            return svg`${this.line(
-              [
-                [845, y],
-                [925, y],
-              ],
-              COLORS.house,
-              floorW(k),
-            )}${floorW(k) >= 10 ? this.arrow(930, y, COLORS.house) : nothing}`;
+            const ln = L.floors[k].line;
+            const end = ln[ln.length - 1];
+            return floorW(k) >= 10
+              ? svg`${this.line(ln, COLORS.house, floorW(k))}${this.arrowLeft(end[0], end[1], COLORS.house)}`
+              : nothing;
           })}
         </svg>
         <div class="boxes">
@@ -285,12 +277,12 @@ export class ZephyrHouse extends LitElement {
       <path d=${d} class="dots" style=${`animation-duration:${Math.max(0.5, 1.6 - power / 3000)}s`}></path>`;
   }
 
-  private arrowLeft(x: number, y: number, color: string) {
-    return svg`<path d=${`M${x} ${y} l12 -6 l0 12 z`} fill=${color}></path>`;
+  private dot(p: Pt, color: string) {
+    return svg`<circle cx=${p[0]} cy=${p[1]} r="6" fill=${color}></circle>`;
   }
 
-  private arrow(x: number, y: number, color: string) {
-    return svg`<path d=${`M${x} ${y} l-12 -6 l0 12 z`} fill=${color}></path>`;
+  private arrowLeft(x: number, y: number, color: string) {
+    return svg`<path d=${`M${x} ${y} l12 -6 l0 12 z`} fill=${color}></path>`;
   }
 
   private bar(
@@ -388,8 +380,8 @@ export class ZephyrHouse extends LitElement {
     :host {
       display: block;
       grid-column: 1 / -1;
-      /* Picture plus totals bar fit in one screen: 1284/1048 is the picture's aspect ratio. */
-      --house-max: calc((100vh - 300px) * 1.2252 + 30px);
+      /* Picture plus totals bar fit in one screen: 1614/1225 is the picture's aspect ratio. */
+      --house-max: calc((100vh - 300px) * 1.3176 + 30px);
     }
     .card {
       container: house / inline-size;
@@ -401,6 +393,13 @@ export class ZephyrHouse extends LitElement {
       padding: 14px;
       color: #eef2f5;
       font-family: var(--z-font);
+      /* Next to the today cards: as high as they are, the bar at the bottom. */
+      box-sizing: border-box;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
     }
     .skeleton {
       min-height: 400px;
@@ -527,7 +526,6 @@ export class ZephyrHouse extends LitElement {
     }
     .bar {
       display: flex;
-      margin-top: 12px;
       background: #0f1f2a;
       border: 1px solid #23435a;
       border-radius: 16px;
@@ -586,6 +584,7 @@ export class ZephyrHouse extends LitElement {
       color: #9fb3c2;
     }
     @container house (max-width: 680px) {
+      .stage > svg,
       .boxes {
         display: none;
       }
