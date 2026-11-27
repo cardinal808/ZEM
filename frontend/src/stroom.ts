@@ -225,7 +225,7 @@ export class ZephyrStroom extends LitElement {
   protected override render(): TemplateResult {
     const v = this.view;
     const pic = v?.picture;
-    const ar = pic && pic.width && pic.height ? pic.width / pic.height : 1614 / 1225;
+    const ar = pic && pic.width && pic.height ? pic.width / pic.height : 1700 / 1225;
     return html`<div class="layout" style=${`--house-ar:${ar.toFixed(4)}`}>
       <zephyr-house
         .sign=${this.sign}
@@ -832,7 +832,7 @@ export class ZephyrStroom extends LitElement {
     @container (min-width: 1200px) {
       /* Wide panel: picture on the left (as high as the screen allows), today's cards next to it. */
       .layout {
-        grid-template-columns: minmax(0, calc((100vh - 300px) * var(--house-ar, 1.3176) + 30px)) minmax(360px, 1fr);
+        grid-template-columns: minmax(0, calc((100vh - 300px) * var(--house-ar, 1.3878) + 30px)) minmax(360px, 1fr);
         grid-template-rows: auto 1fr;
         align-items: stretch;
       }

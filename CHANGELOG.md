@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.56 — Stroom: all power flows on the house picture
+- New default picture: the floors moved right so a **main line** runs between the house and the floors. Every source runs to it (battery and shed panels along the top, roof panels straight across, grid from the *Net* box); from it branches go to floors with a measured consumer, into the house (the rest, labelled *Overig*) and to the charge point. Moving dots show the direction: battery charging/delivering and grid import/export reverse their line (Bjorn 27-11: the battery's 540 W "went nowhere").
+- The main line, its branches and the *Huis* box take the colour of the source that supplies the most now (sun yellow, battery green, grid red); another source takes over only when it is 50 W bigger. Grid is red now.
+- Watts on the lines (*540 W → huis*, *200 W → net*), and the flows in words in the *Nu* box (*Zon 3,2 kW → huis 600 W · accu 2,4 kW · net 200 W*).
+- *Overig* is no longer put on the 1st floor: a new *Huis* box shows the total and the rest; on an own picture *Huis* is an item to place.
+- Tests: the dominant source with its margin and the flows per source (vitest).
+
 ### 0.8.55 — Write and relay counters over a restart; no 0 W at a restart
 - **A restart of Home Assistant no longer sets the sets to 0 W** while live: they keep their last command and ZEPHYR takes over again after the start (B35, B47). 0 W opened the relay and drew from the grid for the minute of the restart. A real stop still writes 0 W.
 - **Counters kept over a restart** (OPDRACHT-tellers-relais-flash): the write and relay events of the last 24 hours and the totals per day (7 days) are stored (`zephyr.<entry>.writes`, every 5 minutes, at a stop and an unload). The 1 h and 24 h windows run on after a restart.

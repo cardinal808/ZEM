@@ -11,79 +11,99 @@ import { t, type Lang } from "./i18n";
 import type { HouseDevice, HousePicture, StroomView } from "./stroom";
 import type { Now } from "./types";
 
-export const W = 1614;
+export const W = 1700;
 export const H = 1225;
 
 type Pt = [number, number];
 type Box = [number, number, number, number];
 
+/** x of the main line between the house and the floors in the default picture. */
+const BUS = 920;
+
 /**
- * Where things are in the default picture (Bjorn's clean render, widened on the right with
- * background so the floor boxes sit next to their floor). Every line runs from its box to the
- * spot it belongs to; a dot marks that spot.
+ * Where things are in the default picture (Bjorn's render; the floors moved right so a main line
+ * fits between the house and the floors). Every source runs to the main line; from there branches
+ * go to the floors with measured consumers, into the house (the rest) and to the charge point.
+ * Lines run from the source towards the main line; a flow the other way is drawn reversed.
  */
 export const LAYOUT = {
-  header: [20, 16, 420, 70] as Box,
+  header: [20, 16, 420, 96] as Box,
+  bus: [
+    [BUS, 96],
+    [BUS, 1145],
+  ] as Pt[],
   battery: {
-    box: [20, 126, 420, 84] as Box,
+    box: [20, 140, 420, 84] as Box,
     line: [
-      [440, 166],
-      [530, 166],
-      [530, 172],
+      [530, 165],
+      [530, 96],
+      [BUS, 96],
     ] as Pt[],
-    dot: [530, 174] as Pt,
+    dot: [530, 165] as Pt,
+    label: [545, 140] as Pt,
   },
   shedSolar: {
-    box: [860, 16, 300, 70] as Box,
+    box: [960, 16, 300, 70] as Box,
     line: [
-      [860, 51],
-      [735, 51],
-      [735, 158],
+      [735, 150],
+      [735, 112],
+      [BUS, 112],
     ] as Pt[],
-    dot: [735, 160] as Pt,
+    dot: [735, 150] as Pt,
   },
   roof: {
     box: [20, 340, 262, 80] as Box,
     line: [
-      [282, 380],
-      [318, 380],
+      [600, 420],
+      [BUS, 420],
     ] as Pt[],
-    dot: [320, 380] as Pt,
+    dot: [600, 420] as Pt,
+    label: [700, 405] as Pt,
   },
   grid: {
-    box: [20, 1100, 270, 90] as Box,
+    box: [20, 1075, 300, 100] as Box,
     line: [
-      [290, 1145],
-      [370, 1145],
-      [370, 1002],
+      [320, 1145],
+      [BUS, 1145],
     ] as Pt[],
-    dot: [370, 1000] as Pt,
+    label: [430, 1130] as Pt,
   },
   ev: {
-    box: [705, 1110, 230, 70] as Box,
+    box: [690, 990, 220, 76] as Box,
     line: [
-      [705, 1145],
-      [685, 1145],
+      [BUS, 972],
       [685, 972],
     ] as Pt[],
-    dot: [685, 970] as Pt,
+    dot: [685, 972] as Pt,
+  },
+  home: {
+    box: [940, 1060, 330, 110] as Box,
+    line: [
+      [BUS, 700],
+      [705, 700],
+    ] as Pt[],
+    dot: [705, 700] as Pt,
+    label: [730, 688] as Pt,
   },
   floors: {
-    attic: { box: [1262, 215, 330, 80] as Box, line: [[1262, 255], [1226, 255]] as Pt[] },
-    first: { box: [1262, 442, 330, 80] as Box, line: [[1262, 482], [1238, 482]] as Pt[] },
-    ground: { box: [1262, 692, 330, 80] as Box, line: [[1262, 732], [1246, 732]] as Pt[] },
-    shed: { box: [1262, 945, 330, 80] as Box, line: [[1262, 985], [1214, 985]] as Pt[] },
+    attic: { box: [1378, 265, 316, 80] as Box, line: [[BUS, 305], [1037, 305]] as Pt[] },
+    first: { box: [1378, 460, 316, 80] as Box, line: [[BUS, 500], [1024, 500]] as Pt[] },
+    ground: { box: [1378, 675, 316, 80] as Box, line: [[BUS, 715], [1009, 715]] as Pt[] },
+    shed: { box: [1378, 892, 316, 80] as Box, line: [] as Pt[] },
   },
 };
+
+const SOURCE_COLOR: Record<string, string> = {};
 
 export const COLORS = {
   sun: "#ffcf1f",
   batt: "#22d3b5",
   house: "#2f8cff",
-  grid: "#ff6a2b",
+  grid: "#ff4d4d",
   ev: "#a86bff",
   exp: "#ff3b3b",
 };
+Object.assign(SOURCE_COLOR, { sun: COLORS.sun, batt: COLORS.batt, grid: COLORS.grid });
 
 const ICON: Record<string, string> = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -112,9 +132,64 @@ export type ItemKey =
   | "attic"
   | "first"
   | "ground"
-  | "shed";
+  | "shed"
+  | "home";
 type FloorKey = "attic" | "first" | "ground" | "shed";
-export const ITEM_KEYS: ItemKey[] = ["roof", "shed_solar", "battery", "grid", "ev", "attic", "first", "ground", "shed"];
+export const ITEM_KEYS: ItemKey[] = [
+  "roof",
+  "shed_solar",
+  "battery",
+  "grid",
+  "ev",
+  "home",
+  "attic",
+  "first",
+  "ground",
+  "shed",
+];
+
+export type Source = "sun" | "batt" | "grid";
+
+/**
+ * The source that supplies the most to the house now, for the colour of the main line. A new
+ * source takes over only when it supplies at least `margin` W more than the current one, so the
+ * colour does not flicker between two sources of about the same size. Charging the battery and
+ * exporting are not sources. Null when nothing flows.
+ */
+export function dominant(
+  supply: Record<Source, number>,
+  current: Source | null,
+  margin = 50,
+): Source | null {
+  const best = (Object.keys(supply) as Source[]).reduce((a, b) => (supply[b] > supply[a] ? b : a));
+  if (supply[best] < 10) return null;
+  if (current && current !== best && supply[best] < supply[current] + margin && supply[current] >= 10)
+    return current;
+  return best;
+}
+
+/** The flows now in words, per source: "Zon 3,2 kW → huis 0,6 kW · accu 2,4 kW". */
+export function flowParts(paths: Record<string, number>): { from: Source; total: number; to: [string, number][] }[] {
+  const out: { from: Source; total: number; to: [string, number][] }[] = [];
+  const add = (from: Source, keys: [string, string][]) => {
+    const to = keys.map(([k, dest]) => [dest, paths[k] ?? 0] as [string, number]).filter(([, w]) => w >= 10);
+    if (to.length) out.push({ from, total: to.reduce((t, [, w]) => t + w, 0), to });
+  };
+  add("sun", [
+    ["solar_house", "house"],
+    ["solar_battery", "battery"],
+    ["solar_grid", "grid"],
+  ]);
+  add("batt", [
+    ["battery_house", "house"],
+    ["battery_grid", "grid"],
+  ]);
+  add("grid", [
+    ["grid_house", "house"],
+    ["grid_battery", "battery"],
+  ]);
+  return out;
+}
 const FLOOR_KEYS: FloorKey[] = ["attic", "first", "ground", "shed"];
 /** Width of a box on an own picture, as a part of the picture's width. */
 export const OWN_BOX_W = 0.24;
@@ -196,10 +271,9 @@ export class ZephyrHouse extends LitElement {
     const shedW = now.solar_sets_w ?? 0;
     const curtail = now.curtail?.active ? now.curtail : null;
     const floorW = (key: string): number =>
-      (floors[key] ?? []).reduce((s, d) => s + (d.power_w ?? 0), 0) +
-      (key === "first" ? rest : 0);
+      (floors[key] ?? []).reduce((s, d) => s + (d.power_w ?? 0), 0);
     const floor = (k: FloorKey): Item => ({
-      ...this.floorItem(k, floors[k] ?? [], k === "first" ? rest : null, now),
+      ...this.floorItem(k, floors[k] ?? [], null, now),
       power: k === "shed" ? 0 : floorW(k),
     });
     return {
@@ -252,6 +326,16 @@ export class ZephyrHouse extends LitElement {
         active: !!ev,
         power: ev?.power_w ?? 0,
       },
+      home: {
+        color: COLORS.house,
+        icon: "house",
+        title: html`<b>${this.tr("house.home")}</b>`,
+        lines: [
+          html`${this.tr("house.total")} <b>${this.w(f.house)}</b>`,
+          html`${this.tr("house.rest_of")} <b>${this.w(rest)}</b>`,
+        ],
+        power: rest,
+      },
       attic: floor("attic"),
       first: floor("first"),
       ground: floor("ground"),
@@ -259,35 +343,54 @@ export class ZephyrHouse extends LitElement {
     };
   }
 
-  /** The default house: fixed places for every box and line. */
+  @state() private dom: Source | null = null;
+
+  /** The default house: every source runs to the main line, from there to the floors and the house. */
   private defaultStage(it: Record<ItemKey, Item>): TemplateResult {
     const L = LAYOUT;
-    const placed: [ItemKey, { box: Box; line: Pt[]; dot?: Pt }][] = [
-      ["roof", L.roof],
-      ["shed_solar", L.shedSolar],
-      ["battery", L.battery],
-      ["grid", L.grid],
-      ["ev", L.ev],
-    ];
+    const now = this.now!;
+    const airco = now.excluded?.active ? (now.excluded.power_w ?? 0) : 0;
+    const f = flows(now.solar_w, now.grid_w, now.battery_w, airco);
+    const dom = dominant(
+      { sun: f.solar - f.paths.solar_battery, batt: Math.max(0, -f.battery), grid: Math.max(0, f.grid) },
+      this.dom,
+    );
+    if (dom !== this.dom) queueMicrotask(() => (this.dom = dom));
+    const c = dom ? SOURCE_COLOR[dom] : COLORS.house;
+    const rev = (pts: Pt[], yes: boolean): Pt[] => (yes ? [...pts].reverse() : pts);
+    const bat = f.battery;
+    const busOn = f.house >= 10 || Math.abs(bat) >= 10 || Math.abs(f.grid) >= 10;
+    const tag = (at: Pt, text: string, color: string, on: boolean) =>
+      on ? svg`<text x=${at[0]} y=${at[1]} class="tag" fill=${color}>${text}</text>` : nothing;
+    const to = (key: string) => this.tr(`house.to_${key}`);
     return html`<div class="stage">
       <img src=${`${this.base}/house.webp`} alt="" draggable="false" />
       <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
-        ${placed.map(([k, p]) =>
-          k === "ev" && !it.ev.active
-            ? nothing
-            : svg`${this.line(p.line, it[k].color, it[k].power)}${p.dot ? this.dot(p.dot, it[k].color) : nothing}`,
-        )}
+        ${busOn ? this.line(L.bus, c, Math.max(f.house, Math.abs(bat), Math.abs(f.grid))) : nothing}
+        ${this.line(L.roof.line, COLORS.sun, it.roof.power)}${this.dot(L.roof.dot, COLORS.sun)}
+        ${this.line(L.shedSolar.line, COLORS.sun, it.shed_solar.power)}${this.dot(L.shedSolar.dot, COLORS.sun)}
+        ${this.line(rev(L.battery.line, bat > 0), COLORS.batt, Math.abs(bat))}${this.dot(L.battery.dot, COLORS.batt)}
+        ${this.line(rev(L.grid.line, f.grid < 0), COLORS.grid, Math.abs(f.grid))}
+        ${it.ev.active ? svg`${this.line(L.ev.line, COLORS.batt, it.ev.power)}${this.dot(L.ev.dot, COLORS.batt)}` : nothing}
+        ${it.home.power >= 10 ? svg`${this.line(L.home.line, c, it.home.power)}${this.dot(L.home.dot, c)}` : nothing}
         ${(["attic", "first", "ground"] as const).map((k) => {
           const ln = L.floors[k].line;
           const end = ln[ln.length - 1];
           return it[k].power >= 10
-            ? svg`${this.line(ln, COLORS.house, it[k].power)}${this.arrowLeft(end[0], end[1], COLORS.house)}`
+            ? svg`${this.line(ln, c, it[k].power)}${this.arrow(end[0], end[1], c)}`
             : nothing;
         })}
+        ${busOn ? svg`<circle cx=${BUS} cy="96" r="8" fill=${c}></circle><circle cx=${BUS} cy="1145" r="8" fill=${c}></circle>` : nothing}
+        ${tag(L.roof.label, this.w(it.roof.power), COLORS.sun, it.roof.power >= 10)}
+        ${tag(L.battery.label, `${this.w(Math.abs(bat))} ${to(bat > 0 ? "battery" : "house")}`, COLORS.batt, Math.abs(bat) >= 10)}
+        ${tag(L.grid.label, `${this.w(Math.abs(f.grid))} ${to(f.grid > 0 ? "house" : "grid")}`, COLORS.grid, Math.abs(f.grid) >= 10)}
+        ${tag(L.home.label, `${this.tr("house.rest")} ${this.w(it.home.power)}`, c, it.home.power >= 10)}
       </svg>
       <div class="boxes">
-        ${this.box(L.header, this.header())}
-        ${placed.map(([k, p]) => this.box(p.box, it[k]))}
+        ${this.box(L.header, this.header(f.paths))}
+        ${this.box(L.roof.box, it.roof)} ${this.box(L.shedSolar.box, it.shed_solar)}
+        ${this.box(L.battery.box, it.battery)} ${this.box(L.grid.box, it.grid)}
+        ${this.box(L.ev.box, it.ev)} ${this.box(L.home.box, { ...it.home, color: c })}
         ${FLOOR_KEYS.map((k) => this.box(L.floors[k].box, it[k]))}
       </div>
     </div>`;
@@ -333,12 +436,22 @@ export class ZephyrHouse extends LitElement {
     );
   }
 
-  private header(): Item {
+  private header(paths?: Record<string, number>): Item {
+    const src = (k: string) => this.tr(`house.src_${k}`);
+    const dst = (k: string) => this.tr(`house.dst_${k}`);
+    const parts = paths ? flowParts(paths) : [];
     return {
       color: "#23435a",
       icon: "leaf",
       title: html`<b class="big">${this.tr("house.title")}</b>`,
-      lines: [this.tr("house.sub")],
+      lines: parts.length
+        ? parts.map((p) =>
+            p.to.length === 1
+              ? html`${src(p.from)} <b>${this.w(p.total)}</b> → ${dst(p.to[0][0])}`
+              : html`${src(p.from)} <b>${this.w(p.total)}</b> →
+                ${p.to.map(([d, w], i) => html`${i ? " · " : ""}${dst(d)} ${this.w(w)}`)}`,
+          )
+        : [this.tr("house.sub")],
       power: 0,
     };
   }
@@ -419,8 +532,9 @@ export class ZephyrHouse extends LitElement {
     return svg`<circle cx=${p[0]} cy=${p[1]} r="6" fill=${color}></circle>`;
   }
 
-  private arrowLeft(x: number, y: number, color: string) {
-    return svg`<path d=${`M${x} ${y} l12 -6 l0 12 z`} fill=${color}></path>`;
+  /** An arrow pointing right with its tip at (x, y). */
+  private arrow(x: number, y: number, color: string) {
+    return svg`<path d=${`M${x} ${y} l-16 -9 l0 18 z`} fill=${color}></path>`;
   }
 
   private bar(
@@ -518,8 +632,8 @@ export class ZephyrHouse extends LitElement {
     :host {
       display: block;
       grid-column: 1 / -1;
-      /* Picture plus totals bar fit in one screen: 1614/1225 is the picture's aspect ratio. */
-      --house-max: calc((100vh - 300px) * var(--house-ar, 1.3176) + 30px);
+      /* Picture plus totals bar fit in one screen: 1700/1225 is the default picture's aspect ratio. */
+      --house-max: calc((100vh - 300px) * var(--house-ar, 1.3878) + 30px);
     }
     .card {
       container: house / inline-size;
@@ -577,6 +691,12 @@ export class ZephyrHouse extends LitElement {
       stroke-dasharray: 3 14;
       opacity: 0.85;
       animation: run 1s linear infinite;
+    }
+    .stage > svg text.tag {
+      font: 700 26px var(--z-font);
+      paint-order: stroke;
+      stroke: #0b1620;
+      stroke-width: 7px;
     }
     @keyframes run {
       to {

@@ -21,6 +21,7 @@ const COLOR: Record<ItemKey, string> = {
   battery: COLORS.batt,
   grid: COLORS.grid,
   ev: COLORS.batt,
+  home: COLORS.house,
   attic: COLORS.house,
   first: COLORS.house,
   ground: COLORS.house,
