@@ -45,7 +45,7 @@ async def test_forecast_and_counter_are_stored(hass: HomeAssistant, fake_sets: F
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     result = await hass.config_entries.options.async_init(entry.entry_id)
     suggested = {str(k): k.description["suggested_value"] for k in result["data_schema"].schema if str(k).startswith("solar_")}
-    assert suggested == {"solar_forecast_entity": FORECAST, "solar_energy_entity": ENERGY}
+    assert suggested == {"solar_forecast_entity": FORECAST, "solar_energy_entity": ENERGY, "solar_power_entities": None}
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"p1_source": "single", "p1_entity": P1, "solar_forecast_entity": FORECAST, "solar_energy_entity": ENERGY}
     )

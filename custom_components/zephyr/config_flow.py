@@ -53,6 +53,7 @@ from .const import (
     CONF_SERIAL,
     CONF_SOLAR_ENERGY,
     CONF_SOLAR_FORECAST,
+    CONF_SOLAR_POWER,
     CONF_TARIFF_ENERGY_TAX,
     CONF_TARIFF_FIXED_MONTH,
     CONF_TARIFF_MARKUP_EXPORT,
@@ -416,6 +417,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                     CONF_P1_EXPORT,
                     CONF_SOLAR_FORECAST,
                     CONF_SOLAR_ENERGY,
+                    CONF_SOLAR_POWER,
                     CONF_EXCLUDED_ENERGY,
                     CONF_EXCLUDED_CLIMATE,
                     CONF_WORKDAY_ENTITY,
@@ -461,6 +463,11 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_SOLAR_ENERGY, description={"suggested_value": options.get(CONF_SOLAR_ENERGY) or solar_energy}
                 ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.ENERGY)),
+                vol.Optional(CONF_SOLAR_POWER, description={"suggested_value": options.get(CONF_SOLAR_POWER)}): (
+                    selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER, multiple=True)
+                    )
+                ),
                 vol.Optional(CONF_EXCLUDED_ENERGY, description={"suggested_value": options.get(CONF_EXCLUDED_ENERGY)}): (
                     selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.ENERGY))
                 ),

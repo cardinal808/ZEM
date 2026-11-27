@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.36 — Solar now from inverters the sets do not see
+- Bjorn 27-11: *Nu* showed sun 0 W at noon, because ZEPHYR only knew the PV on the Zendure set. The house was too low by the same amount.
+- New option **Zonnepanelen-vermogen** (Instellingen → Bronnen, also in the options flow): one or more power sensors (W or kW) of inverters that are not on a set, e.g. SolarEdge. They are added up and added to the sets' PV. Live, no reload. ZEPHYR's own sensors are skipped (the sets' PV is already counted).
+- Without a power sensor ZEPHYR estimates the power from the solar energy counter (step / time between steps, fading out when the counter stops); *Nu* then says *geschat*.
+- `now` gives `solar_sets_w`, `solar_external_w` and `solar_estimated` next to `solar_w`.
+- Tests: W/kW, unavailable sensors, counter estimate; in HA two inverters added to the sets' PV.
+
 ### 0.8.35 — Surplus solar at a negative export price (PLANNING 1.1/1.2)
 - **Planner:** surplus solar at a negative export price now **costs money** unless something curtails it. Before, the planner assumed it was always curtailed, while a SolarEdge (or any inverter outside the sets) simply keeps exporting. Now it makes room in the battery before such hours when that pays.
 - **New setting** *Surplus solar at a negative price* (planner): **Off** (default; exported, costs money) / **Another system curtails** (e.g. an export limiter with its own negative-price mode; the planner counts the surplus as curtailed) / **ZEPHYR curtails**.

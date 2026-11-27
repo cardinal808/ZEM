@@ -43,6 +43,7 @@ from .const import (
     CONF_RESERVE_SOC,
     CONF_SOLAR_ENERGY,
     CONF_SOLAR_FORECAST,
+    CONF_SOLAR_POWER,
     CONF_TARIFF_ENERGY_TAX,
     CONF_TARIFF_FIXED_MONTH,
     CONF_TARIFF_MARKUP_EXPORT,
@@ -126,6 +127,7 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_PRICE_ENTITY, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_FORECAST, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True),
+    Field(CONF_SOLAR_POWER, "sources", "entities", device_class="power", optional=True),
     Field(CONF_EXCLUDED_ENERGY, "corrections", "entity", device_class="energy", optional=True, reload=True),
     Field(CONF_EXCLUDED_CLIMATE, "corrections", "entity", optional=True, reload=True, domain="climate"),
     Field(

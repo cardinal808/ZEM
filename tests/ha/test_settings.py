@@ -194,7 +194,7 @@ def _example(hass: HomeAssistant, key: str, suppliers: list[str]) -> dict[str, A
     if key == "excluded_climate_entity":
         return {key: "climate.living", "excluded_energy_entity": "sensor.counter"}
     if field.kind == "entities":
-        return {key: ["sensor.counter"]}
+        return {key: ["sensor.p1_in" if field.device_class == "power" else "sensor.counter"]}
     return {key: "sensor.p1_in" if field.device_class == "power" else "sensor.counter"}
 
 

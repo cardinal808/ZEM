@@ -126,3 +126,24 @@ async def test_panel_now_counter_without_climate(hass: HomeAssistant, fake_sets:
     await hass.async_block_till_done()
     ex = now_snapshot(hass, entry)["excluded"]
     assert ex["quality"] == "no_climate" and ex["active"] is True and ex["has_climate"] is False
+
+
+async def test_panel_now_adds_inverters_the_sets_do_not_see(hass: HomeAssistant, fake_sets: FakeSets) -> None:
+    """Solar now: power sensors added up (kW converted); without them an estimate from the counter."""
+    from custom_components.zephyr.websocket_api import now_snapshot
+
+    entry = await _install_with_p1(hass, fake_sets)
+    snap = now_snapshot(hass, entry)
+    assert snap["solar_external_w"] is None and snap["solar_estimated"] is False
+    sets_solar = snap["solar_sets_w"]
+
+    hass.states.async_set("sensor.inverter_a", "1500", {"device_class": "power", "unit_of_measurement": "W"})
+    hass.states.async_set("sensor.inverter_b", "0.5", {"device_class": "power", "unit_of_measurement": "kW"})
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], {"p1_entity": P1, "solar_power_entities": ["sensor.inverter_a", "sensor.inverter_b"]}
+    )
+    await hass.async_block_till_done()
+    snap = now_snapshot(hass, entry)
+    assert snap["solar_external_w"] == 2000 and snap["solar_estimated"] is False
+    assert snap["solar_w"] == sets_solar + 2000
