@@ -76,3 +76,11 @@ async def test_gap_is_filled_when_the_set_returns(hass: HomeAssistant, fake_sets
     assert state.attributes["estimated_kwh"] > 0.1
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["energy_counters"]["sets"][0]["gaps"][-1]["method"] == "interpolate"
+
+
+async def test_peaks_per_day_in_the_diagnostics(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    entry = await _install_with_p1(hass, fake_sets, "charge_2400")
+    await _wait(hass, freezer, 20)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    peaks = diag["control"]["p1_filter"]
+    assert peaks["peak_kwh"] == 0.0 and list(peaks["days"].values()) == [{"kwh": 0.0, "holds": 0}]
