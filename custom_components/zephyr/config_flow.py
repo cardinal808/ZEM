@@ -31,6 +31,7 @@ from .const import (
     CONF_APPLIANCE_NAME,
     CONF_APPLIANCE_POWER,
     CONF_APPLIANCE_UNTIL,
+    CONF_CALIBRATION_DAYS,
     CONF_CAPACITY_OVERRIDE,
     CONF_COST_EXPORT_COUNTERS,
     CONF_COST_IMPORT_COUNTERS,
@@ -679,6 +680,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Required(CONF_PLAN_ALLOW_EXPORT, default=options.get(CONF_PLAN_ALLOW_EXPORT, False)): bool,
                 vol.Required(CONF_PLAN_LOAD_MARGIN, default=options.get(CONF_PLAN_LOAD_MARGIN, 0)): _percent(0, 50),
                 vol.Required(CONF_PLAN_BUFFER, default=options.get(CONF_PLAN_BUFFER, 0)): _percent(0, 50),
+                vol.Required(CONF_CALIBRATION_DAYS, default=options.get(CONF_CALIBRATION_DAYS, 21)): _box(0, 90, 1, "d"),
                 vol.Optional(
                     CONF_WORKDAY_ENTITY, description={"suggested_value": options.get(CONF_WORKDAY_ENTITY) or suggest_workday(self.hass)}
                 ): (selector.EntitySelector(selector.EntitySelectorConfig(domain="binary_sensor", integration="workday"))),

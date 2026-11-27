@@ -77,6 +77,8 @@ class PlannerSettings:
     """Action X (B12: off by default)."""
     load_margin: float = 0.0
     """Plan with this share more consumption when choosing (not in the costs)."""
+    calibration_penalty: float = 0.0
+    """€ when the horizon never reaches a full battery (SPEC-planner §3.5); 0 = no calibration due."""
     wear_cost: float = 0.0
     """€ per kWh delivered by the battery (PU3): weighs wear in the choice, not in the grid costs.
     Keeps the planner from cycling the battery for a few cents (especially with X)."""
@@ -197,7 +199,14 @@ def plan(
     def end_value(e: float) -> float:
         return -(min(e, reserve) * reserve_price + max(e - reserve, 0.0) * end_price)
 
-    future: dict[Action, list[float]] = {g: [end_value(e) for e in grid] for g in GROUPS}
+    # §3.5: a second layer for "the battery was full somewhere in the horizon"; without it the
+    # calibration penalty is paid at the end. Without a penalty one layer is enough.
+    calibrate = cfg.calibration_penalty > 0
+    full_at = cap - max(cap * 1e-6, 0.005)
+    layers = (False, True) if calibrate else (True,)
+    future: dict[bool, dict[Action, list[float]]] = {
+        done: {g: [end_value(e) + (0.0 if done else cfg.calibration_penalty) for e in grid] for g in GROUPS} for done in layers
+    }
 
     def switch(prev: Action, action: Action) -> float:
         if action is Action.CHARGE and prev is not Action.CHARGE:
@@ -206,30 +215,38 @@ def plan(
             return cfg.hold_start_cost
         return 0.0
 
-    tables: list[dict[Action, list[float]]] = [future]
+    def reached(done: bool, energy: float) -> bool:
+        return done or not calibrate or energy >= full_at
+
+    tables: list[dict[bool, dict[Action, list[float]]]] = [future]
     for slot in reversed(slots):
         options = [a for a in actions if not (a is Action.EXPORT and slot.sell <= 0)]
-        # Per energy step: cost + value after, per action (independent of the previous action).
-        after: list[list[tuple[Action, float]]] = []
-        for e in grid:
-            row = []
-            for a in options:
-                r = step(slot, battery, e, a, cfg.load_margin, cfg.curtail)
-                row.append((a, r.cost + _choice(cfg, r) + _interp(future[_group(a)], r.energy_after, cap, n)))
-            after.append(row)
-        current = {prev: [min(v + switch(prev, a) for a, v in row) for row in after] for prev in GROUPS}
+        current: dict[bool, dict[Action, list[float]]] = {}
+        for done in layers:
+            # Per energy step: cost + value after, per action (independent of the previous action).
+            after: list[list[tuple[Action, float]]] = []
+            for e in grid:
+                row = []
+                for a in options:
+                    r = step(slot, battery, e, a, cfg.load_margin, cfg.curtail)
+                    later = future[reached(done, r.energy_after)][_group(a)]
+                    row.append((a, r.cost + _choice(cfg, r) + _interp(later, r.energy_after, cap, n)))
+                after.append(row)
+            current[done] = {prev: [min(v + switch(prev, a) for a, v in row) for row in after] for prev in GROUPS}
         tables.append(current)
         future = current
     tables.reverse()  # tables[t] = value from slot t onwards; tables[len] = end value
 
     result = Plan()
     energy, prev = energy_now, _group(previous)
+    done = reached(False, energy_now)
     for t, slot in enumerate(slots):
         options = [a for a in actions if not (a is Action.EXPORT and slot.sell <= 0)]
         best: tuple[float, Action, Step] | None = None
         for a in options:
             r = step(slot, battery, energy, a, cfg.load_margin, cfg.curtail)
-            total = r.cost + _choice(cfg, r) + switch(prev, a) + _interp(tables[t + 1][_group(a)], r.energy_after, cap, n)
+            later = tables[t + 1][reached(done, r.energy_after)][_group(a)]
+            total = r.cost + _choice(cfg, r) + switch(prev, a) + _interp(later, r.energy_after, cap, n)
             if best is None or total < best[0] - 1e-12:
                 best = (total, a, r)
         assert best is not None
@@ -240,4 +257,5 @@ def plan(
         result.steps.append(real)
         result.cost += real.cost
         energy, prev = real.energy_after, _group(a)
+        done = reached(done, energy)
     return result

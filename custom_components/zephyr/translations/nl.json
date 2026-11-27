@@ -412,7 +412,8 @@
           "curtail_negative": "Zonoverschot bij negatieve prijs",
           "curtail_switch": "Schakelaar omvormer afknijpen",
           "curtail_number": "Vermogensbegrenzing omvormer",
-          "curtail_inverter_w": "Nominaal vermogen omvormer"
+          "curtail_inverter_w": "Nominaal vermogen omvormer",
+          "calibration_days": "Planner: kalibratie na dagen"
         },
         "data_description": {
           "p1_entity": "Een meter die elke seconde meldt, regelt het nauwkeurigst. Met correcties (EV, airco) kun je de gecorrigeerde sensor van je huidige systeem kiezen.",
@@ -451,7 +452,8 @@
           "curtail_negative": "Wat er met zonoverschot gebeurt als de terugleverprijs onder nul is. Uit: het gaat het net op en kost geld, de planner maakt eerst ruimte in de accu. Ander systeem: een omvormerbegrenzer knijpt zelf af. ZEPHYR: ZEPHYR blokkeert teruglevering van de eigen panelen van de sets en knijpt de omvormer af: met de schakelaar of met de vermogensbegrenzing hieronder (één van beide).",
           "curtail_switch": "Aan zolang de terugleverprijs negatief is. Alternatief voor de vermogensbegrenzing.",
           "curtail_number": "Getal-entiteit die het vermogen van de omvormer begrenst in % (bijv. SolarEdge Modbus active power limit). Alleen met ZEPHYR knijpt af.",
-          "curtail_inverter_w": "Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld."
+          "curtail_inverter_w": "Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld.",
+          "calibration_days": "Haalt de accu zoveel dagen geen 100 %, dan laadt de planner hem op het goedkoopste moment vol (de bovengrens gaat tijdelijk naar 100 %) en levert hij niet tot de set zichzelf heeft gekalibreerd (max. 2 uur). Vanaf de helft van deze dagen laadt hij al vol als dat goedkoop kan. 0 = uit."
         }
       }
     },

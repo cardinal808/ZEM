@@ -15,6 +15,7 @@ shown; the mode *Dynamic Forecasting* that carries it out follows.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import time
 from collections import deque
 from collections.abc import Callable, Mapping
@@ -32,6 +33,7 @@ from homeassistant.helpers.sun import is_up
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_CALIBRATION_DAYS,
     CONF_CURTAIL_MODE,
     CONF_EXCLUDED_CLIMATE,
     CONF_EXCLUDED_ENERGY,
@@ -50,6 +52,7 @@ from .const import (
     DOMAIN,
     LOGGER,
 )
+from .core.calibration import DEFAULT_INTERVAL_DAYS, Calibration
 from .core.forecast_plan import (
     DEFAULT_LOAD_KWH_PER_HOUR,
     QUARTER,
@@ -137,6 +140,8 @@ class PlanRunner:
         self.settings = planner_settings(options)
         self.curtail_mode: str = options.get(CONF_CURTAIL_MODE, CURTAIL_OFF)
         self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
+        self.calibration_days = float(options.get(CONF_CALIBRATION_DAYS, DEFAULT_INTERVAL_DAYS))
+        self.calibration = Calibration(interval_days=self.calibration_days)
         self.profile = LoadProfile()
         self.excluded_entity: str | None = options.get(CONF_EXCLUDED_ENERGY)
         """B41: energy counter of the load the battery may not feed (the air conditioner)."""
@@ -179,6 +184,8 @@ class PlanRunner:
         self.settings = planner_settings(options)
         self.curtail_mode = options.get(CONF_CURTAIL_MODE, CURTAIL_OFF)
         self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
+        self.calibration_days = float(options.get(CONF_CALIBRATION_DAYS, DEFAULT_INTERVAL_DAYS))
+        self.calibration.interval_days = self.calibration_days
         self.async_request()
 
     async def async_start(self) -> Callable[[], None]:
@@ -189,6 +196,8 @@ class PlanRunner:
         self.profile_source = str(stored.get("profile_source") or ("stored" if self.profile.mean_count else "none"))
         self.excluded_profile = LoadProfile.from_dict(stored.get("excluded_profile"))
         self.vacation_profile = LoadProfile.from_dict(stored.get("vacation_profile"))
+        self.calibration = Calibration.from_dict(stored.get("calibration"), self.calibration_days)
+        self._calibration_tick(dt_util.utcnow())
         self.ahead = {str(k): v for k, v in (stored.get("ahead") or {}).items() if isinstance(v, dict)}
         # B41: a profile learned with another (or no) excluded load mixes it in: fill again.
         changed = stored.get("profile", None) is not None and stored.get("excluded_entity") != self.excluded_entity
@@ -281,6 +290,7 @@ class PlanRunner:
 
     @callback
     def _on_minute(self, now: datetime) -> None:
+        self._calibration_tick(dt_util.as_utc(now))
         waiting = self.outcome is None or self.outcome.state in (PlanState.NO_PRICES, PlanState.PRICE_RESERVE)
         if waiting or dt_util.as_utc(now).minute % 15 == 0:
             self.async_request()
@@ -322,7 +332,7 @@ class PlanRunner:
             capacity_kwh=totals.capacity_kwh,
             soc=totals.soc,
             min_soc=settings.min_soc,
-            max_soc=settings.max_soc,
+            max_soc=100.0 if self.calibration.active(dt_util.utcnow()) else settings.max_soc,
             charge_kw=charge_kw,
             deliver_kw=deliver_kw,
             buffer=self.buffer,
@@ -461,16 +471,17 @@ class PlanRunner:
             excluded=self._excluded if self.excluded_entity else None,
         )
         prev_action = previous.action if previous is not None and previous.slots else Action.DELIVER
+        settings = dataclasses.replace(self.settings, calibration_penalty=self.calibration.penalty(dt_util.utcnow()))
         began = time.perf_counter()
         appliances = self.runtime.appliances
         if appliances is not None and appliances.planned:
             # B36: best start of every planned run on the whole plan, then plan with them.
             extra = await self.hass.async_add_executor_job(
-                plan_appliances, slots, battery, now, self.settings, list(appliances.planned), appliances.planning_profiles(), prev_action
+                plan_appliances, slots, battery, now, settings, list(appliances.planned), appliances.planning_profiles(), prev_action
             )
             slots = with_appliances(slots, extra)
             appliances.published()
-        outcome = await self.hass.async_add_executor_job(make_plan, slots, battery, now, self.settings, prev_action)
+        outcome = await self.hass.async_add_executor_job(make_plan, slots, battery, now, settings, prev_action)
         outcome.duration_s = time.perf_counter() - began
         if from_reserve:
             outcome.state = PlanState.PRICE_RESERVE
@@ -745,8 +756,26 @@ class PlanRunner:
             LOGGER.debug("Consumption profile filled from %s cost quarters", len(records))
             self._store.async_delay_save(self._data, 10)
 
+    def _calibration_tick(self, now: datetime) -> None:
+        """SPEC-planner §3.5: track the last full battery, raise the limit when due, rest at 100 %."""
+        totals = self.runtime.totals()
+        reports = [c.data.report for c in self.runtime.coordinators.values() if c.data is not None and c.data.report is not None]
+        calibrating = any(r.calibrating for r in reports)
+        was = (self.calibration.active(now), self.calibration.resting)
+        event = self.calibration.update(now, totals.soc if totals.sets_online else None, calibrating)
+        state = (self.calibration.active(now), self.calibration.resting)
+        control = self.runtime.control
+        if control is not None:
+            control.set_calibration(*state)
+        if event is not None:
+            LOGGER.info("Calibration: %s (%s)", event, self.calibration.view(now))
+            self._store.async_delay_save(self._data, 5)
+        if state != was:
+            self.async_request()
+
     def _data(self) -> dict[str, Any]:
         return {
+            "calibration": self.calibration.as_dict(),
             "profile": self.profile.as_dict(),
             "hour": self.hour,
             "profile_source": self.profile_source,
@@ -777,6 +806,7 @@ class PlanRunner:
             "profile": self.profile.as_dict(),
             "excluded_profile": None if not self.excluded_entity else self.excluded_profile.as_dict(),
             "appliance_plugs": self._plugs(),
+            "calibration": self.calibration.view(dt_util.utcnow()),
             "vacation_profile": self.vacation_profile.as_dict() if self.vacation_profile.mean_count else None,
             "vacation": None if self.runtime.vacation is None else self.runtime.vacation.diagnostics(),
             "planned_quarters": self.by_quarter,

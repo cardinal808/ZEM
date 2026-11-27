@@ -229,6 +229,8 @@ class ZephyrEngine:
         self.p1_profile = P1Profile()
         self._stale = False
         self._stale_events: deque[float] = deque(maxlen=10_000)
+        self.limits_cause: str | None = None
+        """Cause for the next SOC-limit writes when not the first sight (e.g. "calibration")."""
         self.count_commands = True
         """Count commands when they are decided (shadow mode, tests). Live, the writer counts
         them once the set accepted them (``counters_record``)."""
@@ -734,7 +736,7 @@ class ZephyrEngine:
             state.flash_paused = not flash_ok
             if not state.limits_checked and flash_ok:
                 state.limits_checked = True
-                cause = "soc_limits" if state.seen else "startup"
+                cause = (self.limits_cause or "soc_limits") if state.seen else "startup"
                 state.seen = True
                 if r.min_soc != s.min_soc or r.max_soc != s.max_soc:
                     commands.append(Command(view.key, soc_limits_command(s.min_soc, s.max_soc), "soc_limits", cause))

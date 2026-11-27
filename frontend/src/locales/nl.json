@@ -451,6 +451,11 @@
         "label": "Nominaal vermogen omvormer",
         "help": "Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld.",
         "more": "Bij een SolarEdge het nominale vermogen van het model, bijv. 5000 W voor een SE5K."
+      },
+      "calibration_days": {
+        "label": "Kalibratie na dagen",
+        "help": "Na zoveel dagen zonder 100 % laadt de planner de accu vol en laat hij de set kalibreren.",
+        "more": "Hoe langer de accu niet vol is geweest, hoe verder de packs uit elkaar lopen. Vanaf de helft van deze dagen kiest de planner een goedkoop moment of zon om vol te laden; op de laatste dag is het een harde eis. Daarna levert ZEPHYR niet tot de set klaar is met kalibreren (socStatus), maximaal 2 uur. 0 = uit."
       }
     },
     "restarting": "ZEPHYR start opnieuw met de nieuwe instellingen…",
