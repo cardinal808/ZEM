@@ -7086,14 +7086,14 @@ var Z = class extends E {
           ${this.line(d.ev.line, X.batt, i?.power_w ?? 0)}
           ${x`<circle cx=${d.ev.dot[0]} cy=${d.ev.dot[1]} r="6" fill=${X.batt}></circle>`}
           ${this.line(d.houseBus, X.house, r.house)}
-          ${[369, 563].map((e) => x`${this.line([[845, e], [790, e]], X.house, r.house)}${this.arrowLeft(784, e, X.house)}`)}
+          ${[369, 563].map((e) => x`${this.line([[845, e], [790, e]], X.house, r.house)}${r.house >= 10 ? this.arrowLeft(784, e, X.house) : C}`)}
           ${[
 			"attic",
 			"first",
 			"ground"
 		].map((e) => {
 			let t = d.floors[e].y;
-			return x`${this.line([[845, t], [925, t]], X.house, f(e))}${this.arrow(930, t, X.house)}`;
+			return x`${this.line([[845, t], [925, t]], X.house, f(e))}${f(e) >= 10 ? this.arrow(930, t, X.house) : C}`;
 		})}
         </svg>
         <div class="boxes">
@@ -7136,7 +7136,7 @@ var Z = class extends E {
           <b>${P(r.soc, this.locale)}</b>`), this.box(_n.floors[e].box, e === "shed" ? X.batt : X.house, e === "shed" ? "batt" : e === "attic" ? "wash" : "house", b`<b>${this.tr(`settings.floors.${e}`)}</b>`, [i.length ? b`${i.map((e, t) => b`${t ? b`<span class="sep"> · </span>` : C}${e}`)}` : b`<span class="dim">–</span>`]);
 	}
 	box(e, t, n, r, i, a = !0) {
-		let [o, s, c, l] = e, u = `left:${o / hn * 100}%;top:${s / gn * 100}%;width:${c / hn * 100}%;height:${l / gn * 100}%;--c:${t}`;
+		let [o, s, c, l] = e, u = `left:${o / hn * 100}%;top:${s / gn * 100}%;width:${c / hn * 100}%;min-height:${l / gn * 100}%;--c:${t}`;
 		return b`<div class=${a ? "box" : "box off"} style=${u}>
       <span class="ic"
         ><svg viewBox="0 0 24 24">${un(vn[n])}</svg></span
@@ -7147,10 +7147,10 @@ var Z = class extends E {
     </div>`;
 	}
 	line(e, t, n) {
-		let r = `M${e.map((e) => e.join(" ")).join(" L")}`, i = n >= 10;
-		return x`<path d=${r} class="glow" stroke=${t}></path>
-      <path d=${r} class=${i ? "core" : "core off"} stroke=${t}></path>
-      ${i ? x`<path d=${r} class="dots" style=${`animation-duration:${Math.max(.5, 1.6 - n / 3e3)}s`}></path>` : C}`;
+		let r = `M${e.map((e) => e.join(" ")).join(" L")}`;
+		return n < 10 ? C : x`<path d=${r} class="glow" stroke=${t}></path>
+      <path d=${r} class="core" stroke=${t}></path>
+      <path d=${r} class="dots" style=${`animation-duration:${Math.max(.5, 1.6 - n / 3e3)}s`}></path>`;
 	}
 	arrowLeft(e, t, n) {
 		return x`<path d=${`M${e} ${t} l12 -6 l0 12 z`} fill=${n}></path>`;
@@ -7234,8 +7234,13 @@ var Z = class extends E {
     :host {
       display: block;
       grid-column: 1 / -1;
+      /* Picture plus totals bar fit in one screen: 1284/1048 is the picture's aspect ratio. */
+      --house-max: calc((100vh - 300px) * 1.2252 + 30px);
     }
     .card {
+      container: house / inline-size;
+      max-width: var(--house-max);
+      margin: 0 auto;
       background: #0f1d27;
       border: 1px solid #1f3342;
       border-radius: 18px;
@@ -7273,9 +7278,6 @@ var Z = class extends E {
       stroke-width: 3;
       opacity: 0.95;
     }
-    .core.off {
-      opacity: 0.3;
-    }
     .dots {
       fill: none;
       stroke: #fff;
@@ -7293,7 +7295,7 @@ var Z = class extends E {
     .boxes {
       position: absolute;
       inset: 0;
-      font-size: 1.15cqw;
+      font-size: max(11px, 1.15cqw);
     }
     .box {
       position: absolute;
@@ -7301,7 +7303,7 @@ var Z = class extends E {
       display: flex;
       align-items: center;
       gap: 0.8cqw;
-      padding: 0 1cqw;
+      padding: 0.4cqw 1cqw;
       background: rgba(12, 26, 36, 0.93);
       border: 2px solid var(--c);
       border-radius: 1.1cqw;
@@ -7313,8 +7315,8 @@ var Z = class extends E {
     }
     .ic {
       flex: none;
-      width: 2.6cqw;
-      height: 2.6cqw;
+      width: max(18px, 2.6cqw);
+      height: max(18px, 2.6cqw);
       color: var(--c);
     }
     .ic svg,
@@ -7336,20 +7338,22 @@ var Z = class extends E {
     .tx > b {
       color: #fff;
       font-weight: 600;
-      font-size: 1.1cqw;
-      white-space: nowrap;
+      font-size: max(11.5px, 1.1cqw);
       overflow: hidden;
-      text-overflow: ellipsis;
+    }
+    .ln b {
+      white-space: nowrap;
     }
     .tx > b.fit {
-      font-size: 0.95cqw;
+      font-size: max(11px, 0.95cqw);
+      white-space: normal;
     }
     .tx .big {
-      font-size: 1.9cqw;
+      font-size: max(16px, 1.9cqw);
       font-weight: 700;
     }
     .ln {
-      font-size: 1.05cqw;
+      font-size: max(11px, 1.05cqw);
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
@@ -7427,10 +7431,15 @@ var Z = class extends E {
     .list small {
       color: #9fb3c2;
     }
-    @media (max-width: 700px) {
+    @container house (max-width: 680px) {
       .boxes {
         display: none;
       }
+      .list {
+        display: block;
+      }
+    }
+    @container house (max-width: 640px) {
       .bar {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -7439,9 +7448,6 @@ var Z = class extends E {
       .bar > div {
         border: 0;
         min-width: 0;
-      }
-      .list {
-        display: block;
       }
     }
   `;
@@ -7757,6 +7763,7 @@ var Dn = [
 		this.styles = o`
     :host {
       display: block;
+      container-type: inline-size;
       color: var(--z-text);
       font-family: var(--z-font);
     }
@@ -7986,6 +7993,17 @@ var Dn = [
     .num {
       text-align: right;
       font-variant-numeric: tabular-nums;
+    }
+    @container (min-width: 1200px) {
+      /* Wide panel: picture on the left (as high as the screen allows), today's cards next to it. */
+      .layout {
+        grid-template-columns: minmax(0, calc((100vh - 300px) * 1.2252 + 30px)) minmax(360px, 1fr);
+        grid-template-rows: auto 1fr;
+      }
+      zephyr-house {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+      }
     }
     @media (max-width: 900px) {
       .layout {

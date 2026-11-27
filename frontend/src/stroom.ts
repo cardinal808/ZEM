@@ -582,6 +582,7 @@ export class ZephyrStroom extends LitElement {
   static override styles = css`
     :host {
       display: block;
+      container-type: inline-size;
       color: var(--z-text);
       font-family: var(--z-font);
     }
@@ -811,6 +812,17 @@ export class ZephyrStroom extends LitElement {
     .num {
       text-align: right;
       font-variant-numeric: tabular-nums;
+    }
+    @container (min-width: 1200px) {
+      /* Wide panel: picture on the left (as high as the screen allows), today's cards next to it. */
+      .layout {
+        grid-template-columns: minmax(0, calc((100vh - 300px) * 1.2252 + 30px)) minmax(360px, 1fr);
+        grid-template-rows: auto 1fr;
+      }
+      zephyr-house {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+      }
     }
     @media (max-width: 900px) {
       .layout {

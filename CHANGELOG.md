@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.51 — Stroom: house picture fits the screen
+- The *Nu* card (picture and totals bar) is never taller than the screen; the picture shrinks with its proportions (Bjorn 27-11: the bar fell off the screen).
+- Wide panel (≥ 1200 px): the picture on the left, *Energie per route* and *Verbruikers vandaag* next to it.
+- Text in the boxes has a minimum size (11 px); a box grows instead of cutting text. Below 680 px picture width the boxes give way to the list, as on a phone.
+- A line without power (< 10 W) is no longer drawn: the faint line over the picture looked blurred. Arrows go with their line.
+
 ### 0.8.50 — Stroom: the house picture as *Nu*
 - *Stroom* opens with an illustrated house (a generic illustration, not a real house) instead of the flow diagram: straight power lines from the roof panels, the panels on the shed, the battery, the grid and the charge point, with a box per floor (*Zolder*, *1e verdieping*, *Begane grond*, *Schuur*) showing the consumers on it and their power now; arrows towards a floor show power going in. Lines glow and move from 10 W.
 - The battery box names the set: product and packs, e.g. *SolarFlow 2400 Pro + 3 × AB3000L* (no serial numbers).

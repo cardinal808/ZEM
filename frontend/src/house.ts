@@ -153,7 +153,7 @@ export class ZephyrHouse extends LitElement {
           ${this.line(L.ev.line, COLORS.batt, ev?.power_w ?? 0)}
           ${svg`<circle cx=${L.ev.dot[0]} cy=${L.ev.dot[1]} r="6" fill=${COLORS.batt}></circle>`}
           ${this.line(L.houseBus, COLORS.house, f.house)}
-          ${[369, 563].map((y) => svg`${this.line([[845, y], [790, y]], COLORS.house, f.house)}${this.arrowLeft(784, y, COLORS.house)}`)}
+          ${[369, 563].map((y) => svg`${this.line([[845, y], [790, y]], COLORS.house, f.house)}${f.house >= 10 ? this.arrowLeft(784, y, COLORS.house) : nothing}`)}
           ${(["attic", "first", "ground"] as const).map((k) => {
             const y = L.floors[k].y;
             return svg`${this.line(
@@ -163,7 +163,7 @@ export class ZephyrHouse extends LitElement {
               ],
               COLORS.house,
               floorW(k),
-            )}${this.arrow(930, y, COLORS.house)}`;
+            )}${floorW(k) >= 10 ? this.arrow(930, y, COLORS.house) : nothing}`;
           })}
         </svg>
         <div class="boxes">
@@ -265,7 +265,7 @@ export class ZephyrHouse extends LitElement {
     active = true,
   ): TemplateResult {
     const [x, y, w, h] = b;
-    const style = `left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%;--c:${color}`;
+    const style = `left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:${(w / W) * 100}%;min-height:${(h / H) * 100}%;--c:${color}`;
     return html`<div class=${active ? "box" : "box off"} style=${style}>
       <span class="ic"
         ><svg viewBox="0 0 24 24">${unsafeSVG(ICON[icon])}</svg></span
@@ -278,10 +278,11 @@ export class ZephyrHouse extends LitElement {
 
   private line(pts: Pt[], color: string, power: number) {
     const d = `M${pts.map((p) => p.join(" ")).join(" L")}`;
-    const on = power >= 10;
+    // No power, no line: a faint line over the picture only looks blurred (Bjorn 27-11).
+    if (power < 10) return nothing;
     return svg`<path d=${d} class="glow" stroke=${color}></path>
-      <path d=${d} class=${on ? "core" : "core off"} stroke=${color}></path>
-      ${on ? svg`<path d=${d} class="dots" style=${`animation-duration:${Math.max(0.5, 1.6 - power / 3000)}s`}></path>` : nothing}`;
+      <path d=${d} class="core" stroke=${color}></path>
+      <path d=${d} class="dots" style=${`animation-duration:${Math.max(0.5, 1.6 - power / 3000)}s`}></path>`;
   }
 
   private arrowLeft(x: number, y: number, color: string) {
@@ -387,8 +388,13 @@ export class ZephyrHouse extends LitElement {
     :host {
       display: block;
       grid-column: 1 / -1;
+      /* Picture plus totals bar fit in one screen: 1284/1048 is the picture's aspect ratio. */
+      --house-max: calc((100vh - 300px) * 1.2252 + 30px);
     }
     .card {
+      container: house / inline-size;
+      max-width: var(--house-max);
+      margin: 0 auto;
       background: #0f1d27;
       border: 1px solid #1f3342;
       border-radius: 18px;
@@ -426,9 +432,6 @@ export class ZephyrHouse extends LitElement {
       stroke-width: 3;
       opacity: 0.95;
     }
-    .core.off {
-      opacity: 0.3;
-    }
     .dots {
       fill: none;
       stroke: #fff;
@@ -446,7 +449,7 @@ export class ZephyrHouse extends LitElement {
     .boxes {
       position: absolute;
       inset: 0;
-      font-size: 1.15cqw;
+      font-size: max(11px, 1.15cqw);
     }
     .box {
       position: absolute;
@@ -454,7 +457,7 @@ export class ZephyrHouse extends LitElement {
       display: flex;
       align-items: center;
       gap: 0.8cqw;
-      padding: 0 1cqw;
+      padding: 0.4cqw 1cqw;
       background: rgba(12, 26, 36, 0.93);
       border: 2px solid var(--c);
       border-radius: 1.1cqw;
@@ -466,8 +469,8 @@ export class ZephyrHouse extends LitElement {
     }
     .ic {
       flex: none;
-      width: 2.6cqw;
-      height: 2.6cqw;
+      width: max(18px, 2.6cqw);
+      height: max(18px, 2.6cqw);
       color: var(--c);
     }
     .ic svg,
@@ -489,20 +492,22 @@ export class ZephyrHouse extends LitElement {
     .tx > b {
       color: #fff;
       font-weight: 600;
-      font-size: 1.1cqw;
-      white-space: nowrap;
+      font-size: max(11.5px, 1.1cqw);
       overflow: hidden;
-      text-overflow: ellipsis;
+    }
+    .ln b {
+      white-space: nowrap;
     }
     .tx > b.fit {
-      font-size: 0.95cqw;
+      font-size: max(11px, 0.95cqw);
+      white-space: normal;
     }
     .tx .big {
-      font-size: 1.9cqw;
+      font-size: max(16px, 1.9cqw);
       font-weight: 700;
     }
     .ln {
-      font-size: 1.05cqw;
+      font-size: max(11px, 1.05cqw);
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
@@ -580,10 +585,15 @@ export class ZephyrHouse extends LitElement {
     .list small {
       color: #9fb3c2;
     }
-    @media (max-width: 700px) {
+    @container house (max-width: 680px) {
       .boxes {
         display: none;
       }
+      .list {
+        display: block;
+      }
+    }
+    @container house (max-width: 640px) {
       .bar {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -592,9 +602,6 @@ export class ZephyrHouse extends LitElement {
       .bar > div {
         border: 0;
         min-width: 0;
-      }
-      .list {
-        display: block;
       }
     }
   `;
