@@ -11,9 +11,9 @@ runs in a power series, spreading a run over quarters and finding the best start
 from __future__ import annotations
 
 import statistics
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, Final
 
 QUARTER: Final = timedelta(minutes=15)
@@ -121,6 +121,57 @@ def detect_runs(
     if start is not None and off_since is not None and (ordered[-1][0] - off_since).total_seconds() / 60 >= off_minutes:
         close(off_since)
     return runs
+
+
+def hourly_energy(runs: Iterable[Run]) -> dict[datetime, float]:
+    """kWh of the runs per hour (start of the hour in UTC): what the plug used in real runs,
+    without short pulses of something else on the same plug (a boiling-water tap)."""
+    out: dict[datetime, float] = {}
+    for run in runs:
+        start = run.start.astimezone(UTC)
+        for minute, watts in enumerate(run.profile):
+            moment = start + timedelta(minutes=minute)
+            hour = moment.replace(minute=0, second=0, microsecond=0)
+            out[hour] = out.get(hour, 0.0) + watts / 60_000
+    return out
+
+
+class RunMeter:
+    """Live energy of the runs on one plug: an on-period counts once it lasts ``min_minutes``
+    (then from its start), and ends after ``off_minutes`` below ``on_w``. Shorter on-periods
+    (pulses of a boiling-water tap on the same plug) are not counted."""
+
+    def __init__(self, on_w: float = 5.0, min_minutes: float = 10.0, off_minutes: float = 5.0) -> None:
+        self.on_w, self.min_s, self.off_s = on_w, min_minutes * 60, off_minutes * 60
+        self.on_since: datetime | None = None
+        self.off_since: datetime | None = None
+        self.in_run = False
+        self.pending = 0.0
+
+    def add(self, t0: datetime, t1: datetime, watts: float) -> float:
+        """Energy (kWh) of the run part of [t0, t1) with constant ``watts``."""
+        if t1 <= t0:
+            return 0.0
+        kwh = watts * (t1 - t0).total_seconds() / 3_600_000
+        if watts > self.on_w:
+            if self.on_since is None:
+                self.on_since, self.pending, self.in_run = t0, 0.0, False
+            self.off_since = None
+            if self.in_run:
+                return kwh
+            self.pending += kwh
+            if (t1 - self.on_since).total_seconds() >= self.min_s:
+                self.in_run, counted, self.pending = True, self.pending, 0.0
+                return counted
+            return 0.0
+        if self.on_since is None:
+            return 0.0
+        if self.off_since is None:
+            self.off_since = t0
+        counted = kwh if self.in_run else 0.0
+        if (t1 - self.off_since).total_seconds() > self.off_s:
+            self.on_since, self.off_since, self.in_run, self.pending = None, None, False, 0.0
+        return counted
 
 
 def _run(points: Sequence[tuple[datetime, float]], start: datetime, end: datetime) -> Run:

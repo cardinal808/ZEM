@@ -8,6 +8,10 @@
 - **Times follow the interval:** *P1 stale* after 3 × the interval (was 2.5 ×; a DSMR 4 gap of 20 s no longer comes close), the check for a second controller over at least 2 samples. Lost after 6 × and the hold at a balanced P1 stayed as they were; one decision per new sample and the slow control (B26) too.
 - **Diagnostics** `control.p1_profile`: interval, samples, profile and since when, step filter on/off, the times in use, *P1 stale* per 24 h, timestamp source, and the DSMR version of a HomeWizard P1 meter.
 
+### 0.8.63 — Appliance plugs: only real runs leave the house profile
+- Since 0.8.54 all energy of an appliance's plug was taken out of the house profile; on a plug that also feeds a boiling-water tap (a dishwasher plug with a Quooker), the tap's pulses left the profile too, while nothing plans them. Now only **real runs** count: live, an on-period counts once it lasts 10 minutes (then from its start, ending after 5 minutes off); the first fill from the recorder uses the energy per hour of the runs found in the plug's history (the planner waits up to 30 s for them). Short pulses stay house use.
+- **Appliance without a plug:** its usual runs are already in the house profile, so a planned run now counts for half on top of it (SPEC-geplande-verbruikers §3.2). The run's full kWh is still shown (`kwh`), with `counted_kwh`.
+
 ### 0.8.62 — Solar forecast from the Energy dashboard
 - Without a forecast sensor, ZEPHYR now takes the solar forecast of Home Assistant's **Energy dashboard**: every forecast integration set there (Forecast.Solar, Solcast, Open-Meteo, Helios Forecast if it provides one, …), summed over the solar sources. Read at the start and every 30 minutes. Per hour (or the source's own step) and without the 10/90 % bounds; Solcast via its sensor stays the richer choice (half hours and bounds, B32).
 - The planner and the day-ahead history (23:00, B31) use the same forecast; its source is in the diagnostics (`planner.inputs.solar_forecast_source`, `solar.forecast_source`, `energy:<integrations>`).

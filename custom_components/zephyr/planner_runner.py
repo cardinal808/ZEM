@@ -466,7 +466,7 @@ class PlanRunner:
         if appliances is not None and appliances.planned:
             # B36: best start of every planned run on the whole plan, then plan with them.
             extra = await self.hass.async_add_executor_job(
-                plan_appliances, slots, battery, now, self.settings, list(appliances.planned), appliances.profiles(), prev_action
+                plan_appliances, slots, battery, now, self.settings, list(appliances.planned), appliances.planning_profiles(), prev_action
             )
             slots = with_appliances(slots, extra)
             appliances.published()
@@ -653,14 +653,16 @@ class PlanRunner:
         battery = self._battery_entity()
         solar = costs.solar_entity
         excluded = self.excluded_entity
-        plugs = self._plugs()
+        appliances = self.runtime.appliances
+        if appliances is not None:
+            await appliances.async_history_ready()
+        runs = appliances.run_energy_per_hour() if appliances is not None else {}
         ids = [
             *costs.import_counters,
             *costs.export_counters,
             battery,
             *([solar] if solar else []),
             *([excluded] if excluded else []),
-            *plugs,
         ]
         end = dt_util.now().replace(minute=0, second=0, microsecond=0)
         start = end - timedelta(days=LEARN_FROM_DAYS)
@@ -686,7 +688,6 @@ class PlanRunner:
         solar_rows = by_hour(solar, "change") if solar else None
         battery_rows = by_hour(battery, "mean")
         excluded_rows = by_hour(excluded, "change") if excluded else None
-        plug_rows = [by_hour(plug, "mean") for plug in plugs]
         hours: list[HourEnergy] = []
         for key, mean_w in battery_rows.items():
             parts = [rows.get(key) for rows in imports + exports]
@@ -713,8 +714,9 @@ class PlanRunner:
                     solar_kwh=sun,
                     battery_kwh=mean_w / 1000,
                     excluded_kwh=aside,
-                    # B36: a plug without statistics for this hour (not there yet) counts as 0.
-                    appliance_kwh=sum(max(rows.get(key, 0.0), 0.0) for rows in plug_rows) / 1000,
+                    # B36: the plugs' use in real runs (known from the recorder's raw history);
+                    # pulses of something else on a plug (a boiling-water tap) stay in the house.
+                    appliance_kwh=runs.get(begin, 0.0),
                 )
             )
         if len(hours) < MIN_FILL_HOURS:
