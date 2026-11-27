@@ -425,6 +425,11 @@
         "label": "Schakelaar omvormer afknijpen",
         "help": "Aan zolang de terugleverprijs negatief is (alleen met ZEPHYR).",
         "more": "ZEPHYR zet deze schakelaar aan aan het begin van een kwartier met een negatieve terugleverprijs en daarna weer uit. Een sjabloon-schakelaar kan elk script aanroepen of de modus van een exportbegrenzer zetten."
+      },
+      "solar_power_entities": {
+        "label": "Zonnepanelen-vermogen",
+        "help": "Vermogenssensoren (W) van omvormers, worden opgeteld.",
+        "more": "Voor omvormers die niet aan een Zendure-set hangen, zoals SolarEdge. ZEPHYR telt ze op bij de PV van de sets en toont dat in Nu en Stroom. Kies hier niet de PV van de Zendure-set zelf: die leest ZEPHYR al uit de set. Leeg: ZEPHYR schat het vermogen uit de zonnepanelen-teller (grover, loopt achter)."
       }
     },
     "restarting": "ZEPHYR start opnieuw met de nieuwe instellingen…",
@@ -674,7 +679,8 @@
     "grid_out": "Teruglevering",
     "charging": "Accu laadt",
     "delivering": "Accu levert",
-    "battery": "Accu"
+    "battery": "Accu",
+    "estimated": "geschat"
   },
   "stroom": {
     "zero_title": "Nul op de meter vandaag",

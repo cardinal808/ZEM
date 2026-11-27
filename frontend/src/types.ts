@@ -1,9 +1,15 @@
 // Shapes of Home Assistant objects the panel uses, and of the zephyr/* messages (SPEC-ui §3).
 
 export interface HassConnection {
-  subscribeMessage<T>(callback: (message: T) => void, message: Record<string, unknown>): Promise<() => Promise<void>>;
+  subscribeMessage<T>(
+    callback: (message: T) => void,
+    message: Record<string, unknown>,
+  ): Promise<() => Promise<void>>;
   addEventListener(event: "ready" | "disconnected", listener: () => void): void;
-  removeEventListener(event: "ready" | "disconnected", listener: () => void): void;
+  removeEventListener(
+    event: "ready" | "disconnected",
+    listener: () => void,
+  ): void;
 }
 
 export interface HomeAssistant {
@@ -62,6 +68,9 @@ export interface Now {
   grid_w: number | null;
   battery_w: number | null;
   solar_w: number | null;
+  /** Part from inverters the sets do not see; estimated = from the solar energy counter. */
+  solar_external_w?: number | null;
+  solar_estimated?: boolean;
   soc: number | null;
   energy_kwh: number | null;
   capacity_kwh: number | null;

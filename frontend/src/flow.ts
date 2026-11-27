@@ -191,7 +191,17 @@ export class ZephyrFlow extends LitElement {
         ${route("battery_house", "battery", "house", "bat")}
         ${route("battery_grid", "battery", "grid", "bat")}
         <circle cx=${HUB[0]} cy=${HUB[1]} r="5" class="hub"></circle>
-        ${this.node("solar", this.tr("flow.solar"), watts(f.solar, this.locale), f.solar >= 10 ? "" : this.tr("flow.none"), f.solar >= 10)}
+        ${this.node(
+          "solar",
+          this.tr("flow.solar"),
+          watts(f.solar, this.locale),
+          f.solar < 10
+            ? this.tr("flow.none")
+            : now.solar_estimated
+              ? this.tr("flow.estimated")
+              : "",
+          f.solar >= 10,
+        )}
         ${this.node(
           "grid",
           this.tr(

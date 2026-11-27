@@ -425,6 +425,11 @@
         "label": "Inverter curtail switch",
         "help": "On while the export price is negative (only with ZEPHYR).",
         "more": "ZEPHYR turns this switch on at the start of a quarter with a negative export price and off again after. A template switch can call any script or set the mode of an export limiter."
+      },
+      "solar_power_entities": {
+        "label": "Solar panel power",
+        "help": "Power sensors (W) of inverters, added up.",
+        "more": "For inverters that are not on a Zendure set, such as SolarEdge. ZEPHYR adds them to the sets' PV and shows that in Now and Power. Do not choose the Zendure set's own PV here: ZEPHYR already reads it from the set. Empty: ZEPHYR estimates the power from the solar energy counter (coarser, lags behind)."
       }
     },
     "restarting": "ZEPHYR is restarting with the new settings…",
@@ -674,7 +679,8 @@
     "grid_out": "Export",
     "charging": "Battery charging",
     "delivering": "Battery delivering",
-    "battery": "Battery"
+    "battery": "Battery",
+    "estimated": "estimated"
   },
   "stroom": {
     "zero_title": "Zero on the meter today",

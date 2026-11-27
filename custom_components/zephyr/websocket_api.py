@@ -30,6 +30,7 @@ from .core.plan_view import past_action
 
 if TYPE_CHECKING:
     from . import ZephyrConfigEntry
+    from .control import ZephyrControl
 
 THROTTLE_S: Final = 2.0
 PLAN_MODES: Final = [Mode.STANDBY, Mode.ZERO_METER, Mode.FAST_CHARGE, Mode.FAST_DISCHARGE]
@@ -133,6 +134,17 @@ def _control_entities(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str
     }
 
 
+def _solar_now(control: ZephyrControl, sets_solar: float) -> dict[str, Any]:
+    """Solar now: PV on the sets plus inverters the sets do not see (power sensors or the counter's estimate)."""
+    external, estimated = control.external_solar()
+    return {
+        "solar_w": _round(sets_solar + (external or 0.0), 0),
+        "solar_sets_w": _round(sets_solar, 0),
+        "solar_external_w": _round(external, 0),
+        "solar_estimated": bool(estimated and external is not None),
+    }
+
+
 def now_snapshot(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
     """Everything the cards *Nu*, *Accu* and *Volgende stap* need."""
     runtime = entry.runtime_data
@@ -157,7 +169,7 @@ def now_snapshot(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any
         "setpoint_w": None if result is None else result.setpoint,
         "grid_w": None if result is None else _round(result.grid_power, 0),
         "battery_w": _round(totals.power, 0),
-        "solar_w": _round(totals.solar_power, 0),
+        **_solar_now(control, totals.solar_power),
         "soc": _round(totals.soc),
         "energy_kwh": _round(totals.energy_kwh, 2),
         "capacity_kwh": _round(totals.capacity_kwh, 2),

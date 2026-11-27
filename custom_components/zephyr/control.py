@@ -42,6 +42,8 @@ from .const import (
     CONF_P1_SOURCE,
     CONF_PRICE_ENTITY,
     CONF_RESERVE_SOC,
+    CONF_SOLAR_ENERGY,
+    CONF_SOLAR_POWER,
     DEFAULT_EXCLUDED_MODES,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_RESERVE_SOC,
@@ -55,6 +57,7 @@ from .core.engine import Mode, Reason, ReasonCode, SetView, StepResult, ZephyrEn
 from .core.excluded_load import ExcludedLoad, exclusion_for_controller
 from .core.price_window import NO_PRICES, PriceDecision, decide, parse_nordpool_raw
 from .core.settings import Settings
+from .core.solar_now import CounterPower, total, watts
 from .core.stroom import ZERO_REASONS, ZeroScore
 from .core.zensdk import power_command, standby_command
 from .writer import SetWriter
@@ -120,6 +123,10 @@ class ZephyrControl:
             if self.excluded_energy
             else None
         )
+        # Solar the sets do not see (panel *Nu*): inverter power sensors, else an estimate from the counter.
+        self.solar_power_entities: list[str] = list(options.get(CONF_SOLAR_POWER) or [])
+        self.solar_energy: str | None = options.get(CONF_SOLAR_ENERGY)
+        self.solar_counter = CounterPower()
         self.zero = ZeroScore()
         """How well the meter stayed at its target today (screen Stroom)."""
         self._zero_store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.zero")
@@ -133,6 +140,7 @@ class ZephyrControl:
         self.expensive_hours = int(options.get(CONF_EXPENSIVE_HOURS, DEFAULT_EXPENSIVE_HOURS))
         self.reserve_soc = float(options.get(CONF_RESERVE_SOC, DEFAULT_RESERVE_SOC))
         self.min_price = options.get(CONF_MIN_PRICE)
+        self.solar_power_entities = list(options.get(CONF_SOLAR_POWER) or [])
 
     def async_start(self) -> Callable[[], None]:
         unsubs: list[Callable[[], None]] = []
@@ -156,6 +164,9 @@ class ZephyrControl:
             if self.excluded_climate:
                 unsubs.append(async_track_state_change_event(self.hass, [self.excluded_climate], self._on_excluded_climate))
                 self._excluded_climate_state(self.hass.states.get(self.excluded_climate))
+        if self.solar_energy:
+            unsubs.append(async_track_state_change_event(self.hass, [self.solar_energy], self._on_solar_energy))
+            self._solar_energy_state(self.hass.states.get(self.solar_energy))
         if self.p1_pair or self.p1_entity:
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
         else:
@@ -192,6 +203,37 @@ class ZephyrControl:
         return lambda: self._listeners.remove(listener)
 
     # --- inputs -----------------------------------------------------------------
+
+    @callback
+    def _on_solar_energy(self, event: Event[EventStateChangedData]) -> None:
+        self._solar_energy_state(event.data["new_state"])
+
+    def _solar_energy_state(self, state: State | None) -> None:
+        if state is None:
+            return
+        try:
+            kwh = float(state.state)
+        except ValueError:
+            return
+        if state.attributes.get("unit_of_measurement") == UnitOfEnergy.WATT_HOUR:
+            kwh /= 1000
+        self.solar_counter.observe(kwh, time.monotonic())
+
+    def external_solar(self) -> tuple[float | None, bool]:
+        """Solar power (W) the sets do not see, and whether it is an estimate from the counter.
+
+        ZEPHYR's own sensors are skipped: the sets' PV is already counted from the sets.
+        """
+        from homeassistant.helpers import entity_registry as er
+
+        registry = er.async_get(self.hass)
+        ids = [e for e in self.solar_power_entities if (entry := registry.async_get(e)) is None or entry.platform != DOMAIN]
+        if ids:
+            states = [self.hass.states.get(e) for e in ids]
+            return total([None if s is None else watts(s.state, s.attributes.get("unit_of_measurement")) for s in states]), False
+        if self.solar_energy:
+            return self.solar_counter.power(time.monotonic()), True
+        return None, False
 
     @callback
     def _on_excluded_energy(self, event: Event[EventStateChangedData]) -> None:
