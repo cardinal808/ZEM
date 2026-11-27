@@ -186,3 +186,25 @@ def test_future_quarters_carry_the_excluded_load() -> None:
     quarters = plan_quarters(outcome, prices, now, TZ, **_fns())
     future = [q for q in quarters if not q["past"] and q["action"] is not None]
     assert future and all((q["solar"], q["load"], q["excluded"]) == (0.3, 0.1, 0.05) for q in future)
+
+
+def test_surplus_at_a_negative_export_price_is_curtailed_or_costs() -> None:
+    """SPEC-ui-planner §4.2: what the planner expects for spilled solar at a negative export price."""
+    from zephyr_core.plan_view import _surplus
+
+    assert _surplus(0.05, 0.6, curtail=False) == {"curtail_kwh": 0.0, "export_cost": 0.0}
+    assert _surplus(-0.04, 0.6, curtail=True) == {"curtail_kwh": 0.6, "export_cost": 0.0}
+    assert _surplus(-0.04, 0.6, curtail=False) == {"curtail_kwh": 0.0, "export_cost": 0.024}
+    assert _surplus(-0.04, 0.0, curtail=False) == {"curtail_kwh": 0.0, "export_cost": 0.0}
+
+
+def test_planner_step_reports_the_spilled_solar() -> None:
+    from zephyr_core.planner import Action, Battery, Slot, step
+
+    battery = Battery(capacity_kwh=10.0, charge_kw=2.4, deliver_kw=2.4, eta_in=1.0, eta_out=1.0)
+    slot = Slot(hours=0.25, buy=0.3, sell=-0.05, load_kwh=0.1, solar_kwh=1.0)
+    full = step(slot, battery, 10.0, Action.HOLD)
+    assert full.spill == pytest.approx(0.9) and full.cost == pytest.approx(0.045)
+    curtailed = step(slot, battery, 10.0, Action.HOLD, curtail=True)
+    assert curtailed.spill == pytest.approx(0.9) and curtailed.cost == pytest.approx(0.0)
+    assert step(slot, battery, 5.0, Action.HOLD).spill == pytest.approx(0.0)
