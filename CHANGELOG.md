@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.50 — Stroom: the house picture as *Nu*
+- *Stroom* opens with an illustrated house (a generic illustration, not a real house) instead of the flow diagram: straight power lines from the roof panels, the panels on the shed, the battery, the grid and the charge point, with a box per floor (*Zolder*, *1e verdieping*, *Begane grond*, *Schuur*) showing the consumers on it and their power now; arrows towards a floor show power going in. Lines glow and move from 10 W.
+- The battery box names the set: product and packs, e.g. *SolarFlow 2400 Pro + 3 × AB3000L* (no serial numbers).
+- A bar under the picture: sun, battery, consumers, charge point, grid import and export.
+- On a phone the boxes on the picture give way to a list below it.
+- Tests: consumers per floor in vitest, the battery label in the HA test.
+
 ### 0.8.49 — Curtailing at a negative export price in the panel; entity picker
 - *Plan* (SPEC-ui-planner §2.1): a negative export price is drawn in red below the zero line (and in the legend); a quarter in which the planner curtails gets a crossed-out panel mark; the tooltip says what happens ("Terugleverprijs −€0,04: zonoverschot 0,6 kWh wordt afgeknepen" or "Teruglevering kost €0,03 (geen afknijpen ingesteld)"). With curtailing off and negative prices ahead: one notice with the hours and the expected cost, and a link to the setting.
 - *Stroom*, *Nu* (§2.2): while curtailing, the solar node says *Afgeknepen tot 45 %* or *Omvormer uit*, the battery *Teruglevering geblokkeerd*.

@@ -844,5 +844,31 @@
     "tap_plan": "Plan",
     "tap_more": "Plan one more",
     "tap_clear": "Clear"
+  },
+  "house": {
+    "title": "Now",
+    "sub": "Power in and around the house",
+    "roof": "Solar panels (roof)",
+    "shed_solar": "Solar panels (shed)",
+    "battery": "Battery",
+    "charging": "Charging",
+    "delivering": "Delivering",
+    "idle": "Idle",
+    "ev": "Charger",
+    "grid": "Grid",
+    "import": "Import",
+    "export": "Export",
+    "rest": "Other",
+    "sun": "Solar",
+    "production": "(production)",
+    "charging_l": "(charging)",
+    "delivering_l": "(delivering)",
+    "idle_l": "(idle)",
+    "consumers": "Consumers",
+    "house": "(house)",
+    "ev_sub": "(electric car)",
+    "import_l": "(import)",
+    "export_t": "Grid → zero",
+    "export_l": "(export)"
   }
 }

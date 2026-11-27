@@ -2,7 +2,7 @@
 import { LitElement, css, html, nothing, svg, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-import "./flow";
+import "./house";
 import { euro, kwh, percent, watts } from "./format";
 import { t, type Lang } from "./i18n";
 import type { Now } from "./types";
@@ -109,6 +109,8 @@ export function deviceRows(
 
 export interface StroomView {
   devices?: HouseDevice[];
+  /** "SolarFlow 2400 Pro + 3 × AB3000L" per set. */
+  battery_label?: string | null;
   rest_today_kwh?: number | null;
   today: StroomToday;
   zero: ZeroView | null;
@@ -197,6 +199,8 @@ export class ZephyrStroom extends LitElement {
   @property({ attribute: false }) uiLang: Lang = "en";
   @property() locale = "en";
   @property() timeZone = "UTC";
+  /** URL of the panel's files (the house picture). */
+  @property() base = "";
 
   private tr(
     key: string,
@@ -208,14 +212,16 @@ export class ZephyrStroom extends LitElement {
   protected override render(): TemplateResult {
     const v = this.view;
     return html`<div class="layout">
-      <zephyr-flow
+      <zephyr-house
         .now=${this.now}
+        .view=${v}
         .uiLang=${this.uiLang}
         .locale=${this.locale}
-      ></zephyr-flow>
-      ${v ? this.renderZero(v) : html`<section class="card skeleton"></section>`}
-      ${v ? this.renderRoutes(v.today) : nothing}
+        .base=${this.base}
+      ></zephyr-house>
+      ${v ? this.renderRoutes(v.today) : html`<section class="card skeleton"></section>`}
       ${v && (v.devices?.length || v.airco_set) ? this.renderDevices(v) : nothing}
+      ${v ? this.renderZero(v) : nothing}
       ${v?.regulation ? this.renderRegulation(v.regulation, v.live) : nothing}
     </div>`;
   }
@@ -421,7 +427,7 @@ export class ZephyrStroom extends LitElement {
     });
     const ticks2 = [base, base + span / 2, base + span];
     const label = this.tr("stroom.reg_title");
-    return html`<section class="card wide" aria-labelledby="rg-title">
+    return html`<section class="card" aria-labelledby="rg-title">
       <div>
         <h2 id="rg-title">${label}</h2>
         <p class="sub">${this.tr("stroom.reg_sub")}</p>

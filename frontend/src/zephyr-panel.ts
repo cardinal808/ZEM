@@ -828,6 +828,7 @@ export class ZephyrPanel extends LitElement {
         class=${this.status === "ok" ? "" : "stale"}
         .now=${this.now}
         .view=${this.stroomView}
+        .base=${this.base}
         .uiLang=${this.uiLang}
         .locale=${this.locale}
         .timeZone=${this.timeZone}

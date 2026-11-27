@@ -677,6 +677,27 @@ def ws_plan_check(hass: HomeAssistant, connection: ActiveConnection, msg: dict[s
     connection.send_result(msg["id"], entry.runtime_data.costs.plan_check(msg["days"]))
 
 
+def _battery_label(entry: ZephyrConfigEntry) -> str | None:
+    """ "SolarFlow 2400 Pro + 3 × AB3000L" per set, for the house picture (no serial numbers)."""
+    labels: list[str] = []
+    for coordinator in sorted(entry.runtime_data.coordinators.values(), key=lambda c: c.number):
+        data = coordinator.data
+        report = data.report if data is not None else None
+        counts: dict[str, int] = {}
+        if report is None:
+            labels.append(coordinator.model_name)
+            continue
+        for pack in report.packs:
+            info = pack_info(report.product, pack.pack_type, pack.serial)
+            if info is None or info.name.startswith("Built-in"):
+                continue
+            counts[info.name] = counts.get(info.name, 0) + 1
+        packs = " + ".join(f"{n} × {name}" for name, n in counts.items())
+        name = coordinator.model_name
+        labels.append(f"{name} + {packs}" if packs else name)
+    return " · ".join(labels) or None
+
+
 def stroom_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
     """Screen Stroom: energy per route and airco today (closed quarters), and the zero score."""
     from .core import stroom
@@ -693,6 +714,7 @@ def stroom_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         "today": today,
         "devices": devices,
         "rest_today_kwh": round(max(0.0, today["house_kwh"] - known), 3) if devices else None,
+        "battery_label": _battery_label(entry),
         "zero": control.zero.view() if control is not None else None,
         "regulation": control.regulation.view(time.monotonic()) if control is not None else None,
         "live": control is not None and not control.shadow,

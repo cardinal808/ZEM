@@ -70,6 +70,8 @@ export interface Now {
   solar_w: number | null;
   /** Part from inverters the sets do not see; estimated = from the solar energy counter. */
   solar_external_w?: number | null;
+  /** PV on the sets themselves. */
+  solar_sets_w?: number | null;
   solar_estimated?: boolean;
   soc: number | null;
   energy_kwh: number | null;

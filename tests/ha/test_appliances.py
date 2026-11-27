@@ -183,6 +183,8 @@ async def test_stroom_shows_the_plugs_with_floor_and_energy_today(
     entry = hass.config_entries.async_get_entry(entry.entry_id)
     washer = next(d for d in stroom_view(entry)["devices"] if d["name"] == "Wasmachine")
     assert washer["floor"] == "attic" and washer["shown"] is True
+    label = stroom_view(entry)["battery_label"]
+    assert label and label.startswith("SolarFlow")  # product + packs, never a serial
 
     await client.send_json_auto_id({"type": "zephyr/house/layout", "floors": {washer["id"]: "first"}, "hidden": []})
     assert (await client.receive_json())["success"]

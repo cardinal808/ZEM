@@ -844,5 +844,31 @@
     "tap_plan": "Plannen",
     "tap_more": "Nog een keer plannen",
     "tap_clear": "Niet meer plannen"
+  },
+  "house": {
+    "title": "Nu",
+    "sub": "Stroom in huis en omgeving",
+    "roof": "Zonnepanelen (dak)",
+    "shed_solar": "Zonnepanelen (schuur)",
+    "battery": "Accu",
+    "charging": "Laden",
+    "delivering": "Leveren",
+    "idle": "Rust",
+    "ev": "Laadpaal",
+    "grid": "Net",
+    "import": "Import",
+    "export": "Export",
+    "rest": "Overig",
+    "sun": "Zon",
+    "production": "(productie)",
+    "charging_l": "(laden)",
+    "delivering_l": "(leveren)",
+    "idle_l": "(rust)",
+    "consumers": "Verbruikers",
+    "house": "(huis)",
+    "ev_sub": "(elektrische auto)",
+    "import_l": "(afname)",
+    "export_t": "Net → op nul",
+    "export_l": "(teruglevering)"
   }
 }
