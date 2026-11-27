@@ -7,6 +7,10 @@
 - **Solar counter:** a production counter of an inverter integration (SolarEdge, SolarEdge Modbus, Enphase, Fronius, SMA, Growatt, Huawei, GoodWe, Solax, Sungrow, Solarman, FoxESS, APsystems, Hoymiles, OpenDTU) wins over a name match; forecast sensors are skipped.
 - **Meter counters for the cost log:** without per-tariff counters, the import and export total of a meter reader (e.g. HomeWizard P1).
 
+### 0.8.60 — Prices from Home Assistant's own Nord Pool integration
+- The price sensor may now also be the **current price of the Nord Pool integration that ships with Home Assistant** (until now only the HACS Nord Pool with `raw_today`). ZEPHYR fetches today and tomorrow with the action `nordpool.get_prices_for_date` (bare price per MWh, converted to €/kWh) at the start, when the sensor appears and every 15 minutes while a day is missing (tomorrow around 13:00); a new day starts a new plan. Control, planner, cost log, curtailing and the panel read them as before.
+- Settings suggest that sensor when there is no HACS Nord Pool. Diagnostics: `prices` (area, days, last error).
+
 ### 0.8.58 — Stroom: flows on an own picture
 - On an own picture, place the item *Huis* (the meter cupboard) with its spot: then every flow runs through that spot like the main line on the default picture: roof and shed panels, battery and grid to *Huis* (battery and grid reverse when charging or exporting), and from *Huis* to the floors and the charge point, with moving dots and the colour of the biggest source. Each box then only points at its spot with a thin line.
 - The *Huis* box shows the total, the rest and the flows in words. Without a *Huis* spot the picture works as before.

@@ -444,9 +444,20 @@ def suggest_p1_pair(hass: HomeAssistant) -> tuple[str | None, str | None]:
 
 
 def suggest_price(hass: HomeAssistant) -> str | None:
-    """A Nord Pool price sensor with the day's prices in its attributes (``raw_today``)."""
-    return next(
+    """A Nord Pool price sensor: the HACS one (``raw_today``), else the current price of HA's own Nord Pool."""
+    hacs = next(
         (st.entity_id for st in sorted(hass.states.async_all("sensor"), key=lambda st: st.entity_id) if "raw_today" in st.attributes),
+        None,
+    )
+    if hacs is not None:
+        return hacs
+    registry = er.async_get(hass)
+    return next(
+        (
+            e.entity_id
+            for e in sorted(registry.entities.values(), key=lambda e: e.entity_id)
+            if e.platform == "nordpool" and e.domain == "sensor" and (e.unique_id or "").endswith("-current_price")
+        ),
         None,
     )
 
