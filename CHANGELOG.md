@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.8.31 — Screen Stroom
+- New screen **Stroom** after *Plan*, with four cards:
+  - **Nu:** the live flow between sun, grid, house and battery (SOC ring, airco part of the house).
+  - **Nul op de meter vandaag:** share of the steering time the meter stayed within ±50 W of its target (0 W, or the airco's power when the airco is kept out of the battery), with a 5-minute strip over the day, energy imported and exported while steering, and the mean deviation. Goal 80 %. Only live steering counts (not shadow, charging or holding). Kept over a restart on the same day.
+  - **Energie per route vandaag:** sun → house/battery/grid, grid → house/battery, battery → house/grid, split per closed quarter of the cost log; share of the sun used yourself, share of the house from own sources, mean price of grid → battery.
+  - **Airco vandaag** (when set up, B41): kWh, share of the house, fed by sun or grid, cost of its grid power.
+- `zephyr/stroom` websocket command; `core/stroom.py` (route split, zero score).
+- Tests: route split and airco share, zero score (band, gaps, new day, restart); websocket in HA; strip colours in vitest.
+
 ### 0.8.29 — Recharge below the minimum starts right below min_SOC
 - **Recharging below the minimum** (self-consumption in standby, SPEC-basis §10) started only at min_SOC − 1: with min_SOC 10 % and a set that reports whole percents, at 8 %. It now starts as soon as the SOC is below min_SOC (9 % with 10 %) and goes on up to min_SOC, with the same gentle power (default 300 W). Delivering still waits until min_SOC + 2 (hysteresis), so the battery does not swing around the minimum.
 - Tests: recharge at 9 % and 5 % with min_SOC 10 %, none at 10 %.

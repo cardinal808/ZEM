@@ -25,6 +25,7 @@ from homeassistant.helpers.event import (
     async_track_state_report_event,
     async_track_time_interval,
 )
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -51,9 +52,10 @@ from .const import (
     SCAN_INTERVAL_IDLE,
 )
 from .core.engine import Mode, Reason, ReasonCode, SetView, StepResult, ZephyrEngine
-from .core.excluded_load import ExcludedLoad
+from .core.excluded_load import ExcludedLoad, exclusion_for_controller
 from .core.price_window import NO_PRICES, PriceDecision, decide, parse_nordpool_raw
 from .core.settings import Settings
+from .core.stroom import ZERO_REASONS, ZeroScore
 from .core.zensdk import power_command, standby_command
 from .writer import SetWriter
 
@@ -118,6 +120,9 @@ class ZephyrControl:
             if self.excluded_energy
             else None
         )
+        self.zero = ZeroScore()
+        """How well the meter stayed at its target today (screen Stroom)."""
+        self._zero_store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.zero")
 
     # --- lifecycle ----------------------------------------------------------
 
@@ -164,12 +169,15 @@ class ZephyrControl:
             )
             unsubs.append(lambda: ir.async_delete_issue(self.hass, DOMAIN, issue_id))
         unsubs.append(async_track_time_interval(self.hass, self._on_tick, timedelta(seconds=1)))
+        unsubs.append(async_track_time_interval(self.hass, self._save_zero, timedelta(minutes=5)))
         unsubs.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_stop))
+        self.hass.async_create_task(self._restore_zero(), "zephyr: restore the zero score")
         self._apply_poll_interval()
 
         def stop() -> None:
             for unsub in unsubs:
                 unsub()
+            self.hass.async_create_task(self._save_zero(), "zephyr: save the zero score")
             if self._test_task is not None and not self._test_task.done():
                 self._test_task.cancel()
             if not self.shadow:
@@ -378,6 +386,25 @@ class ZephyrControl:
     async def _on_stop(self, _event: Event) -> None:
         if not self.shadow:
             await self._all_to_zero()
+        await self._save_zero()
+
+    async def _restore_zero(self) -> None:
+        data = await self._zero_store.async_load()
+        if self.zero.day is None or not self.zero.buckets:
+            self.zero.restore(data, dt_util.now().date())
+
+    async def _save_zero(self, _now: datetime | None = None) -> None:
+        if self.zero.day is not None:
+            await self._zero_store.async_save(self.zero.as_dict())
+
+    def _zero_step(self, now: float, result: StepResult, excluded: float) -> None:
+        """Feed the zero score: steering only when live and regulating the meter (core/stroom.py)."""
+        local = dt_util.now()
+        steering = not self.shadow and result.reason.code.value in ZERO_REASONS and result.grid_power is not None
+        grid = result.grid_power
+        deviation = None if grid is None else grid - exclusion_for_controller(excluded, grid, result.battery_power or 0.0)
+        seconds = local.hour * 3600 + local.minute * 60 + local.second + local.microsecond / 1e6
+        self.zero.add(now, local.date(), seconds, steering, deviation)
 
     # --- write test (PLAN-M4b §2.8) ---------------------------------------------
 
@@ -470,6 +497,7 @@ class ZephyrControl:
             self.engine.set_mode(self._previous_mode, now)
         previous = self.result
         self.result = result
+        self._zero_step(now, result, excluded)
         if result.commands or previous is None or (previous.setpoint, previous.reason) != (result.setpoint, result.reason):
             self.log.append(
                 {
