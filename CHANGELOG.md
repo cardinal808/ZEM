@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.34 — Screen Stroom
+- New screen **Stroom** after *Plan*, with four cards:
+  - **Nu:** the live flow between sun, grid, house and battery (SOC ring, airco part of the house).
+  - **Nul op de meter vandaag:** share of the steering time the meter stayed within ±50 W of its target (0 W, or the airco's power when the airco is kept out of the battery), with a 5-minute strip over the day, energy imported and exported while steering, and the mean deviation. Goal 80 %. Only live steering counts (not shadow, charging or holding). Kept over a restart on the same day.
+  - **Energie per route vandaag:** sun → house/battery/grid, grid → house/battery, battery → house/grid, split per closed quarter of the cost log; share of the sun used yourself, share of the house from own sources, mean price of grid → battery.
+  - **Airco vandaag** (when set up, B41): kWh, share of the house, fed by sun or grid, cost of its grid power.
+- `zephyr/stroom` websocket command; `core/stroom.py` (route split, zero score).
+- Tests: route split and airco share, zero score (band, gaps, new day, restart); websocket in HA; strip colours in vitest.
 ### 0.8.32 — Cost log on the own energy counters, corrected after a gap (SPEC-tellers T3)
 - **Charged, delivered and set PV per quarter now come from the own energy counters** (the change of the installation totals between the quarter boundaries), like the grid import and export from the P1 counters. The meter of 0.8.26 stays as the fallback (first quarter after a start, no counters). Each quarter says which one it used: `battery_source` = `counters` or `meter`.
 - **Correction after a gap:** when the counters fill a gap, the filled energy is spread over the closed quarters of the gap by time, and the cost log of the current month is **evaluated again** from the first corrected quarter up to now (costs, the three situations, the pools of solar/grid in the battery, saldering part), with the day totals updated. Corrected quarters get `estimated: true` and `corrected_at`. The quarter in which the set returns no longer gets the whole fill as a jump.
