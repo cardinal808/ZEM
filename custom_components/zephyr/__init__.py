@@ -20,7 +20,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN, SUBENTRY_SET
+from .const import CONF_LIVE_OFF_AFTER_RESTART, DOMAIN, SUBENTRY_SET
 from .coordinator import SetCoordinator
 from .core.totals import CostFlows, Totals, compute_totals, cost_flows
 
@@ -200,6 +200,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     from .websocket_api import async_setup as async_setup_websocket
 
     async_setup_websocket(hass)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry[Any]) -> bool:
+    """1.2: live control stays on after a restart by default (the test-phase setting is turned off once)."""
+    if entry.version > 1:
+        return False
+    if entry.minor_version < 2:
+        options = {**entry.options, CONF_LIVE_OFF_AFTER_RESTART: False}
+        hass.config_entries.async_update_entry(entry, options=options, minor_version=2)
     return True
 
 

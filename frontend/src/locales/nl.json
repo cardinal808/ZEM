@@ -402,8 +402,8 @@
         "more": "Leeg = geen minimum."
       },
       "live_off_after_restart": {
-        "label": "Live sturen uit na herstart",
-        "help": "Na een herstart van HA eerst in de schaduw.",
+        "label": "Live sturen uit na een herstart (testfase)",
+        "help": "Uit (standaard): na een herstart komt live sturen vanzelf terug zodra de P1 meldt en de sets online zijn (als het aan stond). Aan: het blijft uit en je zet het zelf weer aan.",
         "more": "Voor de testfase: na elke herstart zet je live sturen zelf weer aan."
       },
       "vacation_when_away": {

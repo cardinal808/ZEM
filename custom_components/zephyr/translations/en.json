@@ -357,6 +357,10 @@
     "price_format": {
       "title": "Prices of {entity} cannot be read",
       "description": "The price sensor {entity} has a value, but ZEPHYR finds no prices per time slot in its attributes (raw_today / raw_tomorrow with start, end and value). The planner uses zero on the meter until it can read prices. Choose a Nord Pool sensor in the ZEPHYR options, or report the format in an issue on GitHub."
+    },
+    "live_not_resumed": {
+      "title": "ZEPHYR did not resume live control",
+      "description": "Live control was on before the restart, but could not start again within 10 minutes: {reasons}. Switch \"ZEPHYR controls the battery\" on again once that is solved."
     }
   },
   "options": {
@@ -416,7 +420,7 @@
           "excluded_energy_entity": "Optional. Energy counter (kWh) of a load the battery may not feed, such as the air conditioner. ZEPHYR estimates its power from the counter and does not deliver for it; the house's other use still comes from the battery and solar surplus still charges it.",
           "excluded_climate_entity": "Optional. The climate entity of that air conditioner: it tells at once whether it runs and in which mode. Without it, the load is never fed from the battery.",
           "excluded_hvac_modes": "Modes in which the air conditioner may not be fed from the battery. Default: heating.",
-          "live_off_after_restart": "After a restart of Home Assistant or a reload, \"ZEPHYR controls the battery\" is off and you switch it on yourself. Keep this on during the test week.",
+          "live_off_after_restart": "Off (default): after a restart live control comes back on its own as soon as the P1 reports and the sets are online (if it was on). On: it stays off and you switch it on yourself.",
           "price_entity": "Optional. With a Nord Pool sensor (today's prices in its attributes) zero-meter control delivers only in the most expensive hours of the day. Without it ZEPHYR delivers whenever the house asks.",
           "expensive_hours": "Hours per day in which ZEPHYR may deliver: the most expensive according to Nord Pool.",
           "reserve_soc": "Extra charge that may be used freely: below it ZEPHYR charges in the cheapest hours before the next expensive block. In the expensive hours it delivers down to the minimum SOC. 0 = off.",

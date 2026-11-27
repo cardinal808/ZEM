@@ -7,19 +7,27 @@ disabled; during the test phase that option is on, so the user confirms every ti
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import ZephyrConfigEntry, ZephyrRuntime
 from .const import CONF_LIVE_OFF_AFTER_RESTART, DOMAIN, LOGGER
 from .entity import ZephyrControlEntity, ZephyrVacationEntity
 from .vacation import VacationManager
+
+RESUME_EVERY = timedelta(seconds=5)
+RESUME_FOR = timedelta(minutes=10)
+"""After a restart live control comes back as soon as it can, trying this long."""
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
@@ -35,22 +43,61 @@ class ZephyrControlSwitch(ZephyrControlEntity, SwitchEntity, RestoreEntity):
     def __init__(self, runtime: ZephyrRuntime, entry: ZephyrConfigEntry) -> None:
         super().__init__(runtime, entry, "control", "switch")
         self._entry = entry
+        self._resume_unsub: Callable[[], None] | None = None
+        self._resume_since: float | None = None
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         last = await self.async_get_last_state()
         if last is None or last.state != STATE_ON:
-            return
+            return  # a new installation, or shadow mode before: stay in shadow mode
         issue_id = "live_off_after_restart"
-        if self._entry.options.get(CONF_LIVE_OFF_AFTER_RESTART, True):
+        if self._entry.options.get(CONF_LIVE_OFF_AFTER_RESTART, False):
             ir.async_create_issue(
                 self.hass, DOMAIN, issue_id, is_fixable=False, severity=ir.IssueSeverity.WARNING, translation_key=issue_id
             )
             return
-        try:
-            await self._control.async_set_live(True)
-        except Exception as err:
-            LOGGER.warning("Live control not resumed after the restart: %s", err)
+        # Live before the restart: live again as soon as the P1 reports and the sets are online.
+        self._resume_since = time.monotonic()
+        self._resume_unsub = async_track_time_interval(self.hass, self._try_resume, RESUME_EVERY)
+        self.async_on_remove(self._stop_resume)
+        await self._try_resume()
+
+    async def _try_resume(self, _now: Any = None) -> None:
+        if not self._control.shadow:
+            self._stop_resume()
+            return
+        blockers = self._control.live_blockers()
+        if not blockers:
+            try:
+                await self._control.async_set_live(True)
+            except Exception as err:
+                LOGGER.debug("Live control not resumed yet: %s", err)
+                return
+            LOGGER.info("Live control resumed after the restart")
+            ir.async_delete_issue(self.hass, DOMAIN, "live_not_resumed")
+            self._stop_resume()
+            self.async_write_ha_state()
+            return
+        if self._resume_since is not None and time.monotonic() - self._resume_since > RESUME_FOR.total_seconds():
+            LOGGER.warning("Live control not resumed after the restart: %s", "; ".join(blockers))
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                "live_not_resumed",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="live_not_resumed",
+                translation_placeholders={"reasons": "; ".join(blockers)},
+            )
+            self._stop_resume()
+
+    @callback
+    def _stop_resume(self) -> None:
+        if self._resume_unsub is not None:
+            self._resume_unsub()
+            self._resume_unsub = None
+        self._resume_since = None
 
     @property
     def is_on(self) -> bool:
@@ -61,11 +108,14 @@ class ZephyrControlSwitch(ZephyrControlEntity, SwitchEntity, RestoreEntity):
         return {"blockers": self._control.live_blockers() if self._control.shadow else []}
 
     async def async_turn_on(self, **kwargs: Any) -> None:
+        self._stop_resume()
         ir.async_delete_issue(self.hass, DOMAIN, "live_off_after_restart")
+        ir.async_delete_issue(self.hass, DOMAIN, "live_not_resumed")
         await self._control.async_set_live(True)
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
+        self._stop_resume()
         await self._control.async_set_live(False)
         self.async_write_ha_state()
 

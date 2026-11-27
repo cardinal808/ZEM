@@ -357,6 +357,10 @@
     "price_format": {
       "title": "Prijzen van {entity} niet leesbaar",
       "description": "De prijssensor {entity} heeft een waarde, maar ZEPHYR vindt in de attributen geen prijzen per tijdvak (raw_today / raw_tomorrow met start, end en value). De planner houdt Nul op de meter aan tot hij prijzen kan lezen. Kies een Nord Pool-sensor bij de opties van ZEPHYR, of meld het formaat in een issue op GitHub."
+    },
+    "live_not_resumed": {
+      "title": "ZEPHYR heeft live sturen niet hervat",
+      "description": "Live sturen stond aan voor de herstart, maar kon binnen 10 minuten niet weer starten: {reasons}. Zet \"ZEPHYR stuurt de accu\" weer aan als dat is opgelost."
     }
   },
   "options": {
@@ -377,7 +381,7 @@
           "excluded_hvac_modes": "Airco: niet uit de accu bij",
           "min_soc": "Minimale laadtoestand",
           "max_soc": "Maximale laadtoestand",
-          "live_off_after_restart": "Live sturen uit na herstart (testfase)",
+          "live_off_after_restart": "Live sturen uit na een herstart (testfase)",
           "price_entity": "Prijssensor (Nord Pool)",
           "expensive_hours": "Leveren in de duurste uren",
           "reserve_soc": "Reserve",
@@ -416,7 +420,7 @@
           "excluded_energy_entity": "Optioneel. Energieteller (kWh) van een verbruiker die niet uit de accu mag, zoals de airco. ZEPHYR schat het vermogen uit de teller en levert daar niet voor; de rest van het huis komt wel uit de accu en zon over laadt de accu gewoon.",
           "excluded_climate_entity": "Optioneel. De klimaat-entiteit van die airco: die zegt direct of hij draait en in welke stand. Zonder deze entiteit komt de verbruiker nooit uit de accu.",
           "excluded_hvac_modes": "Standen waarin de airco niet uit de accu mag. Standaard: verwarmen.",
-          "live_off_after_restart": "Na een herstart van Home Assistant of een herlaad staat \"ZEPHYR stuurt de accu\" uit en zet je hem zelf weer aan. Laat dit aan tijdens de testweek.",
+          "live_off_after_restart": "Uit (standaard): na een herstart komt live sturen vanzelf terug zodra de P1 meldt en de sets online zijn (als het aan stond). Aan: het blijft uit en je zet het zelf weer aan.",
           "price_entity": "Optioneel. Met een Nord Pool-sensor (met de prijzen van vandaag in de attributen) levert Nul op de meter alleen in de duurste uren van de dag. Zonder sensor levert ZEPHYR zodra het huis vraagt.",
           "expensive_hours": "Aantal uren per dag waarin ZEPHYR mag leveren: de duurste volgens Nord Pool.",
           "reserve_soc": "Extra lading die vrij gebruikt mag worden: zit de accu eronder, dan laadt ZEPHYR bij in de goedkoopste uren vóór het volgende dure blok. In de dure uren levert hij door tot de minimale laadtoestand. 0 = uit.",
