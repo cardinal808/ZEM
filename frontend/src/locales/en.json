@@ -299,7 +299,7 @@
       },
       "price_entity": {
         "label": "Price sensor",
-        "help": "Nord Pool with today's and tomorrow's prices.",
+        "help": "Nord Pool: the HACS integration, or the current price of Home Assistant's own Nord Pool integration.",
         "more": "Tomorrow's prices arrive around 13:00. Without a price sensor ZEPHYR makes no plan."
       },
       "solar_forecast_entity": {

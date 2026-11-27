@@ -48,6 +48,7 @@ from .core.costs import (
 from .core.energy_counters import TOTAL_KEYS as ENERGY_TOTAL_KEYS
 from .core.price_window import parse_nordpool_raw
 from .core.solar_history import energy_kwh
+from .prices import price_state
 
 if TYPE_CHECKING:
     from . import ZephyrRuntime
@@ -214,7 +215,7 @@ class CostRecorder:
 
     def _open(self, start: datetime) -> None:
         self.open_start = start
-        self.open_market = market_price(self.hass.states.get(self.price_entity), start) if self.price_entity else None
+        self.open_market = market_price(price_state(self.hass, self.price_entity), start) if self.price_entity else None
 
     @callback
     def _on_boundary(self, now: datetime) -> None:
@@ -241,7 +242,7 @@ class CostRecorder:
         start = boundary - timedelta(seconds=QUARTER_SECONDS)
         market = self.open_market if self.open_start == start else None
         if market is None and self.price_entity:
-            market = market_price(self.hass.states.get(self.price_entity), start)
+            market = market_price(price_state(self.hass, self.price_entity), start)
         imp, exp = measured.import_kwh, measured.export_kwh
         coverage = measured.grid_seconds / QUARTER_SECONDS
         if self.import_counters and self.export_counters:

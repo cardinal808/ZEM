@@ -30,6 +30,7 @@ from .const import (
     LOGGER,
 )
 from .core.curtail_limit import should_write, wanted_percent
+from .prices import price_state
 
 if TYPE_CHECKING:
     from . import ZephyrRuntime
@@ -92,7 +93,7 @@ class CurtailManager:
         start = quarter_floor(now)
         if not self.price_entity or self.runtime.tariffs is None:
             return None
-        market = market_price(self.hass.states.get(self.price_entity), start)
+        market = market_price(price_state(self.hass, self.price_entity), start)
         if market is None:
             return None
         tariffs = self.runtime.tariffs.tariffs_for(dt_util.as_local(start).date())
