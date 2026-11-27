@@ -87,13 +87,15 @@
             "power_entity": "Vermogenssensor (slimme stekker)",
             "energy_entity": "Energiesensor (zelfde stekker)",
             "window_from": "Venster vanaf",
-            "window_until": "Klaar om"
+            "window_until": "Klaar om",
+            "after_washer": "Altijd na de was"
           },
           "data_description": {
             "power_entity": "Optioneel. ZEPHYR leert het echte profiel uit de historie (meteen de laatste 10 dagen) en uit latere runs.",
             "energy_entity": "Optioneel, voor later.",
             "window_from": "Wanneer een run die met de knop is gepland mag starten. Leeg = vanaf nu.",
-            "window_until": "De run moet dan klaar zijn; vroeger dan de start = de volgende dag."
+            "window_until": "De run moet dan klaar zijn; vroeger dan de start = de volgende dag.",
+            "after_washer": "Plan de droger mee (één keer, na de laatste was) zodra de wasmachine wordt gepland."
           }
         },
         "reconfigure": {
@@ -102,7 +104,8 @@
             "power_entity": "Vermogenssensor (slimme stekker)",
             "energy_entity": "Energiesensor (zelfde stekker)",
             "window_from": "Venster vanaf",
-            "window_until": "Klaar om"
+            "window_until": "Klaar om",
+            "after_washer": "Altijd na de was"
           }
         }
       },

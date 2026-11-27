@@ -196,3 +196,37 @@ async def test_stroom_shows_the_plugs_with_floor_and_energy_today(
     washer = next(d for d in stroom_view(entry)["devices"] if d["name"] == "Wasmachine")
     assert washer["power_w"] == 0
     assert 0.95 < washer["today_kwh"] < 1.05  # 2 kW for half an hour
+
+
+async def test_dryer_goes_along_with_the_washing_and_settings_from_the_panel(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, hass_ws_client: Any
+) -> None:
+    """A dryer set to 'after the washing' is planned once with the washer and cleared with it."""
+    client = await hass_ws_client(hass)
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (9, 0), price_entity=PRICE)
+    await _add(hass, entry, "Wasmachine", "washer", window_from="10:00:00", window_until="15:00:00")
+    await _add(hass, entry, "Droger", "dryer_heat_pump", window_from="12:00:00", window_until="20:00:00", after_washer=True)
+    manager = hass.config_entries.async_get_entry(entry.entry_id).runtime_data.appliances
+
+    await client.send_json_auto_id({"type": "zephyr/appliances/plan", "appliance": "Wasmachine", "runs": 2})
+    view = (await client.receive_json())["result"]
+    kinds = [next(a["kind"] for a in view["appliances"] if a["id"] == p["appliance"]) for p in view["planned"]]
+    assert sorted(kinds) == ["dryer_heat_pump", "washer", "washer"]  # one dryer, after the last wash
+    dryer_run = next(p for p in view["planned"] if p["after"])
+    assert dryer_run["after"] == "Wasmachine"
+    assert next(a for a in view["appliances"] if a["name"] == "Droger")["after_washer"] is True
+
+    await client.send_json_auto_id({"type": "zephyr/appliances/clear", "appliance": "Wasmachine"})
+    assert (await client.receive_json())["result"]["planned"] == []  # the dryer went with it
+    assert manager.planned == []
+
+    dryer_id = next(a.id for a in manager.appliances.values() if a.name == "Droger")
+    await client.send_json_auto_id(
+        {"type": "zephyr/appliances/update", "appliances": [{"id": dryer_id, "window_from": "15:00", "after_washer": False}]}
+    )
+    result = (await client.receive_json())["result"]
+    assert result == {"changed": 1, "reload": True}
+    await hass.async_block_till_done()
+    data = hass.config_entries.async_get_entry(entry.entry_id).subentries[dryer_id].data
+    assert data["window_from"] == "15:00:00" and data["after_washer"] is False

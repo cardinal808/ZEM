@@ -271,3 +271,90 @@ describe("consumers today", () => {
     expect(deviceName(d("wash", 1), (k) => k)).toBe("wash");
   });
 });
+
+import { estimateCost, tapAction, type ApplianceItem } from "../src/appliances";
+import { runBars, type Quarter as PQ } from "../src/plan";
+
+describe("appliance buttons", () => {
+  it("washer goes 0 → 1 → 2 → off, the others 0 → 1 → off", () => {
+    expect([0, 1, 2].map((n) => tapAction("washer", n))).toEqual([
+      "plan",
+      "plan",
+      "clear",
+    ]);
+    expect([0, 1].map((n) => tapAction("dishwasher", n))).toEqual([
+      "plan",
+      "clear",
+    ]);
+  });
+
+  const q = (iso: string, buy: number): PQ => ({
+    start: iso,
+    past: false,
+    market: null,
+    buy,
+    sell: null,
+    action: null,
+    soc: null,
+    solar: null,
+    load: null,
+    indicative: false,
+  });
+  const washer: ApplianceItem = {
+    id: "w",
+    name: "Was",
+    kind: "washer",
+    plug: true,
+    running: false,
+    profile: "default",
+    runs_seen: 0,
+    kwh: 1.0,
+    minutes: 60,
+    window: { from: "10:00:00", until: "15:00:00" },
+  };
+  it("estimates one run at the cheapest start within the window", () => {
+    const quarters: PQ[] = [];
+    for (let i = 0; i < 96; i++) {
+      const h = Math.floor(i / 4);
+      quarters.push(
+        q(
+          new Date(Date.UTC(2026, 10, 28, 0, i * 15)).toISOString(),
+          h >= 12 && h < 14 ? 0.1 : 0.3,
+        ),
+      );
+    }
+    const est = estimateCost(
+      quarters,
+      washer,
+      Date.UTC(2026, 10, 28, 6, 0),
+      "UTC",
+    );
+    expect(est).toBeCloseTo(0.1); // 12:00–13:00 at € 0,10
+    expect(
+      estimateCost(
+        quarters,
+        { ...washer, window: { from: "16:00:00", until: "17:00:00" } },
+        Date.UTC(2026, 10, 28, 6, 0),
+        "UTC",
+      ),
+    ).toBeCloseTo(0.3);
+  });
+  it("draws runs as bars, overlapping ones on a new row", () => {
+    const quarters = [0, 1, 2, 3, 4, 5, 6, 7].map((i) =>
+      q(new Date(Date.UTC(2026, 10, 28, 10, i * 15)).toISOString(), 0.2),
+    );
+    const bars = runBars(quarters, [
+      { name: "Was", start: "2026-11-28T10:15:00Z", minutes: 60, fixed: false },
+      {
+        name: "Droger",
+        start: "2026-11-28T10:45:00Z",
+        minutes: 30,
+        fixed: true,
+      },
+    ]);
+    expect(bars.map((b) => [b.left, b.width, b.row])).toEqual([
+      [1, 4, 0],
+      [3, 2, 1],
+    ]);
+  });
+});

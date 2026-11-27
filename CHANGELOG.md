@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.8.46 — Plan: appliance buttons; Instellingen: Apparaten
+- Under *Prijzen en plan* one button per appliance (B36). A tap plans a run in the appliance's window; the washing machine goes 1× → 2× → off, the others 1× → off. Nothing planned: the expected cost of one run (cheapest start in the window at the quarter prices). Planned: the advised start(s), the cost of the run(s) and how much cheaper than starting now; a dryer planned along shows *na de was*.
+- Planned runs appear in the chart as bars under the solar lane (a fixed start with a lock); the tooltip shows the appliances' kWh in that quarter.
+- *Instellingen*: the group *Huis in beeld* becomes **Apparaten**: per appliance *Niet vóór* / *Klaar om* (the window), floor and shown on *Stroom*; for a dryer **Altijd na de was**.
+- Dryer *Altijd na de was* (`after_washer`, also in the appliance's options in HA): planning the washing machine plans one dryer run after the last wash (if none is planned yet); clearing the washing clears that dryer run too.
+- A run's `cost` and `cost_now` are now the run's own cost (the plan with the run minus without it), not the whole plan's.
+- New `zephyr/appliances/update` (admin): window and `after_washer` per appliance from the panel, one reload. `zephyr/appliances` gives `after_washer`.
+- Tests: run cost as its own share; dryer along and cleared with the washing, settings from the panel; buttons, estimate and run bars in vitest.
+
 ### 0.8.45 — Stroom: consumers today; Instellingen: house view
 - *Stroom*: the card *Airco vandaag* becomes **Verbruikers vandaag**: kWh today per appliance with a plug (B36 appliances) and the airco (B41), largest first, with the power now when it runs, then *Overig huis* (house today minus the consumers). Below: the airco's sun/grid split and cost, and the house total.
 - kWh today per plug is integrated from its power (W or kW; a reading counts until the next one, split at midnight, unavailable stops counting); kept over a restart on the same day. The airco's kWh comes from the cost log.

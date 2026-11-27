@@ -1,5 +1,13 @@
 // Card "Prijzen en plan" (SPEC-ui §4.2, design A, approved 26-11).
-import { LitElement, css, html, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
+import {
+  LitElement,
+  css,
+  html,
+  nothing,
+  svg,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
 import { clock, day, euro, kwh, percent } from "./format";
@@ -22,6 +30,8 @@ import {
   type PlanView,
   type PriceStats,
   type Quarter,
+  runBars,
+  type RunInput,
 } from "./plan";
 import { actionFill } from "./theme";
 
@@ -48,6 +58,8 @@ export class ZephyrPricesPlan extends LitElement {
   @property() locale = "en";
   @property() timeZone = "UTC";
   @property({ type: Boolean }) narrow = false;
+  /** Planned appliance runs, drawn as bars under the solar lane (B36). */
+  @property({ attribute: false }) runs: RunInput[] = [];
 
   /** Chosen period; the panel keeps it, so the cards below follow it too. */
   @property({ attribute: false }) period: Period = storedPeriod();
@@ -55,13 +67,22 @@ export class ZephyrPricesPlan extends LitElement {
 
   private scrolledFor = "";
 
-  private tr(key: string, params: Record<string, string | number> = {}): string {
+  private tr(
+    key: string,
+    params: Record<string, string | number> = {},
+  ): string {
     return t(this.uiLang, key, params);
   }
 
   private pick(period: Period): void {
     this.period = period;
-    this.dispatchEvent(new CustomEvent<Period>("zephyr-period", { detail: period, bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent<Period>("zephyr-period", {
+        detail: period,
+        bubbles: true,
+        composed: true,
+      }),
+    );
     this.sel = null;
     this.scrolledFor = "";
     try {
@@ -76,20 +97,31 @@ export class ZephyrPricesPlan extends LitElement {
     const wrap = this.renderRoot.querySelector<HTMLElement>(".scroll");
     const quarters = this.visible();
     const key = `${this.period}|${this.view?.now ?? ""}`;
-    if (!wrap || wrap.scrollWidth <= wrap.clientWidth || this.scrolledFor === key) return;
+    if (
+      !wrap ||
+      wrap.scrollWidth <= wrap.clientWidth ||
+      this.scrolledFor === key
+    )
+      return;
     this.scrolledFor = key;
     const now = currentIndex(quarters);
-    if (now > 0) wrap.scrollLeft = (Math.max(0, now - 8) / quarters.length) * wrap.scrollWidth;
+    if (now > 0)
+      wrap.scrollLeft =
+        (Math.max(0, now - 8) / quarters.length) * wrap.scrollWidth;
   }
 
   private visible(): Quarter[] {
-    return this.view ? quartersOf(this.view.quarters, this.period, this.timeZone) : [];
+    return this.view
+      ? quartersOf(this.view.quarters, this.period, this.timeZone)
+      : [];
   }
 
   protected override render(): TemplateResult {
     const view = this.view;
     if (!view) {
-      return html`<section class="card"><div class="skeleton" aria-hidden="true"></div></section>`;
+      return html`<section class="card">
+        <div class="skeleton" aria-hidden="true"></div>
+      </section>`;
     }
     const quarters = this.visible();
     const todayQs = dayOf(view.quarters, 0, this.timeZone);
@@ -98,7 +130,12 @@ export class ZephyrPricesPlan extends LitElement {
     const tomorrow = stats(tomorrowQs);
     const now = currentIndex(view.quarters);
     const nowQ = now >= 0 ? view.quarters[now] : undefined;
-    const title = this.period === "today" ? "plan.title_today" : this.period === "tomorrow" ? "plan.title_tomorrow" : "plan.title_both";
+    const title =
+      this.period === "today"
+        ? "plan.title_today"
+        : this.period === "tomorrow"
+          ? "plan.title_tomorrow"
+          : "plan.title_both";
     return html`<section class="card" aria-label=${this.tr("plan.title")}>
       <div class="head">
         <h2>${this.tr("plan.title")} · ${this.tr(title)}</h2>
@@ -118,14 +155,21 @@ export class ZephyrPricesPlan extends LitElement {
       </div>
       <div class="prices">
         <div class="cell now">
-          <span class="cap">${this.tr("plan.now", { time: nowQ ? clock(nowQ.start, this.locale, this.timeZone) : "–" })}</span>
-          <span class="value">${nowQ?.buy != null ? euro(nowQ.buy, this.locale) : "–"}</span>
+          <span class="cap"
+            >${this.tr("plan.now", { time: nowQ ? clock(nowQ.start, this.locale, this.timeZone) : "–" })}</span
+          >
+          <span class="value"
+            >${nowQ?.buy != null ? euro(nowQ.buy, this.locale) : "–"}</span
+          >
           <span class="sub">${this.tr("plan.per_kwh")}</span>
         </div>
-        ${this.statCell(todayQs, today, "plan.today")} ${this.statCell(tomorrowQs, tomorrow, "plan.tomorrow", true)}
+        ${this.statCell(todayQs, today, "plan.today")}
+        ${this.statCell(tomorrowQs, tomorrow, "plan.tomorrow", true)}
       </div>
-      ${this.notes(view, tomorrow)} ${quarters.length ? this.chart(quarters) : html`<p class="empty">${this.tr("plan.no_quarters")}</p>`}
+      ${this.notes(view, tomorrow)}
+      ${quarters.length ? this.chart(quarters) : html`<p class="empty">${this.tr("plan.no_quarters")}</p>`}
       ${this.legend()}
+      <slot></slot>
     </section>`;
   }
 
@@ -134,11 +178,20 @@ export class ZephyrPricesPlan extends LitElement {
     const high = s.max.buy as number;
     const pct = spreadPct(low, high);
     // Around zero or below a percentage says nothing: then the difference in euro.
-    return pct === null ? this.tr("plan.spread", { value: euro(high - low, this.locale) }) : this.tr("plan.spread", { value: `${pct} %` });
+    return pct === null
+      ? this.tr("plan.spread", { value: euro(high - low, this.locale) })
+      : this.tr("plan.spread", { value: `${pct} %` });
   }
 
-  private statCell(quarters: Quarter[], s: PriceStats | null, label: string, tomorrow = false): TemplateResult {
-    const dayLabel = quarters.length ? day(quarters[0].start, this.locale, this.timeZone) : "";
+  private statCell(
+    quarters: Quarter[],
+    s: PriceStats | null,
+    label: string,
+    tomorrow = false,
+  ): TemplateResult {
+    const dayLabel = quarters.length
+      ? day(quarters[0].start, this.locale, this.timeZone)
+      : "";
     if (!s) {
       return html`<div class="cell">
         <span class="cap">${this.tr(label)} · ${dayLabel}</span>
@@ -146,11 +199,17 @@ export class ZephyrPricesPlan extends LitElement {
         <span class="sub">${tomorrow ? this.tr("plan.expected_at") : ""}</span>
       </div>`;
     }
-    const known = tomorrow && this.view?.tomorrow_known_at ? ` · ${this.tr("plan.known_at", { time: clock(this.view.tomorrow_known_at, this.locale, this.timeZone) })}` : "";
+    const known =
+      tomorrow && this.view?.tomorrow_known_at
+        ? ` · ${this.tr("plan.known_at", { time: clock(this.view.tomorrow_known_at, this.locale, this.timeZone) })}`
+        : "";
     return html`<div class="cell">
       <span class="cap">${this.tr(label)} · ${dayLabel}</span>
       <span class="value"
-        >${euro(s.min.buy as number, this.locale)} – ${euro(s.max.buy as number, this.locale)}<span class="spread" title=${this.tr("plan.spread_title")}
+        >${euro(s.min.buy as number, this.locale)} –
+        ${euro(s.max.buy as number, this.locale)}<span
+          class="spread"
+          title=${this.tr("plan.spread_title")}
           >${this.spreadText(s)}</span
         ></span
       >
@@ -164,11 +223,17 @@ export class ZephyrPricesPlan extends LitElement {
     </div>`;
   }
 
-  private notes(view: PlanView, tomorrow: PriceStats | null): TemplateResult | typeof nothing {
+  private notes(
+    view: PlanView,
+    tomorrow: PriceStats | null,
+  ): TemplateResult | typeof nothing {
     const notes: TemplateResult[] = [];
-    if (view.state === "no_prices") notes.push(html`<p class="note warn">${this.tr("plan.no_prices")}</p>`);
-    if (view.state === "price_reserve") notes.push(html`<p class="note">${this.tr("plan.reserve")}</p>`);
-    if (!tomorrow && this.period !== "today") notes.push(html`<p class="note">${this.tr("plan.indicative")}</p>`);
+    if (view.state === "no_prices")
+      notes.push(html`<p class="note warn">${this.tr("plan.no_prices")}</p>`);
+    if (view.state === "price_reserve")
+      notes.push(html`<p class="note">${this.tr("plan.reserve")}</p>`);
+    if (!tomorrow && this.period !== "today")
+      notes.push(html`<p class="note">${this.tr("plan.indicative")}</p>`);
     return notes.length ? html`${notes}` : nothing;
   }
 
@@ -178,16 +243,35 @@ export class ZephyrPricesPlan extends LitElement {
     const now = currentIndex(quarters);
     const pct = (i: number): string => `${((i / n) * 100).toFixed(3)}%`;
     const dayIdx = days(quarters, this.timeZone);
-    const split = dayIdx.length > 1 ? quarters.findIndex((q) => new Date(q.start).getTime() >= new Date(dayOf(quarters, 1, this.timeZone)[0].start).getTime()) : -1;
+    const split =
+      dayIdx.length > 1
+        ? quarters.findIndex(
+            (q) =>
+              new Date(q.start).getTime() >=
+              new Date(dayOf(quarters, 1, this.timeZone)[0].start).getTime(),
+          )
+        : -1;
     const marks: { q: Quarter; i: number; kind: string }[] = [];
     for (let d = 0; d < dayIdx.length; d++) {
       const dq = dayOf(quarters, d, this.timeZone);
       const st = stats(dq);
       if (!st) continue;
-      marks.push({ q: st.min, i: quarters.indexOf(st.min), kind: "plan.lowest" });
-      marks.push({ q: st.max, i: quarters.indexOf(st.max), kind: "plan.highest" });
+      marks.push({
+        q: st.min,
+        i: quarters.indexOf(st.min),
+        kind: "plan.lowest",
+      });
+      marks.push({
+        q: st.max,
+        i: quarters.indexOf(st.max),
+        kind: "plan.highest",
+      });
     }
-    const tickIdx = ticks(quarters, this.period === "both" ? 6 : 3, this.timeZone);
+    const tickIdx = ticks(
+      quarters,
+      this.period === "both" ? 6 : 3,
+      this.timeZone,
+    );
     const focus = this.sel !== null && this.sel < n ? this.sel : null;
     const pts = socPoints(quarters, this.view?.soc_now ?? null);
     const pastLines = pastSocLines(quarters, this.view?.soc_now ?? null);
@@ -195,9 +279,13 @@ export class ZephyrPricesPlan extends LitElement {
     return html`<div class="scroll">
       <div class="chart ${n > 100 ? "wide" : ""}">
         <div class="axis left" aria-hidden="true">
-          <span>${euro(s.hi, this.locale)}</span><span>${euro((s.hi + s.lo) / 2, this.locale)}</span><span>${euro(s.lo, this.locale)}</span>
+          <span>${euro(s.hi, this.locale)}</span
+          ><span>${euro((s.hi + s.lo) / 2, this.locale)}</span
+          ><span>${euro(s.lo, this.locale)}</span>
         </div>
-        <div class="axis right" aria-hidden="true"><span>100 %</span><span>50 %</span><span>0 %</span></div>
+        <div class="axis right" aria-hidden="true">
+          <span>100 %</span><span>50 %</span><span>0 %</span>
+        </div>
         <div
           class="plot"
           tabindex="0"
@@ -215,27 +303,45 @@ export class ZephyrPricesPlan extends LitElement {
             if (q.buy === null) return nothing;
             const b = bar(q.buy, s);
             const cls = `bar${q.past ? " past" : ""}${q.indicative ? " ind" : ""}${i === now ? " cur" : ""}${i === focus ? " focus" : ""}`;
-            return html`<div class=${cls} style="left:${pct(i)};width:${pct(1)};bottom:${b.bottom}%;height:${b.height}%"></div>`;
+            return html`<div
+              class=${cls}
+              style="left:${pct(i)};width:${pct(1)};bottom:${b.bottom}%;height:${b.height}%"
+            ></div>`;
           })}
-          <svg viewBox="0 0 ${n} 100" preserveAspectRatio="none" aria-hidden="true">
+          <svg
+            viewBox="0 0 ${n} 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
             ${pastLines.map((p) => svg`<polyline class="halo" points=${p}></polyline><polyline class="soc measured" points=${p}></polyline>`)}
             ${pts ? svg`<polyline class="halo" points=${pts}></polyline><polyline class="soc" points=${pts}></polyline>` : nothing}
           </svg>
-          ${split > 0
-            ? html`<div class="split" style="left:${pct(split)}"></div>
-                <span class="dayname" style="left:calc(${pct(split)} + 6px)">${day(quarters[split].start, this.locale, this.timeZone)}</span>`
-            : nothing}
+          ${
+            split > 0
+              ? html`<div class="split" style="left:${pct(split)}"></div>
+                  <span class="dayname" style="left:calc(${pct(split)} + 6px)"
+                    >${day(quarters[split].start, this.locale, this.timeZone)}</span
+                  >`
+              : nothing
+          }
           ${marks.map(({ q, i }) => {
             const left = Math.min(94, Math.max(6, ((i + 0.5) / n) * 100));
             const b = bar(q.buy as number, s);
-            return html`<span class="mark" style="left:${left}%;bottom:calc(${b.bottom + b.height}% + 6px)"
-              >${euro(q.buy as number, this.locale)} · ${clock(q.start, this.locale, this.timeZone)}</span
+            return html`<span
+              class="mark"
+              style="left:${left}%;bottom:calc(${b.bottom + b.height}% + 6px)"
+              >${euro(q.buy as number, this.locale)} ·
+              ${clock(q.start, this.locale, this.timeZone)}</span
             >`;
           })}
-          ${now >= 0
-            ? html`<div class="nowline" style="left:${pct(now)}"></div>
-                <span class="nowpill" style="left:${pct(now)}">${this.tr("plan.now_short")}</span>`
-            : nothing}
+          ${
+            now >= 0
+              ? html`<div class="nowline" style="left:${pct(now)}"></div>
+                  <span class="nowpill" style="left:${pct(now)}"
+                    >${this.tr("plan.now_short")}</span
+                  >`
+              : nothing
+          }
           ${focus !== null ? this.tooltip(quarters[focus], focus, n) : nothing}
         </div>
         <div class="band" aria-hidden="true">
@@ -247,11 +353,35 @@ export class ZephyrPricesPlan extends LitElement {
               ></div>`,
           )}
         </div>
-        ${this.sun(quarters)}
+        ${this.sun(quarters)} ${this.runLane(quarters)}
         <div class="ticks" aria-hidden="true">
           ${tickIdx.map((i) => html`<span style="left:${pct(i)}">${clock(quarters[i].start, this.locale, this.timeZone)}</span>`)}
         </div>
       </div>
+    </div>`;
+  }
+
+  /** Planned appliance runs as bars on the time axis (SPEC-ui-planner §1.2); a fixed start has a lock. */
+  private runLane(quarters: Quarter[]): TemplateResult | typeof nothing {
+    const bars = runBars(quarters, this.runs);
+    if (!bars.length) return nothing;
+    const n = quarters.length;
+    const rows = Math.max(...bars.map((b) => b.row)) + 1;
+    return html`<div
+      class="runlane"
+      style="height:${rows * 20}px"
+      aria-label=${this.tr("plan.runs_label")}
+    >
+      ${bars.map(
+        (b) =>
+          html`<div
+            class="run"
+            style="left:${((b.left / n) * 100).toFixed(3)}%;width:${((b.width / n) * 100).toFixed(3)}%;top:${b.row * 20}px"
+            title=${b.name}
+          >
+            ${b.fixed ? "🔒 " : ""}${b.name}
+          </div>`,
+      )}
     </div>`;
   }
 
@@ -261,9 +391,10 @@ export class ZephyrPricesPlan extends LitElement {
     if (!lane) return nothing;
     return html`<div class="sunlane" aria-hidden="true">
       ${lane.map(
-        (q) => html`<div class="sq">
-          ${q.height > 0 ? html`<i class=${`${q.past ? "" : "fut"}${q.over ? " over" : ""}`} style="height:${q.height}%"></i>` : nothing}
-        </div>`,
+        (q) =>
+          html`<div class="sq">
+            ${q.height > 0 ? html`<i class=${`${q.past ? "" : "fut"}${q.over ? " over" : ""}`} style="height:${q.height}%"></i>` : nothing}
+          </div>`,
       )}
     </div>`;
   }
@@ -276,8 +407,10 @@ export class ZephyrPricesPlan extends LitElement {
 
   private key(e: KeyboardEvent, n: number, now: number): void {
     const step = e.shiftKey ? 4 : 1;
-    if (e.key === "ArrowRight") this.sel = Math.min(n - 1, (this.sel ?? Math.max(now, 0)) + step);
-    else if (e.key === "ArrowLeft") this.sel = Math.max(0, (this.sel ?? Math.max(now, 0)) - step);
+    if (e.key === "ArrowRight")
+      this.sel = Math.min(n - 1, (this.sel ?? Math.max(now, 0)) + step);
+    else if (e.key === "ArrowLeft")
+      this.sel = Math.max(0, (this.sel ?? Math.max(now, 0)) - step);
     else if (e.key === "Escape") this.sel = null;
     else return;
     e.preventDefault();
@@ -286,24 +419,46 @@ export class ZephyrPricesPlan extends LitElement {
   private tooltip(q: Quarter, i: number, n: number): TemplateResult {
     const left = ((i + 0.5) / n) * 100;
     const side = left > 60 ? "right" : "left";
-    const pos = side === "left" ? `left:calc(${left}% + 10px)` : `right:calc(${100 - left}% + 10px)`;
+    const pos =
+      side === "left"
+        ? `left:calc(${left}% + 10px)`
+        : `right:calc(${100 - left}% + 10px)`;
     const action = q.action
-      ? this.tr(`action.${q.action}`) + (q.past ? ` (${this.tr("plan.actual")})` : q.indicative ? ` (${this.tr("plan.indicative_short")})` : "")
+      ? this.tr(`action.${q.action}`) +
+        (q.past
+          ? ` (${this.tr("plan.actual")})`
+          : q.indicative
+            ? ` (${this.tr("plan.indicative_short")})`
+            : "")
       : q.past
         ? this.tr("plan.no_record")
         : null;
     return html`<div class="tip" role="status" style=${pos}>
-      <strong>${day(q.start, this.locale, this.timeZone)} ${clock(q.start, this.locale, this.timeZone)}</strong>
-      ${q.buy !== null
-        ? html`<span>${this.tr("plan.tip_buy", { price: euro(q.buy, this.locale) })}</span>
-            <span>${this.tr("plan.tip_sell", { price: euro(q.sell as number, this.locale) })}</span>`
-        : html`<span>${this.tr("plan.unknown")}</span>`}
+      <strong
+        >${day(q.start, this.locale, this.timeZone)}
+        ${clock(q.start, this.locale, this.timeZone)}</strong
+      >
+      ${
+        q.buy !== null
+          ? html`<span
+                >${this.tr("plan.tip_buy", { price: euro(q.buy, this.locale) })}</span
+              >
+              <span
+                >${this.tr("plan.tip_sell", { price: euro(q.sell as number, this.locale) })}</span
+              >`
+          : html`<span>${this.tr("plan.unknown")}</span>`
+      }
       ${action ? html`<span>${action}</span>` : nothing}
       ${q.soc !== null ? html`<span>${this.tr(q.past ? "plan.tip_soc_past" : "plan.tip_soc", { soc: percent(q.soc, this.locale) })}</span>` : nothing}
-      ${q.solar !== null && q.load !== null
-        ? html`<span>${this.tr(q.past ? "plan.tip_energy_past" : "plan.tip_energy", { solar: kwh(q.solar, this.locale, 2), load: kwh(q.load, this.locale, 2) })}</span>`
-        : nothing}
+      ${
+        q.solar !== null && q.load !== null
+          ? html`<span
+              >${this.tr(q.past ? "plan.tip_energy_past" : "plan.tip_energy", { solar: kwh(q.solar, this.locale, 2), load: kwh(q.load, this.locale, 2) })}</span
+            >`
+          : nothing
+      }
       ${q.excluded ? html`<span>${this.tr("plan.tip_airco", { kwh: kwh(q.excluded, this.locale, 2) })}</span>` : nothing}
+      ${q.appliances ? html`<span>${this.tr("plan.tip_appliances", { kwh: kwh(q.appliances, this.locale, 2) })}</span>` : nothing}
     </div>`;
   }
 
@@ -320,13 +475,25 @@ export class ZephyrPricesPlan extends LitElement {
 
   private legend(): TemplateResult {
     const item = (fill: string, key: string, cls = "sw"): TemplateResult =>
-      html`<span class="li"><span class=${cls} style="background:${fill}"></span>${this.tr(key)}</span>`;
+      html`<span class="li"
+        ><span class=${cls} style="background:${fill}"></span
+        >${this.tr(key)}</span
+      >`;
     return html`<div class="legend">
-      ${item("var(--z-bar)", "plan.legend_price")} ${item(actionFill("charge"), "action.charge")} ${item(actionFill("deliver"), "action.deliver")}
-      ${item(actionFill("hold"), "action.hold")} ${item(actionFill("export"), "action.export")}
-      ${item("var(--z-solar)", "plan.legend_solar")} ${item("var(--z-solar)", "plan.legend_solar_over", "sw over")}
-      <span class="li"><span class="line solid"></span>${this.tr("plan.legend_soc_past")}</span>
-      <span class="li"><span class="line"></span>${this.tr("plan.legend_soc")}</span>
+      ${item("var(--z-bar)", "plan.legend_price")}
+      ${item(actionFill("charge"), "action.charge")}
+      ${item(actionFill("deliver"), "action.deliver")}
+      ${item(actionFill("hold"), "action.hold")}
+      ${item(actionFill("export"), "action.export")}
+      ${item("var(--z-solar)", "plan.legend_solar")}
+      ${item("var(--z-solar)", "plan.legend_solar_over", "sw over")}
+      <span class="li"
+        ><span class="line solid"></span
+        >${this.tr("plan.legend_soc_past")}</span
+      >
+      <span class="li"
+        ><span class="line"></span>${this.tr("plan.legend_soc")}</span
+      >
       <span class="li">${this.tr("plan.legend_past")}</span>
     </div>`;
   }
@@ -519,7 +686,11 @@ export class ZephyrPricesPlan extends LitElement {
         opacity: 0.4;
       }
       .bar.ind {
-        background: repeating-linear-gradient(45deg, var(--z-bar) 0 3px, transparent 3px 6px);
+        background: repeating-linear-gradient(
+          45deg,
+          var(--z-bar) 0 3px,
+          transparent 3px 6px
+        );
         opacity: 0.7;
       }
       .bar.cur {
@@ -630,6 +801,29 @@ export class ZephyrPricesPlan extends LitElement {
       }
       .seg.past {
         opacity: 0.4;
+      }
+      .runlane {
+        position: relative;
+        margin-top: 4px;
+      }
+      .run {
+        position: absolute;
+        height: 16px;
+        border-radius: 5px;
+        background: repeating-linear-gradient(
+          135deg,
+          color-mix(in srgb, var(--z-charge) 30%, transparent) 0 4px,
+          color-mix(in srgb, var(--z-charge) 18%, transparent) 4px 8px
+        );
+        border: 1px solid color-mix(in srgb, var(--z-charge) 60%, transparent);
+        color: var(--z-text);
+        font-size: 10.5px;
+        line-height: 14px;
+        padding: 0 4px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        box-sizing: border-box;
       }
       .sunlane {
         display: flex;

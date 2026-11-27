@@ -234,6 +234,7 @@ def place_runs(
         # Not before the end of this appliance's previous run, nor of the one it waits for.
         waits = [t for t in (ends.get(run.appliance), ends.get(run.after) if run.after else None) if t is not None]
         options = candidates(run, minutes, now, max(waits) if waits else None)
+        before = cost(dict(extra))  # the plan without this run: its own cost is the difference
         best: tuple[float, datetime] | None = None
         first_cost: float | None = None
         for start in options:
@@ -248,8 +249,8 @@ def place_runs(
         assert best is not None and first_cost is not None
         run.best_start = best[1]
         run.details = {
-            "cost": round(best[0], 4),
-            "cost_now": round(first_cost, 4),
+            "cost": round(best[0] - before, 4),
+            "cost_now": round(first_cost - before, 4),
             "saving": round(first_cost - best[0], 4),
             "kwh": round(profile_kwh(profile), 3),
             "minutes": minutes,

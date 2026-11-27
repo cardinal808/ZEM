@@ -50,6 +50,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_savings_backfill)
     async_register_command(hass, ws_stroom)
     async_register_command(hass, ws_house_layout)
+    async_register_command(hass, ws_appliances_update)
     async_register_command(hass, ws_appliances)
     async_register_command(hass, ws_appliances_plan)
     async_register_command(hass, ws_appliances_clear)
@@ -785,6 +786,58 @@ def _appliances(hass: HomeAssistant, connection: ActiveConnection, msg_id: int) 
         connection.send_error(msg_id, "not_loaded", "ZEPHYR is not loaded")
         return None
     return entry.runtime_data.appliances
+
+
+_HHMM = vol.Match(r"^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$")
+
+
+@websocket_command(
+    {
+        vol.Required("type"): "zephyr/appliances/update",
+        vol.Required("appliances"): [
+            {
+                vol.Required("id"): str,
+                vol.Optional("window_from"): vol.Any("", _HHMM),
+                vol.Optional("window_until"): _HHMM,
+                vol.Optional("after_washer"): bool,
+            }
+        ],
+    }
+)
+@require_admin
+@callback
+def ws_appliances_update(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Window and 'after the washing' per appliance from the panel (Instellingen → Apparaten); one reload."""
+    from .const import CONF_APPLIANCE_AFTER_WASH, CONF_APPLIANCE_FROM, CONF_APPLIANCE_UNTIL, SUBENTRY_APPLIANCE
+
+    entry = _entry(hass)
+    if entry is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    keys = {"window_from": CONF_APPLIANCE_FROM, "window_until": CONF_APPLIANCE_UNTIL, "after_washer": CONF_APPLIANCE_AFTER_WASH}
+    changed = 0
+    for item in msg["appliances"]:
+        subentry = entry.subentries.get(item["id"])
+        if subentry is None or subentry.subentry_type != SUBENTRY_APPLIANCE:
+            connection.send_error(msg["id"], "not_found", f"Unknown appliance {item['id']}")
+            return
+        data = dict(subentry.data)
+        for key, conf in keys.items():
+            if key not in item:
+                continue
+            value = item[key]
+            if isinstance(value, str) and len(value) == 5:
+                value = f"{value}:00"
+            if value == "":
+                data.pop(conf, None)
+            else:
+                data[conf] = value
+        if data != dict(subentry.data):
+            hass.config_entries.async_update_subentry(entry, subentry, data=data)
+            changed += 1
+    if changed:
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+    connection.send_result(msg["id"], {"changed": changed, "reload": bool(changed)})
 
 
 @websocket_command({vol.Required("type"): "zephyr/appliances"})

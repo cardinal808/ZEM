@@ -41,6 +41,8 @@ import type { SetResult } from "./settings-edit";
 import { blockerText, fastButtons, type EventsView } from "./diag";
 import "./diagnostics";
 import "./savings";
+import "./appliances";
+import type { AppliancesView, PlanOptions } from "./appliances";
 import "./stroom";
 import type { StroomView } from "./stroom";
 import type { PlanCheckView } from "./diag";
@@ -96,6 +98,8 @@ export class ZephyrPanel extends LitElement {
   @state() private eventsView?: EventsView;
   @state() private savingsView?: SavingsView;
   @state() private stroomView?: StroomView;
+  @state() private appliancesView?: AppliancesView;
+  private appliancesFor: number | null = null;
   @state() private planCheck?: PlanCheckView;
   @state() private confirmLive = false;
   @state() private controlBusy = false;
@@ -253,6 +257,80 @@ export class ZephyrPanel extends LitElement {
     }
   }
 
+  /** Appliances and their planned runs, fetched again when the revision changes. */
+  private async loadAppliances(): Promise<void> {
+    const rev = this.now?.appliances_revision;
+    if (
+      !this.hass ||
+      rev === null ||
+      rev === undefined ||
+      rev === this.appliancesFor
+    )
+      return;
+    this.appliancesFor = rev;
+    try {
+      this.appliancesView = await this.hass.callWS<AppliancesView>({
+        type: "zephyr/appliances",
+      });
+    } catch {
+      this.appliancesFor = null;
+    }
+  }
+
+  private planAppliance = async (
+    id: string,
+    options: PlanOptions,
+  ): Promise<void> => {
+    if (!this.hass) return;
+    try {
+      this.appliancesView = await this.hass.callWS<AppliancesView>({
+        type: "zephyr/appliances/plan",
+        appliance: id,
+        ...options,
+      });
+    } catch (err) {
+      this.controlError = (err as { message?: string })?.message ?? String(err);
+    }
+  };
+
+  private clearAppliance = async (id: string): Promise<void> => {
+    if (!this.hass) return;
+    try {
+      this.appliancesView = await this.hass.callWS<AppliancesView>({
+        type: "zephyr/appliances/clear",
+        appliance: id,
+      });
+    } catch (err) {
+      this.controlError = (err as { message?: string })?.message ?? String(err);
+    }
+  };
+
+  /** Planned runs for the chart: name, start (fixed or advised) and duration. */
+  private runInputs(): {
+    name: string;
+    start: string;
+    minutes: number;
+    fixed: boolean;
+  }[] {
+    const v = this.appliancesView;
+    if (!v) return [];
+    const names = new Map(v.appliances.map((a) => [a.id, a]));
+    return v.planned.flatMap((p) => {
+      const start = p.fixed_start ?? p.best_start;
+      const a = names.get(p.appliance);
+      return start && a
+        ? [
+            {
+              name: a.name,
+              start,
+              minutes: p.minutes ?? a.minutes,
+              fixed: p.fixed_start !== null,
+            },
+          ]
+        : [];
+    });
+  }
+
   private async loadSets(): Promise<void> {
     if (!this.hass || this.view !== "sets") return;
     try {
@@ -402,6 +480,21 @@ export class ZephyrPanel extends LitElement {
   };
 
   /** Vacation through ZEPHYR's own entities (switch and end time), like an automation would (B42). */
+  private saveAppliances = async (
+    updates: Record<string, unknown>[],
+  ): Promise<void> => {
+    if (!this.hass) return;
+    try {
+      await this.hass.callWS({
+        type: "zephyr/appliances/update",
+        appliances: updates,
+      });
+      this.appliancesFor = null; // ZEPHYR reloads; fetch again after
+    } catch (err) {
+      this.controlError = (err as { message?: string })?.message ?? String(err);
+    }
+  };
+
   private saveHouse = async (
     floors: Record<string, string>,
     hidden: string[],
@@ -496,6 +589,7 @@ export class ZephyrPanel extends LitElement {
       this.status = "ok";
       this.clockMs = Date.now();
       void this.loadPlan();
+      void this.loadAppliances();
     } else if (event.type === "unloaded") {
       // The installation reloads; the server already closed this subscription.
       this.unsubscribe = undefined;
@@ -722,6 +816,8 @@ export class ZephyrPanel extends LitElement {
         .save=${this.saveSettings}
         .setVacation=${this.setVacation}
         .saveHouse=${this.saveHouse}
+        .appliances=${this.appliancesView}
+        .saveAppliances=${this.saveAppliances}
       ></zephyr-settings>`;
     }
     if (this.view === "stroom") {
@@ -802,7 +898,18 @@ export class ZephyrPanel extends LitElement {
         .timeZone=${this.timeZone}
         ?narrow=${this.narrow}
         .period=${this.period}
+        .runs=${this.runInputs()}
         @zephyr-period=${(e: CustomEvent<Period>) => (this.period = e.detail)}
+        ><zephyr-appliances
+          .view=${this.appliancesView}
+          .quarters=${this.planView?.quarters ?? []}
+          .uiLang=${this.uiLang}
+          .locale=${this.locale}
+          .timeZone=${this.timeZone}
+          .clockMs=${this.clockMs}
+          .plan=${this.planAppliance}
+          .clear=${this.clearAppliance}
+        ></zephyr-appliances
       ></zephyr-prices-plan>
       ${this.planView ? html`<section class="duo ${stale}">${this.renderBlocks(this.planView)} ${this.renderWhy(this.planView)}</section>` : nothing}`;
   }

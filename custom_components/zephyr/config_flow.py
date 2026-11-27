@@ -23,6 +23,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
+    CONF_APPLIANCE_AFTER_WASH,
     CONF_APPLIANCE_ENERGY,
     CONF_APPLIANCE_FROM,
     CONF_APPLIANCE_KIND,
@@ -289,6 +290,12 @@ def _appliance_details_schema(kind: str, data: dict[str, Any]) -> vol.Schema:
     dishwasher = kind == DISHWASHER
     default_from = data.get(CONF_APPLIANCE_FROM, "" if dishwasher else "08:00:00")
     default_until = data.get(CONF_APPLIANCE_UNTIL, "07:00:00" if dishwasher else "20:00:00")
+    dryer = kind.startswith("dryer")
+    extra: dict[Any, Any] = (
+        {vol.Optional(CONF_APPLIANCE_AFTER_WASH, default=bool(data.get(CONF_APPLIANCE_AFTER_WASH, False))): selector.BooleanSelector()}
+        if dryer
+        else {}
+    )
     return vol.Schema(
         {
             vol.Optional(CONF_APPLIANCE_POWER, description={"suggested_value": data.get(CONF_APPLIANCE_POWER)}): selector.EntitySelector(
@@ -299,6 +306,7 @@ def _appliance_details_schema(kind: str, data: dict[str, Any]) -> vol.Schema:
             ),
             vol.Optional(CONF_APPLIANCE_FROM, description={"suggested_value": default_from or None}): selector.TimeSelector(),
             vol.Required(CONF_APPLIANCE_UNTIL, default=default_until): selector.TimeSelector(),
+            **extra,
         }
     )
 

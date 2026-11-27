@@ -82,6 +82,8 @@ export interface Now {
   price_entity: boolean;
   plan: PlanNow | null;
   excluded?: import("./airco").Excluded | null;
+  /** Goes up when appliances or their planned runs change (B36): fetch zephyr/appliances again. */
+  appliances_revision?: number | null;
 }
 
 export type SubscribeEvent = { type: "now"; data: Now } | { type: "unloaded" };
