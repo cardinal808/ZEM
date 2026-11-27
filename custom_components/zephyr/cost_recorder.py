@@ -31,6 +31,8 @@ from .const import (
     LOGGER,
 )
 from .core import plan_check
+from .core.cost_correction import MAX_AGE as MAX_CORRECTION_AGE
+from .core.cost_correction import day_delta, gap_shares, reevaluate
 from .core.costs import (
     QUARTER_SECONDS,
     Pools,
@@ -43,6 +45,7 @@ from .core.costs import (
     summarize,
     to_csv,
 )
+from .core.energy_counters import TOTAL_KEYS as ENERGY_TOTAL_KEYS
 from .core.price_window import parse_nordpool_raw
 from .core.solar_history import energy_kwh
 
@@ -126,6 +129,7 @@ class CostRecorder:
         self.pools = Pools()
         self.counters: dict[str, list[Any]] = {}
         """entity → [boundary (ISO UTC), kWh]: the reading at the last quarter boundary."""
+        self._corrections_log: list[dict[str, Any]] = []
         self._excluded_total: float | None = None
         """B41: the excluded load's energy total at the last quarter close (None until the first close)."""
         self.months: list[str] = []
@@ -245,31 +249,51 @@ class CostRecorder:
             counted_exp = self._counter_sum(self.export_counters, boundary, start)
             if counted_imp is not None and counted_exp is not None:
                 imp, exp, coverage = counted_imp, counted_exp, 1.0
+        charge, discharge, set_solar = measured.charge_kwh, measured.discharge_kwh, measured.set_solar_kwh
+        corrections, filled = self._gap_corrections(start)
+        own = self._own_counters(boundary, start)
+        if own is not None:
+            # SPEC-tellers T3: the own energy counters, without what they filled for earlier quarters.
+            charge = max(own["charged"] - filled["charged"], 0.0)
+            discharge = max(own["discharged"] - filled["discharged"], 0.0)
+            set_solar = max(own["solar"] - filled["solar"], 0.0)
         solar: float | None = None
         if self.solar_entity:
             ext = self._counter_sum([self.solar_entity], boundary, start)
-            solar = None if ext is None else ext + measured.set_solar_kwh
+            solar = None if ext is None else ext + set_solar
         if self.runtime.coordinators:
             coverage = min(coverage, measured.battery_seconds / QUARTER_SECONDS)
         totals = self.runtime.totals()
         local_start = dt_util.as_local(start)
+        daylight = is_up(self.hass, start + timedelta(seconds=QUARTER_SECONDS / 2))
+        pools_before = self.pools.as_dict()
         record = evaluate(
             QuarterInput(
                 start=start,
                 minutes=QUARTER_SECONDS / 60,
                 import_kwh=imp,
                 export_kwh=exp,
-                charge_kwh=measured.charge_kwh,
-                discharge_kwh=measured.discharge_kwh,
+                charge_kwh=charge,
+                discharge_kwh=discharge,
                 solar_kwh=solar,
                 market=market,
                 coverage=coverage,
                 stored_kwh=totals.energy_kwh,
-                daylight=is_up(self.hass, start + timedelta(seconds=QUARTER_SECONDS / 2)),
+                daylight=daylight,
             ),
             self.tariffs.tariffs_for(local_start.date()),
             self.pools,
             _days_in_month(local_start.date()),
+        )
+        # Inputs kept for a later correction (T3): pools before, energy stored, daylight, coverage.
+        record.update(
+            {
+                "pools": pools_before,
+                "stored_kwh": None if totals.energy_kwh is None else round(totals.energy_kwh, 4),
+                "daylight": daylight,
+                "coverage": round(coverage, 3),
+                "battery_source": "counters" if own is not None else "meter",
+            }
         )
         record["soc"] = None if totals.soc is None else round(totals.soc, 1)
         if self.runtime.vacation is not None and self.runtime.vacation.was(start):
@@ -287,6 +311,8 @@ class CostRecorder:
         await self._load_month(_month_key(start))
         self.current.append(record)
         add_to_day(self.days.setdefault(local_start.date().isoformat(), {}), record)
+        if corrections:
+            self._apply_corrections(corrections)
         self._summaries.clear()
         assert self.current_month is not None
         month_store, quarters = self._month_store(self.current_month), self.current
@@ -296,6 +322,78 @@ class CostRecorder:
         for listener in list(self._listeners):
             listener()
         return record
+
+    # --- own energy counters and corrections (SPEC-tellers T3) ---------------------------
+
+    def _own_counters(self, boundary: datetime, previous: datetime) -> dict[str, float] | None:
+        """Deltas of the installation's own energy counters since ``previous``; None without a reading then."""
+        energy = self.runtime.energy
+        if energy is None:
+            return None
+        out: dict[str, float] | None = {}
+        for key in ENERGY_TOTAL_KEYS:
+            reading = energy.counters.totals[key]
+            stored = self.counters.get(f"zephyr:{key}")
+            self.counters[f"zephyr:{key}"] = [boundary.isoformat(), reading]
+            if out is None or not stored or stored[0] != previous.isoformat():
+                out = None
+                continue
+            out[key] = max(reading - float(stored[1]), 0.0)
+        return out
+
+    def _gap_corrections(self, start: datetime) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+        """Spread the gaps filled since the last close over their quarters.
+
+        Returns the extra kWh per closed quarter (ISO start; only gaps that began less than
+        48 h ago) and the total filled for quarters before ``start`` (taken out of this
+        quarter's counter delta, also for older gaps).
+        """
+        corrections: dict[str, dict[str, float]] = {}
+        filled = dict.fromkeys(ENERGY_TOTAL_KEYS, 0.0)
+        energy = self.runtime.energy
+        if energy is None:
+            return corrections, filled
+        for gap in energy.take_gaps():
+            if not gap.get("start") or not gap.get("end"):
+                continue
+            gap_start, gap_end = datetime.fromisoformat(gap["start"]), datetime.fromisoformat(gap["end"])
+            recent = start - gap_start <= MAX_CORRECTION_AGE
+            for quarter, share in gap_shares(gap_start, gap_end).items():
+                if quarter >= start:
+                    continue  # this quarter: the counter delta already holds it
+                for key in ENERGY_TOTAL_KEYS:
+                    kwh = float(gap["kwh"].get(key, 0.0)) * share
+                    if kwh <= 0:
+                        continue
+                    filled[key] += kwh
+                    if recent:
+                        extra = corrections.setdefault(quarter.isoformat(), {})
+                        extra[key] = extra.get(key, 0.0) + kwh
+            self._corrections_log.append(
+                {"start": gap["start"], "end": gap["end"], "method": gap.get("method"), "kwh": gap["kwh"], "corrected": recent}
+            )
+        self._corrections_log = self._corrections_log[-20:]
+        return corrections, filled
+
+    def _apply_corrections(self, corrections: dict[str, dict[str, float]]) -> None:
+        """Evaluate the current month again from the first corrected quarter; update days and pools."""
+        tz = dt_util.get_default_time_zone()
+        result = reevaluate(
+            self.current,
+            corrections,
+            self.tariffs.tariffs_for,
+            _days_in_month,
+            tz,
+            dt_util.utcnow().isoformat(timespec="seconds"),
+        )
+        if result is None:
+            LOGGER.debug("Cost log: gap correction not possible (quarters missing or from before 0.8.31): %s", corrections)
+            return
+        self.pools, changes = result
+        for old, new in changes:
+            day = dt_util.as_local(datetime.fromisoformat(new["start"])).date().isoformat()
+            day_delta(self.days.setdefault(day, {}), old, new)
+        LOGGER.debug("Cost log: %d quarters evaluated again after a gap", len(changes))
 
     def records_since(self, start: datetime) -> dict[datetime, dict[str, Any]]:
         """Stored quarters of the current month from ``start`` on, by start time (UTC); for the panel."""
@@ -487,5 +585,6 @@ class CostRecorder:
             "today": self.summary("today").as_dict(),
             "month": self.summary("month").as_dict(),
             "last_quarters": self.current[-8:],
+            "gap_corrections": self._corrections_log[-10:],
             "plan_check": self.plan_check(7),
         }

@@ -48,6 +48,8 @@ class EnergyRecorder:
         self.counters = EnergyCounters()
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}.counters")
         self._seen: dict[str, float | None] = {}
+        self._gaps: list[dict[str, Any]] = []
+        """Filled gaps not yet taken by the cost log (T3)."""
         self._listeners: list[Callable[[], None]] = []
 
     async def async_start(self) -> Callable[[], None]:
@@ -91,6 +93,9 @@ class EnergyRecorder:
         )
         if gap is not None:
             LOGGER.debug("Set %s: gap of %s s filled (%s): %s", coordinator.number, gap["seconds"], gap["method"], gap["kwh"])
+            if gap["kwh"]:
+                self._gaps.append(gap)
+                self._gaps = self._gaps[-50:]
             self._save()
         for listener in list(self._listeners):
             listener()
@@ -106,6 +111,11 @@ class EnergyRecorder:
             self._listeners.remove(listener)
 
         return remove
+
+    def take_gaps(self) -> list[dict[str, Any]]:
+        """The gaps filled since the last call, for the cost log to spread over its quarters."""
+        gaps, self._gaps = self._gaps, []
+        return gaps
 
     def set_kwh(self, serial: str, key: str) -> float | None:
         counter = self.counters.sets.get(serial)
