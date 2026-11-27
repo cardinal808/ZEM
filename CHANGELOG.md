@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.62 — Solar forecast from the Energy dashboard
+- Without a forecast sensor, ZEPHYR now takes the solar forecast of Home Assistant's **Energy dashboard**: every forecast integration set there (Forecast.Solar, Solcast, Open-Meteo, Helios Forecast if it provides one, …), summed over the solar sources. Read at the start and every 30 minutes. Per hour (or the source's own step) and without the 10/90 % bounds; Solcast via its sensor stays the richer choice (half hours and bounds, B32).
+- The planner and the day-ahead history (23:00, B31) use the same forecast; its source is in the diagnostics (`planner.inputs.solar_forecast_source`, `solar.forecast_source`, `energy:<integrations>`).
+- Settings text for *Solar forecast* says what an empty field does.
+
 ### 0.8.61 — Settings suggest sources by integration
 - **P1:** a power sensor of a smart-meter reader (DSMR, DSMR Reader, P1 Monitor, SlimmeLezer, the HomeWizard P1 meter — not its plugs) is suggested whatever its name; per-phase sensors are skipped. The name hints stay as fallback.
 - **Solar counter:** a production counter of an inverter integration (SolarEdge, SolarEdge Modbus, Enphase, Fronius, SMA, Growatt, Huawei, GoodWe, Solax, Sungrow, Solarman, FoxESS, APsystems, Hoymiles, OpenDTU) wins over a name match; forecast sensors are skipped.

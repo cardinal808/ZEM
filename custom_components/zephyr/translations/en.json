@@ -421,7 +421,7 @@
           "p1_source": "Two sensors see every meter telegram, also when the value stays the same. Better than a combined template sensor, which only reports changes.",
           "p1_import_entity": "Power drawn from the grid, for example …_power_consumption.",
           "p1_export_entity": "Power returned to the grid, for example …_power_production.",
-          "solar_forecast_entity": "Optional. A forecast sensor with half-hour detail (Solcast: …_forecast_tomorrow). ZEPHYR stores tomorrow's forecast every evening at 23:00, as a yardstick for the planner later.",
+          "solar_forecast_entity": "Optional. A forecast sensor with half-hour detail (Solcast: …_forecast_tomorrow). Empty: ZEPHYR takes the solar forecast of the Energy dashboard (Forecast.Solar, Solcast, Open-Meteo and others). ZEPHYR stores tomorrow's forecast every evening at 23:00, as a yardstick for the planner later.",
           "solar_energy_entity": "Optional. Total solar production in kWh (for example the inverter's energy counter). Read every hour to compare with the forecast.",
           "solar_power_entities": "Optional. Power (W) of inverters that are not on a Zendure set, for example SolarEdge. Several are added up. Not the PV of the Zendure set itself: ZEPHYR already reads that from the set. Without a sensor ZEPHYR estimates the power from the solar energy counter.",
           "excluded_energy_entity": "Optional. Energy counter (kWh) of a load the battery may not feed, such as the air conditioner. ZEPHYR estimates its power from the counter and does not deliver for it; the house's other use still comes from the battery and solar surplus still charges it.",

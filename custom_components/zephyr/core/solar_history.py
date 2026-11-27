@@ -60,6 +60,18 @@ def parse_detailed_forecast(items: Any) -> list[ForecastPeriod]:
     return out
 
 
+def periods_from_wh_hours(wh_hours: Mapping[str, float]) -> list[ForecastPeriod]:
+    """The Energy dashboard's forecast (``wh_hours``: start → Wh in that period) as periods in kW."""
+    items = sorted((dt.datetime.fromisoformat(k), float(v)) for k, v in wh_hours.items() if v is not None)
+    if not items:
+        return []
+    hours = 1.0
+    if len(items) > 1:
+        steps = [(b[0] - a[0]).total_seconds() / 3600 for a, b in pairwise(items)]
+        hours = max(min(steps), 1 / 60)
+    return [ForecastPeriod(start.isoformat(), wh / 1000 / hours, None, None) for start, wh in items]
+
+
 def _period_hours(periods: list[ForecastPeriod]) -> float:
     if len(periods) < 2:
         return 0.5

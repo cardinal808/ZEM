@@ -421,7 +421,7 @@
           "p1_source": "Twee sensoren zien elk telegram van de meter, ook als de waarde gelijk blijft. Beter dan een samengestelde sjabloon-sensor, die alleen wijzigingen meldt.",
           "p1_import_entity": "Vermogen uit het net, bijvoorbeeld …_power_consumption.",
           "p1_export_entity": "Vermogen naar het net, bijvoorbeeld …_power_production.",
-          "solar_forecast_entity": "Optioneel. Een verwachtingssensor met detail per half uur (Solcast: …_forecast_tomorrow). ZEPHYR bewaart elke avond om 23:00 de verwachting voor morgen, als meetlat voor de planner later.",
+          "solar_forecast_entity": "Optioneel. Een verwachtingssensor met detail per half uur (Solcast: …_forecast_tomorrow). Leeg: ZEPHYR neemt de zonverwachting uit het Energie-dashboard (Forecast.Solar, Solcast, Open-Meteo en andere). ZEPHYR bewaart elke avond om 23:00 de verwachting voor morgen, als meetlat voor de planner later.",
           "solar_energy_entity": "Optioneel. Totale zonne-opbrengst in kWh (bijvoorbeeld de energieteller van de omvormer). Wordt elk uur gelezen om met de verwachting te vergelijken.",
           "solar_power_entities": "Optioneel. Vermogen (W) van omvormers die niet aan een Zendure-set hangen, bijvoorbeeld SolarEdge. Meerdere worden opgeteld. Niet de PV van de Zendure-set zelf: die leest ZEPHYR al uit de set. Zonder sensor schat ZEPHYR het vermogen uit de teller zonne-opbrengst.",
           "excluded_energy_entity": "Optioneel. Energieteller (kWh) van een verbruiker die niet uit de accu mag, zoals de airco. ZEPHYR schat het vermogen uit de teller en levert daar niet voor; de rest van het huis komt wel uit de accu en zon over laadt de accu gewoon.",

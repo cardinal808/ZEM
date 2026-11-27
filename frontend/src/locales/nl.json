@@ -304,8 +304,8 @@
       },
       "solar_forecast_entity": {
         "label": "Zonverwachting",
-        "help": "Solcast (morgen) met detail per half uur.",
-        "more": "Zonder verwachting neemt de planner de opbrengst van gisteren per uur."
+        "help": "Solcast (morgen) met detail per half uur. Leeg: de zonverwachting uit het Energie-dashboard van HA.",
+        "more": "Leeg laten werkt met elke bron in het Energie-dashboard (Forecast.Solar, Solcast, Open-Meteo en andere), per uur en zonder onder- en bovengrens. Is er ook daar geen verwachting, dan neemt de planner de opbrengst van gisteren per uur."
       },
       "solar_energy_entity": {
         "label": "Zonnepanelen-teller",
