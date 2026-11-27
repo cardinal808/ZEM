@@ -158,3 +158,42 @@ describe("cellKind", () => {
     expect(cellKind([300, 100, 2, 9])).toBe("export");
   });
 });
+
+import { devLimit, linePath } from "../src/stroom";
+
+describe("regulation chart", () => {
+  it("breaks the line at gaps", () => {
+    const id = (v: number): number => v;
+    expect(
+      linePath(
+        [
+          [0, 1],
+          [1, null],
+          [2, 3],
+          [3, 4],
+        ],
+        id,
+        id,
+      ),
+    ).toBe("M0.0,1.0M2.0,3.0L3.0,4.0");
+  });
+  it("scales the deviation axis to the largest miss, at least 200 W", () => {
+    expect(devLimit([[0, 30, 0, 0, 0, true]])).toBe(200);
+    expect(
+      devLimit([
+        [0, 900, 300, 0, 0, true],
+        [1, null, 0, 0, null, false],
+      ]),
+    ).toBe(600);
+  });
+});
+
+import { signedW } from "../src/stroom";
+
+describe("signedW", () => {
+  it("keeps the sign on axis labels", () => {
+    expect(signedW(600, "en")).toBe("+600 W");
+    expect(signedW(-1250, "en")).toBe("−1,250 W");
+    expect(signedW(0, "en")).toBe("0 W");
+  });
+});

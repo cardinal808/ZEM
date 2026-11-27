@@ -714,6 +714,22 @@
     "airco_share": "{share} van het huisverbruik",
     "airco_fed": "Gevoed door",
     "airco_cost": "Airco-stroom van het net",
-    "airco_price": "Gem. prijs"
+    "airco_price": "Gem. prijs",
+    "reg_title": "Regeling · laatste 10 minuten",
+    "reg_sub": "Of ZEPHYR snel genoeg bijstuurt en de accu doet wat gevraagd wordt",
+    "reg_empty": "Nog geen metingen sinds de start.",
+    "reg_p1": "P1 t.o.v. doel (afname +)",
+    "reg_battery": "Accu (+ laden, − leveren)",
+    "reg_ago": "−{m} min",
+    "reg_now": "nu",
+    "reg_dev": "P1 t.o.v. doel",
+    "reg_sp": "gevraagd aan accu",
+    "reg_bat": "accu werkelijk",
+    "reg_idle": "niet op nul",
+    "reg_shadow": "schaduw: ZEPHYR stuurt niet",
+    "reg_recovery": "Hersteltijd na een piek (mediaan)",
+    "reg_seconds": "{s} s",
+    "reg_follow": "Accu volgt opdracht, gem. verschil",
+    "reg_peaks": "Pieken > 150 W"
   }
 }

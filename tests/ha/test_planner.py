@@ -519,3 +519,4 @@ async def test_stroom_websocket(hass: HomeAssistant, fake_sets: FakeSets, freeze
     assert result["today"]["routes"]["solar_battery"] == pytest.approx(0.1)
     assert result["zero"]["date"] == "2026-11-26" and len(result["zero"]["buckets"]) == 288
     assert result["live"] is False and result["zero"]["steering_s"] == 0  # shadow mode does not steer
+    assert result["regulation"]["window_s"] == 600 and isinstance(result["regulation"]["samples"], list)

@@ -51,11 +51,64 @@ export interface ZeroView {
   buckets: ZeroCell[];
 }
 
+/** One second: [s before now, P1 W, target W, setpoint W (+ charging), battery W (+ charging), steering]. */
+export type RegSample = [
+  number,
+  number | null,
+  number,
+  number,
+  number | null,
+  boolean,
+];
+
+export interface RegulationView {
+  window_s: number;
+  band_w: number;
+  samples: RegSample[];
+  follow_w: number | null;
+  peaks: number;
+  recovery_s: number | null;
+}
+
 export interface StroomView {
   today: StroomToday;
   zero: ZeroView | null;
+  regulation?: RegulationView | null;
   live: boolean;
   airco_set: boolean;
+}
+
+/** SVG path through the points; a gap (null) breaks the line. */
+export function linePath(
+  points: [number, number | null][],
+  x: (t: number) => number,
+  y: (v: number) => number,
+): string {
+  let d = "";
+  let pen = false;
+  for (const [t, v] of points) {
+    if (v === null) {
+      pen = false;
+      continue;
+    }
+    d += `${pen ? "L" : "M"}${x(t).toFixed(1)},${y(v).toFixed(1)}`;
+    pen = true;
+  }
+  return d;
+}
+
+/** Axis label with sign: +600 W, 0 W, −1.250 W. */
+export function signedW(v: number, locale: string): string {
+  const n = Math.round(v);
+  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toLocaleString(locale)} W`;
+}
+
+/** Symmetric axis limit for the P1 deviation chart: at least 200 W, rounded up to 100 W. */
+export function devLimit(samples: RegSample[]): number {
+  let m = 200;
+  for (const [, g, target] of samples)
+    if (g !== null) m = Math.max(m, Math.abs(g - target));
+  return Math.ceil(m / 100) * 100;
 }
 
 /** Goal for the share of steering time within the band (PLAN-M4b). */
@@ -124,6 +177,7 @@ export class ZephyrStroom extends LitElement {
       ${v ? this.renderZero(v) : html`<section class="card skeleton"></section>`}
       ${v ? this.renderRoutes(v.today) : nothing}
       ${v && v.airco_set ? this.renderAirco(v.today) : nothing}
+      ${v?.regulation ? this.renderRegulation(v.regulation, v.live) : nothing}
     </div>`;
   }
 
@@ -271,6 +325,158 @@ export class ZephyrStroom extends LitElement {
     </section>`;
   }
 
+  private renderRegulation(r: RegulationView, live: boolean): TemplateResult {
+    // A narrower drawing on a phone keeps the labels readable (the view refreshes every few seconds).
+    const narrow =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(max-width: 600px)").matches;
+    const W = narrow ? 360 : 760;
+    const L = narrow ? 50 : 52;
+    const R = W - 8;
+    const win = r.window_s;
+    const x = (t: number): number => L + ((t + win) / win) * (R - L);
+    // top: P1 minus its target (0 W, or the airco), with the band
+    const T0 = 14;
+    const H1 = 110;
+    const lim = devLimit(r.samples);
+    const y1 = (v: number): number =>
+      T0 + H1 / 2 - (Math.max(-lim, Math.min(lim, v)) / lim) * (H1 / 2);
+    // bottom: setpoint and battery, + charging
+    const T2 = T0 + H1 + 34;
+    const H2 = 90;
+    let lo = 0;
+    let hi = 0;
+    for (const [, , , sp, b] of r.samples) {
+      lo = Math.min(lo, sp, b ?? 0);
+      hi = Math.max(hi, sp, b ?? 0);
+    }
+    const span = Math.max(500, Math.ceil((hi - lo) / 250) * 250);
+    const base = Math.floor(lo / 250) * 250;
+    const y2 = (v: number): number => T2 + H2 - ((v - base) / span) * H2;
+    const dev = linePath(
+      r.samples.map(([t, g, target]) => [t, g === null ? null : g - target]),
+      x,
+      y1,
+    );
+    const sp = linePath(
+      r.samples.map(([t, , , s]) => [t, s]),
+      x,
+      y2,
+    );
+    const bat = linePath(
+      r.samples.map(([t, , , , b]) => [t, b]),
+      x,
+      y2,
+    );
+    const idle: TemplateResult[] = [];
+    let from: number | null = null;
+    r.samples.forEach(([t, , , , , steer], i) => {
+      const last = i === r.samples.length - 1;
+      if (!steer && from === null) from = t;
+      if ((steer || last) && from !== null) {
+        idle.push(
+          svg`<rect x=${x(from)} y=${T0} width=${Math.max(1, x(t) - x(from))} height=${T2 + H2 - T0} class="idle"></rect>`,
+        );
+        from = null;
+      }
+    });
+    const ticks2 = [base, base + span / 2, base + span];
+    const label = this.tr("stroom.reg_title");
+    return html`<section class="card wide" aria-labelledby="rg-title">
+      <div>
+        <h2 id="rg-title">${label}</h2>
+        <p class="sub">${this.tr("stroom.reg_sub")}</p>
+      </div>
+      ${
+        r.samples.length < 2
+          ? html`<p class="empty">${this.tr("stroom.reg_empty")}</p>`
+          : html`<svg
+                class="reg"
+                viewBox="0 0 ${W} ${T2 + H2 + 22}"
+                role="img"
+                aria-label=${label}
+              >
+                ${idle}
+                <rect
+                  x=${L}
+                  y=${y1(r.band_w)}
+                  width=${R - L}
+                  height=${y1(-r.band_w) - y1(r.band_w)}
+                  class="band"
+                ></rect>
+                <line
+                  x1=${L}
+                  x2=${R}
+                  y1=${y1(0)}
+                  y2=${y1(0)}
+                  class="axis"
+                ></line>
+                ${[lim, 0, -lim].map(
+                  (v) =>
+                    svg`<text x=${L - 6} y=${y1(v) + 3} text-anchor="end">${signedW(v, this.locale)}</text>`,
+                )}
+                <text x=${L} y=${T0 - 3} class="cap">
+                  ${this.tr("stroom.reg_p1")}
+                </text>
+                <path d=${dev} class="dev"></path>
+                ${ticks2.map(
+                  (
+                    v,
+                  ) => svg`<line x1=${L} x2=${R} y1=${y2(v)} y2=${y2(v)} class="grid"></line>
+                  <text x=${L - 6} y=${y2(v) + 3} text-anchor="end">${signedW(v, this.locale)}</text>`,
+                )}
+                <text x=${L} y=${T2 - 5} class="cap">
+                  ${this.tr("stroom.reg_battery")}
+                </text>
+                <path d=${sp} class="sp"></path>
+                <path d=${bat} class="bat"></path>
+                ${[
+                  [
+                    -win,
+                    this.tr("stroom.reg_ago", { m: Math.round(win / 60) }),
+                  ],
+                  [
+                    -win / 2,
+                    this.tr("stroom.reg_ago", { m: Math.round(win / 120) }),
+                  ],
+                  [0, this.tr("stroom.reg_now")],
+                ].map(
+                  ([t, text]) =>
+                    svg`<text x=${x(t as number)} y=${T2 + H2 + 16} text-anchor=${t === 0 ? "end" : t === -win ? "start" : "middle"}>${text}</text>`,
+                )}
+              </svg>
+              <div class="legend">
+                <span><i class="k dev"></i>${this.tr("stroom.reg_dev")}</span>
+                <span><i class="k band"></i>±${r.band_w} W</span>
+                <span><i class="k sp"></i>${this.tr("stroom.reg_sp")}</span>
+                <span><i class="k bat"></i>${this.tr("stroom.reg_bat")}</span>
+                <span
+                  ><i class="k idle"></i
+                  >${this.tr(live ? "stroom.reg_idle" : "stroom.reg_shadow")}</span
+                >
+              </div>
+              <div class="facts">
+                <span
+                  ><span class="k-l">${this.tr("stroom.reg_recovery")}</span
+                  ><b
+                    >${r.recovery_s === null ? "–" : this.tr("stroom.reg_seconds", { s: r.recovery_s.toLocaleString(this.locale) })}</b
+                  ></span
+                >
+                <span
+                  ><span class="k-l">${this.tr("stroom.reg_follow")}</span
+                  ><b
+                    >${r.follow_w === null ? "–" : watts(r.follow_w, this.locale)}</b
+                  ></span
+                >
+                <span
+                  ><span class="k-l">${this.tr("stroom.reg_peaks")}</span
+                  ><b>${r.peaks}</b></span
+                >
+              </div>`
+      }
+    </section>`;
+  }
+
   private renderAirco(d: StroomToday): TemplateResult {
     const a = d.airco;
     const max = a ? Math.max(0.1, a.solar_kwh, a.grid_kwh) : 1;
@@ -351,6 +557,59 @@ export class ZephyrStroom extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 12px;
+    }
+    .wide {
+      grid-column: 1 / -1;
+    }
+    .reg {
+      width: 100%;
+      max-width: 1000px;
+      display: block;
+    }
+    .reg text {
+      font-size: 10px;
+      fill: var(--z-muted);
+      font-family: var(--z-font);
+    }
+    .reg .cap {
+      font-size: 10.5px;
+    }
+    .reg .band,
+    .k.band {
+      fill: var(--z-good-bg);
+      background: var(--z-good-bg);
+    }
+    .reg .idle {
+      fill: var(--z-track);
+      opacity: 0.45;
+    }
+    .reg .axis,
+    .reg .grid {
+      stroke: var(--z-border);
+    }
+    .reg path {
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linejoin: round;
+    }
+    .reg .dev {
+      stroke: var(--z-bar);
+    }
+    .reg .sp {
+      stroke: var(--z-charge);
+      stroke-dasharray: 5 3;
+    }
+    .reg .bat {
+      stroke: var(--z-deliver);
+    }
+    .k.dev {
+      background: var(--z-bar);
+    }
+    .k.sp {
+      background: var(--z-charge);
+    }
+    .k.bat {
+      background: var(--z-deliver);
     }
     .skeleton {
       min-height: 220px;
@@ -504,6 +763,9 @@ export class ZephyrStroom extends LitElement {
     @media (max-width: 600px) {
       .card {
         padding: 16px;
+      }
+      .reg.narrow text {
+        font-size: 9.5px;
       }
       .big {
         font-size: 34px;

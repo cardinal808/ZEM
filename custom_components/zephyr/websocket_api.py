@@ -670,6 +670,7 @@ def stroom_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
     return {
         "today": stroom.routes(records),
         "zero": control.zero.view() if control is not None else None,
+        "regulation": control.regulation.view(time.monotonic()) if control is not None else None,
         "live": control is not None and not control.shadow,
         "airco_set": control is not None and control.excluded is not None,
     }
