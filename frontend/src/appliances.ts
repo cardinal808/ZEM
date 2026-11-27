@@ -3,7 +3,7 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { clock, euro, sameDay } from "./format";
+import { clock, dateFormat, euro, sameDay } from "./format";
 import { t, type Lang } from "./i18n";
 import type { Quarter } from "./plan";
 
@@ -84,7 +84,7 @@ export function estimateCost(
   nowMs: number,
   timeZone: string,
 ): number | null {
-  const fmt = new Intl.DateTimeFormat("en-GB", {
+  const fmt = dateFormat("en-GB", {
     timeZone,
     hour: "2-digit",
     minute: "2-digit",

@@ -243,14 +243,15 @@ export class ZephyrPricesPlan extends LitElement {
     const now = currentIndex(quarters);
     const pct = (i: number): string => `${((i / n) * 100).toFixed(3)}%`;
     const dayIdx = days(quarters, this.timeZone);
-    const split =
+    // First quarter of the second day, worked out once (inside the search it made the 48-hour view slow).
+    const secondDay =
       dayIdx.length > 1
-        ? quarters.findIndex(
-            (q) =>
-              new Date(q.start).getTime() >=
-              new Date(dayOf(quarters, 1, this.timeZone)[0].start).getTime(),
-          )
-        : -1;
+        ? new Date(dayOf(quarters, 1, this.timeZone)[0].start).getTime()
+        : null;
+    const split =
+      secondDay === null
+        ? -1
+        : quarters.findIndex((q) => new Date(q.start).getTime() >= secondDay);
     const marks: { q: Quarter; i: number; kind: string }[] = [];
     for (let d = 0; d < dayIdx.length; d++) {
       const dq = dayOf(quarters, d, this.timeZone);

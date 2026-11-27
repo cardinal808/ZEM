@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.48 — Plan: 48 hours fast again
+- Bjorn 27-11: the Plan screen, and above all *48 uur*, reacted slowly. Measured in the test page: switching to 48 hours took ~3.7 s, now ~30 ms.
+- Cause: finding the start of the second day looked up that day once per quarter (192 × 192 date formats), and every date format created a new `Intl.DateTimeFormat`.
+- Formatters are now cached (`format.dateFormat`, `format.numberFormat`), and the second day is looked up once.
+
 ### 0.8.47 — Diagnose: short peaks and appliance profiles
 - Card **Korte pieken** (B20, SPEC-ui-planner §3): energy from the grid during the short peaks ZEPHYR does not follow, today (kWh and count) and the mean per day, with bars for the last 14 days and an explanation behind (i).
 - Card **Apparaatprofielen** (SPEC-ui-planner §1.3): per appliance learned or standard profile, runs seen, kWh and duration per run, plug yes/no, running now, and the learned profile as a small chart (W per minute). Empty: where to add appliances.
