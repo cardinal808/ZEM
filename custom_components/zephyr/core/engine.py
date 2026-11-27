@@ -23,11 +23,11 @@ from .counters import SetCounters
 from .device_table import charging_allowed_by_temperature, delivering_allowed_by_temperature
 from .excluded_load import exclusion_for_controller
 from .grid_filter import GridFilter
-from .models import AcMode, SetReport
+from .models import AcMode, GridReverse, SetReport
 from .planner import Action as PlanAction
 from .settings import Settings
 from .twin import GridTally, TwinSet
-from .zensdk import power_command, soc_limits_command, standby_command
+from .zensdk import grid_reverse_command, power_command, soc_limits_command, standby_command
 
 
 class Mode(StrEnum):
@@ -157,7 +157,8 @@ class Command:
     key: str
     props: dict[str, int]
     kind: str
-    """"power", "standby" or "soc_limits"."""
+    """"power", "standby", "soc_limits" or "grid_reverse" (``gridReverse`` may also ride along
+    with another command for the same set)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,6 +192,7 @@ class _SetState:
     empty: bool = False
     limits_checked: bool = False
     flash_paused: bool = False
+    grid_reverse_sent: tuple[GridReverse, float] | None = None
     counters: SetCounters = field(default_factory=SetCounters)
 
 
@@ -207,6 +209,7 @@ class ZephyrEngine:
         self._p1_at: float | None = None
         self._p1_interval: float | None = None
         self._block_since: float | None = None
+        self._export_blocked: bool | None = None
         self._price_block: Reason | None = None
         self._align_p1 = False
         self._grid_history: deque[tuple[float, float]] = deque(maxlen=100)
@@ -355,6 +358,7 @@ class ZephyrEngine:
         reserve_charge: tuple[int, float] | None = None,
         plan_action: PlanAction | None = None,
         excluded_load: float = 0.0,
+        export_blocked: bool | None = None,
     ) -> StepResult:
         """One control step.
 
@@ -363,9 +367,12 @@ class ZephyrEngine:
         Both only apply to zero-meter control. ``plan_action``: the planner's action for now
         (mode Dynamic Forecasting; None = no plan, zero on the meter). ``excluded_load``: power (W)
         of a load the battery may not feed (B41, the air conditioner while heating); zero-meter
-        control does not deliver for it.
+        control does not deliver for it. ``export_blocked``: block (True) or allow (False) the
+        export of the sets' surplus solar (``gridReverse``) at a negative export price; None =
+        ZEPHYR does not manage it.
         """
         s = self.settings
+        self._export_blocked = export_blocked
         self._price_block = price_block if self.mode is Mode.ZERO_METER else None
         self._reserve_charge = reserve_charge if self.mode is Mode.ZERO_METER else None
         self._plan = plan_action if self.mode is Mode.FORECAST else None
@@ -737,7 +744,33 @@ class ZephyrEngine:
             state.last_power = target
             state.last_sent_at = now
             state.standby = False
+        self._grid_reverse(now, sets, commands)
         return commands
+
+    def _grid_reverse(self, now: float, sets: Sequence[SetView], commands: list[Command]) -> None:
+        """Keep ``gridReverse`` of every set as wanted; rides along with a command of this step."""
+        if self._export_blocked is None:
+            return
+        wanted = GridReverse.BLOCKED if self._export_blocked else GridReverse.ALLOWED
+        for view in sets:
+            r = view.report
+            state = self._sets.get(view.key)
+            if r is None or not view.online or state is None or state.flash_paused or r.calibrating or r.bypass:
+                continue
+            if r.grid_reverse is None or r.grid_reverse is wanted:
+                continue
+            sent = state.grid_reverse_sent
+            if sent is not None and sent[0] is wanted and now - sent[1] < 60:
+                continue  # sent, the set has not reported it yet
+            props = grid_reverse_command(wanted is GridReverse.ALLOWED)
+            for index, command in enumerate(commands):
+                if command.key == view.key:
+                    commands[index] = replace(command, props={**command.props, **props})
+                    break
+            else:
+                commands.append(Command(view.key, props, "grid_reverse"))
+            state.grid_reverse_sent = (wanted, now)
+            state.counters.record("grid_reverse", now)
 
     def _should_send(self, state: _SetState, target: int, now: float) -> bool:
         """Write rules (SPEC-meerdere-sets §2.3)."""

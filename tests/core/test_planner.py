@@ -114,3 +114,27 @@ def test_grid_charge_cost_leaves_solar_charging_alone() -> None:
     slots = [Slot(1.0, 0.30, 0.25, 0.1, 1.5)] * 2 + [Slot(1.0, 0.40, 0.30, 1.0, 0.0)] * 2
     r = step(slots[0], BAT, 0.0, Action.DELIVER)
     assert r.charged > 0 and r.grid_charged == 0
+
+
+def test_surplus_at_a_negative_price_costs_unless_curtailed() -> None:
+    full = Battery(1.0, 2.4, 2.4)
+    slot = Slot(1.0, 0.30, -0.20, 0.5, 1.5)  # 1 kWh surplus, battery full
+    exported = step(slot, full, 1.0, Action.HOLD)
+    assert exported.grid_export == pytest.approx(1.0) and exported.cost == pytest.approx(0.20)
+    curtailed = step(slot, full, 1.0, Action.HOLD, curtail=True)
+    assert curtailed.grid_export == 0.0 and curtailed.cost == 0.0
+
+
+def test_makes_room_before_a_negative_price_when_not_curtailed() -> None:
+    """Full battery; cheap now, 0.5 kWh solar surplus at −0.30 later, expensive evening.
+
+    Exported, the surplus costs 0.15: emptying the battery now (0.10) and storing the surplus
+    wins. Curtailed, the surplus is free: keeping the full battery for the evening (0.40) wins.
+    """
+    slots = [Slot(1.0, 0.10, 0.0, 1.0, 0.0), Slot(1.0, 0.30, -0.30, 0.0, 0.5), Slot(1.0, 0.40, 0.10, 1.0, 0.0)]
+    battery = Battery(1.0, 2.4, 2.4, eta_in=1.0, eta_out=1.0)
+    exported = plan(slots, battery, 1.0, PlannerSettings(charge_start_cost=0, hold_start_cost=0))
+    assert exported.actions[0] is Action.DELIVER  # empty it now, so the surplus goes in instead of out at −0.30
+    curtailed = plan(slots, battery, 1.0, PlannerSettings(charge_start_cost=0, hold_start_cost=0, curtail=True))
+    assert curtailed.actions[0] is not Action.DELIVER  # surplus is curtailed anyway: keep the energy for the evening
+    assert curtailed.actions[2] is Action.DELIVER

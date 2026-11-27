@@ -249,7 +249,10 @@
       "fan_only": "Ventileren",
       "heat_cool": "Verwarmen/koelen",
       "auto": "Automatisch",
-      "off": "Uit"
+      "off": "Uit",
+      "curtail_off": "Uit (gaat het net op, kost geld)",
+      "curtail_external": "Ander systeem knijpt af",
+      "curtail_zephyr": "ZEPHYR knijpt af"
     },
     "fields": {
       "min_soc": {
@@ -411,6 +414,16 @@
         "label": "Werkdag-sensor",
         "help": "Feestdagen tellen als weekenddag.",
         "more": "ZEPHYR vraagt de integratie Workday (actie workday.check_date) naar vandaag, morgen en de dagen van de eerste vulling. Zonder sensor zijn maandag t/m vrijdag werkdagen."
+      },
+      "curtail_negative": {
+        "label": "Zonoverschot bij negatieve prijs",
+        "help": "Wat er met zonoverschot gebeurt als de terugleverprijs onder nul is. Uit: het gaat het net op en kost geld, de planner maakt eerst ruimte in de accu. Ander systeem: een omvormerbegrenzer knijpt zelf af. ZEPHYR: ZEPHYR blokkeert teruglevering van de eigen panelen van de sets en zet de schakelaar hieronder aan.",
+        "more": "Met saldering (tot 2027) is de terugleverprijs zelden negatief (de energiebelasting zit erin); zonder saldering gebeurt het op zonnige middagen in voorjaar en zomer. De eigen panelen van de sets blokkeert ZEPHYR met gridReverse; een omvormer zoals een SolarEdge heeft een schakelaar nodig (bijv. een sjabloon-schakelaar voor een exportbegrenzer)."
+      },
+      "curtail_switch": {
+        "label": "Schakelaar omvormer afknijpen",
+        "help": "Aan zolang de terugleverprijs negatief is (alleen met ZEPHYR).",
+        "more": "ZEPHYR zet deze schakelaar aan aan het begin van een kwartier met een negatieve terugleverprijs en daarna weer uit. Een sjabloon-schakelaar kan elk script aanroepen of de modus van een exportbegrenzer zetten."
       }
     },
     "restarting": "ZEPHYR start opnieuw met de nieuwe instellingen…",
@@ -542,7 +555,8 @@
     "cause": {
       "standby": "standby",
       "soc_limits": "laadgrenzen",
-      "test": "schrijftest"
+      "test": "schrijftest",
+      "grid_reverse": "terugleverblokkade"
     },
     "counters_shadow": "Opdrachten, laatste 24 uur (schaduw)",
     "shadow_counts": "Schaduwmodus: geteld wat ZEPHYR zou sturen. Er is niets naar de set geschreven; Mislukt telt alleen echte schrijfacties.",

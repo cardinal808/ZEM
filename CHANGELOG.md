@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.8.33 — Surplus solar at a negative export price (PLANNING 1.1/1.2)
+- **Planner:** surplus solar at a negative export price now **costs money** unless something curtails it. Before, the planner assumed it was always curtailed, while a SolarEdge (or any inverter outside the sets) simply keeps exporting. Now it makes room in the battery before such hours when that pays.
+- **New setting** *Surplus solar at a negative price* (planner): **Off** (default; exported, costs money) / **Another system curtails** (e.g. an export limiter with its own negative-price mode; the planner counts the surplus as curtailed) / **ZEPHYR curtails**.
+- **ZEPHYR curtails:** at the start of every quarter with a negative export price (market price with the tariffs, as in the cost log) ZEPHYR blocks export of the sets' own panels (`gridReverse` 2, back to 1 afterwards; only on a change, at most once a minute, counted as a flash write and riding along with a command of the same step) and turns on the new optional **inverter curtail switch** (off again after). A template switch can drive any limiter or script. Without a switch only the sets' panels are blocked and the planner still counts the inverter's surplus as exported.
+- With saldering (2026) the export price includes the energy tax and is rarely negative (48 quarters in the 2026 prices); without saldering (2027) it was 308 quarters.
+- Backtest 2027 rules (2-2 to 18-11-2026, learned use, Solcast, wear €0.03, nothing really curtailed): the planner that knows the surplus costs money €245.33 incl. wear, the old assumption €246.19 (−€0.86/year, 3 fewer charge starts). Small, as expected from the few negative quarters. `tools/backtest.py --curtail` plans with the old assumption.
+- Diagnostics: `curtail` (mode, export price now, negative, blocked, last error).
+- Tests: planner step and choice with and without curtailing; `gridReverse` in the engine (once, again after 60 s, riding along); in HA the switch and `gridReverse` at a negative price and back.
+
 ### 0.8.32 — Cost log on the own energy counters, corrected after a gap (SPEC-tellers T3)
 - **Charged, delivered and set PV per quarter now come from the own energy counters** (the change of the installation totals between the quarter boundaries), like the grid import and export from the P1 counters. The meter of 0.8.26 stays as the fallback (first quarter after a start, no counters). Each quarter says which one it used: `battery_source` = `counters` or `meter`.
 - **Correction after a gap:** when the counters fill a gap, the filled energy is spread over the closed quarters of the gap by time, and the cost log of the current month is **evaluated again** from the first corrected quarter up to now (costs, the three situations, the pools of solar/grid in the battery, saldering part), with the day totals updated. Corrected quarters get `estimated: true` and `corrected_at`. The quarter in which the set returns no longer gets the whole fill as a jump.

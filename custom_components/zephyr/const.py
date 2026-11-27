@@ -76,3 +76,15 @@ DEFAULT_PLAN_WEAR_COST: Final = 0.03
 """€ per kWh out of the battery (B39)."""
 DEFAULT_PLAN_GRID_CHARGE_COST: Final = 0.01
 """€ per kWh charged from the grid that grid charging must win (B40, BACKTEST-1 §grid charge)."""
+
+# Negative export price: what happens to surplus solar (PLANNING 1.1/1.2).
+CONF_CURTAIL_MODE: Final = "curtail_negative"
+CURTAIL_OFF: Final = "curtail_off"
+"""Nothing is curtailed: surplus solar is exported and pays the negative price."""
+CURTAIL_EXTERNAL: Final = "curtail_external"
+"""Another system limits the inverter by itself; the planner counts surplus as curtailed."""
+CURTAIL_ZEPHYR: Final = "curtail_zephyr"
+"""ZEPHYR blocks export: ``gridReverse`` on the sets, and the chosen switch for the inverter."""
+CURTAIL_MODES: Final = (CURTAIL_OFF, CURTAIL_EXTERNAL, CURTAIL_ZEPHYR)
+CONF_CURTAIL_SWITCH: Final = "curtail_switch"
+"""Switch that limits the inverter's export (on = limited), e.g. a template switch for a limiter."""

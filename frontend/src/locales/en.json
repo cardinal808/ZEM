@@ -249,7 +249,10 @@
       "fan_only": "Fan",
       "heat_cool": "Heating/cooling",
       "auto": "Auto",
-      "off": "Off"
+      "off": "Off",
+      "curtail_off": "Off (exported, costs money)",
+      "curtail_external": "Another system curtails",
+      "curtail_zephyr": "ZEPHYR curtails"
     },
     "fields": {
       "min_soc": {
@@ -411,6 +414,16 @@
         "label": "Workday sensor",
         "help": "Holidays count as weekend days.",
         "more": "ZEPHYR asks the Workday integration (action workday.check_date) about today, tomorrow and the days of the first fill. Without it Monday to Friday are workdays."
+      },
+      "curtail_negative": {
+        "label": "Surplus solar at a negative price",
+        "help": "What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and turns on the switch below.",
+        "more": "With saldering (until 2027) the export price is rarely below zero (energy tax is part of it); without saldering it happens on sunny spring and summer middays. The sets' own panels are blocked with gridReverse; an inverter such as a SolarEdge needs a switch (e.g. a template switch for an export limiter)."
+      },
+      "curtail_switch": {
+        "label": "Inverter curtail switch",
+        "help": "On while the export price is negative (only with ZEPHYR).",
+        "more": "ZEPHYR turns this switch on at the start of a quarter with a negative export price and off again after. A template switch can call any script or set the mode of an export limiter."
       }
     },
     "restarting": "ZEPHYR is restarting with the new settings…",
@@ -542,7 +555,8 @@
     "cause": {
       "standby": "standby",
       "soc_limits": "charge limits",
-      "test": "write test"
+      "test": "write test",
+      "grid_reverse": "export block"
     },
     "counters_shadow": "Commands, last 24 hours (shadow)",
     "shadow_counts": "Shadow mode: counted what ZEPHYR would send. Nothing was written to the set; Failed only counts real writes.",

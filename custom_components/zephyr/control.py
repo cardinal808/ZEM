@@ -455,8 +455,15 @@ class ZephyrControl:
         if self.engine.mode is Mode.FORECAST and planner is not None:
             plan_action = planner.action_at(dt_util.utcnow())
         excluded = self.excluded.power(now) if self.excluded is not None else 0.0
+        curtail = self.runtime.curtail
         result = self.engine.step(
-            now, views, price_block=price_block, reserve_charge=reserve_charge, plan_action=plan_action, excluded_load=excluded
+            now,
+            views,
+            price_block=price_block,
+            reserve_charge=reserve_charge,
+            plan_action=plan_action,
+            excluded_load=excluded,
+            export_blocked=curtail.export_blocked if curtail is not None else None,
         )
         if not self.shadow:
             self._check_reports(now)

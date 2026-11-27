@@ -26,6 +26,8 @@ from .const import (
     CONF_CAPACITY_OVERRIDE,
     CONF_COST_EXPORT_COUNTERS,
     CONF_COST_IMPORT_COUNTERS,
+    CONF_CURTAIL_MODE,
+    CONF_CURTAIL_SWITCH,
     CONF_EXCLUDED_CLIMATE,
     CONF_EXCLUDED_ENERGY,
     CONF_EXCLUDED_MODES,
@@ -60,6 +62,8 @@ from .const import (
     CONF_TARIFF_VAT,
     CONF_VACATION_AWAY,
     CONF_WORKDAY_ENTITY,
+    CURTAIL_MODES,
+    CURTAIL_OFF,
     DEFAULT_EXCLUDED_MODES,
     DEFAULT_EXPENSIVE_HOURS,
     DEFAULT_PLAN_GRID_CHARGE_COST,
@@ -415,6 +419,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                     CONF_EXCLUDED_ENERGY,
                     CONF_EXCLUDED_CLIMATE,
                     CONF_WORKDAY_ENTITY,
+                    CONF_CURTAIL_SWITCH,
                     CONF_PRICE_ENTITY,
                     CONF_COST_IMPORT_COUNTERS,
                     CONF_COST_EXPORT_COUNTERS,
@@ -520,6 +525,12 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_WORKDAY_ENTITY, description={"suggested_value": options.get(CONF_WORKDAY_ENTITY) or suggest_workday(self.hass)}
                 ): (selector.EntitySelector(selector.EntitySelectorConfig(domain="binary_sensor", integration="workday"))),
+                vol.Required(CONF_CURTAIL_MODE, default=options.get(CONF_CURTAIL_MODE, CURTAIL_OFF)): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=list(CURTAIL_MODES), translation_key="curtail_mode")
+                ),
+                vol.Optional(CONF_CURTAIL_SWITCH, description={"suggested_value": options.get(CONF_CURTAIL_SWITCH)}): (
+                    selector.EntitySelector(selector.EntitySelectorConfig(domain="switch"))
+                ),
                 vol.Required(CONF_VACATION_AWAY, default=options.get(CONF_VACATION_AWAY, False)): bool,
                 vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, True)): bool,
             }

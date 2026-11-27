@@ -80,6 +80,10 @@ class PlannerSettings:
     """€ per kWh charged from the grid (L), in the choice only: grid charging must win at least
     this much per kWh. Keeps the planner from buying at an expensive moment for a cent of gain
     that rests on a forecast (e.g. topping up before the sun to export the solar with a bonus)."""
+    curtail: bool = False
+    """Surplus solar is curtailed when the export price is negative (the inverter is limited, by
+    ZEPHYR or another system). Without that the surplus is exported and pays the negative price,
+    so the planner makes room in the battery before such hours."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +102,7 @@ class Step:
     """kWh from the grid into the battery (L, AC side)."""
 
 
-def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margin: float = 0.0) -> Step:
+def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margin: float = 0.0, curtail: bool = False) -> Step:
     """Energy flows and cost of ``action`` in ``slot`` from ``energy`` (§3.2)."""
     load = slot.load_kwh * (1 + load_margin)
     direct = min(load, slot.solar_kwh)
@@ -130,9 +134,14 @@ def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margi
         imp -= house
         exp += out - house
         delivered = out
-    # A negative export price: surplus solar is curtailed (gridReverse), it earns nothing.
-    sell = slot.sell if slot.sell > 0 or action is Action.EXPORT else 0.0
-    cost = imp * slot.buy - exp * sell
+    # A negative export price: surplus solar is either curtailed (earns nothing) or exported and
+    # pays the negative price. Battery export (X) always pays the price it gets.
+    if slot.sell >= 0 or not curtail:
+        cost = imp * slot.buy - exp * slot.sell
+    else:
+        battery_export = exp - spill if action is Action.EXPORT else 0.0
+        cost = imp * slot.buy - battery_export * slot.sell
+        exp = battery_export
     return Step(max(min(s1, battery.capacity_kwh), 0.0), imp, exp, cost, charged, delivered, grid_charged)
 
 
@@ -192,7 +201,7 @@ def plan(
         for e in grid:
             row = []
             for a in options:
-                r = step(slot, battery, e, a, cfg.load_margin)
+                r = step(slot, battery, e, a, cfg.load_margin, cfg.curtail)
                 row.append((a, r.cost + _choice(cfg, r) + _interp(future[_group(a)], r.energy_after, cap, n)))
             after.append(row)
         current = {prev: [min(v + switch(prev, a) for a, v in row) for row in after] for prev in GROUPS}
@@ -206,14 +215,14 @@ def plan(
         options = [a for a in actions if not (a is Action.EXPORT and slot.sell <= 0)]
         best: tuple[float, Action, Step] | None = None
         for a in options:
-            r = step(slot, battery, energy, a, cfg.load_margin)
+            r = step(slot, battery, energy, a, cfg.load_margin, cfg.curtail)
             total = r.cost + _choice(cfg, r) + switch(prev, a) + _interp(tables[t + 1][_group(a)], r.energy_after, cap, n)
             if best is None or total < best[0] - 1e-12:
                 best = (total, a, r)
         assert best is not None
         _, a, r = best
         # The real costs use the real load (the margin only steers the choice).
-        real = step(slot, battery, energy, a) if cfg.load_margin else r
+        real = step(slot, battery, energy, a, curtail=cfg.curtail) if cfg.load_margin else r
         result.actions.append(a)
         result.steps.append(real)
         result.cost += real.cost

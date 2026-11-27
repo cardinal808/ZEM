@@ -119,5 +119,6 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
         "solar": solar,
         "costs": costs,
         "energy_counters": runtime.energy.diagnostics() if runtime.energy is not None else None,
+        "curtail": runtime.curtail.diagnostics() if runtime.curtail is not None else None,
         "planner": planner,
     }

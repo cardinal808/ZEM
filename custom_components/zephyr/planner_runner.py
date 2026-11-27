@@ -74,6 +74,7 @@ from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
 from .core.solar_history import parse_detailed_forecast
 from .core.vacation import base_load
+from .curtail import planner_curtails
 
 if TYPE_CHECKING:
     from . import ZephyrRuntime
@@ -101,6 +102,7 @@ def planner_settings(options: Mapping[str, Any]) -> PlannerSettings:
         grid_charge_cost=float(options.get(CONF_PLAN_GRID_CHARGE_COST, DEFAULT_PLAN_GRID_CHARGE_COST)),
         allow_export=bool(options.get(CONF_PLAN_ALLOW_EXPORT, False)),
         load_margin=float(options.get(CONF_PLAN_LOAD_MARGIN, 0.0)) / 100,
+        curtail=planner_curtails(options),
     )
 
 
