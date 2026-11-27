@@ -29,11 +29,11 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: ee, getPrototypeOf: te } = Object, p = globalThis, ne = p.trustedTypes, re = ne ? ne.emptyScript : "", ie = p.reactiveElementPolyfillSupport, m = (e, t) => e, ae = {
+})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: p, getPrototypeOf: m } = Object, h = globalThis, ee = h.trustedTypes, te = ee ? ee.emptyScript : "", ne = h.reactiveElementPolyfillSupport, g = (e, t) => e, re = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
-				e = e ? re : null;
+				e = e ? te : null;
 				break;
 			case Object:
 			case Array: e = e == null ? e : JSON.stringify(e);
@@ -58,23 +58,23 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, oe = (e, t) => !l(e, t), se = {
+}, ie = (e, t) => !l(e, t), ae = {
 	attribute: !0,
 	type: String,
-	converter: ae,
+	converter: re,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: oe
+	hasChanged: ie
 };
-Symbol.metadata ??= Symbol("metadata"), p.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var h = class extends HTMLElement {
+Symbol.metadata ??= Symbol("metadata"), h.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+var _ = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = se) {
+	static createProperty(e, t = ae) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && u(this.prototype, e, r);
@@ -100,17 +100,17 @@ var h = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? se;
+		return this.elementProperties.get(e) ?? ae;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(m("elementProperties"))) return;
-		let e = te(this);
+		if (this.hasOwnProperty(g("elementProperties"))) return;
+		let e = m(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(m("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(m("properties"))) {
-			let e = this.properties, t = [...f(e), ...ee(e)];
+		if (this.hasOwnProperty(g("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(g("properties"))) {
+			let e = this.properties, t = [...f(e), ...p(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
 		let e = this[Symbol.metadata];
@@ -171,14 +171,14 @@ var h = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? ae : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? re : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? ae : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? re : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -187,7 +187,7 @@ var h = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? oe)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ie)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -251,88 +251,88 @@ var h = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-h.elementStyles = [], h.shadowRootOptions = { mode: "open" }, h[m("elementProperties")] = /* @__PURE__ */ new Map(), h[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: h }), (p.reactiveElementVersions ??= []).push("2.1.2");
+_.elementStyles = [], _.shadowRootOptions = { mode: "open" }, _[g("elementProperties")] = /* @__PURE__ */ new Map(), _[g("finalized")] = /* @__PURE__ */ new Map(), ne?.({ ReactiveElement: _ }), (h.reactiveElementVersions ??= []).push("2.1.2");
 // node_modules/lit-html/lit-html.js
-var ce = globalThis, le = (e) => e, ue = ce.trustedTypes, de = ue ? ue.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, fe = "$lit$", g = `lit$${Math.random().toFixed(9).slice(2)}$`, pe = "?" + g, me = `<${pe}>`, _ = document, v = () => _.createComment(""), he = (e) => e === null || typeof e != "object" && typeof e != "function", ge = Array.isArray, _e = (e) => ge(e) || typeof e?.[Symbol.iterator] == "function", ve = "[ 	\n\f\r]", ye = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, be = /-->/g, xe = />/g, y = RegExp(`>|${ve}(?:([^\\s"'>=/]+)(${ve}*=${ve}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), Se = /'/g, Ce = /"/g, we = /^(?:script|style|textarea|title)$/i, Te = (e) => (t, ...n) => ({
+var oe = globalThis, se = (e) => e, ce = oe.trustedTypes, le = ce ? ce.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ue = "$lit$", v = `lit$${Math.random().toFixed(9).slice(2)}$`, de = "?" + v, fe = `<${de}>`, y = document, pe = () => y.createComment(""), me = (e) => e === null || typeof e != "object" && typeof e != "function", he = Array.isArray, ge = (e) => he(e) || typeof e?.[Symbol.iterator] == "function", _e = "[ 	\n\f\r]", ve = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ye = /-->/g, be = />/g, b = RegExp(`>|${_e}(?:([^\\s"'>=/]+)(${_e}*=${_e}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), xe = /'/g, Se = /"/g, Ce = /^(?:script|style|textarea|title)$/i, we = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}), b = Te(1), x = Te(2), S = Symbol.for("lit-noChange"), C = Symbol.for("lit-nothing"), Ee = /* @__PURE__ */ new WeakMap(), w = _.createTreeWalker(_, 129);
-function De(e, t) {
-	if (!ge(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return de === void 0 ? t : de.createHTML(t);
+}), x = we(1), S = we(2), C = Symbol.for("lit-noChange"), w = Symbol.for("lit-nothing"), Te = /* @__PURE__ */ new WeakMap(), T = y.createTreeWalker(y, 129);
+function Ee(e, t) {
+	if (!he(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+	return le === void 0 ? t : le.createHTML(t);
 }
-var Oe = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = ye;
+var De = (e, t) => {
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = ve;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === ye ? c[1] === "!--" ? o = be : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = y) : (we.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = y) : o = xe : o === y ? c[0] === ">" ? (o = i ?? ye, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? y : c[3] === "\"" ? Ce : Se) : o === Ce || o === Se ? o = y : o === be || o === xe ? o = ye : (o = y, i = void 0);
-		let d = o === y && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === ye ? n + me : l >= 0 ? (r.push(s), n.slice(0, l) + fe + n.slice(l) + g + d) : n + g + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === ve ? c[1] === "!--" ? o = ye : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = b) : (Ce.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = b) : o = be : o === b ? c[0] === ">" ? (o = i ?? ve, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? b : c[3] === "\"" ? Se : xe) : o === Se || o === xe ? o = b : o === ye || o === be ? o = ve : (o = b, i = void 0);
+		let d = o === b && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === ve ? n + fe : l >= 0 ? (r.push(s), n.slice(0, l) + ue + n.slice(l) + v + d) : n + v + (l === -2 ? t : d);
 	}
-	return [De(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, ke = class e {
+	return [Ee(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, Oe = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = Oe(t, n);
-		if (this.el = e.createElement(l, r), w.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = De(t, n);
+		if (this.el = e.createElement(l, r), T.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = w.nextNode()) !== null && c.length < s;) {
+		for (; (i = T.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(fe)) {
-					let t = u[o++], n = i.getAttribute(e).split(g), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ue)) {
+					let t = u[o++], n = i.getAttribute(e).split(v), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? Ne : r[1] === "?" ? Pe : r[1] === "@" ? Fe : Me
+						ctor: r[1] === "." ? Me : r[1] === "?" ? Ne : r[1] === "@" ? Pe : je
 					}), i.removeAttribute(e);
-				} else e.startsWith(g) && (c.push({
+				} else e.startsWith(v) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (we.test(i.tagName)) {
-					let e = i.textContent.split(g), t = e.length - 1;
+				if (Ce.test(i.tagName)) {
+					let e = i.textContent.split(v), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = ue ? ue.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], v()), w.nextNode(), c.push({
+						i.textContent = ce ? ce.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], pe()), T.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
-						i.append(e[t], v());
+						i.append(e[t], pe());
 					}
 				}
 			} else if (i.nodeType === 8) {
-				if (i.data === pe) c.push({
+				if (i.data === de) c.push({
 					type: 2,
 					index: a
 				});
 				else {
 					let e = -1;
-					for (; (e = i.data.indexOf(g, e + 1)) !== -1;) c.push({
+					for (; (e = i.data.indexOf(v, e + 1)) !== -1;) c.push({
 						type: 7,
 						index: a
-					}), e += g.length - 1;
+					}), e += v.length - 1;
 				}
 			}
 			a++;
 		}
 	}
 	static createElement(e, t) {
-		let n = _.createElement("template");
+		let n = y.createElement("template");
 		return n.innerHTML = e, n;
 	}
 };
-function T(e, t, n = e, r) {
-	if (t === S) return t;
-	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = he(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = T(e, i._$AS(e, t.values), i, r)), t;
+function E(e, t, n = e, r) {
+	if (t === C) return t;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = me(t) ? void 0 : t._$litDirective$;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = E(e, i._$AS(e, t.values), i, r)), t;
 }
-var Ae = class {
+var ke = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -343,28 +343,28 @@ var Ae = class {
 		return this._$AM._$AU;
 	}
 	u(e) {
-		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? _).importNode(t, !0);
-		w.currentNode = r;
-		let i = w.nextNode(), a = 0, o = 0, s = n[0];
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? y).importNode(t, !0);
+		T.currentNode = r;
+		let i = T.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new je(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Ie(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new Ae(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Fe(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = w.nextNode(), a++);
+			a !== s?.index && (i = T.nextNode(), a++);
 		}
-		return w.currentNode = _, r;
+		return T.currentNode = y, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, je = class e {
+}, Ae = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = C, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = w, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -377,7 +377,7 @@ var Ae = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = T(this, e, t), he(e) ? e === C || e == null || e === "" ? (this._$AH !== C && this._$AR(), this._$AH = C) : e !== this._$AH && e !== S && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? _e(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = E(this, e, t), me(e) ? e === w || e == null || e === "" ? (this._$AH !== w && this._$AR(), this._$AH = w) : e !== this._$AH && e !== C && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? ge(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -386,36 +386,36 @@ var Ae = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== C && he(this._$AH) ? this._$AA.nextSibling.data = e : this.T(_.createTextNode(e)), this._$AH = e;
+		this._$AH !== w && me(this._$AH) ? this._$AA.nextSibling.data = e : this.T(y.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = ke.createElement(De(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = Oe.createElement(Ee(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new Ae(r, this), n = e.u(this.options);
+			let e = new ke(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = Ee.get(e.strings);
-		return t === void 0 && Ee.set(e.strings, t = new ke(e)), t;
+		let t = Te.get(e.strings);
+		return t === void 0 && Te.set(e.strings, t = new Oe(e)), t;
 	}
 	k(t) {
-		ge(this._$AH) || (this._$AH = [], this._$AR());
+		he(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
-		for (let a of t) i === n.length ? n.push(r = new e(this.O(v()), this.O(v()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(pe()), this.O(pe()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = le(e).nextSibling;
-			le(e).remove(), e = t;
+			let t = se(e).nextSibling;
+			se(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, Me = class {
+}, je = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -423,47 +423,47 @@ var Ae = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = C, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = C;
+		this.type = 1, this._$AH = w, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = w;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = T(this, e, t, 0), a = !he(e) || e !== this._$AH && e !== S, a && (this._$AH = e);
+		if (i === void 0) e = E(this, e, t, 0), a = !me(e) || e !== this._$AH && e !== C, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = T(this, r[n + o], t, o), s === S && (s = this._$AH[o]), a ||= !he(s) || s !== this._$AH[o], s === C ? e = C : e !== C && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = E(this, r[n + o], t, o), s === C && (s = this._$AH[o]), a ||= !me(s) || s !== this._$AH[o], s === w ? e = w : e !== w && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === C ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === w ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, Ne = class extends Me {
+}, Me = class extends je {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === C ? void 0 : e;
+		this.element[this.name] = e === w ? void 0 : e;
 	}
-}, Pe = class extends Me {
+}, Ne = class extends je {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== C);
+		this.element.toggleAttribute(this.name, !!e && e !== w);
 	}
-}, Fe = class extends Me {
+}, Pe = class extends je {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = T(this, e, t, 0) ?? C) === S) return;
-		let n = this._$AH, r = e === C && n !== C || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== C && (n === C || r);
+		if ((e = E(this, e, t, 0) ?? w) === C) return;
+		let n = this._$AH, r = e === w && n !== w || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== w && (n === w || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, Ie = class {
+}, Fe = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -471,18 +471,18 @@ var Ae = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		T(this, e);
+		E(this, e);
 	}
-}, Le = ce.litHtmlPolyfillSupport;
-Le?.(ke, je), (ce.litHtmlVersions ??= []).push("3.3.3");
-var Re = (e, t, n) => {
+}, Ie = oe.litHtmlPolyfillSupport;
+Ie?.(Oe, Ae), (oe.litHtmlVersions ??= []).push("3.3.3");
+var Le = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new je(t.insertBefore(v(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new Ae(t.insertBefore(pe(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, ze = globalThis, E = class extends h {
+}, Re = globalThis, D = class extends _ {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -492,7 +492,7 @@ var Re = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Re(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Le(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -501,24 +501,24 @@ var Re = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return S;
+		return C;
 	}
 };
-E._$litElement$ = !0, E.finalized = !0, ze.litElementHydrateSupport?.({ LitElement: E });
-var Be = ze.litElementPolyfillSupport;
-Be?.({ LitElement: E }), (ze.litElementVersions ??= []).push("4.2.2");
+D._$litElement$ = !0, D.finalized = !0, Re.litElementHydrateSupport?.({ LitElement: D });
+var ze = Re.litElementPolyfillSupport;
+ze?.({ LitElement: D }), (Re.litElementVersions ??= []).push("4.2.2");
 // node_modules/@lit/reactive-element/decorators/custom-element.js
-var D = (e) => (t, n) => {
+var O = (e) => (t, n) => {
 	n === void 0 ? customElements.define(e, t) : n.addInitializer(() => {
 		customElements.define(e, t);
 	});
-}, Ve = {
+}, Be = {
 	attribute: !0,
 	type: String,
-	converter: ae,
+	converter: re,
 	reflect: !1,
-	hasChanged: oe
-}, He = (e = Ve, t, n) => {
+	hasChanged: ie
+}, Ve = (e = Be, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
 		let { name: r } = n;
@@ -541,51 +541,51 @@ var D = (e) => (t, n) => {
 	}
 	throw Error("Unsupported decorator location: " + r);
 };
-function O(e) {
-	return (t, n) => typeof n == "object" ? He(e, t, n) : ((e, t, n) => {
+function k(e) {
+	return (t, n) => typeof n == "object" ? Ve(e, t, n) : ((e, t, n) => {
 		let r = t.hasOwnProperty(n);
 		return t.constructor.createProperty(n, e), r ? Object.getOwnPropertyDescriptor(t, n) : void 0;
 	})(e, t, n);
 }
 // node_modules/@lit/reactive-element/decorators/state.js
-function k(e) {
-	return O({
+function A(e) {
+	return k({
 		...e,
 		state: !0,
 		attribute: !1
 	});
 }
 // src/format.ts
-var Ue = "−";
-function We(e, t, n) {
+var He = "−";
+function Ue(e, t, n) {
 	return new Intl.NumberFormat(t, {
 		minimumFractionDigits: n,
 		maximumFractionDigits: n
 	}).format(e);
 }
-function A(e, t) {
+function j(e, t) {
 	let n = new Intl.NumberFormat(t, {
 		style: "currency",
 		currency: "EUR",
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2
 	}).format(Math.abs(e));
-	return e < 0 ? Ue + n : n;
+	return e < 0 ? He + n : n;
 }
-function j(e, t) {
+function M(e, t) {
 	let n = Math.abs(e);
-	return n >= 1e3 ? `${We(n / 1e3, t, 2)} kW` : `${We(Math.round(n / 10) * 10, t, 0)} W`;
+	return n >= 1e3 ? `${Ue(n / 1e3, t, 2)} kW` : `${Ue(Math.round(n / 10) * 10, t, 0)} W`;
 }
-function Ge(e, t) {
-	return (e > 0 ? "+" : e < 0 ? Ue : "") + j(e, t);
+function We(e, t) {
+	return (e > 0 ? "+" : e < 0 ? He : "") + M(e, t);
 }
-function M(e, t, n = 1) {
-	return `${We(e, t, n)} kWh`;
+function N(e, t, n = 1) {
+	return `${Ue(e, t, n)} kWh`;
 }
-function N(e, t) {
-	return `${We(Math.round(e), t, 0)} %`;
+function P(e, t) {
+	return `${Ue(Math.round(e), t, 0)} %`;
 }
-function P(e, t, n) {
+function F(e, t, n) {
 	return new Intl.DateTimeFormat(t, {
 		hour: "2-digit",
 		minute: "2-digit",
@@ -593,7 +593,7 @@ function P(e, t, n) {
 		timeZone: n
 	}).format(new Date(e));
 }
-function F(e, t, n) {
+function I(e, t, n) {
 	return new Intl.DateTimeFormat(t, {
 		weekday: "short",
 		day: "numeric",
@@ -601,10 +601,10 @@ function F(e, t, n) {
 		timeZone: n
 	}).format(new Date(e));
 }
-function Ke(e, t) {
+function Ge(e, t) {
 	return Math.max(0, Math.round((new Date(e).getTime() - t) / 6e4));
 }
-function I(e, t, n) {
+function L(e, t, n) {
 	let r = new Intl.DateTimeFormat("en-CA", {
 		year: "numeric",
 		month: "2-digit",
@@ -614,7 +614,7 @@ function I(e, t, n) {
 	return r.format(new Date(e)) === r.format(new Date(t));
 }
 // src/i18n.ts
-var qe = {
+var Ke = {
 	nl: {
 		menu: {
 			label: "Hoofdmenu",
@@ -1074,7 +1074,23 @@ var qe = {
 			airco_share: "{share} van het huisverbruik",
 			airco_fed: "Gevoed door",
 			airco_cost: "Airco-stroom van het net",
-			airco_price: "Gem. prijs"
+			airco_price: "Gem. prijs",
+			reg_title: "Regeling · laatste 10 minuten",
+			reg_sub: "Of ZEPHYR snel genoeg bijstuurt en de accu doet wat gevraagd wordt",
+			reg_empty: "Nog geen metingen sinds de start.",
+			reg_p1: "P1 t.o.v. doel (afname +)",
+			reg_battery: "Accu (+ laden, − leveren)",
+			reg_ago: "−{m} min",
+			reg_now: "nu",
+			reg_dev: "P1 t.o.v. doel",
+			reg_sp: "gevraagd aan accu",
+			reg_bat: "accu werkelijk",
+			reg_idle: "niet op nul",
+			reg_shadow: "schaduw: ZEPHYR stuurt niet",
+			reg_recovery: "Hersteltijd na een piek (mediaan)",
+			reg_seconds: "{s} s",
+			reg_follow: "Accu volgt opdracht, gem. verschil",
+			reg_peaks: "Pieken > 150 W"
 		}
 	},
 	en: {
@@ -1536,14 +1552,30 @@ var qe = {
 			airco_share: "{share} of the house use",
 			airco_fed: "Fed by",
 			airco_cost: "Air con power from the grid",
-			airco_price: "Avg price"
+			airco_price: "Avg price",
+			reg_title: "Regulation · last 10 minutes",
+			reg_sub: "Whether ZEPHYR corrects fast enough and the battery does what it is asked",
+			reg_empty: "No samples since the start yet.",
+			reg_p1: "P1 against target (import +)",
+			reg_battery: "Battery (+ charging, − delivering)",
+			reg_ago: "−{m} min",
+			reg_now: "now",
+			reg_dev: "P1 against target",
+			reg_sp: "asked of the battery",
+			reg_bat: "battery actual",
+			reg_idle: "not at zero",
+			reg_shadow: "shadow: ZEPHYR is not steering",
+			reg_recovery: "Recovery after a peak (median)",
+			reg_seconds: "{s} s",
+			reg_follow: "Battery follows, avg difference",
+			reg_peaks: "Peaks > 150 W"
 		}
 	}
 };
-function Je(e) {
+function qe(e) {
 	return e?.toLowerCase().startsWith("nl") ? "nl" : "en";
 }
-function L(e, t, n = {}) {
+function R(e, t, n = {}) {
 	let r = (e) => {
 		let n = e;
 		for (let e of t.split(".")) {
@@ -1552,23 +1584,23 @@ function L(e, t, n = {}) {
 		}
 		return typeof n == "string" ? n : void 0;
 	};
-	return (r(qe[e]) ?? r(qe.en) ?? t).replace(/\{(\w+)\}/g, (e, t) => t in n ? String(n[t]) : e);
+	return (r(Ke[e]) ?? r(Ke.en) ?? t).replace(/\{(\w+)\}/g, (e, t) => t in n ? String(n[t]) : e);
 }
 // src/airco.ts
-var Ye = /* @__PURE__ */ new Set(["idle", "off"]);
-function Xe(e, t) {
+var Je = /* @__PURE__ */ new Set(["idle", "off"]);
+function Ye(e, t) {
 	return new Intl.NumberFormat(t, {
 		minimumFractionDigits: 1,
 		maximumFractionDigits: 1
 	}).format(e / 1e3);
 }
-function Ze(e, t, n) {
+function Xe(e, t, n) {
 	if (!e) return null;
 	let r = e.mode === "heat" ? "heat" : e.mode === "cool" ? "cool" : null;
 	if (e.active) {
-		let i = e.power_w > 0 ? L(t, "airco.blocked", { kw: Xe(e.power_w, n) }) : L(t, "airco.blocked_unknown");
-		e.excluded_w > 0 && e.excluded_w < e.power_w - 50 && (i += ` ${L(t, "airco.kept_off", { kw: Xe(e.excluded_w, n) })}`);
-		let a = e.quality === "fading" || e.quality === "starting" ? L(t, "airco.estimate_more", { kwh: new Intl.NumberFormat(n, { maximumFractionDigits: 2 }).format(e.last_step_kwh || .25) }) : null;
+		let i = e.power_w > 0 ? R(t, "airco.blocked", { kw: Ye(e.power_w, n) }) : R(t, "airco.blocked_unknown");
+		e.excluded_w > 0 && e.excluded_w < e.power_w - 50 && (i += ` ${R(t, "airco.kept_off", { kw: Ye(e.excluded_w, n) })}`);
+		let a = e.quality === "fading" || e.quality === "starting" ? R(t, "airco.estimate_more", { kwh: new Intl.NumberFormat(n, { maximumFractionDigits: 2 }).format(e.last_step_kwh || .25) }) : null;
 		return {
 			text: i,
 			allowed: !1,
@@ -1576,38 +1608,38 @@ function Ze(e, t, n) {
 			icon: r
 		};
 	}
-	return e.has_climate && e.mode && e.mode !== "off" && e.action && !Ye.has(e.action) ? {
-		text: L(t, "airco.allowed", { mode: L(t, `settings.options.${e.mode}`).toLowerCase() }),
+	return e.has_climate && e.mode && e.mode !== "off" && e.action && !Je.has(e.action) ? {
+		text: R(t, "airco.allowed", { mode: R(t, `settings.options.${e.mode}`).toLowerCase() }),
 		allowed: !0,
 		estimate: null,
 		icon: r
 	} : null;
 }
 // src/plan.ts
-var R = (e, t) => new Intl.DateTimeFormat("en-CA", {
+var z = (e, t) => new Intl.DateTimeFormat("en-CA", {
 	year: "numeric",
 	month: "2-digit",
 	day: "2-digit",
 	timeZone: t
 }).format(new Date(e));
-function Qe(e, t) {
+function Ze(e, t) {
 	let n = [];
 	for (let r of e) {
-		let e = R(r.start, t);
+		let e = z(r.start, t);
 		n[n.length - 1] !== e && n.push(e);
 	}
 	return n;
 }
-function $e(e, t, n) {
+function Qe(e, t, n) {
 	if (t === "both") return e;
-	let r = Qe(e, n)[t === "today" ? 0 : 1];
-	return r ? e.filter((e) => R(e.start, n) === r) : [];
+	let r = Ze(e, n)[t === "today" ? 0 : 1];
+	return r ? e.filter((e) => z(e.start, n) === r) : [];
 }
-function et(e, t, n) {
-	let r = Qe(e, n)[t];
-	return r ? e.filter((e) => R(e.start, n) === r) : [];
+function $e(e, t, n) {
+	let r = Ze(e, n)[t];
+	return r ? e.filter((e) => z(e.start, n) === r) : [];
 }
-function z(e) {
+function B(e) {
 	let t = e.filter((e) => e.buy !== null && !e.indicative);
 	if (!t.length) return null;
 	let n = t[0], r = t[0], i = 0;
@@ -1621,7 +1653,7 @@ function z(e) {
 		avg: i / t.length
 	};
 }
-function B(e) {
+function et(e) {
 	return e.findIndex((e) => !e.past);
 }
 function tt(e) {
@@ -1668,13 +1700,13 @@ function it(e, t, n) {
 	}), i;
 }
 function at(e, t) {
-	let n = B(e), r = [];
+	let n = et(e), r = [];
 	return n >= 0 && t !== null && r.push(`${n},${(100 - t).toFixed(1)}`), e.forEach((e, t) => {
 		!e.past && e.soc !== null && r.push(`${t + 1},${(100 - e.soc).toFixed(1)}`);
 	}), r.join(" ");
 }
 function ot(e, t) {
-	let n = B(e), r = [], i = [];
+	let n = et(e), r = [], i = [];
 	return e.forEach((e, t) => {
 		e.past && (e.soc === null ? (i.length && r.push(i), i = []) : i.push(`${t + 1},${(100 - e.soc).toFixed(1)}`));
 	}), i.length && (n >= 0 && t !== null && i[i.length - 1].startsWith(`${n},`) && i.push(`${n},${(100 - t).toFixed(1)}`), r.push(i)), r.filter((e) => e.length > 1).map((e) => e.join(" "));
@@ -1686,9 +1718,9 @@ function st(e, t) {
 function ct(e, t, n, r, i) {
 	let a = st(e, n);
 	if (t === "both") return a;
-	let o = t === "today" ? R(n, i) : r;
+	let o = t === "today" ? z(n, i) : r;
 	return o ? a.filter((e) => {
-		let t = R(e.start, i), n = R((/* @__PURE__ */ new Date(new Date(e.end).getTime() - 1)).toISOString(), i);
+		let t = z(e.start, i), n = z((/* @__PURE__ */ new Date(new Date(e.end).getTime() - 1)).toISOString(), i);
 		return t <= o && o <= n;
 	}) : [];
 }
@@ -1788,12 +1820,12 @@ function mt() {
 		return "today";
 	}
 }
-var U = class extends E {
+var U = class extends D {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.narrow = !1, this.period = mt(), this.sel = null, this.scrolledFor = "";
 	}
 	tr(e, t = {}) {
-		return L(this.uiLang, e, t);
+		return R(this.uiLang, e, t);
 	}
 	pick(e) {
 		this.period = e, this.dispatchEvent(new CustomEvent("zephyr-period", {
@@ -1809,21 +1841,21 @@ var U = class extends E {
 		let t = this.renderRoot.querySelector(".scroll"), n = this.visible(), r = `${this.period}|${this.view?.now ?? ""}`;
 		if (!t || t.scrollWidth <= t.clientWidth || this.scrolledFor === r) return;
 		this.scrolledFor = r;
-		let i = B(n);
+		let i = et(n);
 		i > 0 && (t.scrollLeft = Math.max(0, i - 8) / n.length * t.scrollWidth);
 	}
 	visible() {
-		return this.view ? $e(this.view.quarters, this.period, this.timeZone) : [];
+		return this.view ? Qe(this.view.quarters, this.period, this.timeZone) : [];
 	}
 	render() {
 		let e = this.view;
-		if (!e) return b`<section class="card"><div class="skeleton" aria-hidden="true"></div></section>`;
-		let t = this.visible(), n = et(e.quarters, 0, this.timeZone), r = et(e.quarters, 1, this.timeZone), i = z(n), a = z(r), o = B(e.quarters), s = o >= 0 ? e.quarters[o] : void 0, c = this.period === "today" ? "plan.title_today" : this.period === "tomorrow" ? "plan.title_tomorrow" : "plan.title_both";
-		return b`<section class="card" aria-label=${this.tr("plan.title")}>
+		if (!e) return x`<section class="card"><div class="skeleton" aria-hidden="true"></div></section>`;
+		let t = this.visible(), n = $e(e.quarters, 0, this.timeZone), r = $e(e.quarters, 1, this.timeZone), i = B(n), a = B(r), o = et(e.quarters), s = o >= 0 ? e.quarters[o] : void 0, c = this.period === "today" ? "plan.title_today" : this.period === "tomorrow" ? "plan.title_tomorrow" : "plan.title_both";
+		return x`<section class="card" aria-label=${this.tr("plan.title")}>
       <div class="head">
         <h2>${this.tr("plan.title")} · ${this.tr(c)}</h2>
         <div class="tabs" role="group" aria-label=${this.tr("plan.period")}>
-          ${pt.map(([e, t]) => b`<button
+          ${pt.map(([e, t]) => x`<button
                 type="button"
                 class=${this.period === e ? "on" : ""}
                 aria-pressed=${this.period === e ? "true" : "false"}
@@ -1835,52 +1867,52 @@ var U = class extends E {
       </div>
       <div class="prices">
         <div class="cell now">
-          <span class="cap">${this.tr("plan.now", { time: s ? P(s.start, this.locale, this.timeZone) : "–" })}</span>
-          <span class="value">${s?.buy == null ? "–" : A(s.buy, this.locale)}</span>
+          <span class="cap">${this.tr("plan.now", { time: s ? F(s.start, this.locale, this.timeZone) : "–" })}</span>
+          <span class="value">${s?.buy == null ? "–" : j(s.buy, this.locale)}</span>
           <span class="sub">${this.tr("plan.per_kwh")}</span>
         </div>
         ${this.statCell(n, i, "plan.today")} ${this.statCell(r, a, "plan.tomorrow", !0)}
       </div>
-      ${this.notes(e, a)} ${t.length ? this.chart(t) : b`<p class="empty">${this.tr("plan.no_quarters")}</p>`}
+      ${this.notes(e, a)} ${t.length ? this.chart(t) : x`<p class="empty">${this.tr("plan.no_quarters")}</p>`}
       ${this.legend()}
     </section>`;
 	}
 	spreadText(e) {
 		let t = e.min.buy, n = e.max.buy, r = ut(t, n);
-		return r === null ? this.tr("plan.spread", { value: A(n - t, this.locale) }) : this.tr("plan.spread", { value: `${r} %` });
+		return r === null ? this.tr("plan.spread", { value: j(n - t, this.locale) }) : this.tr("plan.spread", { value: `${r} %` });
 	}
 	statCell(e, t, n, r = !1) {
-		let i = e.length ? F(e[0].start, this.locale, this.timeZone) : "";
-		if (!t) return b`<div class="cell">
+		let i = e.length ? I(e[0].start, this.locale, this.timeZone) : "";
+		if (!t) return x`<div class="cell">
         <span class="cap">${this.tr(n)} · ${i}</span>
         <span class="value small">${this.tr("plan.unknown")}</span>
         <span class="sub">${r ? this.tr("plan.expected_at") : ""}</span>
       </div>`;
-		let a = r && this.view?.tomorrow_known_at ? ` · ${this.tr("plan.known_at", { time: P(this.view.tomorrow_known_at, this.locale, this.timeZone) })}` : "";
-		return b`<div class="cell">
+		let a = r && this.view?.tomorrow_known_at ? ` · ${this.tr("plan.known_at", { time: F(this.view.tomorrow_known_at, this.locale, this.timeZone) })}` : "";
+		return x`<div class="cell">
       <span class="cap">${this.tr(n)} · ${i}</span>
       <span class="value"
-        >${A(t.min.buy, this.locale)} – ${A(t.max.buy, this.locale)}<span class="spread" title=${this.tr("plan.spread_title")}
+        >${j(t.min.buy, this.locale)} – ${j(t.max.buy, this.locale)}<span class="spread" title=${this.tr("plan.spread_title")}
           >${this.spreadText(t)}</span
         ></span
       >
       <span class="sub"
         >${this.tr("plan.stats", {
-			avg: A(t.avg, this.locale),
-			low: P(t.min.start, this.locale, this.timeZone),
-			high: P(t.max.start, this.locale, this.timeZone)
+			avg: j(t.avg, this.locale),
+			low: F(t.min.start, this.locale, this.timeZone),
+			high: F(t.max.start, this.locale, this.timeZone)
 		})}${a}</span
       >
     </div>`;
 	}
 	notes(e, t) {
 		let n = [];
-		return e.state === "no_prices" && n.push(b`<p class="note warn">${this.tr("plan.no_prices")}</p>`), e.state === "price_reserve" && n.push(b`<p class="note">${this.tr("plan.reserve")}</p>`), !t && this.period !== "today" && n.push(b`<p class="note">${this.tr("plan.indicative")}</p>`), n.length ? b`${n}` : C;
+		return e.state === "no_prices" && n.push(x`<p class="note warn">${this.tr("plan.no_prices")}</p>`), e.state === "price_reserve" && n.push(x`<p class="note">${this.tr("plan.reserve")}</p>`), !t && this.period !== "today" && n.push(x`<p class="note">${this.tr("plan.indicative")}</p>`), n.length ? x`${n}` : w;
 	}
 	chart(e) {
-		let t = e.length, n = nt(e), r = B(e), i = (e) => `${(e / t * 100).toFixed(3)}%`, a = Qe(e, this.timeZone), o = a.length > 1 ? e.findIndex((t) => new Date(t.start).getTime() >= new Date(et(e, 1, this.timeZone)[0].start).getTime()) : -1, s = [];
+		let t = e.length, n = nt(e), r = et(e), i = (e) => `${(e / t * 100).toFixed(3)}%`, a = Ze(e, this.timeZone), o = a.length > 1 ? e.findIndex((t) => new Date(t.start).getTime() >= new Date($e(e, 1, this.timeZone)[0].start).getTime()) : -1, s = [];
 		for (let t = 0; t < a.length; t++) {
-			let n = z(et(e, t, this.timeZone));
+			let n = B($e(e, t, this.timeZone));
 			n && (s.push({
 				q: n.min,
 				i: e.indexOf(n.min),
@@ -1892,10 +1924,10 @@ var U = class extends E {
 			}));
 		}
 		let c = it(e, this.period === "both" ? 6 : 3, this.timeZone), l = this.sel !== null && this.sel < t ? this.sel : null, u = at(e, this.view?.soc_now ?? null), d = ot(e, this.view?.soc_now ?? null), f = n.lo < 0 ? (0 - n.lo) / (n.hi - n.lo) * 100 : null;
-		return b`<div class="scroll">
+		return x`<div class="scroll">
       <div class="chart ${t > 100 ? "wide" : ""}">
         <div class="axis left" aria-hidden="true">
-          <span>${A(n.hi, this.locale)}</span><span>${A((n.hi + n.lo) / 2, this.locale)}</span><span>${A(n.lo, this.locale)}</span>
+          <span>${j(n.hi, this.locale)}</span><span>${j((n.hi + n.lo) / 2, this.locale)}</span><span>${j(n.lo, this.locale)}</span>
         </div>
         <div class="axis right" aria-hidden="true"><span>100 %</span><span>50 %</span><span>0 %</span></div>
         <div
@@ -1910,48 +1942,48 @@ var U = class extends E {
         >
           <div class="grid" style="top:0"></div>
           <div class="grid" style="top:50%"></div>
-          ${f === null ? C : b`<div class="zero" style="bottom:${f}%"></div>`}
+          ${f === null ? w : x`<div class="zero" style="bottom:${f}%"></div>`}
           ${e.map((e, t) => {
-			if (e.buy === null) return C;
+			if (e.buy === null) return w;
 			let a = rt(e.buy, n);
-			return b`<div class=${`bar${e.past ? " past" : ""}${e.indicative ? " ind" : ""}${t === r ? " cur" : ""}${t === l ? " focus" : ""}`} style="left:${i(t)};width:${i(1)};bottom:${a.bottom}%;height:${a.height}%"></div>`;
+			return x`<div class=${`bar${e.past ? " past" : ""}${e.indicative ? " ind" : ""}${t === r ? " cur" : ""}${t === l ? " focus" : ""}`} style="left:${i(t)};width:${i(1)};bottom:${a.bottom}%;height:${a.height}%"></div>`;
 		})}
           <svg viewBox="0 0 ${t} 100" preserveAspectRatio="none" aria-hidden="true">
-            ${d.map((e) => x`<polyline class="halo" points=${e}></polyline><polyline class="soc measured" points=${e}></polyline>`)}
-            ${u ? x`<polyline class="halo" points=${u}></polyline><polyline class="soc" points=${u}></polyline>` : C}
+            ${d.map((e) => S`<polyline class="halo" points=${e}></polyline><polyline class="soc measured" points=${e}></polyline>`)}
+            ${u ? S`<polyline class="halo" points=${u}></polyline><polyline class="soc" points=${u}></polyline>` : w}
           </svg>
-          ${o > 0 ? b`<div class="split" style="left:${i(o)}"></div>
-                <span class="dayname" style="left:calc(${i(o)} + 6px)">${F(e[o].start, this.locale, this.timeZone)}</span>` : C}
+          ${o > 0 ? x`<div class="split" style="left:${i(o)}"></div>
+                <span class="dayname" style="left:calc(${i(o)} + 6px)">${I(e[o].start, this.locale, this.timeZone)}</span>` : w}
           ${s.map(({ q: e, i: r }) => {
 			let i = Math.min(94, Math.max(6, (r + .5) / t * 100)), a = rt(e.buy, n);
-			return b`<span class="mark" style="left:${i}%;bottom:calc(${a.bottom + a.height}% + 6px)"
-              >${A(e.buy, this.locale)} · ${P(e.start, this.locale, this.timeZone)}</span
+			return x`<span class="mark" style="left:${i}%;bottom:calc(${a.bottom + a.height}% + 6px)"
+              >${j(e.buy, this.locale)} · ${F(e.start, this.locale, this.timeZone)}</span
             >`;
 		})}
-          ${r >= 0 ? b`<div class="nowline" style="left:${i(r)}"></div>
-                <span class="nowpill" style="left:${i(r)}">${this.tr("plan.now_short")}</span>` : C}
-          ${l === null ? C : this.tooltip(e[l], l, t)}
+          ${r >= 0 ? x`<div class="nowline" style="left:${i(r)}"></div>
+                <span class="nowpill" style="left:${i(r)}">${this.tr("plan.now_short")}</span>` : w}
+          ${l === null ? w : this.tooltip(e[l], l, t)}
         </div>
         <div class="band" aria-hidden="true">
-          ${tt(e).map((e) => b`<div
+          ${tt(e).map((e) => x`<div
                 class=${e.past ? "seg past" : "seg"}
                 style="flex:${e.count} 1 0;background:${e.action ? V(e.action) : "transparent"}"
               ></div>`)}
         </div>
         ${this.sun(e)}
         <div class="ticks" aria-hidden="true">
-          ${c.map((t) => b`<span style="left:${i(t)}">${P(e[t].start, this.locale, this.timeZone)}</span>`)}
+          ${c.map((t) => x`<span style="left:${i(t)}">${F(e[t].start, this.locale, this.timeZone)}</span>`)}
         </div>
       </div>
     </div>`;
 	}
 	sun(e) {
 		let t = lt(e);
-		return t ? b`<div class="sunlane" aria-hidden="true">
-      ${t.map((e) => b`<div class="sq">
-          ${e.height > 0 ? b`<i class=${`${e.past ? "" : "fut"}${e.over ? " over" : ""}`} style="height:${e.height}%"></i>` : C}
+		return t ? x`<div class="sunlane" aria-hidden="true">
+      ${t.map((e) => x`<div class="sq">
+          ${e.height > 0 ? x`<i class=${`${e.past ? "" : "fut"}${e.over ? " over" : ""}`} style="height:${e.height}%"></i>` : w}
         </div>`)}
-    </div>` : C;
+    </div>` : w;
 	}
 	hover(e, t) {
 		let n = e.currentTarget.getBoundingClientRect(), r = Math.floor((e.clientX - n.left) / n.width * t);
@@ -1967,31 +1999,31 @@ var U = class extends E {
 	}
 	tooltip(e, t, n) {
 		let r = (t + .5) / n * 100, i = (r > 60 ? "right" : "left") == "left" ? `left:calc(${r}% + 10px)` : `right:calc(${100 - r}% + 10px)`, a = e.action ? this.tr(`action.${e.action}`) + (e.past ? ` (${this.tr("plan.actual")})` : e.indicative ? ` (${this.tr("plan.indicative_short")})` : "") : e.past ? this.tr("plan.no_record") : null;
-		return b`<div class="tip" role="status" style=${i}>
-      <strong>${F(e.start, this.locale, this.timeZone)} ${P(e.start, this.locale, this.timeZone)}</strong>
-      ${e.buy === null ? b`<span>${this.tr("plan.unknown")}</span>` : b`<span>${this.tr("plan.tip_buy", { price: A(e.buy, this.locale) })}</span>
-            <span>${this.tr("plan.tip_sell", { price: A(e.sell, this.locale) })}</span>`}
-      ${a ? b`<span>${a}</span>` : C}
-      ${e.soc === null ? C : b`<span>${this.tr(e.past ? "plan.tip_soc_past" : "plan.tip_soc", { soc: N(e.soc, this.locale) })}</span>`}
-      ${e.solar !== null && e.load !== null ? b`<span>${this.tr(e.past ? "plan.tip_energy_past" : "plan.tip_energy", {
-			solar: M(e.solar, this.locale, 2),
-			load: M(e.load, this.locale, 2)
-		})}</span>` : C}
-      ${e.excluded ? b`<span>${this.tr("plan.tip_airco", { kwh: M(e.excluded, this.locale, 2) })}</span>` : C}
+		return x`<div class="tip" role="status" style=${i}>
+      <strong>${I(e.start, this.locale, this.timeZone)} ${F(e.start, this.locale, this.timeZone)}</strong>
+      ${e.buy === null ? x`<span>${this.tr("plan.unknown")}</span>` : x`<span>${this.tr("plan.tip_buy", { price: j(e.buy, this.locale) })}</span>
+            <span>${this.tr("plan.tip_sell", { price: j(e.sell, this.locale) })}</span>`}
+      ${a ? x`<span>${a}</span>` : w}
+      ${e.soc === null ? w : x`<span>${this.tr(e.past ? "plan.tip_soc_past" : "plan.tip_soc", { soc: P(e.soc, this.locale) })}</span>`}
+      ${e.solar !== null && e.load !== null ? x`<span>${this.tr(e.past ? "plan.tip_energy_past" : "plan.tip_energy", {
+			solar: N(e.solar, this.locale, 2),
+			load: N(e.load, this.locale, 2)
+		})}</span>` : w}
+      ${e.excluded ? x`<span>${this.tr("plan.tip_airco", { kwh: N(e.excluded, this.locale, 2) })}</span>` : w}
     </div>`;
 	}
 	summary(e) {
-		let t = z(e);
+		let t = B(e);
 		return t ? this.tr("plan.aria", {
-			low: A(t.min.buy, this.locale),
-			low_time: P(t.min.start, this.locale, this.timeZone),
-			high: A(t.max.buy, this.locale),
-			high_time: P(t.max.start, this.locale, this.timeZone)
+			low: j(t.min.buy, this.locale),
+			low_time: F(t.min.start, this.locale, this.timeZone),
+			high: j(t.max.buy, this.locale),
+			high_time: F(t.max.start, this.locale, this.timeZone)
 		}) : this.tr("plan.title");
 	}
 	legend() {
-		let e = (e, t, n = "sw") => b`<span class="li"><span class=${n} style="background:${e}"></span>${this.tr(t)}</span>`;
-		return b`<div class="legend">
+		let e = (e, t, n = "sw") => x`<span class="li"><span class=${n} style="background:${e}"></span>${this.tr(t)}</span>`;
+		return x`<div class="legend">
       ${e("var(--z-bar)", "plan.legend_price")} ${e(V("charge"), "action.charge")} ${e(V("deliver"), "action.deliver")}
       ${e(V("hold"), "action.hold")} ${e(V("export"), "action.export")}
       ${e("var(--z-solar)", "plan.legend_solar")} ${e("var(--z-solar)", "plan.legend_solar_over", "sw over")}
@@ -2386,10 +2418,10 @@ var U = class extends E {
     `];
 	}
 };
-H([O({ attribute: !1 })], U.prototype, "view", void 0), H([O({ attribute: !1 })], U.prototype, "uiLang", void 0), H([O()], U.prototype, "locale", void 0), H([O()], U.prototype, "timeZone", void 0), H([O({ type: Boolean })], U.prototype, "narrow", void 0), H([O({ attribute: !1 })], U.prototype, "period", void 0), H([k()], U.prototype, "sel", void 0), U = H([D("zephyr-prices-plan")], U);
+H([k({ attribute: !1 })], U.prototype, "view", void 0), H([k({ attribute: !1 })], U.prototype, "uiLang", void 0), H([k()], U.prototype, "locale", void 0), H([k()], U.prototype, "timeZone", void 0), H([k({ type: Boolean })], U.prototype, "narrow", void 0), H([k({ attribute: !1 })], U.prototype, "period", void 0), H([A()], U.prototype, "sel", void 0), U = H([O("zephyr-prices-plan")], U);
 // src/sets.ts
 function ht(e, t, n) {
-	return e.built_in ? L(n, "sets.built_in") : e.model ? t.filter((t) => t.model === e.model).length > 1 ? `${e.model} ${e.number}` : e.model : L(n, "sets.pack", { n: e.index + 1 });
+	return e.built_in ? R(n, "sets.built_in") : e.model ? t.filter((t) => t.model === e.model).length > 1 ? `${e.model} ${e.number}` : e.model : R(n, "sets.pack", { n: e.index + 1 });
 }
 var gt = (e) => e <= 30 ? "good" : e <= 100 ? "balancing" : "imbalance";
 function _t(e) {
@@ -2437,12 +2469,12 @@ function _t(e) {
 		offline: e.filter((e) => !e.online)
 	};
 }
-var W = class extends E {
+var W = class extends D {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC";
 	}
 	tr(e, t = {}) {
-		return L(this.uiLang, e, t);
+		return R(this.uiLang, e, t);
 	}
 	num(e, t = 0) {
 		return new Intl.NumberFormat(this.locale, {
@@ -2452,19 +2484,19 @@ var W = class extends E {
 	}
 	render() {
 		let e = this.view;
-		if (!e) return b`<div class="card skeleton" aria-hidden="true"></div>`;
-		if (!e.sets.length) return b`<section class="card"><p class="text">${this.tr("sets.none")}</p></section>`;
+		if (!e) return x`<div class="card skeleton" aria-hidden="true"></div>`;
+		if (!e.sets.length) return x`<section class="card"><p class="text">${this.tr("sets.none")}</p></section>`;
 		let t = _t(e.sets), n = e.sets.flatMap((e) => e.packs);
-		return b`
+		return x`
       ${this.renderSummary(t, e.sets)}
-      ${e.sets.map((t) => b`<div class="row">
+      ${e.sets.map((t) => x`<div class="row">
           ${this.renderSet(t, e.sets.length)} ${this.renderPacks(t)}
         </div>`)}
-      ${n.length ? this.renderBalance(e.sets) : C} ${e.sets.length === 1 ? this.renderActivity(e) : C}
+      ${n.length ? this.renderBalance(e.sets) : w} ${e.sets.length === 1 ? this.renderActivity(e) : w}
     `;
 	}
 	stat(e, t) {
-		return b`<div class="stat"><span class="cap">${e}</span><span class="value">${t}</span></div>`;
+		return x`<div class="stat"><span class="cap">${e}</span><span class="value">${t}</span></div>`;
 	}
 	renderSummary(e, t) {
 		let n = t.flatMap((e) => e.packs), r;
@@ -2476,45 +2508,45 @@ var W = class extends E {
 			mv: e.now.mv
 		}) : e.imbalance ? this.tr("sets.line_recent", {
 			pack: ht(e.imbalance.pack, n, this.uiLang),
-			day: F(`${e.imbalance.lastDay}T12:00:00Z`, this.locale, this.timeZone),
+			day: I(`${e.imbalance.lastDay}T12:00:00Z`, this.locale, this.timeZone),
 			mv: e.imbalance.mv
 		}) : e.notFull ? this.tr("sets.line_not_full") : this.tr("sets.line_ok");
 		let i = e.now ? `${this.num(e.now.mv)} mV · ${this.tr(`sets.cell.${e.now.status}`)}` : e.lastDay ? `${this.num(e.lastDay.mv)} mV · ${this.tr(`sets.cell.${e.lastDay.status}`)}` : "–";
-		return b`<section class="card summary" aria-label=${this.tr("sets.summary")}>
+		return x`<section class="card summary" aria-label=${this.tr("sets.summary")}>
       ${this.stat(this.tr("sets.batteries"), this.tr(e.online ? "sets.all_online" : "sets.some_offline", { n: e.packs }))}
-      ${this.stat(this.tr("sets.soc_spread"), e.socMin === null ? "–" : e.socMin === e.socMax ? N(e.socMin, this.locale) : `${this.num(e.socMin)}–${N(e.socMax, this.locale)}`)}
+      ${this.stat(this.tr("sets.soc_spread"), e.socMin === null ? "–" : e.socMin === e.socMax ? P(e.socMin, this.locale) : `${this.num(e.socMin)}–${P(e.socMax, this.locale)}`)}
       ${this.stat(this.tr("sets.warmest"), e.warmest === null ? "–" : `${this.num(e.warmest)} °C`)}
-      ${this.stat(e.now || !e.lastDay ? this.tr("sets.largest_delta") : this.tr("sets.largest_delta_day", { day: F(`${e.lastDay.day}T12:00:00Z`, this.locale, this.timeZone) }), i)}
+      ${this.stat(e.now || !e.lastDay ? this.tr("sets.largest_delta") : this.tr("sets.largest_delta_day", { day: I(`${e.lastDay.day}T12:00:00Z`, this.locale, this.timeZone) }), i)}
       <p class="line"><strong>${this.tr("sets.in_short")}</strong> ${r}</p>
     </section>`;
 	}
 	renderSet(e, t) {
-		let n = e.soc ?? 0, r = e.online ? e.status ?? "standby" : "offline", i = (e, t) => b`<div><dt>${e}</dt><dd>${t}</dd></div>`, a = e.last_full ? I(e.last_full, Date.now(), this.timeZone) ? `${this.tr("sets.today")} ${P(e.last_full, this.locale, this.timeZone)}` : F(e.last_full, this.locale, this.timeZone) : this.tr("sets.unknown");
-		return b`<article class="card set">
+		let n = e.soc ?? 0, r = e.online ? e.status ?? "standby" : "offline", i = (e, t) => x`<div><dt>${e}</dt><dd>${t}</dd></div>`, a = e.last_full ? L(e.last_full, Date.now(), this.timeZone) ? `${this.tr("sets.today")} ${F(e.last_full, this.locale, this.timeZone)}` : I(e.last_full, this.locale, this.timeZone) : this.tr("sets.unknown");
+		return x`<article class="card set">
       <div class="head">
         <div>
           <h2>${this.tr("sets.set", { n: e.number })}</h2>
           <span class="muted"
-            >${e.model}${e.packs.length ? ` · ${this.tr("sets.packs_n", { n: e.packs.length })}` : ""}${e.capacity_kwh ? ` · ${M(e.capacity_kwh, this.locale)}` : ""}</span
+            >${e.model}${e.packs.length ? ` · ${this.tr("sets.packs_n", { n: e.packs.length })}` : ""}${e.capacity_kwh ? ` · ${N(e.capacity_kwh, this.locale)}` : ""}</span
           >
         </div>
         <span class="chip ${r}">${this.tr(`sets.status.${r}`)}</span>
       </div>
-      ${e.soc === null ? b`<p class="text">${this.tr("battery.unknown")}</p>` : b`<div class="big-row">
-              <span class="big">${N(n, this.locale)}</span>
-              ${e.energy_kwh !== null && e.capacity_kwh ? b`<span class="muted">${this.tr("battery.of", {
-			energy: M(e.energy_kwh, this.locale),
-			capacity: M(e.capacity_kwh, this.locale)
-		})}</span>` : C}
+      ${e.soc === null ? x`<p class="text">${this.tr("battery.unknown")}</p>` : x`<div class="big-row">
+              <span class="big">${P(n, this.locale)}</span>
+              ${e.energy_kwh !== null && e.capacity_kwh ? x`<span class="muted">${this.tr("battery.of", {
+			energy: N(e.energy_kwh, this.locale),
+			capacity: N(e.capacity_kwh, this.locale)
+		})}</span>` : w}
             </div>
             <div class="bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${Math.round(n)} aria-label=${this.tr("battery.title")}>
               <div class="fill" style="width:${n}%"></div>
-              ${e.limits?.min == null ? C : b`<div class="mark" style="left:${e.limits.min}%"></div>`}
-              ${e.limits?.max == null ? C : b`<div class="mark" style="left:${e.limits.max}%"></div>`}
+              ${e.limits?.min == null ? w : x`<div class="mark" style="left:${e.limits.min}%"></div>`}
+              ${e.limits?.max == null ? w : x`<div class="mark" style="left:${e.limits.max}%"></div>`}
             </div>`}
       <dl>
-        ${i(this.tr("sets.power"), e.power_w === null ? "–" : Ge(e.power_w, this.locale))}
-        ${e.solar_w ? i(this.tr("sets.solar"), Ge(e.solar_w, this.locale).replace("+", "")) : C}
+        ${i(this.tr("sets.power"), e.power_w === null ? "–" : We(e.power_w, this.locale))}
+        ${e.solar_w ? i(this.tr("sets.solar"), We(e.solar_w, this.locale).replace("+", "")) : w}
         ${i(this.tr("sets.inverter"), e.enclosure_temp === null ? "–" : `${this.num(e.enclosure_temp)} °C`)}
         ${i(this.tr("sets.last_full"), a)}
         ${i(this.tr("sets.switches"), e.relays_24h === null ? "–" : this.tr("sets.switches_n", { n: e.relays_24h }))}
@@ -2522,12 +2554,12 @@ var W = class extends E {
       </dl>
       <div class="foot">
         <span>${t >= 3 ? this.tr("sets.max_sets") : ""}</span>
-        ${t < 3 ? b`<a class="button" href="/config/integrations/integration/zephyr">${this.tr("sets.add")}</a>` : C}
+        ${t < 3 ? x`<a class="button" href="/config/integrations/integration/zephyr">${this.tr("sets.add")}</a>` : w}
       </div>
     </article>`;
 	}
 	renderPacks(e) {
-		return e.packs.length ? b`<section class="card packs" aria-label=${this.tr("sets.in_set")}>
+		return e.packs.length ? x`<section class="card packs" aria-label=${this.tr("sets.in_set")}>
       <div class="head">
         <h2>${this.tr("sets.in_set")}</h2>
         <span class="muted">${this.tr("sets.pack_power_note")}</span>
@@ -2535,15 +2567,15 @@ var W = class extends E {
       <div class="grid">
         ${e.packs.map((t) => {
 			let n = t.cell_status;
-			return b`<div class="pack ${e.online ? "" : "off"}">
-            <div class="ph"><strong>${ht(t, e.packs, this.uiLang)}</strong><span class="muted">${t.capacity_kwh ? M(t.capacity_kwh, this.locale, 2) : this.tr("sets.unknown_type")}</span></div>
+			return x`<div class="pack ${e.online ? "" : "off"}">
+            <div class="ph"><strong>${ht(t, e.packs, this.uiLang)}</strong><span class="muted">${t.capacity_kwh ? N(t.capacity_kwh, this.locale, 2) : this.tr("sets.unknown_type")}</span></div>
             <div class="big-row">
-              <span class="mid">${N(t.soc, this.locale)}</span>
-              ${t.energy_kwh === null ? C : b`<span class="muted">${M(t.energy_kwh, this.locale, 2)}</span>`}
+              <span class="mid">${P(t.soc, this.locale)}</span>
+              ${t.energy_kwh === null ? w : x`<span class="muted">${N(t.energy_kwh, this.locale, 2)}</span>`}
             </div>
             <div class="bar thin"><div class="fill" style="width:${t.soc}%"></div></div>
             <dl>
-              <div><dt>${this.tr("sets.power")}</dt><dd>${Ge(t.power_w, this.locale)}</dd></div>
+              <div><dt>${this.tr("sets.power")}</dt><dd>${We(t.power_w, this.locale)}</dd></div>
               <div><dt>${this.tr("sets.temp")}</dt><dd>${t.temp === null ? "–" : `${this.num(t.temp)} °C`}</dd></div>
               <div>
                 <dt>${this.tr("sets.cells")}</dt>
@@ -2553,7 +2585,7 @@ var W = class extends E {
                 <dt>${this.tr("sets.cell_delta")}</dt>
                 <dd class="delta">
                   ${t.cell_delta_mv === null ? "–" : `${this.num(t.cell_delta_mv)} mV`}
-                  ${n ? b`<span class="tag ${n}">${this.tr(`sets.cell.${n}`)}</span>` : t.cell_delta_mv === null ? C : b`<span class="tag none" title=${this.tr("sets.not_judged_title")}>${this.tr("sets.not_judged")}</span>`}
+                  ${n ? x`<span class="tag ${n}">${this.tr(`sets.cell.${n}`)}</span>` : t.cell_delta_mv === null ? w : x`<span class="tag none" title=${this.tr("sets.not_judged_title")}>${this.tr("sets.not_judged")}</span>`}
                 </dd>
               </div>
             </dl>
@@ -2561,11 +2593,11 @@ var W = class extends E {
 		})}
       </div>
       <p class="text small">${this.tr("sets.cell_note")}</p>
-    </section>` : b``;
+    </section>` : x``;
 	}
 	renderBalance(e) {
 		let t = e.find((e) => e.packs.length)?.packs[0]?.history ?? [];
-		return b`<section class="card" aria-label=${this.tr("sets.balance_title")}>
+		return x`<section class="card" aria-label=${this.tr("sets.balance_title")}>
       <div class="head">
         <h2>${this.tr("sets.balance_title")}</h2>
         <span class="muted">${this.tr("sets.balance_note")}</span>
@@ -2573,15 +2605,15 @@ var W = class extends E {
       <div class="table" role="table">
         <div class="tr" role="row">
           <span role="columnheader"></span>
-          ${t.map((e) => b`<span role="columnheader" class="dh">${F(`${e.day}T12:00:00Z`, this.locale, this.timeZone)}</span>`)}
+          ${t.map((e) => x`<span role="columnheader" class="dh">${I(`${e.day}T12:00:00Z`, this.locale, this.timeZone)}</span>`)}
         </div>
-        ${e.flatMap((t) => t.packs.map((n) => b`<div class="tr" role="row">
+        ${e.flatMap((t) => t.packs.map((n) => x`<div class="tr" role="row">
               <span role="rowheader" class="rh">${e.length > 1 ? `${t.number} · ` : ""}${ht(n, t.packs, this.uiLang)}</span>
-              ${n.history.map((e) => b`<span
+              ${n.history.map((e) => x`<span
                   role="cell"
                   class="cell ${e.status ?? "none"}"
                   title=${e.max_mv === null ? this.tr("sets.no_judged") : `${e.max_mv} mV · ${this.tr(`sets.cell.${e.status}`)}`}
-                  >${e.max_mv === null ? "–" : this.num(e.max_mv)}${e.full ? b` <span aria-label=${this.tr("sets.full_day")}>▲</span>` : C}</span
+                  >${e.max_mv === null ? "–" : this.num(e.max_mv)}${e.full ? x` <span aria-label=${this.tr("sets.full_day")}>▲</span>` : w}</span
                 >`)}
             </div>`))}
       </div>
@@ -2592,7 +2624,7 @@ var W = class extends E {
 			charge: 0,
 			deliver: 0
 		};
-		return b`<section class="card" aria-label=${this.tr("sets.activity_title")}>
+		return x`<section class="card" aria-label=${this.tr("sets.activity_title")}>
       <div class="head">
         <h2>${this.tr("sets.activity_title")}</h2>
         <div class="legend">
@@ -2605,8 +2637,8 @@ var W = class extends E {
         ${e.activity_24h.map((e) => {
 			e.action in i && (i[e.action] += 1);
 			let t = r(e.start);
-			return b`<div
-            title="${P(e.start, this.locale, this.timeZone)}–${P(e.end, this.locale, this.timeZone)} · ${this.tr(`action.${e.action}`)}"
+			return x`<div
+            title="${F(e.start, this.locale, this.timeZone)}–${F(e.end, this.locale, this.timeZone)} · ${this.tr(`action.${e.action}`)}"
             style="left:${t}%;width:${r(e.end) - t}%;background:${V(e.action)}"
           ></div>`;
 		})}
@@ -2619,10 +2651,10 @@ var W = class extends E {
 			12,
 			16,
 			20
-		].map((e) => b`<span>${P(new Date(n + e * 36e5).toISOString(), this.locale, this.timeZone)}</span>`)}
+		].map((e) => x`<span>${F(new Date(n + e * 36e5).toISOString(), this.locale, this.timeZone)}</span>`)}
         <span>${this.tr("plan.now_short")}</span>
       </div>
-      ${e.activity_24h.length ? C : b`<p class="text small">${this.tr("sets.no_activity")}</p>`}
+      ${e.activity_24h.length ? w : x`<p class="text small">${this.tr("sets.no_activity")}</p>`}
     </section>`;
 	}
 	static {
@@ -2959,7 +2991,7 @@ var W = class extends E {
   `;
 	}
 };
-H([O({ attribute: !1 })], W.prototype, "view", void 0), H([O({ attribute: !1 })], W.prototype, "uiLang", void 0), H([O()], W.prototype, "locale", void 0), H([O()], W.prototype, "timeZone", void 0), W = H([D("zephyr-sets")], W);
+H([k({ attribute: !1 })], W.prototype, "view", void 0), H([k({ attribute: !1 })], W.prototype, "uiLang", void 0), H([k()], W.prototype, "locale", void 0), H([k()], W.prototype, "timeZone", void 0), W = H([O("zephyr-sets")], W);
 // src/settings-edit.ts
 function vt(e, t) {
 	let n = e.trim().replace(/\s/g, "");
@@ -3005,7 +3037,7 @@ function G(e, t, n) {
 		maximumFractionDigits: r
 	}).format(e);
 }
-var K = class extends E {
+var K = class extends D {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.friendlyName = () => void 0, this.group = 0, this.tip = null, this.draft = {}, this.errors = {}, this.busy = !1, this.saved = null, this.restarting = !1, this.vacUntil = null;
 	}
@@ -3076,18 +3108,18 @@ var K = class extends E {
 		this.draft = {}, this.errors = {};
 	}
 	tr(e, t = {}) {
-		return L(this.uiLang, e, t);
+		return R(this.uiLang, e, t);
 	}
 	label(e) {
 		return this.tr(`settings.fields.${e}.label`);
 	}
 	render() {
 		let e = this.view;
-		if (!e) return b`<div class="card skeleton" aria-hidden="true"></div>`;
+		if (!e) return x`<div class="card skeleton" aria-hidden="true"></div>`;
 		let t = Math.min(this.group, e.groups.length - 1), n = e.groups[t];
-		return b`<div class="layout">
+		return x`<div class="layout">
       <nav class="card groups" aria-label=${this.tr("settings.title")}>
-        ${e.groups.map((e, n) => b`<button
+        ${e.groups.map((e, n) => x`<button
             type="button"
             class=${n === t ? "on" : ""}
             aria-current=${n === t ? "true" : "false"}
@@ -3096,18 +3128,18 @@ var K = class extends E {
 		}}
           >
             <span>${this.tr(`settings.groups.${e.key}`)}</span>
-            ${e.modified ? b`<span class="badge">${this.tr("settings.modified_n", { n: e.modified })}</span>` : C}
+            ${e.modified ? x`<span class="badge">${this.tr("settings.modified_n", { n: e.modified })}</span>` : w}
           </button>`)}
       </nav>
       <section class="card fields" aria-labelledby="group-title">
         <div class="head">
           <h2 id="group-title">${this.tr(`settings.groups.${n.key}`)}</h2>
         </div>
-        ${e.can_edit ? C : b`<p class="note">${this.tr("settings.readonly")}</p>`}
-        ${this.restarting ? b`<p class="note" role="status">${this.tr("settings.restarting")}</p>` : C}
-        ${n.fields.some((e) => e.reload) ? b`<p class="muted">${this.tr("settings.reload_note")}</p>` : C}
-        ${n.key === "tariffs" && e.supplier !== "own" ? b`<p class="muted">${this.tr("settings.supplier_note", { source: e.tariffs_source ?? "–" })}</p>` : C}
-        ${n.key === "vacation" && e.vacation ? this.renderVacation(e.vacation, e.can_edit) : C}
+        ${e.can_edit ? w : x`<p class="note">${this.tr("settings.readonly")}</p>`}
+        ${this.restarting ? x`<p class="note" role="status">${this.tr("settings.restarting")}</p>` : w}
+        ${n.fields.some((e) => e.reload) ? x`<p class="muted">${this.tr("settings.reload_note")}</p>` : w}
+        ${n.key === "tariffs" && e.supplier !== "own" ? x`<p class="muted">${this.tr("settings.supplier_note", { source: e.tariffs_source ?? "–" })}</p>` : w}
+        ${n.key === "vacation" && e.vacation ? this.renderVacation(e.vacation, e.can_edit) : w}
         <ul>
           ${n.fields.map((e) => this.renderField(e))}
         </ul>
@@ -3123,7 +3155,7 @@ var K = class extends E {
 			hour: "2-digit",
 			minute: "2-digit"
 		}).format(new Date(e)), r = e.active ? e.auto ? this.tr("settings.vac_auto", { since: e.started ? n(e.started) : "–" }) : e.until ? this.tr("settings.vac_until", { until: n(e.until) }) : this.tr("settings.vac_open") : this.tr("settings.vac_off"), i = this.vacUntil ?? (e.until ? e.until.slice(0, 16) : "");
-		return b`<div class=${e.active ? "vac on" : "vac"}>
+		return x`<div class=${e.active ? "vac on" : "vac"}>
       <div class="vachead">
         <span class="vacdot" aria-hidden="true"></span>
         <div>
@@ -3131,19 +3163,19 @@ var K = class extends E {
           <p>${r}</p>
         </div>
       </div>
-      ${t ? b`<div class="vacrow">
+      ${t ? x`<div class="vacrow">
             <label for="vac-until">${this.tr("settings.vac_until_label")}</label>
             <input id="vac-until" type="datetime-local" .value=${i} @change=${(e) => this.vacUntil = e.target.value || null} />
-            ${e.active ? b`<button type="button" class="ghost" @click=${() => void this.setVacation?.(!1, null)}>${this.tr("settings.vac_stop")}</button>` : b`<button type="button" class="primary" @click=${() => void this.setVacation?.(!0, i || null)}>${this.tr("settings.vac_start")}</button>`}
+            ${e.active ? x`<button type="button" class="ghost" @click=${() => void this.setVacation?.(!1, null)}>${this.tr("settings.vac_stop")}</button>` : x`<button type="button" class="primary" @click=${() => void this.setVacation?.(!0, i || null)}>${this.tr("settings.vac_start")}</button>`}
           </div>
-          <p class="muted">${this.tr("settings.vac_help")}</p>` : C}
+          <p class="muted">${this.tr("settings.vac_help")}</p>` : w}
     </div>`;
 	}
 	renderBar() {
 		let e = Object.keys(this.draft).length, t = this.errors.base;
-		return !e && !t ? C : b`<div class="bar" role="region" aria-label=${this.tr("settings.pending", { n: e })}>
-      ${t ? b`<p class="error" role="alert">${this.tr(`settings.errors.${t}`)}</p>` : C}
-      ${e ? b`<div class="barrow">
+		return !e && !t ? w : x`<div class="bar" role="region" aria-label=${this.tr("settings.pending", { n: e })}>
+      ${t ? x`<p class="error" role="alert">${this.tr(`settings.errors.${t}`)}</p>` : w}
+      ${e ? x`<div class="barrow">
             <span>${this.tr(e === 1 ? "settings.pending_one" : "settings.pending", { n: e })}</span>
             <span class="buttons">
               <button type="button" class="ghost" ?disabled=${this.busy} @click=${() => this.cancelDraft()}>${this.tr("settings.cancel")}</button>
@@ -3151,12 +3183,12 @@ var K = class extends E {
                 ${this.tr(this.busy ? "settings.saving" : "settings.save_restart")}
               </button>
             </span>
-          </div>` : C}
+          </div>` : w}
     </div>`;
 	}
 	renderField(e) {
 		let t = this.tip === e.key, n = `f-${e.key}`;
-		return b`<li class=${e.active === !1 ? "inactive" : ""}>
+		return x`<li class=${e.active === !1 ? "inactive" : ""}>
       <div class="text">
         <div class="labelrow">
           <label for=${n}>${this.label(e.key)}</label>
@@ -3169,14 +3201,14 @@ var K = class extends E {
           >
             i
           </button>
-          ${this.isModified(e) ? b`<span class="dot" title=${this.defaultText(e)}></span>` : C}
-          ${e.key in this.draft ? b`<span class="pending">${this.tr("settings.not_saved")}</span>` : C}
-          ${this.saved === e.key ? b`<span class="saved" role="status">${this.tr("settings.saved")}</span>` : C}
+          ${this.isModified(e) ? x`<span class="dot" title=${this.defaultText(e)}></span>` : w}
+          ${e.key in this.draft ? x`<span class="pending">${this.tr("settings.not_saved")}</span>` : w}
+          ${this.saved === e.key ? x`<span class="saved" role="status">${this.tr("settings.saved")}</span>` : w}
         </div>
         <span class="help">${this.tr(`settings.fields.${e.key}.help`)}</span>
-        ${t ? b`<div class="more" role="note">${this.tr(`settings.fields.${e.key}.more`)}</div>` : C}
+        ${t ? x`<div class="more" role="note">${this.tr(`settings.fields.${e.key}.more`)}</div>` : w}
         ${this.meta(e)}
-        ${this.errors[e.key] ? b`<span class="error" role="alert">${this.errorText(e, this.errors[e.key])}</span>` : C}
+        ${this.errors[e.key] ? x`<span class="error" role="alert">${this.errorText(e, this.errors[e.key])}</span>` : w}
       </div>
       <div class="control">${this.control(e, n)}</div>
     </li>`;
@@ -3206,14 +3238,14 @@ var K = class extends E {
 			action: this.tr(`settings.actions.${r.action}`)
 		}) : this.tr(`settings.options.${r.mode}`)));
 		let i = n && this.editable && !(e.key in this.draft && this.draft[e.key] === Tt);
-		return !t.length && !i ? C : b`<span class=${r && r.state !== "ok" && r.state !== "unset" ? "meta warn" : "meta"}
-      >${t.join(" · ")}${i ? b` <button type="button" class="link" ?disabled=${this.busy} @click=${() => this.reset(e)}>${this.tr("settings.reset")}</button>` : C}</span
+		return !t.length && !i ? w : x`<span class=${r && r.state !== "ok" && r.state !== "unset" ? "meta warn" : "meta"}
+      >${t.join(" · ")}${i ? x` <button type="button" class="link" ?disabled=${this.busy} @click=${() => this.reset(e)}>${this.tr("settings.reset")}</button>` : w}</span
     >`;
 	}
 	control(e, t) {
 		let n = !this.editable || this.busy || e.active === !1 && e.tariff, r = this.shown(e);
 		switch (e.kind) {
-			case "bool": return b`<button
+			case "bool": return x`<button
           id=${t}
           type="button"
           role="switch"
@@ -3224,7 +3256,7 @@ var K = class extends E {
         >
           <span></span>
         </button>`;
-			case "number": return b`<span class="num">
+			case "number": return x`<span class="num">
           <input
             id=${t}
             type="text"
@@ -3234,13 +3266,13 @@ var K = class extends E {
             aria-invalid=${this.errors[e.key] ? "true" : "false"}
             @change=${(t) => this.numberChanged(e, t.target)}
             @keydown=${(e) => e.key === "Enter" && e.target.blur()}
-          />${e.unit ? b`<span class="unit">${e.unit}</span>` : C}
+          />${e.unit ? x`<span class="unit">${e.unit}</span>` : w}
         </span>`;
-			case "select": return e.multiple ? this.multi(e, t, r ?? [], n) : b`<select id=${t} ?disabled=${n} @change=${(t) => this.change(e, t.target.value)}>
+			case "select": return e.multiple ? this.multi(e, t, r ?? [], n) : x`<select id=${t} ?disabled=${n} @change=${(t) => this.change(e, t.target.value)}>
           ${(e.choices ?? e.options.map((e) => ({
 				value: e,
 				label: null
-			}))).map((t) => b`<option value=${t.value} ?selected=${t.value === r}>
+			}))).map((t) => x`<option value=${t.value} ?selected=${t.value === r}>
               ${t.label ?? (e.key === "tariff_supplier" ? this.tr("settings.own") : this.tr(`settings.options.${t.value}`))}
             </option>`)}
         </select>`;
@@ -3253,8 +3285,8 @@ var K = class extends E {
 		n === null ? !t.value.trim() && e.optional ? this.change(e, null) : this.localError(e, t.value.trim() ? "not_a_number" : "required") : this.change(e, n);
 	}
 	multi(e, t, n, r) {
-		return b`<div id=${t} class="chips" role="group" aria-label=${this.label(e.key)}>
-      ${e.options.map((t) => b`<button
+		return x`<div id=${t} class="chips" role="group" aria-label=${this.label(e.key)}>
+      ${e.options.map((t) => x`<button
           type="button"
           class="chip"
           aria-pressed=${n.includes(t) ? "true" : "false"}
@@ -3273,7 +3305,7 @@ var K = class extends E {
 	}
 	picker(e, t, n, r, i) {
 		let a = this.choices(e);
-		return b`<input
+		return x`<input
         id=${t}
         class="pick"
         type="text"
@@ -3288,26 +3320,26 @@ var K = class extends E {
 			i(bt(t, a), t);
 		}}
       />
-      <datalist id=${`${t}-list`}>${a.map((e) => b`<option value=${xt(e)}></option>`)}</datalist>`;
+      <datalist id=${`${t}-list`}>${a.map((e) => x`<option value=${xt(e)}></option>`)}</datalist>`;
 	}
 	entity(e, t, n, r) {
 		let i = n ? this.choices(e).find((e) => e.id === n) ?? {
 			id: n,
 			name: this.friendlyName(n) ?? n
 		} : null;
-		return b`<span class="entityrow">
+		return x`<span class="entityrow">
       ${this.picker(e, t, i ? xt(i) : "", r, (t, n) => {
 			t ? this.change(e, t) : n.trim() ? this.localError(e, "entity_missing") : e.optional ? this.change(e, null) : this.localError(e, "required");
 		})}
-      ${n && e.optional ? b`<button type="button" class="clear" ?disabled=${r} aria-label=${this.tr("settings.clear")} @click=${() => this.change(e, null)}>
+      ${n && e.optional ? x`<button type="button" class="clear" ?disabled=${r} aria-label=${this.tr("settings.clear")} @click=${() => this.change(e, null)}>
             ×
-          </button>` : C}
+          </button>` : w}
     </span>`;
 	}
 	entities(e, t, n, r) {
-		return b`<div class="multi">
-      ${n.length ? b`<ul class="chips">
-            ${n.map((t) => b`<li class="chip on">
+		return x`<div class="multi">
+      ${n.length ? x`<ul class="chips">
+            ${n.map((t) => x`<li class="chip on">
                 <span>${this.friendlyName(t) ?? t}</span>
                 <button
                   type="button"
@@ -3319,7 +3351,7 @@ var K = class extends E {
                   ×
                 </button>
               </li>`)}
-          </ul>` : C}
+          </ul>` : w}
       ${this.picker(e, t, "", r, (t, r) => {
 			t ? n.includes(t) || this.change(e, [...n, t]) : r.trim() && this.localError(e, "entity_missing");
 		})}
@@ -3789,7 +3821,7 @@ var K = class extends E {
   `;
 	}
 };
-H([O({ attribute: !1 })], K.prototype, "view", void 0), H([O({ attribute: !1 })], K.prototype, "uiLang", void 0), H([O()], K.prototype, "locale", void 0), H([O({ attribute: !1 })], K.prototype, "friendlyName", void 0), H([O({ attribute: !1 })], K.prototype, "states", void 0), H([O({ attribute: !1 })], K.prototype, "save", void 0), H([k()], K.prototype, "group", void 0), H([k()], K.prototype, "tip", void 0), H([k()], K.prototype, "draft", void 0), H([k()], K.prototype, "errors", void 0), H([k()], K.prototype, "busy", void 0), H([k()], K.prototype, "saved", void 0), H([k()], K.prototype, "restarting", void 0), H([O({ attribute: !1 })], K.prototype, "setVacation", void 0), H([k()], K.prototype, "vacUntil", void 0), K = H([D("zephyr-settings")], K);
+H([k({ attribute: !1 })], K.prototype, "view", void 0), H([k({ attribute: !1 })], K.prototype, "uiLang", void 0), H([k()], K.prototype, "locale", void 0), H([k({ attribute: !1 })], K.prototype, "friendlyName", void 0), H([k({ attribute: !1 })], K.prototype, "states", void 0), H([k({ attribute: !1 })], K.prototype, "save", void 0), H([A()], K.prototype, "group", void 0), H([A()], K.prototype, "tip", void 0), H([A()], K.prototype, "draft", void 0), H([A()], K.prototype, "errors", void 0), H([A()], K.prototype, "busy", void 0), H([A()], K.prototype, "saved", void 0), H([A()], K.prototype, "restarting", void 0), H([k({ attribute: !1 })], K.prototype, "setVacation", void 0), H([A()], K.prototype, "vacUntil", void 0), K = H([O("zephyr-settings")], K);
 // src/diag.ts
 var Et = [
 	"charged",
@@ -3816,15 +3848,15 @@ function kt(e, t, n) {
 		maximumFractionDigits: 1
 	}).format(e / 1e3);
 	switch (e.kind) {
-		case "reason": return e.text?.[t] ?? L(t, "diag.event.reason_code", { code: e.code ?? "?" });
-		case "mode": return L(t, "diag.event.mode", { mode: L(t, `mode.${e.mode ?? ""}`) });
-		case "test": return L(t, "diag.event.test", { power: new Intl.NumberFormat(n).format(e.power ?? 0) });
-		case "excluded_on": return L(t, "diag.event.excluded_on", { kw: r(e.power ?? 0) });
-		case "flash": return L(t, "diag.event.flash", {
+		case "reason": return e.text?.[t] ?? R(t, "diag.event.reason_code", { code: e.code ?? "?" });
+		case "mode": return R(t, "diag.event.mode", { mode: R(t, `mode.${e.mode ?? ""}`) });
+		case "test": return R(t, "diag.event.test", { power: new Intl.NumberFormat(n).format(e.power ?? 0) });
+		case "excluded_on": return R(t, "diag.event.excluded_on", { kw: r(e.power ?? 0) });
+		case "flash": return R(t, "diag.event.flash", {
 			set: e.set ?? "?",
-			cause: L(t, `diag.cause.${e.cause ?? ""}`)
+			cause: R(t, `diag.cause.${e.cause ?? ""}`)
 		});
-		default: return L(t, `diag.event.${e.kind}`);
+		default: return R(t, `diag.event.${e.kind}`);
 	}
 }
 function At(e) {
@@ -3850,7 +3882,7 @@ var Mt = [
 function Nt(e, t) {
 	for (let [n, r] of Mt) {
 		let i = n.exec(e);
-		if (i) return L(t, `control.blocker.${r}`, { set: i[1] ?? "" });
+		if (i) return R(t, `control.blocker.${r}`, { set: i[1] ?? "" });
 	}
 	return e;
 }
@@ -3867,12 +3899,12 @@ function Ft(e) {
 	return Math.abs(e.expected) < .05 ? null : (e.actual - e.expected) / Math.abs(e.expected);
 }
 // src/diagnostics.ts
-var q = class extends E {
+var q = class extends D {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.busy = null, this.note = null, this.dayKind = "workday", this.metric = "load";
 	}
 	tr(e, t = {}) {
-		return L(this.uiLang, e, t);
+		return R(this.uiLang, e, t);
 	}
 	async run(e) {
 		if (!this.busy) {
@@ -3901,7 +3933,7 @@ var q = class extends E {
 	}
 	render() {
 		let e = this.view;
-		return b`<div class="layout">
+		return x`<div class="layout">
       <section class="card tools">
         <h2>${this.tr("diag.title")}</h2>
         <p class="muted">${this.tr("diag.intro")}</p>
@@ -3914,21 +3946,21 @@ var q = class extends E {
           >
             ${this.tr(this.busy === "download" ? "diag.busy" : "diag.download")}
           </button>
-          ${this.admin ? b`<button
+          ${this.admin ? x`<button
                   type="button"
                   class="ghost"
                   ?disabled=${this.busy !== null}
                   @click=${() => void this.run("export")}
                 >
                   ${this.tr(this.busy === "export" ? "diag.busy" : "diag.export")}
-                </button>` : C}
+                </button>` : w}
         </div>
-        ${this.note ? b`<p class=${this.note.error ? "note error" : "note"} role="status">${this.note.text}</p>` : C}
-        ${e ? this.renderCounters(e) : b`<div class="skeleton"></div>`}
+        ${this.note ? x`<p class=${this.note.error ? "note error" : "note"} role="status">${this.note.text}</p>` : w}
+        ${e ? this.renderCounters(e) : x`<div class="skeleton"></div>`}
       </section>
-      ${e?.energy ? this.renderEnergy(e.energy) : C}
-      ${this.planCheck ? this.renderCheck(this.planCheck) : C}
-      ${e?.profile ? this.renderProfile(e.profile) : C}
+      ${e?.energy ? this.renderEnergy(e.energy) : w}
+      ${this.planCheck ? this.renderCheck(this.planCheck) : w}
+      ${e?.profile ? this.renderProfile(e.profile) : w}
       <section class="card events" aria-labelledby="events-title">
         <div class="head">
           <h2 id="events-title">${this.tr("diag.events")}</h2>
@@ -3940,17 +3972,17 @@ var q = class extends E {
             ${this.tr("diag.refresh")}
           </button>
         </div>
-        ${e ? this.renderEvents(e) : b`<div class="skeleton"></div>`}
+        ${e ? this.renderEvents(e) : x`<div class="skeleton"></div>`}
       </section>
     </div>`;
 	}
 	renderCounters(e) {
-		if (!e.sets.length) return b`<p class="muted">${this.tr("diag.no_sets")}</p>`;
+		if (!e.sets.length) return x`<p class="muted">${this.tr("diag.no_sets")}</p>`;
 		let t = (e) => e === null ? "–" : new Intl.NumberFormat(this.locale).format(e);
-		return b`<h3>
+		return x`<h3>
         ${this.tr(e.shadow ? "diag.counters_shadow" : "diag.counters")}
       </h3>
-      ${e.shadow ? b`<p class="note">${this.tr("diag.shadow_counts")}</p>` : C}
+      ${e.shadow ? x`<p class="note">${this.tr("diag.shadow_counts")}</p>` : w}
       <table>
         <thead>
           <tr>
@@ -3962,18 +3994,18 @@ var q = class extends E {
           </tr>
         </thead>
         <tbody>
-          ${e.sets.map((e) => b`<tr>
+          ${e.sets.map((e) => x`<tr>
                   <th scope="row">${e.number}</th>
                   <td>${t(e.ram_24h)}</td>
                   <td>${t(e.flash_24h)}</td>
                   <td>${t(e.relay_24h)}</td>
                   <td class=${e.failed_24h ? "bad" : ""}>${t(e.failed_24h)}</td>
                 </tr>
-                ${e.last_error ? b`<tr>
+                ${e.last_error ? x`<tr>
                         <td colspan="5" class="lasterror">
                           ${this.tr("diag.last_error", { error: e.last_error })}
                         </td>
-                      </tr>` : C}`)}
+                      </tr>` : w}`)}
         </tbody>
       </table>
       <p class="muted small">${this.tr("diag.counters_note")}</p>`;
@@ -3989,7 +4021,7 @@ var q = class extends E {
 			minute: "2-digit",
 			timeZone: this.timeZone
 		}), r = (e) => e < 120 ? `${Math.round(e)} s` : e < 7200 ? `${Math.round(e / 60)} min` : `${(e / 3600).toLocaleString(this.locale, { maximumFractionDigits: 1 })} h`, i = Ot(e).slice(0, 8), a = e.sets.length > 1;
-		return b`<section class="card" aria-labelledby="en-title">
+		return x`<section class="card" aria-labelledby="en-title">
       <div>
         <h2 id="en-title">${this.tr("diag.energy_title")}</h2>
         <p class="muted">${this.tr("diag.energy_sub")}</p>
@@ -3998,7 +4030,7 @@ var q = class extends E {
         <thead>
           <tr>
             <th scope="col">${this.tr("diag.set")}</th>
-            ${Et.map((e) => b`<th scope="col">${this.tr(`diag.energy_${e}`)}</th>`)}
+            ${Et.map((e) => x`<th scope="col">${this.tr(`diag.energy_${e}`)}</th>`)}
             <th scope="col">${this.tr("diag.energy_estimated")}</th>
             <th scope="col">${this.tr("diag.energy_failed")}</th>
           </tr>
@@ -4006,34 +4038,34 @@ var q = class extends E {
         <tbody>
           ${e.sets.map((e, r) => {
 			let i = Dt(e);
-			return b`<tr>
+			return x`<tr>
                 <th scope="row">${e.set ?? r + 1}</th>
-                ${Et.map((n) => b`<td>${t(e.kwh[n])}</td>`)}
+                ${Et.map((n) => x`<td>${t(e.kwh[n])}</td>`)}
                 <td>
-                  ${t(i.kwh)}${i.share !== null && i.kwh > 0 ? b` <span class="muted">(${N(i.share * 100, this.locale)})</span>` : C}
+                  ${t(i.kwh)}${i.share !== null && i.kwh > 0 ? x` <span class="muted">(${P(i.share * 100, this.locale)})</span>` : w}
                 </td>
                 <td class=${e.failed_reads ? "bad" : ""}>${e.failed_reads}</td>
               </tr>
-              ${e.open_gap ? b`<tr>
+              ${e.open_gap ? x`<tr>
                       <td colspan="6" class="lasterror">
                         ${this.tr(e.open_gap.restart ? "diag.energy_open_restart" : "diag.energy_open", { since: n(e.open_gap.start) })}
                       </td>
-                    </tr>` : C}`;
+                    </tr>` : w}`;
 		})}
-          ${a ? b`<tr class="total">
+          ${a ? x`<tr class="total">
                   <th scope="row">${this.tr("diag.energy_total")}</th>
-                  ${Et.map((n) => b`<td>${t(e.totals[n])}</td>`)}
+                  ${Et.map((n) => x`<td>${t(e.totals[n])}</td>`)}
                   <td></td>
                   <td></td>
-                </tr>` : C}
+                </tr>` : w}
         </tbody>
       </table>
       <h3>${this.tr("diag.energy_gaps")}</h3>
-      ${i.length ? b`<ul class="gaps">
-              ${i.map((e) => b`<li>
+      ${i.length ? x`<ul class="gaps">
+              ${i.map((e) => x`<li>
                     <span class="when"
                       >${n(e.start)} ·
-                      ${r(e.seconds)}${a ? b` · ${this.tr("diag.set")} ${e.set}` : C}</span
+                      ${r(e.seconds)}${a ? x` · ${this.tr("diag.set")} ${e.set}` : w}</span
                     >
                     <span
                       >${this.tr(`diag.energy_m_${[
@@ -4046,7 +4078,7 @@ var q = class extends E {
                       >${Object.entries(e.kwh).filter(([e]) => Et.includes(e)).map(([e, n]) => `${this.tr(`diag.energy_${e}`).toLowerCase()} ${t(n)} kWh`).join(" · ") || this.tr("diag.energy_nothing")}</span
                     >
                   </li>`)}
-            </ul>` : b`<p class="muted">${this.tr("diag.energy_no_gaps")}</p>`}
+            </ul>` : x`<p class="muted">${this.tr("diag.energy_no_gaps")}</p>`}
       <p class="muted small">${this.tr("diag.energy_note")}</p>
     </section>`;
 	}
@@ -4071,12 +4103,12 @@ var q = class extends E {
 			day: "numeric",
 			timeZone: "UTC"
 		}).format(/* @__PURE__ */ new Date(`${e}T12:00:00Z`));
-		return b`<section class="card check" aria-labelledby="pc-title">
+		return x`<section class="card check" aria-labelledby="pc-title">
       <h2 id="pc-title">${this.tr("diag.check_title")}</h2>
       <p class="muted">
         ${this.tr("diag.check_intro", { n: e.summary.days })}
       </p>
-      ${e.summary.days === 0 ? b`<p class="note">${this.tr("diag.check_none")}</p>` : b`<table class="ctable">
+      ${e.summary.days === 0 ? x`<p class="note">${this.tr("diag.check_none")}</p>` : x`<table class="ctable">
                 <thead>
                   <tr>
                     <th scope="col"></th>
@@ -4089,9 +4121,9 @@ var q = class extends E {
                 <tbody>
                   ${t.map((t) => {
 			let r = e.summary[t];
-			if (!r) return C;
+			if (!r) return w;
 			let i = Ft(r);
-			return b`<tr
+			return x`<tr
                       class=${t === this.metric ? "on" : ""}
                       @click=${() => this.metric = t}
                     >
@@ -4109,7 +4141,7 @@ var q = class extends E {
                       <td
                         class=${i !== null && Math.abs(i) > .15 ? "warnc" : ""}
                       >
-                        ${n(t, r.diff, !0)}${i === null ? C : b` <small>(${i > 0 ? "+" : "−"}${Math.round(Math.abs(i) * 100)} %)</small>`}
+                        ${n(t, r.diff, !0)}${i === null ? w : x` <small>(${i > 0 ? "+" : "−"}${Math.round(Math.abs(i) * 100)} %)</small>`}
                       </td>
                       <td>
                         ${r.mean_abs_day === void 0 ? "–" : n(t, r.mean_abs_day)}
@@ -4128,7 +4160,7 @@ var q = class extends E {
               >
                 ${r.map((e) => {
 			let t = e[this.metric], r = e.quarters < e.of - 4;
-			return b`<div
+			return x`<div
                     class="cday"
                     title=${`${a(e.date)}: ${this.tr("diag.check_expected").toLowerCase()} ${n(this.metric, t.expected)}, ${this.tr("diag.check_actual").toLowerCase()} ${n(this.metric, t.actual)}${r ? ` (${this.tr("diag.check_partial", {
 				n: e.quarters,
@@ -4164,11 +4196,11 @@ var q = class extends E {
 			minimumFractionDigits: t,
 			maximumFractionDigits: t
 		}).format(e), i = t.airco.some((e) => e > 0) || e.workday.airco.some((e) => e > 0);
-		return b`<section class="card profile" aria-labelledby="profile-title">
+		return x`<section class="card profile" aria-labelledby="profile-title">
       <div class="head">
         <h2 id="profile-title">${this.tr("diag.profile")}</h2>
         <div class="tabs" role="group">
-          ${["workday", "weekend"].map((e) => b`<button
+          ${["workday", "weekend"].map((e) => x`<button
                 type="button"
                 class=${this.dayKind === e ? "on" : ""}
                 aria-pressed=${this.dayKind === e ? "true" : "false"}
@@ -4184,10 +4216,10 @@ var q = class extends E {
 			hours: e.hours
 		})}
       </p>
-      ${n.learned === 0 ? b`<p class="note">
+      ${n.learned === 0 ? x`<p class="note">
               ${this.tr(`diag.profile_empty_${this.dayKind}`, { mean: r(e.mean, 2) })}
-            </p>` : b`<p class="sum">
-                ${this.tr("diag.profile_total", { kwh: r(n.total) })}${i ? b` · ${this.tr("diag.profile_airco", { kwh: r(n.aircoTotal) })}` : C}
+            </p>` : x`<p class="sum">
+                ${this.tr("diag.profile_total", { kwh: r(n.total) })}${i ? x` · ${this.tr("diag.profile_airco", { kwh: r(n.aircoTotal) })}` : w}
               </p>
               <div
                 class="pchart"
@@ -4200,7 +4232,7 @@ var q = class extends E {
                 <div class="pbars">
                   ${t.house.map((e, i) => {
 			let a = t.airco[i] ?? 0;
-			return b`<div
+			return x`<div
                       class=${t.counts[i] >= t.min_count ? "pcol" : "pcol none"}
                       title=${this.tr("diag.profile_hour", {
 				hour: i,
@@ -4209,7 +4241,7 @@ var q = class extends E {
 				n: t.counts[i]
 			})}
                     >
-                      ${a > 0 ? b`<i class="air" style="height:${a / n.top * 100}%"></i>` : C}
+                      ${a > 0 ? x`<i class="air" style="height:${a / n.top * 100}%"></i>` : w}
                       <i
                         class="house"
                         style="height:${e / n.top * 100}%"
@@ -4224,7 +4256,7 @@ var q = class extends E {
 			12,
 			18,
 			23
-		].map((e) => b`<span style="left:${(e + .5) / 24 * 100}%">${String(e).padStart(2, "0")}</span>`)}
+		].map((e) => x`<span style="left:${(e + .5) / 24 * 100}%">${String(e).padStart(2, "0")}</span>`)}
                 </div>
               </div>
               <div class="plegend">
@@ -4232,7 +4264,7 @@ var q = class extends E {
                   ><i class="sw house"></i
                   >${this.tr("diag.profile_house")}</span
                 >
-                ${i ? b`<span><i class="sw air"></i>${this.tr("diag.profile_airco_legend")}</span>` : C}
+                ${i ? x`<span><i class="sw air"></i>${this.tr("diag.profile_airco_legend")}</span>` : w}
                 <span
                   ><i class="sw house faint"></i
                   >${this.tr("diag.profile_learned", {
@@ -4244,12 +4276,12 @@ var q = class extends E {
     </section>`;
 	}
 	renderEvents(e) {
-		if (!e.events.length) return b`<p class="muted">${this.tr("diag.no_events")}</p>`;
+		if (!e.events.length) return x`<p class="muted">${this.tr("diag.no_events")}</p>`;
 		let t = (/* @__PURE__ */ new Date()).toISOString();
-		return b`<ol>
+		return x`<ol>
       ${e.events.map((e) => {
-			let n = At(e), r = I(e.time, t, this.timeZone) ? P(e.time, this.locale, this.timeZone) : `${F(e.time, this.locale, this.timeZone)} ${P(e.time, this.locale, this.timeZone)}`;
-			return b`<li>
+			let n = At(e), r = L(e.time, t, this.timeZone) ? F(e.time, this.locale, this.timeZone) : `${I(e.time, this.locale, this.timeZone)} ${F(e.time, this.locale, this.timeZone)}`;
+			return x`<li>
           <time datetime=${e.time}>${r}</time>
           <span class="kind k-${n}">${this.tr(`diag.kind.${n}`)}</span>
           <span class="text">${kt(e, this.uiLang, this.locale)}</span>
@@ -4682,7 +4714,7 @@ var q = class extends E {
   `;
 	}
 };
-H([O({ attribute: !1 })], q.prototype, "view", void 0), H([O({ attribute: !1 })], q.prototype, "uiLang", void 0), H([O()], q.prototype, "locale", void 0), H([O()], q.prototype, "timeZone", void 0), H([O({ type: Boolean })], q.prototype, "admin", void 0), H([O({ attribute: !1 })], q.prototype, "download", void 0), H([O({ attribute: !1 })], q.prototype, "exportCosts", void 0), H([O({ attribute: !1 })], q.prototype, "refresh", void 0), H([O({ attribute: !1 })], q.prototype, "planCheck", void 0), H([k()], q.prototype, "busy", void 0), H([k()], q.prototype, "note", void 0), H([k()], q.prototype, "dayKind", void 0), H([k()], q.prototype, "metric", void 0), q = H([D("zephyr-diagnostics")], q);
+H([k({ attribute: !1 })], q.prototype, "view", void 0), H([k({ attribute: !1 })], q.prototype, "uiLang", void 0), H([k()], q.prototype, "locale", void 0), H([k()], q.prototype, "timeZone", void 0), H([k({ type: Boolean })], q.prototype, "admin", void 0), H([k({ attribute: !1 })], q.prototype, "download", void 0), H([k({ attribute: !1 })], q.prototype, "exportCosts", void 0), H([k({ attribute: !1 })], q.prototype, "refresh", void 0), H([k({ attribute: !1 })], q.prototype, "planCheck", void 0), H([A()], q.prototype, "busy", void 0), H([A()], q.prototype, "note", void 0), H([A()], q.prototype, "dayKind", void 0), H([A()], q.prototype, "metric", void 0), q = H([O("zephyr-diagnostics")], q);
 // src/savings.ts
 var It, Lt = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
 function Rt(e) {
@@ -4692,7 +4724,7 @@ function Rt(e) {
 		bottom: -Lt(-o)
 	};
 }
-var J = class extends E {
+var J = class extends D {
 	static {
 		It = this;
 	}
@@ -4700,13 +4732,13 @@ var J = class extends E {
 		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = It.storedForm(), this.busy = !1, this.result = null;
 	}
 	tr(e, t = {}) {
-		return L(this.uiLang, e, t);
+		return R(this.uiLang, e, t);
 	}
 	render() {
 		let e = this.view;
-		if (!e) return b`<div class="skeleton"></div>`;
+		if (!e) return x`<div class="skeleton"></div>`;
 		let t = e.periods[this.period];
-		return b`<div class="layout">
+		return x`<div class="layout">
       <section class="card hero" aria-labelledby="sv-title">
         <div class="head">
           <h2 id="sv-title">${this.tr("savings.title")}</h2>
@@ -4716,7 +4748,7 @@ var J = class extends E {
 			"week",
 			"month",
 			"year"
-		].map((e) => b`<button type="button" class=${e === this.period ? "on" : ""} aria-pressed=${e === this.period ? "true" : "false"} @click=${() => this.period = e}>
+		].map((e) => x`<button type="button" class=${e === this.period ? "on" : ""} aria-pressed=${e === this.period ? "true" : "false"} @click=${() => this.period = e}>
                 <span class="long">${this.tr(`savings.p_${e}`)}</span><span class="short">${this.tr(`savings.ps_${e}`)}</span>
               </button>`)}
           </div>
@@ -4736,12 +4768,12 @@ var J = class extends E {
         <ul>
           <li>${this.tr("savings.note_compare")}</li>
           <li>${this.tr("savings.note_fixed")}</li>
-          ${e.saldering_until ? b`<li>${this.tr("savings.note_saldering", { date: this.date(e.saldering_until) })}</li>` : C}
-          ${e.backfilled_days && e.measured_since ? b`<li>${this.tr("savings.note_hourly", { date: this.date(e.measured_since) })}</li>` : C}
-          ${e.since ? b`<li>${this.tr("savings.note_since", { date: this.date(e.since) })}</li>` : C}
+          ${e.saldering_until ? x`<li>${this.tr("savings.note_saldering", { date: this.date(e.saldering_until) })}</li>` : w}
+          ${e.backfilled_days && e.measured_since ? x`<li>${this.tr("savings.note_hourly", { date: this.date(e.measured_since) })}</li>` : w}
+          ${e.since ? x`<li>${this.tr("savings.note_since", { date: this.date(e.since) })}</li>` : w}
         </ul>
       </section>
-      ${this.admin && e.can_backfill ? this.renderBackfill(e) : C}
+      ${this.admin && e.can_backfill ? this.renderBackfill(e) : w}
     </div>`;
 	}
 	choices(e, t = "sensor") {
@@ -4752,8 +4784,8 @@ var J = class extends E {
 			id: r,
 			name: r
 		} : null;
-		return b`<label class="field" for=${a}>
-      <span>${t}${i ? b` <em>(${this.tr("savings.optional")})</em>` : C}</span>
+		return x`<label class="field" for=${a}>
+      <span>${t}${i ? x` <em>(${this.tr("savings.optional")})</em>` : w}</span>
       <input
         id=${a}
         type="text"
@@ -4769,7 +4801,7 @@ var J = class extends E {
 			};
 		}}
       />
-      <datalist id=${`${a}-list`}>${n.map((e) => b`<option value=${xt(e)}></option>`)}</datalist>
+      <datalist id=${`${a}-list`}>${n.map((e) => x`<option value=${xt(e)}></option>`)}</datalist>
     </label>`;
 	}
 	defaultFirst(e) {
@@ -4814,7 +4846,7 @@ var J = class extends E {
 			solar_entity: this.form.solar_entity === void 0 ? e.defaults?.solar_entity ?? null : this.form.solar_entity,
 			price_entity: this.form.price_entity === void 0 ? e.defaults?.price_entity ?? null : this.form.price_entity
 		}, r = !!(n.first && n.charge_entity && n.discharge_entity), i = this.result;
-		return b`<section class="card backfill" aria-labelledby="sv-bf">
+		return x`<section class="card backfill" aria-labelledby="sv-bf">
       <h2 id="sv-bf">${this.tr("savings.bf_title")}</h2>
       <p class="muted">${this.tr("savings.bf_intro", { date: e.measured_since ? this.date(e.measured_since) : "–" })}</p>
       <div class="form">
@@ -4849,7 +4881,7 @@ var J = class extends E {
             />
             ${this.tr("savings.bf_price_sensor")}
           </label>
-          ${n.price_entity === "energyzero" ? C : this.picker("price_entity", this.tr("savings.bf_price_pick"), this.choices(null), n.price_entity, !1)}
+          ${n.price_entity === "energyzero" ? w : this.picker("price_entity", this.tr("savings.bf_price_pick"), this.choices(null), n.price_entity, !1)}
         </fieldset>
       </div>
       <p class="muted small">${this.tr("savings.bf_help")}</p>
@@ -4857,11 +4889,11 @@ var J = class extends E {
         <button type="button" class="primary" ?disabled=${!r || this.busy} @click=${() => void this.run(n)}>
           ${this.tr(this.busy ? "savings.bf_busy" : "savings.bf_run")}
         </button>
-        ${e.backfilled_days ? b`<button type="button" class="ghost" ?disabled=${this.busy} @click=${() => void this.run(null)}>
+        ${e.backfilled_days ? x`<button type="button" class="ghost" ?disabled=${this.busy} @click=${() => void this.run(null)}>
               ${this.tr("savings.bf_clear", { n: e.backfilled_days })}
-            </button>` : C}
+            </button>` : w}
       </div>
-      ${i ? b`<p class=${i.ok ? "result" : "result bad"} role="status">
+      ${i ? x`<p class=${i.ok ? "result" : "result bad"} role="status">
             ${i.ok ? i.removed === void 0 ? i.days ? this.tr("savings.bf_done", {
 			n: i.days,
 			first: this.date(i.first),
@@ -4869,7 +4901,7 @@ var J = class extends E {
 			skipped: i.skipped ?? 0,
 			unpriced: (i.hours ?? 0) - (i.priced_hours ?? 0)
 		}) + (i.price_failed_days ? ` ${this.tr("savings.bf_ez_failed", { n: i.price_failed_days })}` : "") : this.tr("savings.bf_nothing") : this.tr("savings.bf_removed", { n: i.removed }) : this.tr(`savings.bf_err_${i.error}`, { entities: (i.entities ?? []).join(", ") })}
-          </p>` : C}
+          </p>` : w}
     </section>`;
 	}
 	date(e) {
@@ -4881,90 +4913,90 @@ var J = class extends E {
 		}).format(new Date(e));
 	}
 	renderHero(e) {
-		if (e.cost === null || e.cost_no_battery === null || e.savings_battery === null) return b`<p class="muted">${this.tr("savings.no_data")}</p>`;
+		if (e.cost === null || e.cost_no_battery === null || e.savings_battery === null) return x`<p class="muted">${this.tr("savings.no_data")}</p>`;
 		let t = e.savings_battery, n = t < 0, r = Math.max(e.cost, e.cost_no_battery, .01);
-		return b`<div class="big ${n ? "loss" : "win"}">
-        <span class="amount">${n ? "−" : ""}${A(Math.abs(t), this.locale)}</span>
+		return x`<div class="big ${n ? "loss" : "win"}">
+        <span class="amount">${n ? "−" : ""}${j(Math.abs(t), this.locale)}</span>
         <span class="label">${this.tr(n ? "savings.lost" : "savings.saved")}</span>
       </div>
       <div class="compare">
         <div class="row">
           <span class="name">${this.tr("savings.without")}</span>
           <span class="bar"><i class="nb" style="width:${Math.max(0, e.cost_no_battery) / r * 100}%"></i></span>
-          <span class="val">${A(e.cost_no_battery, this.locale)}</span>
+          <span class="val">${j(e.cost_no_battery, this.locale)}</span>
         </div>
         <div class="row">
           <span class="name">${this.tr("savings.paid")}</span>
           <span class="bar"><i class="paid" style="width:${Math.max(0, e.cost) / r * 100}%"></i></span>
-          <span class="val">${A(e.cost, this.locale)}</span>
+          <span class="val">${j(e.cost, this.locale)}</span>
         </div>
       </div>
-      ${e.incomplete_quarters ? b`<p class="warn">${this.tr("savings.incomplete", {
+      ${e.incomplete_quarters ? x`<p class="warn">${this.tr("savings.incomplete", {
 			n: e.incomplete_quarters,
 			total: e.quarters
-		})}</p>` : C}`;
+		})}</p>` : w}`;
 	}
 	renderDays(e) {
-		if (!e.length) return b`<p class="muted">${this.tr("savings.no_data")}</p>`;
+		if (!e.length) return x`<p class="muted">${this.tr("savings.no_data")}</p>`;
 		let { top: t, bottom: n } = Rt(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
 			weekday: "short",
 			day: "numeric",
 			month: "short",
 			timeZone: "UTC"
 		}).format(/* @__PURE__ */ new Date(`${e}T12:00:00Z`)), o = e.reduce((e, t) => e + (t.savings_battery ?? 0), 0);
-		return b`<p class="muted">${this.tr("savings.days_total", {
+		return x`<p class="muted">${this.tr("savings.days_total", {
 			n: e.length,
-			amount: A(o, this.locale)
+			amount: j(o, this.locale)
 		})}</p>
       <div class="dchart">
         <div class="daxis" aria-hidden="true">
-          <span style="top:0">${A(t, this.locale)}</span>
+          <span style="top:0">${j(t, this.locale)}</span>
           <span style="top:${i}%">€ 0</span>
-          ${n < 0 ? b`<span style="top:100%">−${A(-n, this.locale)}</span>` : C}
+          ${n < 0 ? x`<span style="top:100%">−${j(-n, this.locale)}</span>` : w}
         </div>
         <div class="dbars">
           <div class="zero" style="top:${i}%"></div>
           ${e.map((e) => {
-			let o = e.savings_battery ?? 0, s = Math.max(n, Math.min(t, o)), c = s !== o, l = Math.abs(s) / r * 100, u = o >= 0 ? `top:${i - l}%;height:${l}%` : `top:${i}%;height:${l}%`, d = [e.incomplete ? this.tr("savings.day_incomplete") : "", e.hourly ? this.tr("savings.day_hourly") : ""].filter(Boolean), f = `${a(e.day)}: ${e.savings_battery === null ? this.tr("savings.unknown") : A(o, this.locale)}${d.length ? ` (${d.join(", ")})` : ""}`;
-			return b`<div class="dcol" title=${f} aria-label=${f}>
+			let o = e.savings_battery ?? 0, s = Math.max(n, Math.min(t, o)), c = s !== o, l = Math.abs(s) / r * 100, u = o >= 0 ? `top:${i - l}%;height:${l}%` : `top:${i}%;height:${l}%`, d = [e.incomplete ? this.tr("savings.day_incomplete") : "", e.hourly ? this.tr("savings.day_hourly") : ""].filter(Boolean), f = `${a(e.day)}: ${e.savings_battery === null ? this.tr("savings.unknown") : j(o, this.locale)}${d.length ? ` (${d.join(", ")})` : ""}`;
+			return x`<div class="dcol" title=${f} aria-label=${f}>
               <i class=${`${o >= 0 ? "win" : "loss"}${e.incomplete ? " part" : ""}${c ? " cut" : ""}${e.hourly ? " hourly" : ""}`} style=${u}></i>
-              ${c ? b`<span class=${o >= 0 ? "cutlabel up" : "cutlabel down"}>${o >= 0 ? "▲" : "▼"} ${A(o, this.locale)}</span>` : C}
+              ${c ? x`<span class=${o >= 0 ? "cutlabel up" : "cutlabel down"}>${o >= 0 ? "▲" : "▼"} ${j(o, this.locale)}</span>` : w}
             </div>`;
 		})}
         </div>
         <div class="dticks" aria-hidden="true">
-          ${e.map((t, n) => n % 7 == 0 && e.length - n > 3 ? b`<span style="left:${(n + .5) / e.length * 100}%">${new Intl.DateTimeFormat(this.locale, {
+          ${e.map((t, n) => n % 7 == 0 && e.length - n > 3 ? x`<span style="left:${(n + .5) / e.length * 100}%">${new Intl.DateTimeFormat(this.locale, {
 			day: "numeric",
 			month: "short",
 			timeZone: "UTC"
-		}).format(/* @__PURE__ */ new Date(`${t.day}T12:00:00Z`))}</span>` : C)}
+		}).format(/* @__PURE__ */ new Date(`${t.day}T12:00:00Z`))}</span>` : w)}
         </div>
       </div>
       <div class="legend">
         <span><i class="sw win"></i>${this.tr("savings.leg_win")}</span>
         <span><i class="sw loss"></i>${this.tr("savings.leg_loss")}</span>
         <span><i class="sw part"></i>${this.tr("savings.leg_part")}</span>
-        ${e.some((e) => e.hourly) ? b`<span><i class="sw hourly"></i>${this.tr("savings.leg_hourly")}</span>` : C}
+        ${e.some((e) => e.hourly) ? x`<span><i class="sw hourly"></i>${this.tr("savings.leg_hourly")}</span>` : w}
       </div>`;
 	}
 	renderSplit(e) {
 		let t = e.savings_solar_via_battery, n = e.savings_trade, r = e.discharge_kwh > 0 && e.savings_battery !== null ? e.savings_battery / e.discharge_kwh : null;
-		return b`<dl>
+		return x`<dl>
         <div>
           <dt><i class="sw solar"></i>${this.tr("savings.solar_part")}</dt>
-          <dd>${t === null ? "–" : A(t, this.locale)}</dd>
+          <dd>${t === null ? "–" : j(t, this.locale)}</dd>
           <p>${this.tr("savings.solar_part_help")}</p>
         </div>
         <div>
           <dt><i class="sw trade"></i>${this.tr("savings.trade_part")}</dt>
-          <dd>${n === null ? "–" : A(n, this.locale)}</dd>
+          <dd>${n === null ? "–" : j(n, this.locale)}</dd>
           <p>${this.tr("savings.trade_part_help")}</p>
         </div>
       </dl>
       <div class="facts">
-        <span><b>${M(e.charge_kwh, this.locale)}</b> ${this.tr("savings.charged")}</span>
-        <span><b>${M(e.discharge_kwh, this.locale)}</b> ${this.tr("savings.delivered")}</span>
-        ${r === null ? C : b`<span><b>${A(r, this.locale)}</b> ${this.tr("savings.per_kwh")}</span>`}
+        <span><b>${N(e.charge_kwh, this.locale)}</b> ${this.tr("savings.charged")}</span>
+        <span><b>${N(e.discharge_kwh, this.locale)}</b> ${this.tr("savings.delivered")}</span>
+        ${r === null ? w : x`<span><b>${j(r, this.locale)}</b> ${this.tr("savings.per_kwh")}</span>`}
       </div>`;
 	}
 	static {
@@ -5396,10 +5428,10 @@ var J = class extends E {
   `;
 	}
 };
-H([O({ attribute: !1 })], J.prototype, "view", void 0), H([O({ attribute: !1 })], J.prototype, "uiLang", void 0), H([O()], J.prototype, "locale", void 0), H([O()], J.prototype, "timeZone", void 0), H([O({ type: Boolean })], J.prototype, "admin", void 0), H([O({ attribute: !1 })], J.prototype, "states", void 0), H([O({ attribute: !1 })], J.prototype, "backfill", void 0), H([k()], J.prototype, "period", void 0), H([k()], J.prototype, "form", void 0), H([k()], J.prototype, "busy", void 0), H([k()], J.prototype, "result", void 0), J = It = H([D("zephyr-savings")], J);
+H([k({ attribute: !1 })], J.prototype, "view", void 0), H([k({ attribute: !1 })], J.prototype, "uiLang", void 0), H([k()], J.prototype, "locale", void 0), H([k()], J.prototype, "timeZone", void 0), H([k({ type: Boolean })], J.prototype, "admin", void 0), H([k({ attribute: !1 })], J.prototype, "states", void 0), H([k({ attribute: !1 })], J.prototype, "backfill", void 0), H([A()], J.prototype, "period", void 0), H([A()], J.prototype, "form", void 0), H([A()], J.prototype, "busy", void 0), H([A()], J.prototype, "result", void 0), J = It = H([O("zephyr-savings")], J);
 // src/flow.ts
 function zt(e, t, n, r = 0) {
-	let i = Math.max(0, e ?? 0), a = t ?? 0, o = n ?? 0, s = Math.max(0, a + i - o), c = Math.max(0, o), l = Math.max(0, -o), u = Math.min(i, s), d = Math.min(i - u, c), f = Math.max(0, i - u - d), ee = Math.min(l, s - u), te = Math.max(0, l - ee), p = Math.max(0, s - u - ee), ne = Math.max(0, c - d);
+	let i = Math.max(0, e ?? 0), a = t ?? 0, o = n ?? 0, s = Math.max(0, a + i - o), c = Math.max(0, o), l = Math.max(0, -o), u = Math.min(i, s), d = Math.min(i - u, c), f = Math.max(0, i - u - d), p = Math.min(l, s - u), m = Math.max(0, l - p), h = Math.max(0, s - u - p), ee = Math.max(0, c - d);
 	return {
 		solar: i,
 		grid: a,
@@ -5410,10 +5442,10 @@ function zt(e, t, n, r = 0) {
 			solar_house: u,
 			solar_battery: d,
 			solar_grid: f,
-			grid_house: p,
-			grid_battery: ne,
-			battery_house: ee,
-			battery_grid: te
+			grid_house: h,
+			grid_battery: ee,
+			battery_house: p,
+			battery_grid: m
 		}
 	};
 }
@@ -5435,7 +5467,7 @@ var Ht = {
 	grid: "M9 2 6 22m9-20 3 20M5.5 8h13M4.5 14h15M12 2v20",
 	house: "M3.5 11.5 12 4.5l8.5 7M6 10v9.5h12V10M10 19.5v-5h4v5",
 	battery: "M8 5.5h8a1.5 1.5 0 0 1 1.5 1.5v12.5A1.5 1.5 0 0 1 16 21H8a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 8 5.5zM10 3h4"
-}, Z = class extends E {
+}, Z = class extends D {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.narrow = !1, this.onMedia = () => this.narrow = !!this.media?.matches;
 	}
@@ -5446,24 +5478,24 @@ var Ht = {
 		this.media?.removeEventListener("change", this.onMedia), super.disconnectedCallback();
 	}
 	tr(e, t = {}) {
-		return L(this.uiLang, e, t);
+		return R(this.uiLang, e, t);
 	}
 	render() {
 		let e = this.now;
-		if (!e) return b`<div class="skeleton"></div>`;
+		if (!e) return x`<div class="skeleton"></div>`;
 		let t = e.excluded?.active ? e.excluded.power_w ?? 0 : 0, n = zt(e.solar_w, e.grid_w, e.battery_w, t), r = n.paths, i = Math.max(500, ...Object.values(r)), a = (e, t, n, a) => {
 			let o = r[e], s = Vt(t, n);
-			if (o < 10) return x`<path d=${s} class="track"></path>`;
+			if (o < 10) return S`<path d=${s} class="track"></path>`;
 			let c = Math.min(1, o / i), l = 2 + Math.round(c * 3), u = (3.2 - c * 1.8).toFixed(2);
-			return x`<path d=${s} class="track lit ${a}" style=${`stroke-width:${2 + c * 3}`}></path>
-        ${Array.from({ length: l }, (e, t) => x`<circle r=${3 + c * 2.5} class=${`dot ${a}`}>
+			return S`<path d=${s} class="track lit ${a}" style=${`stroke-width:${2 + c * 3}`}></path>
+        ${Array.from({ length: l }, (e, t) => S`<circle r=${3 + c * 2.5} class=${`dot ${a}`}>
           <animateMotion dur=${`${u}s`} repeatCount="indefinite" begin=${`-${(t * Number(u) / l).toFixed(2)}s`} path=${s}></animateMotion>
         </circle>`)}`;
 		}, o = e.soc, s = 2 * Math.PI * 46;
-		return b`<section class="card" aria-labelledby="fl-title">
+		return x`<section class="card" aria-labelledby="fl-title">
       <div class="head">
         <h2 id="fl-title">${this.tr("flow.title")}</h2>
-        ${e.live ? C : b`<span class="chip">${this.tr("flow.shadow_chip")}</span>`}
+        ${e.live ? w : x`<span class="chip">${this.tr("flow.shadow_chip")}</span>`}
       </div>
       <svg
         viewBox=${this.narrow ? "0 0 640 620" : "0 0 640 540"}
@@ -5486,11 +5518,11 @@ var Ht = {
         ${a("battery_house", "battery", "house", "bat")}
         ${a("battery_grid", "battery", "grid", "bat")}
         <circle cx=${X[0]} cy=${X[1]} r="5" class="hub"></circle>
-        ${this.node("solar", this.tr("flow.solar"), j(n.solar, this.locale), n.solar < 10 ? this.tr("flow.none") : e.solar_estimated ? this.tr("flow.estimated") : "", n.solar >= 10)}
-        ${this.node("grid", this.tr(Math.abs(n.grid) < 30 ? "flow.grid" : n.grid > 0 ? "flow.grid_in" : "flow.grid_out"), j(Math.abs(n.grid), this.locale), Math.abs(n.grid) < 30 ? this.tr("flow.balanced") : "", Math.abs(n.grid) >= 30)}
-        ${this.node("house", this.tr("flow.house"), j(n.house, this.locale), n.airco >= 10 ? this.tr("flow.airco", { w: j(n.airco, this.locale) }) : "", !0)}
-        ${this.node("battery", this.tr(n.battery > 10 ? "flow.charging" : n.battery < -10 ? "flow.delivering" : "flow.battery"), j(Math.abs(n.battery), this.locale), o === null ? "" : N(o, this.locale), Math.abs(n.battery) > 10)}
-        ${o === null ? C : x`<circle cx=${Y.battery[0]} cy=${Y.battery[1]} r=${46} class="socring"
+        ${this.node("solar", this.tr("flow.solar"), M(n.solar, this.locale), n.solar < 10 ? this.tr("flow.none") : e.solar_estimated ? this.tr("flow.estimated") : "", n.solar >= 10)}
+        ${this.node("grid", this.tr(Math.abs(n.grid) < 30 ? "flow.grid" : n.grid > 0 ? "flow.grid_in" : "flow.grid_out"), M(Math.abs(n.grid), this.locale), Math.abs(n.grid) < 30 ? this.tr("flow.balanced") : "", Math.abs(n.grid) >= 30)}
+        ${this.node("house", this.tr("flow.house"), M(n.house, this.locale), n.airco >= 10 ? this.tr("flow.airco", { w: M(n.airco, this.locale) }) : "", !0)}
+        ${this.node("battery", this.tr(n.battery > 10 ? "flow.charging" : n.battery < -10 ? "flow.delivering" : "flow.battery"), M(Math.abs(n.battery), this.locale), o === null ? "" : P(o, this.locale), Math.abs(n.battery) > 10)}
+        ${o === null ? w : S`<circle cx=${Y.battery[0]} cy=${Y.battery[1]} r=${46} class="socring"
               stroke-dasharray=${`${s * Math.max(0, Math.min(100, o)) / 100} ${s}`}
               transform=${`rotate(-90 ${Y.battery[0]} ${Y.battery[1]})`}></circle>`}
       </svg>
@@ -5498,21 +5530,21 @@ var Ht = {
     </section>`;
 	}
 	summary(e) {
-		let t = [], n = e.paths, r = (e) => j(e, this.locale);
+		let t = [], n = e.paths, r = (e) => M(e, this.locale);
 		if (n.solar_house >= 10 && t.push(this.tr("flow.s_solar_house", { w: r(n.solar_house) })), n.battery_house >= 10 && t.push(this.tr("flow.s_battery_house", { w: r(n.battery_house) })), n.grid_house >= 10 && t.push(this.tr("flow.s_grid_house", { w: r(n.grid_house) })), n.solar_battery >= 10 && t.push(this.tr("flow.s_solar_battery", { w: r(n.solar_battery) })), n.grid_battery >= 10 && t.push(this.tr("flow.s_grid_battery", { w: r(n.grid_battery) })), n.solar_grid + n.battery_grid >= 10 && t.push(this.tr("flow.s_export", { w: r(n.solar_grid + n.battery_grid) })), !t.length) return this.tr("flow.s_idle");
 		let i = t.join("; ");
 		return `${i.charAt(0).toUpperCase()}${i.slice(1)}.`;
 	}
 	node(e, t, n, r, i) {
 		let [a, o] = Y[e], s = this.narrow ? 1.7 : 1, c = e === "solar" && this.narrow, l = c ? a + Bt + 16 : a, u = c ? o - 30 : e === "solar" ? o - Bt - 44 : o + Bt + 26 * s, d = c ? "start" : "middle";
-		return x`<g class=${`node ${e}${i ? " active" : ""}`} text-anchor=${d}>
+		return S`<g class=${`node ${e}${i ? " active" : ""}`} text-anchor=${d}>
       <circle cx=${a} cy=${o} r=${58} class="halo"></circle>
       <circle cx=${a} cy=${o} r=${Bt} class="disc"></circle>
       <circle cx=${a} cy=${o} r=${46} class="ring"></circle>
       <g transform=${`translate(${a - 22} ${o - 22}) scale(1.833)`}><path d=${Ht[e]} class="icon"></path></g>
       <text x=${l} y=${u} class="label" text-anchor=${d}>${t.toUpperCase()}</text>
       <text x=${l} y=${u + 26 * s} class="value" text-anchor=${d}>${n}</text>
-      ${r ? x`<text x=${l} y=${u + 44 * s} class="sub" text-anchor=${d}>${r}</text>` : C}
+      ${r ? S`<text x=${l} y=${u + 44 * s} class="sub" text-anchor=${d}>${r}</text>` : w}
     </g>`;
 	}
 	static {
@@ -5705,15 +5737,29 @@ var Ht = {
   `;
 	}
 };
-H([O({ attribute: !1 })], Z.prototype, "now", void 0), H([O({ attribute: !1 })], Z.prototype, "uiLang", void 0), H([O()], Z.prototype, "locale", void 0), H([k()], Z.prototype, "narrow", void 0), Z = H([D("zephyr-flow")], Z);
+H([k({ attribute: !1 })], Z.prototype, "now", void 0), H([k({ attribute: !1 })], Z.prototype, "uiLang", void 0), H([k()], Z.prototype, "locale", void 0), H([A()], Z.prototype, "narrow", void 0), Z = H([O("zephyr-flow")], Z);
 // src/stroom.ts
-var Ut = .8;
-function Wt(e) {
+function Ut(e, t, n) {
+	let r = "", i = !1;
+	for (let [a, o] of e) o === null ? i = !1 : (r += `${i ? "L" : "M"}${t(a).toFixed(1)},${n(o).toFixed(1)}`, i = !0);
+	return r;
+}
+function Wt(e, t) {
+	let n = Math.round(e);
+	return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toLocaleString(t)} W`;
+}
+function Gt(e) {
+	let t = 200;
+	for (let [, n, r] of e) n !== null && (t = Math.max(t, Math.abs(n - r)));
+	return Math.ceil(t / 100) * 100;
+}
+var Kt = .8;
+function qt(e) {
 	if (!e) return "none";
 	let [t, n, r, i] = e;
 	return t < 30 ? "idle" : n / t >= .8 ? "good" : r >= i ? "import" : "export";
 }
-var Gt = [
+var Jt = [
 	["solar", [
 		["solar_house", "house"],
 		["solar_battery", "battery"],
@@ -5721,44 +5767,45 @@ var Gt = [
 	]],
 	["grid", [["grid_house", "house"], ["grid_battery", "battery"]]],
 	["battery", [["battery_house", "house"], ["battery_grid", "grid"]]]
-], Q = class extends E {
+], Q = class extends D {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC";
 	}
 	tr(e, t = {}) {
-		return L(this.uiLang, e, t);
+		return R(this.uiLang, e, t);
 	}
 	render() {
 		let e = this.view;
-		return b`<div class="layout">
+		return x`<div class="layout">
       <zephyr-flow
         .now=${this.now}
         .uiLang=${this.uiLang}
         .locale=${this.locale}
       ></zephyr-flow>
-      ${e ? this.renderZero(e) : b`<section class="card skeleton"></section>`}
-      ${e ? this.renderRoutes(e.today) : C}
-      ${e && e.airco_set ? this.renderAirco(e.today) : C}
+      ${e ? this.renderZero(e) : x`<section class="card skeleton"></section>`}
+      ${e ? this.renderRoutes(e.today) : w}
+      ${e && e.airco_set ? this.renderAirco(e.today) : w}
+      ${e?.regulation ? this.renderRegulation(e.regulation, e.live) : w}
     </div>`;
 	}
 	renderZero(e) {
 		let t = e.zero, n = t?.score ?? null, r = n !== null && n >= .8;
-		return b`<section class="card" aria-labelledby="zr-title">
+		return x`<section class="card" aria-labelledby="zr-title">
       <div>
         <h2 id="zr-title">${this.tr("stroom.zero_title")}</h2>
         <p class="sub">
           ${this.tr("stroom.zero_sub", { band: t?.band_w ?? 50 })}
         </p>
       </div>
-      ${n === null ? b`<p class="empty">
+      ${n === null ? x`<p class="empty">
               ${this.tr(e.live ? "stroom.zero_empty" : "stroom.zero_shadow")}
-            </p>` : b`<div class="row">
-              <span class="big">${N(n * 100, this.locale)}</span>
+            </p>` : x`<div class="row">
+              <span class="big">${P(n * 100, this.locale)}</span>
               <span class=${r ? "pill good" : "pill warn"}
-                >${this.tr(r ? "stroom.zero_good" : "stroom.zero_low", { goal: N(Ut * 100, this.locale) })}</span
+                >${this.tr(r ? "stroom.zero_good" : "stroom.zero_low", { goal: P(Kt * 100, this.locale) })}</span
               >
             </div>`}
-      ${t ? this.strip(t) : C}
+      ${t ? this.strip(t) : w}
       <div class="legend">
         <span
           ><i class="k good"></i
@@ -5768,28 +5815,28 @@ var Gt = [
         <span><i class="k export"></i>${this.tr("stroom.zero_export")}</span>
         <span><i class="k idle"></i>${this.tr("stroom.zero_idle")}</span>
       </div>
-      ${t && n !== null ? b`<div class="facts">
+      ${t && n !== null ? x`<div class="facts">
               <span
                 ><span class="k-l">${this.tr("stroom.zero_imported")}</span
-                ><b>${M(t.import_kwh, this.locale, 2)}</b></span
+                ><b>${N(t.import_kwh, this.locale, 2)}</b></span
               >
               <span
                 ><span class="k-l">${this.tr("stroom.zero_exported")}</span
-                ><b>${M(t.export_kwh, this.locale, 2)}</b></span
+                ><b>${N(t.export_kwh, this.locale, 2)}</b></span
               >
               <span
                 ><span class="k-l">${this.tr("stroom.zero_mean")}</span
-                ><b>${j(t.mean_dev_w ?? 0, this.locale)}</b></span
+                ><b>${M(t.mean_dev_w ?? 0, this.locale)}</b></span
               >
-            </div>` : C}
+            </div>` : w}
     </section>`;
 	}
 	strip(e) {
 		let t = 360 / (e.buckets.length || 288), n = e.buckets.map((e, n) => {
-			let r = Wt(e);
-			return r === "none" ? C : x`<rect x=${(n * t).toFixed(2)} y="2" width=${(t + .3).toFixed(2)} height="22" class=${`c ${r}`}></rect>`;
+			let r = qt(e);
+			return r === "none" ? w : S`<rect x=${(n * t).toFixed(2)} y="2" width=${(t + .3).toFixed(2)} height="22" class=${`c ${r}`}></rect>`;
 		});
-		return b`<svg
+		return x`<svg
       class="strip"
       viewBox="0 0 360 40"
       role="img"
@@ -5804,7 +5851,7 @@ var Gt = [
 			12,
 			18,
 			24
-		].map((e) => x`<text x=${Math.min(358, Math.max(1, e * 15))} y="37" text-anchor=${e === 0 ? "start" : e === 24 ? "end" : "middle"}>${String(e).padStart(2, "0")}:00</text>`)}
+		].map((e) => S`<text x=${Math.min(358, Math.max(1, e * 15))} y="37" text-anchor=${e === 0 ? "start" : e === 24 ? "end" : "middle"}>${String(e).padStart(2, "0")}:00</text>`)}
     </svg>`;
 	}
 	renderRoutes(e) {
@@ -5813,15 +5860,15 @@ var Gt = [
 			minute: "2-digit",
 			timeZone: this.timeZone
 		}) : null;
-		return b`<section class="card" aria-labelledby="rt-title">
+		return x`<section class="card" aria-labelledby="rt-title">
       <div>
         <h2 id="rt-title">${this.tr("stroom.routes_title")}</h2>
         <p class="sub">
           ${n ? this.tr("stroom.routes_sub", { until: n }) : this.tr("stroom.routes_none")}
         </p>
       </div>
-      ${Gt.map(([n, r]) => b`<div class="grp">${this.tr(`stroom.src_${n}`)}</div>
-            ${r.map(([r, i]) => b`<div class="route">
+      ${Jt.map(([n, r]) => x`<div class="grp">${this.tr(`stroom.src_${n}`)}</div>
+            ${r.map(([r, i]) => x`<div class="route">
                   <span>→ ${this.tr(`stroom.to_${i}`)}</span>
                   <div class="bar">
                     <div
@@ -5829,37 +5876,128 @@ var Gt = [
                       style=${`width:${Math.min(100, e.routes[r] / t * 100)}%`}
                     ></div>
                   </div>
-                  <span class="num">${M(e.routes[r], this.locale)}</span>
+                  <span class="num">${N(e.routes[r], this.locale)}</span>
                 </div>`)}`)}
       <div class="facts">
-        ${e.self_use === null ? C : b`<span
+        ${e.self_use === null ? w : x`<span
                 ><span class="k-l">${this.tr("stroom.self_use")}</span
-                ><b>${N(e.self_use * 100, this.locale)}</b></span
+                ><b>${P(e.self_use * 100, this.locale)}</b></span
               >`}
-        ${e.own_source === null ? C : b`<span
+        ${e.own_source === null ? w : x`<span
                 ><span class="k-l">${this.tr("stroom.own_source")}</span
-                ><b>${N(e.own_source * 100, this.locale)}</b></span
+                ><b>${P(e.own_source * 100, this.locale)}</b></span
               >`}
-        ${e.grid_battery_price === null ? C : b`<span
+        ${e.grid_battery_price === null ? w : x`<span
                 ><span class="k-l">${this.tr("stroom.grid_battery_price")}</span
-                ><b>${A(e.grid_battery_price, this.locale)}/kWh</b></span
+                ><b>${j(e.grid_battery_price, this.locale)}/kWh</b></span
               >`}
       </div>
     </section>`;
 	}
+	renderRegulation(e, t) {
+		let n = typeof window < "u" && window.matchMedia?.("(max-width: 600px)").matches, r = n ? 360 : 760, i = n ? 50 : 52, a = r - 8, o = e.window_s, s = (e) => i + (e + o) / o * (a - i), c = Gt(e.samples), l = (e) => 69 - Math.max(-c, Math.min(c, e)) / c * 55, u = 0, d = 0;
+		for (let [, , , t, n] of e.samples) u = Math.min(u, t, n ?? 0), d = Math.max(d, t, n ?? 0);
+		let f = Math.max(500, Math.ceil((d - u) / 250) * 250), p = Math.floor(u / 250) * 250, m = (e) => 248 - (e - p) / f * 90, h = Ut(e.samples.map(([e, t, n]) => [e, t === null ? null : t - n]), s, l), ee = Ut(e.samples.map(([e, , , t]) => [e, t]), s, m), te = Ut(e.samples.map(([e, , , , t]) => [e, t]), s, m), ne = [], g = null;
+		e.samples.forEach(([t, , , , , n], r) => {
+			let i = r === e.samples.length - 1;
+			!n && g === null && (g = t), (n || i) && g !== null && (ne.push(S`<rect x=${s(g)} y=${14} width=${Math.max(1, s(t) - s(g))} height=${234} class="idle"></rect>`), g = null);
+		});
+		let re = [
+			p,
+			p + f / 2,
+			p + f
+		], ie = this.tr("stroom.reg_title");
+		return x`<section class="card wide" aria-labelledby="rg-title">
+      <div>
+        <h2 id="rg-title">${ie}</h2>
+        <p class="sub">${this.tr("stroom.reg_sub")}</p>
+      </div>
+      ${e.samples.length < 2 ? x`<p class="empty">${this.tr("stroom.reg_empty")}</p>` : x`<svg
+                class="reg"
+                viewBox="0 0 ${r} ${270}"
+                role="img"
+                aria-label=${ie}
+              >
+                ${ne}
+                <rect
+                  x=${i}
+                  y=${l(e.band_w)}
+                  width=${a - i}
+                  height=${l(-e.band_w) - l(e.band_w)}
+                  class="band"
+                ></rect>
+                <line
+                  x1=${i}
+                  x2=${a}
+                  y1=${l(0)}
+                  y2=${l(0)}
+                  class="axis"
+                ></line>
+                ${[
+			c,
+			0,
+			-c
+		].map((e) => S`<text x=${i - 6} y=${l(e) + 3} text-anchor="end">${Wt(e, this.locale)}</text>`)}
+                <text x=${i} y=${11} class="cap">
+                  ${this.tr("stroom.reg_p1")}
+                </text>
+                <path d=${h} class="dev"></path>
+                ${re.map((e) => S`<line x1=${i} x2=${a} y1=${m(e)} y2=${m(e)} class="grid"></line>
+                  <text x=${i - 6} y=${m(e) + 3} text-anchor="end">${Wt(e, this.locale)}</text>`)}
+                <text x=${i} y=${153} class="cap">
+                  ${this.tr("stroom.reg_battery")}
+                </text>
+                <path d=${ee} class="sp"></path>
+                <path d=${te} class="bat"></path>
+                ${[
+			[-o, this.tr("stroom.reg_ago", { m: Math.round(o / 60) })],
+			[-o / 2, this.tr("stroom.reg_ago", { m: Math.round(o / 120) })],
+			[0, this.tr("stroom.reg_now")]
+		].map(([e, t]) => S`<text x=${s(e)} y=${264} text-anchor=${e === 0 ? "end" : e === -o ? "start" : "middle"}>${t}</text>`)}
+              </svg>
+              <div class="legend">
+                <span><i class="k dev"></i>${this.tr("stroom.reg_dev")}</span>
+                <span><i class="k band"></i>±${e.band_w} W</span>
+                <span><i class="k sp"></i>${this.tr("stroom.reg_sp")}</span>
+                <span><i class="k bat"></i>${this.tr("stroom.reg_bat")}</span>
+                <span
+                  ><i class="k idle"></i
+                  >${this.tr(t ? "stroom.reg_idle" : "stroom.reg_shadow")}</span
+                >
+              </div>
+              <div class="facts">
+                <span
+                  ><span class="k-l">${this.tr("stroom.reg_recovery")}</span
+                  ><b
+                    >${e.recovery_s === null ? "–" : this.tr("stroom.reg_seconds", { s: e.recovery_s.toLocaleString(this.locale) })}</b
+                  ></span
+                >
+                <span
+                  ><span class="k-l">${this.tr("stroom.reg_follow")}</span
+                  ><b
+                    >${e.follow_w === null ? "–" : M(e.follow_w, this.locale)}</b
+                  ></span
+                >
+                <span
+                  ><span class="k-l">${this.tr("stroom.reg_peaks")}</span
+                  ><b>${e.peaks}</b></span
+                >
+              </div>`}
+    </section>`;
+	}
 	renderAirco(e) {
 		let t = e.airco, n = t ? Math.max(.1, t.solar_kwh, t.grid_kwh) : 1;
-		return b`<section class="card" aria-labelledby="ac-title">
+		return x`<section class="card" aria-labelledby="ac-title">
       <div>
         <h2 id="ac-title">${this.tr("stroom.airco_title")}</h2>
         <p class="sub">${this.tr("stroom.airco_sub")}</p>
       </div>
-      ${t ? b`<div class="row">
-                <span class="big">${M(t.kwh, this.locale)}</span>
-                ${t.share === null ? C : b`<span class="muted">${this.tr("stroom.airco_share", { share: N(t.share * 100, this.locale) })}</span>`}
+      ${t ? x`<div class="row">
+                <span class="big">${N(t.kwh, this.locale)}</span>
+                ${t.share === null ? w : x`<span class="muted">${this.tr("stroom.airco_share", { share: P(t.share * 100, this.locale) })}</span>`}
               </div>
               <div class="grp">${this.tr("stroom.airco_fed")}</div>
-              ${[["solar", t.solar_kwh], ["grid", t.grid_kwh]].map(([e, t]) => b`<div class="route">
+              ${[["solar", t.solar_kwh], ["grid", t.grid_kwh]].map(([e, t]) => x`<div class="route">
                     <span>${this.tr(`stroom.src_${e}`)}</span>
                     <div class="bar">
                       <div
@@ -5867,21 +6005,21 @@ var Gt = [
                         style=${`width:${t / n * 100}%`}
                       ></div>
                     </div>
-                    <span class="num">${M(t, this.locale)}</span>
+                    <span class="num">${N(t, this.locale)}</span>
                   </div>`)}
-              ${t.grid_cost === null ? C : b`<div class="facts">
+              ${t.grid_cost === null ? w : x`<div class="facts">
                       <span
                         ><span class="k-l">${this.tr("stroom.airco_cost")}</span
-                        ><b>${A(t.grid_cost, this.locale)}</b></span
+                        ><b>${j(t.grid_cost, this.locale)}</b></span
                       >
-                      ${t.grid_price === null ? C : b`<span
+                      ${t.grid_price === null ? w : x`<span
                               ><span class="k-l"
                                 >${this.tr("stroom.airco_price")}</span
                               ><b
-                                >${A(t.grid_price, this.locale)}/kWh</b
+                                >${j(t.grid_price, this.locale)}/kWh</b
                               ></span
                             >`}
-                    </div>`}` : b`<p class="empty">${this.tr("stroom.routes_none")}</p>`}
+                    </div>`}` : x`<p class="empty">${this.tr("stroom.routes_none")}</p>`}
     </section>`;
 	}
 	static {
@@ -5906,6 +6044,59 @@ var Gt = [
       display: flex;
       flex-direction: column;
       gap: 12px;
+    }
+    .wide {
+      grid-column: 1 / -1;
+    }
+    .reg {
+      width: 100%;
+      max-width: 1000px;
+      display: block;
+    }
+    .reg text {
+      font-size: 10px;
+      fill: var(--z-muted);
+      font-family: var(--z-font);
+    }
+    .reg .cap {
+      font-size: 10.5px;
+    }
+    .reg .band,
+    .k.band {
+      fill: var(--z-good-bg);
+      background: var(--z-good-bg);
+    }
+    .reg .idle {
+      fill: var(--z-track);
+      opacity: 0.45;
+    }
+    .reg .axis,
+    .reg .grid {
+      stroke: var(--z-border);
+    }
+    .reg path {
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linejoin: round;
+    }
+    .reg .dev {
+      stroke: var(--z-bar);
+    }
+    .reg .sp {
+      stroke: var(--z-charge);
+      stroke-dasharray: 5 3;
+    }
+    .reg .bat {
+      stroke: var(--z-deliver);
+    }
+    .k.dev {
+      background: var(--z-bar);
+    }
+    .k.sp {
+      background: var(--z-charge);
+    }
+    .k.bat {
+      background: var(--z-deliver);
     }
     .skeleton {
       min-height: 220px;
@@ -6060,6 +6251,9 @@ var Gt = [
       .card {
         padding: 16px;
       }
+      .reg.narrow text {
+        font-size: 9.5px;
+      }
       .big {
         font-size: 34px;
       }
@@ -6067,9 +6261,9 @@ var Gt = [
   `;
 	}
 };
-H([O({ attribute: !1 })], Q.prototype, "now", void 0), H([O({ attribute: !1 })], Q.prototype, "view", void 0), H([O({ attribute: !1 })], Q.prototype, "uiLang", void 0), H([O()], Q.prototype, "locale", void 0), H([O()], Q.prototype, "timeZone", void 0), Q = H([D("zephyr-stroom")], Q);
+H([k({ attribute: !1 })], Q.prototype, "now", void 0), H([k({ attribute: !1 })], Q.prototype, "view", void 0), H([k({ attribute: !1 })], Q.prototype, "uiLang", void 0), H([k()], Q.prototype, "locale", void 0), H([k()], Q.prototype, "timeZone", void 0), Q = H([O("zephyr-stroom")], Q);
 // src/zephyr-panel.ts
-var Kt = "/zephyr_static", qt = [
+var Yt = "/zephyr_static", Xt = [
 	[
 		"Inter",
 		400,
@@ -6091,13 +6285,13 @@ var Kt = "/zephyr_static", qt = [
 		"space-grotesk-latin-700-normal.woff2"
 	]
 ];
-function Jt(e) {
+function Zt(e) {
 	let t = "zephyr-fonts";
 	if (document.getElementById(t)) return;
 	let n = document.createElement("style");
-	n.id = t, n.textContent = qt.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
+	n.id = t, n.textContent = Xt.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
 }
-var $ = class extends E {
+var $ = class extends D {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.period = mt(), this.confirmLive = !1, this.controlBusy = !1, this.controlError = null, this.pendingMode = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
 			this.status = "loading", this.subscribe();
@@ -6170,10 +6364,10 @@ var $ = class extends E {
 		};
 	}
 	get base() {
-		return this.panel?.config?.static ?? Kt;
+		return this.panel?.config?.static ?? Yt;
 	}
 	get uiLang() {
-		return Je(this.hass?.locale?.language ?? this.hass?.language);
+		return qe(this.hass?.locale?.language ?? this.hass?.language);
 	}
 	get locale() {
 		return this.hass?.locale?.language ?? this.hass?.language ?? "en";
@@ -6182,10 +6376,10 @@ var $ = class extends E {
 		return this.hass?.config.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 	}
 	tr(e, t = {}) {
-		return L(this.uiLang, e, t);
+		return R(this.uiLang, e, t);
 	}
 	connectedCallback() {
-		super.connectedCallback(), Jt(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
+		super.connectedCallback(), Zt(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), window.clearInterval(this.clockTimer), window.clearInterval(this.planTimer), window.clearInterval(this.setsTimer), window.clearTimeout(this.retryTimer), this.watch(void 0), this.stop();
@@ -6291,7 +6485,7 @@ var $ = class extends E {
 		this.confirmLive = !1, t && await this.callService("switch", e ? "turn_on" : "turn_off", { entity_id: t });
 	}
 	show(e) {
-		this.view = e, window.clearInterval(this.setsTimer), e === "sets" ? (this.loadSets(), this.setsTimer = window.setInterval(() => void this.loadSets(), 1e4)) : e === "settings" ? this.loadSettings() : e === "savings" ? this.loadSavings() : e === "stroom" ? (this.loadStroom(), this.setsTimer = window.setInterval(() => void this.loadStroom(), 6e4)) : e === "diagnostics" && (this.loadEvents(), this.setsTimer = window.setInterval(() => void this.loadEvents(), 15e3));
+		this.view = e, window.clearInterval(this.setsTimer), e === "sets" ? (this.loadSets(), this.setsTimer = window.setInterval(() => void this.loadSets(), 1e4)) : e === "settings" ? this.loadSettings() : e === "savings" ? this.loadSavings() : e === "stroom" ? (this.loadStroom(), this.setsTimer = window.setInterval(() => void this.loadStroom(), 5e3)) : e === "diagnostics" && (this.loadEvents(), this.setsTimer = window.setInterval(() => void this.loadEvents(), 15e3));
 	}
 	retry(e) {
 		window.clearTimeout(this.retryTimer), this.retryTimer = window.setTimeout(() => void this.subscribe(), e);
@@ -6300,7 +6494,7 @@ var $ = class extends E {
 		e.type === "now" ? (this.now = e.data, this.pendingMode === e.data.mode && (this.pendingMode = null), this.status = "ok", this.clockMs = Date.now(), this.loadPlan()) : e.type === "unloaded" && (this.unsubscribe = void 0, this.status = "reloading", this.retry(3e3));
 	}
 	render() {
-		return b`
+		return x`
       <div class="page">
         ${this.renderHeader()}
         <main>${this.renderBanner()} ${this.renderView()}</main>
@@ -6316,14 +6510,14 @@ var $ = class extends E {
 			["settings", "menu.settings"],
 			["diagnostics", "menu.diagnostics"]
 		];
-		return b`
+		return x`
       <header>
         <div class="brand">
           <img src="${this.base}/logo.png" alt="" width="32" height="32" />
           <span>ZEPHYR</span>
         </div>
         <nav aria-label=${this.tr("menu.label")}>
-          ${t.map(([e, t]) => b`<button
+          ${t.map(([e, t]) => x`<button
                 type="button"
                 class=${this.view === e ? "tab active" : "tab"}
                 aria-current=${this.view === e ? "page" : "false"}
@@ -6333,9 +6527,9 @@ var $ = class extends E {
               </button>`)}
         </nav>
         <div class="meta">
-          ${e ? this.renderControls(e) : C}
+          ${e ? this.renderControls(e) : w}
           <span class="time"
-            >${P(new Date(this.clockMs).toISOString(), this.locale, this.timeZone)}</span
+            >${F(new Date(this.clockMs).toISOString(), this.locale, this.timeZone)}</span
           >
         </div>
       </header>
@@ -6343,17 +6537,17 @@ var $ = class extends E {
 	}
 	renderControls(e) {
 		let t = this.admin && !!e.entities?.mode, n = this.admin && !!e.entities?.live, r = this.tr(e.live ? "header.live" : "header.shadow"), i = this.tr(e.live ? "header.live_title" : "header.shadow_title");
-		return b`${t ? b`<label class="chipselect">
+		return x`${t ? x`<label class="chipselect">
             <span class="sr">${this.tr("control.mode")}</span>
             <select
               class="chip"
               ?disabled=${this.controlBusy}
               @change=${(e) => this.setMode(e.target.value)}
             >
-              ${e.modes.map((t) => b`<option value=${t} ?selected=${t === e.mode}>${this.tr(`mode.${t}`)}</option>`)}
+              ${e.modes.map((t) => x`<option value=${t} ?selected=${t === e.mode}>${this.tr(`mode.${t}`)}</option>`)}
             </select>
-          </label>` : b`<span class="chip">${this.tr(`mode.${e.mode}`)}</span>`}
-    ${n ? b`<span class="livewrap">
+          </label>` : x`<span class="chip">${this.tr(`mode.${e.mode}`)}</span>`}
+    ${n ? x`<span class="livewrap">
             <button
               type="button"
               class=${e.live ? "chip live" : "chip"}
@@ -6365,23 +6559,23 @@ var $ = class extends E {
             >
               ${r}
             </button>
-            ${this.confirmLive && !e.live ? this.renderConfirmLive(e) : C}
-          </span>` : b`<span class=${e.live ? "chip live" : "chip"} title=${i}
+            ${this.confirmLive && !e.live ? this.renderConfirmLive(e) : w}
+          </span>` : x`<span class=${e.live ? "chip live" : "chip"} title=${i}
             >${r}</span
           >`}`;
 	}
 	renderConfirmLive(e) {
 		let t = e.blockers.length > 0;
-		return b`<div
+		return x`<div
       class="popover"
       role="dialog"
       aria-label=${this.tr("control.live_title")}
     >
       <strong>${this.tr("control.live_title")}</strong>
       <p>${this.tr(t ? "control.live_blocked" : "control.live_text")}</p>
-      ${t ? b`<ul>
-              ${e.blockers.map((e) => b`<li>${Nt(e, this.uiLang)}</li>`)}
-            </ul>` : C}
+      ${t ? x`<ul>
+              ${e.blockers.map((e) => x`<li>${Nt(e, this.uiLang)}</li>`)}
+            </ul>` : w}
       <div class="row">
         <button
           type="button"
@@ -6402,14 +6596,14 @@ var $ = class extends E {
     </div>`;
 	}
 	renderFast(e) {
-		if (!this.admin || !e.entities?.mode) return C;
+		if (!this.admin || !e.entities?.mode) return w;
 		let t = jt(e.mode, e.modes, e.previous_mode), n = this.pendingMode !== null && this.pendingMode !== e.mode, r = t.find((e) => e.active);
-		return b`<div
+		return x`<div
       class="fast"
       role="group"
       aria-label=${this.tr("control.fast")}
     >
-      ${t.map((e) => b`<button
+      ${t.map((e) => x`<button
             type="button"
             class=${e.active ? "primary" : "ghost"}
             aria-pressed=${e.active ? "true" : "false"}
@@ -6418,15 +6612,15 @@ var $ = class extends E {
           >
             ${e.active ? this.tr("control.stop_fast", { mode: this.tr(`control.${e.mode}`) }) : this.tr(`control.${e.mode}`)}
           </button>`)}
-      ${r ? b`<span class="fastnote"
+      ${r ? x`<span class="fastnote"
               >${this.tr(`control.running_${r.mode}`)}
               ${this.tr("control.back_to", { mode: this.tr(`mode.${r.target}`) })}</span
-            >` : C}
-      ${e.live ? C : b`<span class="fastnote">${this.tr("control.shadow_note")}</span>`}
+            >` : w}
+      ${e.live ? w : x`<span class="fastnote">${this.tr("control.shadow_note")}</span>`}
     </div>`;
 	}
 	renderBanner() {
-		if (this.controlError && this.status === "ok") return b`<div class="banner" role="alert">
+		if (this.controlError && this.status === "ok") return x`<div class="banner" role="alert">
         ${this.tr("control.failed", { error: this.controlError })}
         <button
           type="button"
@@ -6437,26 +6631,26 @@ var $ = class extends E {
         </button>
       </div>`;
 		switch (this.status) {
-			case "not_loaded": return b`<div class="banner" role="status">
+			case "not_loaded": return x`<div class="banner" role="status">
           ${this.tr("status.not_loaded")}
         </div>`;
-			case "reloading": return b`<div class="banner info" role="status">
+			case "reloading": return x`<div class="banner info" role="status">
           ${this.tr("status.reloading")}
         </div>`;
-			case "disconnected": return b`<div class="banner" role="status">
-          ${this.tr("status.disconnected", { time: this.now ? P(this.now.updated_at, this.locale, this.timeZone) : "–" })}
+			case "disconnected": return x`<div class="banner" role="status">
+          ${this.tr("status.disconnected", { time: this.now ? F(this.now.updated_at, this.locale, this.timeZone) : "–" })}
         </div>`;
-			default: return C;
+			default: return w;
 		}
 	}
 	renderView() {
-		return this.view === "plan" ? this.renderPlan() : this.view === "sets" ? b`<zephyr-sets
+		return this.view === "plan" ? this.renderPlan() : this.view === "sets" ? x`<zephyr-sets
         class=${this.status === "ok" ? "" : "stale"}
         .view=${this.setsView}
         .uiLang=${this.uiLang}
         .locale=${this.locale}
         .timeZone=${this.timeZone}
-      ></zephyr-sets>` : this.view === "settings" ? b`<zephyr-settings
+      ></zephyr-sets>` : this.view === "settings" ? x`<zephyr-settings
         class=${this.status === "ok" ? "" : "stale"}
         .view=${this.settingsView}
         .uiLang=${this.uiLang}
@@ -6465,14 +6659,14 @@ var $ = class extends E {
         .states=${this.hass?.states}
         .save=${this.saveSettings}
         .setVacation=${this.setVacation}
-      ></zephyr-settings>` : this.view === "stroom" ? b`<zephyr-stroom
+      ></zephyr-settings>` : this.view === "stroom" ? x`<zephyr-stroom
         class=${this.status === "ok" ? "" : "stale"}
         .now=${this.now}
         .view=${this.stroomView}
         .uiLang=${this.uiLang}
         .locale=${this.locale}
         .timeZone=${this.timeZone}
-      ></zephyr-stroom>` : this.view === "savings" ? b`<zephyr-savings
+      ></zephyr-stroom>` : this.view === "savings" ? x`<zephyr-savings
         class=${this.status === "ok" ? "" : "stale"}
         .view=${this.savingsView}
         .uiLang=${this.uiLang}
@@ -6481,7 +6675,7 @@ var $ = class extends E {
         ?admin=${this.admin}
         .states=${this.hass?.states}
         .backfill=${this.backfillSavings}
-      ></zephyr-savings>` : this.view === "diagnostics" ? b`<zephyr-diagnostics
+      ></zephyr-savings>` : this.view === "diagnostics" ? x`<zephyr-diagnostics
         class=${this.status === "ok" ? "" : "stale"}
         .view=${this.eventsView}
         .uiLang=${this.uiLang}
@@ -6495,21 +6689,21 @@ var $ = class extends E {
       ></zephyr-diagnostics>` : this.renderComing();
 	}
 	renderComing() {
-		return b`<section class="card coming">
+		return x`<section class="card coming">
       ${this.tr("status.coming")}
     </section>`;
 	}
 	renderPlan() {
 		let e = this.now;
-		if (!e) return b`<section class="cards" aria-busy="true">
+		if (!e) return x`<section class="cards" aria-busy="true">
         ${[
 			0,
 			1,
 			2
-		].map(() => b`<div class="card skeleton" aria-hidden="true"></div>`)}
+		].map(() => x`<div class="card skeleton" aria-hidden="true"></div>`)}
       </section>`;
 		let t = this.status === "ok" ? "" : "stale";
-		return b`<section
+		return x`<section
         class="cards ${t}"
         aria-label=${this.tr("now.title")}
       >
@@ -6517,11 +6711,11 @@ var $ = class extends E {
         ${this.renderNext(e)}
       </section>
       ${this.renderFast(e)}
-      ${e.price_entity ? this.renderPlanParts(e, t) : C}`;
+      ${e.price_entity ? this.renderPlanParts(e, t) : w}`;
 	}
 	renderPlanParts(e, t) {
 		let n = null;
-		return e.mode === "dynamic_forecasting" ? e.live || (n = this.tr("plan.shadow_note")) : n = this.tr("plan.mode_note", { mode: this.tr(`mode.${e.mode}`) }), b`${n ? b`<div class="banner info" role="note">${n}</div>` : C}
+		return e.mode === "dynamic_forecasting" ? e.live || (n = this.tr("plan.shadow_note")) : n = this.tr("plan.mode_note", { mode: this.tr(`mode.${e.mode}`) }), x`${n ? x`<div class="banner info" role="note">${n}</div>` : w}
       <zephyr-prices-plan
         class=${t}
         .view=${this.planView}
@@ -6532,38 +6726,38 @@ var $ = class extends E {
         .period=${this.period}
         @zephyr-period=${(e) => this.period = e.detail}
       ></zephyr-prices-plan>
-      ${this.planView ? b`<section class="duo ${t}">${this.renderBlocks(this.planView)} ${this.renderWhy(this.planView)}</section>` : C}`;
+      ${this.planView ? x`<section class="duo ${t}">${this.renderBlocks(this.planView)} ${this.renderWhy(this.planView)}</section>` : w}`;
 	}
 	range(e) {
-		let t = P(e.start, this.locale, this.timeZone), n = P(e.end, this.locale, this.timeZone), r = `${this.tr("blocks.tomorrow")} `, i = I(e.start, this.clockMs, this.timeZone), a = I(new Date(e.end).getTime() - 1, this.clockMs, this.timeZone);
+		let t = F(e.start, this.locale, this.timeZone), n = F(e.end, this.locale, this.timeZone), r = `${this.tr("blocks.tomorrow")} `, i = L(e.start, this.clockMs, this.timeZone), a = L(new Date(e.end).getTime() - 1, this.clockMs, this.timeZone);
 		return `${i ? "" : r}${t}–${i && !a ? r : ""}${n}`;
 	}
 	shownBlocks(e) {
-		let t = Qe(e.quarters, this.timeZone)[1] ?? null;
+		let t = Ze(e.quarters, this.timeZone)[1] ?? null;
 		return ct(e.blocks, this.period, new Date(this.clockMs).toISOString(), t, this.timeZone);
 	}
 	renderBlocks(e) {
 		let t = this.shownBlocks(e).slice(0, 12);
-		return b`<article class="card">
+		return x`<article class="card">
       <h2>${this.tr(`blocks.title_${this.period}`)}</h2>
-      ${t.length ? b`<ul class="blocks">
-              ${t.map((e) => b`<li>
+      ${t.length ? x`<ul class="blocks">
+              ${t.map((e) => x`<li>
                     <span class="when">${this.range(e)}</span>
                     <span
                       class="swatch"
                       style="background:${V(e.action)}"
                     ></span>
                     <span class="what"
-                      >${this.tr(`blocks.what_${e.action}`)}${e.indicative ? b` <em>(${this.tr("blocks.indicative")})</em>` : C}</span
+                      >${this.tr(`blocks.what_${e.action}`)}${e.indicative ? x` <em>(${this.tr("blocks.indicative")})</em>` : w}</span
                     >
                     <span class="detail"
                       >${this.tr(`blocks.${e.action}`, {
-			kwh: M(e.kwh, this.locale),
-			price: A(e.price, this.locale)
+			kwh: N(e.kwh, this.locale),
+			price: j(e.price, this.locale)
 		})}</span
                     >
                   </li>`)}
-            </ul>` : b`<p class="text">
+            </ul>` : x`<p class="text">
               ${this.tr(this.period === "tomorrow" ? "blocks.none_tomorrow" : "blocks.none")}
             </p>`}
     </article>`;
@@ -6574,26 +6768,26 @@ var $ = class extends E {
 		let n = this.shownBlocks(e).filter((e) => !e.indicative), r = n.filter((e) => e.action === "charge").sort((e, t) => e.price - t.price)[0];
 		r ? t.push(this.tr("why.cheapest", {
 			time: this.range(r),
-			price: A(r.price, this.locale)
+			price: j(r.price, this.locale)
 		})) : n.length && t.push(this.tr("why.no_charge"));
-		let i = $e(e.quarters, this.period, this.timeZone).filter((e) => !e.past), a = z(i)?.max;
+		let i = Qe(e.quarters, this.period, this.timeZone).filter((e) => !e.past), a = B(i)?.max;
 		if (a && a.action === "deliver") {
-			let e = `${I(a.start, this.clockMs, this.timeZone) ? "" : `${this.tr("blocks.tomorrow")} `}${P(a.start, this.locale, this.timeZone)}`;
+			let e = `${L(a.start, this.clockMs, this.timeZone) ? "" : `${this.tr("blocks.tomorrow")} `}${F(a.start, this.locale, this.timeZone)}`;
 			t.push(this.tr("why.peak", {
 				time: e,
-				price: A(a.buy, this.locale)
+				price: j(a.buy, this.locale)
 			}));
 		}
-		return i.some((e) => e.indicative) && t.push(this.tr("why.indicative")), b`<article class="card">
+		return i.some((e) => e.indicative) && t.push(this.tr("why.indicative")), x`<article class="card">
       <h2>${this.tr(`why.title_${this.period}`)}</h2>
       <ul class="why">
-        ${t.map((e) => b`<li>${e}</li>`)}
+        ${t.map((e) => x`<li>${e}</li>`)}
       </ul>
     </article>`;
 	}
 	renderNow(e) {
-		let t = e.action ?? "standby", n = e.battery_w !== null && Math.abs(e.battery_w) >= 10 ? ` · ${j(e.battery_w, this.locale)}` : "";
-		return b`<article class="card">
+		let t = e.action ?? "standby", n = e.battery_w !== null && Math.abs(e.battery_w) >= 10 ? ` · ${M(e.battery_w, this.locale)}` : "";
+		return x`<article class="card">
       <div class="label">
         <span class="dot" style="background:${V(t)}"></span
         >${this.tr("now.title")}
@@ -6601,33 +6795,33 @@ var $ = class extends E {
       <div class="big">
         ${e.action ? this.tr(`action.${t}`) + n : this.tr("now.waiting")}
       </div>
-      ${e.reason ? b`<p class="text">${e.reason[this.uiLang]}</p>` : C}
+      ${e.reason ? x`<p class="text">${e.reason[this.uiLang]}</p>` : w}
       ${this.renderAirco(e)}
       <div class="foot">
-        ${e.grid_w === null ? C : b`<span>${this.tr("now.grid", { value: Ge(e.grid_w, this.locale) })}</span>`}
-        ${e.live ? C : b`<span>${this.tr("now.shadow_note")}</span>`}
+        ${e.grid_w === null ? w : x`<span>${this.tr("now.grid", { value: We(e.grid_w, this.locale) })}</span>`}
+        ${e.live ? w : x`<span>${this.tr("now.shadow_note")}</span>`}
       </div>
     </article>`;
 	}
 	renderAirco(e) {
-		let t = Ze(e.excluded, this.uiLang, this.locale);
-		if (!t) return C;
-		let n = t.icon === "heat" ? x`<path d="M12 3c1 3 4 4.5 4 8.5a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-7.5Z"/>` : t.icon === "cool" ? x`<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>` : C;
-		return b`<p class=${t.allowed ? "airco allowed" : "airco"}>
-      ${t.icon ? b`<svg viewBox="0 0 24 24" aria-hidden="true">${n}</svg>` : C}
+		let t = Xe(e.excluded, this.uiLang, this.locale);
+		if (!t) return w;
+		let n = t.icon === "heat" ? S`<path d="M12 3c1 3 4 4.5 4 8.5a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-7.5Z"/>` : t.icon === "cool" ? S`<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>` : w;
+		return x`<p class=${t.allowed ? "airco allowed" : "airco"}>
+      ${t.icon ? x`<svg viewBox="0 0 24 24" aria-hidden="true">${n}</svg>` : w}
       <span
-        >${t.text}${t.estimate ? b` <span
+        >${t.text}${t.estimate ? x` <span
                 class="estimate"
                 tabindex="0"
                 title=${t.estimate}
                 aria-label=${`${this.tr("airco.estimate")}: ${t.estimate}`}
                 >${this.tr("airco.estimate")}</span
-              >` : C}</span
+              >` : w}</span
       >
     </p>`;
 	}
 	renderBattery(e) {
-		if (e.soc === null) return b`<article class="card">
+		if (e.soc === null) return x`<article class="card">
         <div class="label">${this.tr("battery.title")}</div>
         <p class="text">${this.tr("battery.unknown")}</p>
       </article>`;
@@ -6635,16 +6829,16 @@ var $ = class extends E {
 			online: e.sets_online,
 			total: e.sets_total
 		});
-		return b`<article class="card">
+		return x`<article class="card">
       <div class="label">${this.tr("battery.title")}</div>
       <div class="big-row">
-        <span class="big">${N(t, this.locale)}</span>
-        ${e.energy_kwh !== null && e.capacity_kwh !== null ? b`<span class="muted"
+        <span class="big">${P(t, this.locale)}</span>
+        ${e.energy_kwh !== null && e.capacity_kwh !== null ? x`<span class="muted"
                 >${this.tr("battery.of", {
-			energy: M(e.energy_kwh, this.locale),
-			capacity: M(e.capacity_kwh, this.locale)
+			energy: N(e.energy_kwh, this.locale),
+			capacity: N(e.capacity_kwh, this.locale)
 		})}</span
-              >` : C}
+              >` : w}
       </div>
       <div
         class="bar"
@@ -6655,10 +6849,10 @@ var $ = class extends E {
         aria-label=${this.tr("battery.title")}
       >
         <div class="fill" style="width:${t}%"></div>
-        ${n > 0 ? b`<div
+        ${n > 0 ? x`<div
                 class="buffer"
                 style="left:${e.min_soc}%;width:${Math.min(n, 100 - e.min_soc)}%"
-              ></div>` : C}
+              ></div>` : w}
         <div class="mark" style="left:${e.min_soc}%"></div>
         <div class="mark" style="left:${e.max_soc}%"></div>
       </div>
@@ -6674,55 +6868,55 @@ var $ = class extends E {
     </article>`;
 	}
 	renderNext(e) {
-		let t = e.plan, n = (e = "") => b`<div class="label">
+		let t = e.plan, n = (e = "") => x`<div class="label">
         <span
           class="dot"
           style="background:${V(t?.next?.action)}"
         ></span
         >${this.tr("next.title")}${e}
       </div>`;
-		if (!e.price_entity) return b`<article class="card">
+		if (!e.price_entity) return x`<article class="card">
         ${n()}
         <p class="text">${this.tr("next.no_price_source")}</p>
       </article>`;
-		if (!t) return b`<article class="card">
+		if (!t) return x`<article class="card">
         ${n()}
         <p class="text">${this.tr("status.loading")}</p>
       </article>`;
 		if (t.state === "no_prices") {
 			let e = t.no_prices_since ?? t.calculated_at;
-			return b`<article class="card">
+			return x`<article class="card">
         ${n()}
         <p class="text warn">
-          ${this.tr("next.no_prices", { time: e ? P(e, this.locale, this.timeZone) : "–" })}
+          ${this.tr("next.no_prices", { time: e ? F(e, this.locale, this.timeZone) : "–" })}
         </p>
       </article>`;
 		}
-		let r = t.next, i = t.price_now ? b`<div class="foot">
+		let r = t.next, i = t.price_now ? x`<div class="foot">
           <span
-            >${this.tr("next.price_now", { price: A(t.price_now.import, this.locale) })}</span
+            >${this.tr("next.price_now", { price: j(t.price_now.import, this.locale) })}</span
           >
-        </div>` : C;
-		if (!r) return b`<article class="card">
+        </div>` : w;
+		if (!r) return x`<article class="card">
         ${n()}
         <p class="text">${this.tr("next.none")}</p>
         ${i}
       </article>`;
-		let a = Ke(r.start, this.clockMs), o = a <= 0 ? this.tr("next.now") : this.tr("next.in", { time: a >= 60 ? this.tr("next.hours", {
+		let a = Ge(r.start, this.clockMs), o = a <= 0 ? this.tr("next.now") : this.tr("next.in", { time: a >= 60 ? this.tr("next.hours", {
 			h: Math.floor(a / 60),
 			m: a % 60
-		}) : this.tr("next.minutes", { m: a }) }), s = P(r.start, this.locale, this.timeZone), c = this.tr(`action.${r.action}`), l = I(r.start, this.clockMs, this.timeZone) ? this.tr("next.at", {
+		}) : this.tr("next.minutes", { m: a }) }), s = F(r.start, this.locale, this.timeZone), c = this.tr(`action.${r.action}`), l = L(r.start, this.clockMs, this.timeZone) ? this.tr("next.at", {
 			time: s,
 			action: c
 		}) : this.tr("next.tomorrow", {
 			time: s,
 			action: c
 		});
-		return b`<article class="card">
+		return x`<article class="card">
       ${n(` · ${o}`)}
       <div class="big">${l}</div>
       <p class="text">${this.detail(t)}</p>
-      ${r.indicative ? b`<p class="text muted">${this.tr("next.indicative")}</p>` : C}
+      ${r.indicative ? x`<p class="text muted">${this.tr("next.indicative")}</p>` : w}
       ${i}
     </article>`;
 	}
@@ -6730,8 +6924,8 @@ var $ = class extends E {
 		let t = e.next;
 		if (!t) return "";
 		let n = {
-			kwh: M(t.kwh, this.locale),
-			price: A(t.price, this.locale)
+			kwh: N(t.kwh, this.locale),
+			price: j(t.price, this.locale)
 		};
 		return this.tr(`next.${t.action}`, n);
 	}
@@ -7207,5 +7401,5 @@ var $ = class extends E {
     `];
 	}
 };
-H([O({ attribute: !1 })], $.prototype, "hass", void 0), H([O({ type: Boolean })], $.prototype, "narrow", void 0), H([O({ attribute: !1 })], $.prototype, "panel", void 0), H([k()], $.prototype, "now", void 0), H([k()], $.prototype, "status", void 0), H([k()], $.prototype, "view", void 0), H([k()], $.prototype, "clockMs", void 0), H([k()], $.prototype, "planView", void 0), H([k()], $.prototype, "setsView", void 0), H([k()], $.prototype, "settingsView", void 0), H([k()], $.prototype, "period", void 0), H([k()], $.prototype, "eventsView", void 0), H([k()], $.prototype, "savingsView", void 0), H([k()], $.prototype, "stroomView", void 0), H([k()], $.prototype, "planCheck", void 0), H([k()], $.prototype, "confirmLive", void 0), H([k()], $.prototype, "controlBusy", void 0), H([k()], $.prototype, "controlError", void 0), H([k()], $.prototype, "pendingMode", void 0), $ = H([D("zephyr-panel")], $);
+H([k({ attribute: !1 })], $.prototype, "hass", void 0), H([k({ type: Boolean })], $.prototype, "narrow", void 0), H([k({ attribute: !1 })], $.prototype, "panel", void 0), H([A()], $.prototype, "now", void 0), H([A()], $.prototype, "status", void 0), H([A()], $.prototype, "view", void 0), H([A()], $.prototype, "clockMs", void 0), H([A()], $.prototype, "planView", void 0), H([A()], $.prototype, "setsView", void 0), H([A()], $.prototype, "settingsView", void 0), H([A()], $.prototype, "period", void 0), H([A()], $.prototype, "eventsView", void 0), H([A()], $.prototype, "savingsView", void 0), H([A()], $.prototype, "stroomView", void 0), H([A()], $.prototype, "planCheck", void 0), H([A()], $.prototype, "confirmLive", void 0), H([A()], $.prototype, "controlBusy", void 0), H([A()], $.prototype, "controlError", void 0), H([A()], $.prototype, "pendingMode", void 0), $ = H([O("zephyr-panel")], $);
 export { $ as ZephyrPanel };

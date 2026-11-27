@@ -732,6 +732,22 @@
     "airco_share": "{share} of the house use",
     "airco_fed": "Fed by",
     "airco_cost": "Air con power from the grid",
-    "airco_price": "Avg price"
+    "airco_price": "Avg price",
+    "reg_title": "Regulation · last 10 minutes",
+    "reg_sub": "Whether ZEPHYR corrects fast enough and the battery does what it is asked",
+    "reg_empty": "No samples since the start yet.",
+    "reg_p1": "P1 against target (import +)",
+    "reg_battery": "Battery (+ charging, − delivering)",
+    "reg_ago": "−{m} min",
+    "reg_now": "now",
+    "reg_dev": "P1 against target",
+    "reg_sp": "asked of the battery",
+    "reg_bat": "battery actual",
+    "reg_idle": "not at zero",
+    "reg_shadow": "shadow: ZEPHYR is not steering",
+    "reg_recovery": "Recovery after a peak (median)",
+    "reg_seconds": "{s} s",
+    "reg_follow": "Battery follows, avg difference",
+    "reg_peaks": "Peaks > 150 W"
   }
 }

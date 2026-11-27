@@ -7,6 +7,15 @@
 - `zephyr/events` gives `energy` (the counters' diagnostics).
 - Tests: estimated share and gap order in vitest.
 
+### 0.8.38 — Stroom: card Regeling, last 10 minutes
+- New card on *Stroom*: the last 10 minutes of the controller, one sample per second.
+  - Top: P1 against its target (0 W, or the airco), with the ±50 W band.
+  - Bottom: the setpoint asked of the sets (dashed) and the battery power measured (+ charging).
+  - Time ZEPHYR did not steer to zero is shaded.
+- Below the chart: median recovery after a peak (> 150 W, back within the band), mean difference between asked and actual battery power while steering, number of peaks.
+- *Stroom* refreshes every 5 s while open; on a phone the chart is drawn narrower so the labels stay readable.
+- `zephyr/stroom` gives `regulation`; `core/stroom.RegulationLog`.
+- Tests: window and one sample per second, peaks and recovery with an airco target; chart helpers in vitest.
 ### 0.8.37 — Short peaks counted (PLANNING 1.3)
 - The step filter (B20) leaves short peaks (a boiling-water tap, a kettle) to the grid for up to 10 s; ZEPHYR now counts the energy of those peaks: the part of the grid power the controller did not see while a peak was held (not while charging, where the filter does not apply).
 - Diagnostics `control.p1_filter`: `peak_kwh` (since the start), and per local day `kwh` and `holds` (last 14 days, in memory). Basis for the panel (Besparing) later.
