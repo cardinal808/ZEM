@@ -91,6 +91,7 @@ def plan_quarters(
                 "solar": round(slot.solar_kwh, 3),
                 "load": round(slot.load_kwh, 3),
                 "excluded": round(slot.excluded_kwh, 3),
+                "appliances": round(slot.appliance_kwh, 3),
                 "indicative": slot.indicative,
             }
 

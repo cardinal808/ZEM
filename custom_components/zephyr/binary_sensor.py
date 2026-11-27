@@ -10,10 +10,18 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ZephyrConfigEntry, ZephyrRuntime
 from .coordinator import SetCoordinator
-from .entity import ZephyrControlEntity, ZephyrSetEntity
+from .entity import ZephyrApplianceEntity, ZephyrControlEntity, ZephyrSetEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
+    appliances = entry.runtime_data.appliances
+    if appliances is not None:
+        for appliance in appliances.appliances.values():
+            if appliance.power_entity:
+                async_add_entities(
+                    [ZephyrApplianceRunningSensor(appliances, appliance, entry, "running", "binary_sensor")],
+                    config_subentry_id=appliance.id,
+                )
     async_add_entities([ZephyrP1Sensor(entry.runtime_data, entry), ZephyrExpensiveHourSensor(entry.runtime_data, entry)])
     for subentry_id, coordinator in entry.runtime_data.coordinators.items():
         async_add_entities(
@@ -107,3 +115,13 @@ class ZephyrExpensiveHourSensor(ZephyrControlEntity, BinarySensorEntity):
             "expensive_hours": self._control.expensive_hours,
             "reserve_soc": self._control.reserve_soc,
         }
+
+
+class ZephyrApplianceRunningSensor(ZephyrApplianceEntity, BinarySensorEntity):
+    """The appliance runs now (from its smart plug)."""
+
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.appliance.running

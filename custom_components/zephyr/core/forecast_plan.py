@@ -20,10 +20,11 @@ Slots are counted in UTC, so days with 92 or 100 quarters come out right.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta, tzinfo
 from typing import Any, Final
 
+from .appliances import PlannedRun, place_runs
 from .planner import Action, Battery, Plan, PlannerSettings, Slot, Step, plan, step
 from .price_window import PriceSlot, parse_nordpool_raw
 from .solar_history import ForecastPeriod
@@ -128,6 +129,8 @@ class HorizonSlot:
     """Price taken from today's pattern (tomorrow not known yet)."""
     excluded_kwh: float = 0.0
     """Expected use of a load the battery may not feed (B41, the air conditioner); not in ``load_kwh``."""
+    appliance_kwh: float = 0.0
+    """Planned appliance runs in this quarter (B36); already in ``load_kwh``."""
 
     def planner_slot(self) -> Slot:
         return Slot(QUARTER.total_seconds() / 3600, self.buy, self.sell, self.load_kwh, solar_for_planner(self))
@@ -385,6 +388,7 @@ class PlanOutcome:
                     "solar": round(slot.solar_kwh, 3),
                     "load": round(slot.load_kwh, 3),
                     "excluded": round(slot.excluded_kwh, 3),
+                    "appliances": round(slot.appliance_kwh, 3),
                     "battery_kw": round((st.charged - st.delivered) / hours, 2),
                     "soc": soc,
                     "grid_kw": round((st.grid_import - st.grid_export) / hours, 2),
@@ -548,3 +552,52 @@ def _action_reason(outcome: PlanOutcome, language: str, tz: tzinfo, text: Callab
     bat = outcome.battery
     loss = (bat.eta_in * bat.eta_out) if bat is not None else 1.0
     return text("deliver_then_charge", now=now, time=_clock(nxt.start, tz), charge=_euro(nxt.price / loss, language))
+
+
+# --- planned appliances (B36) -----------------------------------------------------------
+
+
+def with_appliances(slots: Sequence[HorizonSlot], extra: Mapping[datetime, float]) -> list[HorizonSlot]:
+    """The horizon with the planned runs added to the expected use."""
+    if not extra:
+        return list(slots)
+    out = []
+    for slot in slots:
+        kwh = extra.get(slot.start, 0.0)
+        out.append(replace(slot, load_kwh=slot.load_kwh + kwh, appliance_kwh=kwh) if kwh else slot)
+    return out
+
+
+TRIAL_STEPS: Final = 20
+"""Coarser energy grid for judging candidate starts (speed); the final plan uses the full grid."""
+
+
+def plan_appliances(
+    slots: Sequence[HorizonSlot],
+    bat: BatteryInput,
+    now: datetime,
+    settings: PlannerSettings,
+    runs: Sequence[PlannedRun],
+    profiles: Mapping[str, Sequence[float]],
+    previous: Action = Action.DELIVER,
+) -> dict[datetime, float]:
+    """Best starts for the planned runs (set on the runs) and their use per quarter."""
+    if not runs or not slots:
+        return {}
+    battery = bat.battery()
+    trial = replace(settings, steps=min(settings.steps, TRIAL_STEPS))
+    end = slots[-1].start + QUARTER
+
+    # The plan has no value for energy left in the battery at its end; without one, running a
+    # load late on the battery would look free. Value it at the mean buy price after losses.
+    end_value = sum(s.buy for s in slots) / len(slots) * bat.eta_out
+
+    def cost(extra: Mapping[datetime, float]) -> float:
+        horizon = [s.planner_slot() for s in with_appliances(slots, extra)]
+        result = plan(horizon, battery, bat.energy_now, trial, previous)
+        left = result.steps[-1].energy_after if result.steps else bat.energy_now
+        # Use that falls beyond the horizon is priced at the last buy price (not free).
+        beyond = sum(kwh for start, kwh in extra.items() if start >= end)
+        return result.cost - left * end_value + beyond * slots[-1].buy
+
+    return place_runs(runs, profiles, now, cost)

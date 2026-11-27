@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.41 — Planned appliances: dishwasher, washing machine, dryer (B36)
+- **New subentry *Appliance*** (ZEPHYR → Add appliance): name, kind (dishwasher, washing machine, dryer heat pump / condenser, other), optional smart-plug power and energy sensor, standard window (*from* — empty = from now — and *done by*; a time before the start = the next day). Dishwasher defaults to now → 07:00, the others 08:00 → 20:00.
+- **Per appliance:** `button.zephyr_<name>_plan` (one run in the standard window; press again for another), `button.zephyr_<name>_clear`, `sensor.zephyr_<name>_planned` (number of runs; windows, kWh per run, profile source), `sensor.zephyr_<name>_best_start` (timestamp; cost, cost when started at once, saving, all starts) and, with a plug, `binary_sensor.zephyr_<name>_running`. Actions `zephyr.plan_appliance` (runs, start after, done before, fixed start) and `zephyr.clear_appliance`.
+- **Planner:** every planned run gets the start that makes the **whole plan** cheapest (battery, solar, prices; candidates every 15 min in the window; a later start only when it saves at least €0.02), runs of one appliance one after another, a dryer after the planned wash. The plan then counts the runs in the expected use (timeline `appliances`). Battery energy left at the end of the horizon is valued at the mean buy price, so a late run on the battery does not look free.
+- **Profiles:** first estimate per kind; with a plug, learned from the **recorder history at once** (raw history of the last 10 days) and from every later run (median per minute after 3 runs, last 20 kept). A run seen on the plug in its window fulfils the planned run; planned runs disappear after their window.
+- Not yet: subtracting the appliances from the learned house profile (so typical runs stay in it and an announced run counts on top), automatic start, the panel card (UI chat).
+- Diagnostics `appliances`. Tests: profiles, run detection, learned profile, windows, best start, two washes in a row, dryer after washer, the planner on solar; in HA the buttons and action, a run on the plug, learning from the recorder.
+
 ### 0.8.40 — Inverter power limit at a negative export price
 - With *ZEPHYR curtails*, new optional settings **Inverter power limit** (a number entity in %, e.g. `number.solaredge_modbus_active_power_limit`) and **Inverter rated power** (W).
 - While the export price is negative ZEPHYR sets the limit every 10 s so the inverter produces what the house and the batteries take: wanted production = solar now (solar power sensors) + measured grid power − 50 W, plus the power the sets could still charge (not when full), as % of the rated power. Written only on a change of at least 2 % (or to 0 / 100 %); back to 100 % when the price is no longer negative. Not fully off, because the import price is often still positive then.

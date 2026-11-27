@@ -36,3 +36,31 @@ reset_profile:
       selector:
         boolean:
 get_plan:
+plan_appliance:
+  fields:
+    appliance:
+      required: true
+      selector:
+        text:
+    runs:
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: box
+    start_after:
+      selector:
+        datetime:
+    done_before:
+      selector:
+        datetime:
+    fixed_start:
+      selector:
+        datetime:
+clear_appliance:
+  fields:
+    appliance:
+      required: true
+      selector:
+        text:
