@@ -816,8 +816,9 @@ export class ZephyrStroom extends LitElement {
     @container (min-width: 1200px) {
       /* Wide panel: picture on the left (as high as the screen allows), today's cards next to it. */
       .layout {
-        grid-template-columns: minmax(0, calc((100vh - 300px) * 1.2252 + 30px)) minmax(360px, 1fr);
+        grid-template-columns: minmax(0, calc((100vh - 300px) * 1.3176 + 30px)) minmax(360px, 1fr);
         grid-template-rows: auto 1fr;
+        align-items: stretch;
       }
       zephyr-house {
         grid-column: 1;

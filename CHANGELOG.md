@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.52 — Stroom: clean house picture, cards line up
+- New base picture from Bjorn without lines or text (no more smudge on the roof), widened on the right so each floor has its box next to it. Every line runs from its box to its spot (panels, battery, meter, car, floor) and is only drawn with power.
+- Wide panel: the *Nu* card is as high as *Energie per route* and *Verbruikers vandaag* together, so the bottoms line up (Bjorn 27-11, 90 % zoom).
+
 ### 0.8.51 — Stroom: house picture fits the screen
 - The *Nu* card (picture and totals bar) is never taller than the screen; the picture shrinks with its proportions (Bjorn 27-11: the bar fell off the screen).
 - Wide panel (≥ 1200 px): the picture on the left, *Energie per route* and *Verbruikers vandaag* next to it.
