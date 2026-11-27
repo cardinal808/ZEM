@@ -49,6 +49,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_plan_check)
     async_register_command(hass, ws_savings_backfill)
     async_register_command(hass, ws_stroom)
+    async_register_command(hass, ws_house_layout)
     async_register_command(hass, ws_appliances)
     async_register_command(hass, ws_appliances_plan)
     async_register_command(hass, ws_appliances_clear)
@@ -426,7 +427,13 @@ def settings_view(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, An
                 item["status"] = _source_status(hass, entry, field.key, value)
             fields.append(item)
         groups.append({"key": group, "fields": fields, "modified": sum(1 for f in fields if f["modified"])})
-    return {"groups": groups, "supplier": supplier, "tariffs_source": in_use.get("source"), "vacation": _vacation(hass, entry)}
+    return {
+        "groups": groups,
+        "supplier": supplier,
+        "tariffs_source": in_use.get("source"),
+        "vacation": _vacation(hass, entry),
+        "house": runtime.house.view(None) if runtime.house is not None else [],
+    }
 
 
 def _vacation(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any] | None:
@@ -677,13 +684,38 @@ def stroom_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
     start = dt_util.as_utc(dt_util.start_of_local_day())
     records = list(runtime.costs.records_since(start).values()) if runtime.costs is not None else []
     control = runtime.control
+    today = stroom.routes(records)
+    airco = today.get("airco")
+    devices = runtime.house.view(None if airco is None else airco["kwh"]) if runtime.house is not None else []
+    known = sum(d["today_kwh"] or 0.0 for d in devices)
     return {
-        "today": stroom.routes(records),
+        "today": today,
+        "devices": devices,
+        "rest_today_kwh": round(max(0.0, today["house_kwh"] - known), 3) if devices else None,
         "zero": control.zero.view() if control is not None else None,
         "regulation": control.regulation.view(time.monotonic()) if control is not None else None,
         "live": control is not None and not control.shadow,
         "airco_set": control is not None and control.excluded is not None,
     }
+
+
+@websocket_command(
+    {
+        vol.Required("type"): "zephyr/house/layout",
+        vol.Required("floors"): {str: vol.In(["attic", "first", "ground", "shed", "outside"])},
+        vol.Optional("hidden", default=list): [str],
+    }
+)
+@require_admin
+@async_response
+async def ws_house_layout(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Floor per consumer in the house picture, and which consumers are hidden (Instellingen → Huis in beeld)."""
+    entry = _entry(hass)
+    if entry is None or entry.runtime_data.house is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    await entry.runtime_data.house.async_set_layout(msg["floors"], msg["hidden"])
+    connection.send_result(msg["id"], {"ok": True})
 
 
 @websocket_command({vol.Required("type"): "zephyr/stroom"})

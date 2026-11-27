@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.45 — Stroom: consumers today; Instellingen: house view
+- *Stroom*: the card *Airco vandaag* becomes **Verbruikers vandaag**: kWh today per appliance with a plug (B36 appliances) and the airco (B41), largest first, with the power now when it runs, then *Overig huis* (house today minus the consumers). Below: the airco's sun/grid split and cost, and the house total.
+- kWh today per plug is integrated from its power (W or kW; a reading counts until the next one, split at midnight, unavailable stops counting); kept over a restart on the same day. The airco's kWh comes from the cost log.
+- *Instellingen* has a group **Huis in beeld**: per consumer shown yes/no and its floor (attic, first floor, ground floor, shed, outside), for the house picture that follows. Defaults: washer and dryer on the attic, the rest on the ground floor.
+- `zephyr/stroom` gives `devices` and `rest_today_kwh`; `zephyr/settings/get` gives `house`; new `zephyr/house/layout` (admin). `core/devices.py` (`DayEnergy`), `stroom_devices.py` (store `zephyr.<entry>.house`).
+- Tests: energy per day (midnight, unavailable, restart); in HA a plug of 2 kW for half an hour and a floor set from the panel; rows and names in vitest.
+
 ### 0.8.44 — Notice for entities of another Zendure integration
 - A repair notice lists every setting that uses an entity of another Zendure integration (by integration, device maker or a `zendure` entity name), with what to use instead: set PV is read by ZEPHYR itself (otherwise counted twice), the inverter's counter for solar energy, the smart meter for P1 and cost counters, `sensor.zephyr_energy_charged`/`_discharged` for the battery. Checked at start and after every settings change.
 - Diagnostics: all options and the list `foreign_entities`.

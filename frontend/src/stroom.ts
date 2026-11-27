@@ -70,7 +70,46 @@ export interface RegulationView {
   recovery_s: number | null;
 }
 
+/** A consumer in view: an appliance with a plug (B36) or the airco (B41). */
+export interface HouseDevice {
+  id: string;
+  /** null for the airco: the panel names it. */
+  name: string | null;
+  kind: string;
+  floor: "attic" | "first" | "ground" | "shed" | "outside" | string;
+  shown: boolean;
+  power_w: number | null;
+  today_kwh: number | null;
+}
+
+/** Name of a consumer: its own name, or the kind's text. */
+export function deviceName(
+  d: HouseDevice,
+  tr: (key: string) => string,
+): string {
+  return d.name ?? tr(`stroom.kind_${d.kind}`);
+}
+
+/** Rows of "Verbruikers vandaag": the shown consumers by kWh today (largest first), then the rest of the house. */
+export function deviceRows(
+  devices: HouseDevice[],
+  rest: number | null,
+): { id: string; device: HouseDevice | null; kwh: number | null }[] {
+  const rows = devices
+    .filter((d) => d.shown)
+    .map((d) => ({
+      id: d.id,
+      device: d as HouseDevice | null,
+      kwh: d.today_kwh,
+    }))
+    .sort((a, b) => (b.kwh ?? -1) - (a.kwh ?? -1));
+  if (rest !== null) rows.push({ id: "rest", device: null, kwh: rest });
+  return rows;
+}
+
 export interface StroomView {
+  devices?: HouseDevice[];
+  rest_today_kwh?: number | null;
   today: StroomToday;
   zero: ZeroView | null;
   regulation?: RegulationView | null;
@@ -176,7 +215,7 @@ export class ZephyrStroom extends LitElement {
       ></zephyr-flow>
       ${v ? this.renderZero(v) : html`<section class="card skeleton"></section>`}
       ${v ? this.renderRoutes(v.today) : nothing}
-      ${v && v.airco_set ? this.renderAirco(v.today) : nothing}
+      ${v && (v.devices?.length || v.airco_set) ? this.renderDevices(v) : nothing}
       ${v?.regulation ? this.renderRegulation(v.regulation, v.live) : nothing}
     </div>`;
   }
@@ -477,62 +516,60 @@ export class ZephyrStroom extends LitElement {
     </section>`;
   }
 
-  private renderAirco(d: StroomToday): TemplateResult {
-    const a = d.airco;
-    const max = a ? Math.max(0.1, a.solar_kwh, a.grid_kwh) : 1;
-    return html`<section class="card" aria-labelledby="ac-title">
+  private renderDevices(v: StroomView): TemplateResult {
+    const tr = (k: string): string => this.tr(k);
+    const rows = deviceRows(v.devices ?? [], v.rest_today_kwh ?? null);
+    const max = Math.max(0.5, ...rows.map((r) => r.kwh ?? 0));
+    const a = v.today.airco;
+    return html`<section class="card" aria-labelledby="dv-title">
       <div>
-        <h2 id="ac-title">${this.tr("stroom.airco_title")}</h2>
-        <p class="sub">${this.tr("stroom.airco_sub")}</p>
+        <h2 id="dv-title">${this.tr("stroom.devices_title")}</h2>
+        <p class="sub">${this.tr("stroom.devices_sub")}</p>
       </div>
-      ${
-        !a
-          ? html`<p class="empty">${this.tr("stroom.routes_none")}</p>`
-          : html`<div class="row">
-                <span class="big">${kwh(a.kwh, this.locale)}</span>
-                ${a.share !== null ? html`<span class="muted">${this.tr("stroom.airco_share", { share: percent(a.share * 100, this.locale) })}</span>` : nothing}
-              </div>
-              <div class="grp">${this.tr("stroom.airco_fed")}</div>
-              ${(
-                [
-                  ["solar", a.solar_kwh],
-                  ["grid", a.grid_kwh],
-                ] as const
-              ).map(
-                ([src, value]) =>
-                  html`<div class="route">
-                    <span>${this.tr(`stroom.src_${src}`)}</span>
-                    <div class="bar">
-                      <div
-                        class=${`fill ${src}`}
-                        style=${`width:${(value / max) * 100}%`}
-                      ></div>
-                    </div>
-                    <span class="num">${kwh(value, this.locale)}</span>
-                  </div>`,
-              )}
-              ${
-                a.grid_cost !== null
-                  ? html`<div class="facts">
-                      <span
-                        ><span class="k-l">${this.tr("stroom.airco_cost")}</span
-                        ><b>${euro(a.grid_cost, this.locale)}</b></span
-                      >
-                      ${
-                        a.grid_price !== null
-                          ? html`<span
-                              ><span class="k-l"
-                                >${this.tr("stroom.airco_price")}</span
-                              ><b
-                                >${euro(a.grid_price, this.locale)}/kWh</b
-                              ></span
-                            >`
-                          : nothing
-                      }
-                    </div>`
+      ${rows.map(
+        (r) =>
+          html`<div class="route dev">
+            <span
+              >${r.device ? deviceName(r.device, tr) : this.tr("stroom.rest")}${
+                r.device && r.device.power_w !== null && r.device.power_w >= 10
+                  ? html` <span class="live"
+                      >${watts(r.device.power_w, this.locale)}</span
+                    >`
                   : nothing
-              }`
-      }
+              }</span
+            >
+            <div class="bar">
+              <div
+                class=${r.device ? "fill house" : "fill grid"}
+                style=${`width:${Math.min(100, ((r.kwh ?? 0) / max) * 100)}%`}
+              ></div>
+            </div>
+            <span class="num"
+              >${r.kwh === null ? "–" : kwh(r.kwh, this.locale)}</span
+            >
+          </div>`,
+      )}
+      <div class="facts">
+        ${
+          a
+            ? html`<span
+                ><span class="k-l">${this.tr("stroom.airco_not_battery")}</span
+                ><b
+                  >${this.tr("stroom.airco_fed_line", { solar: kwh(a.solar_kwh, this.locale), grid: kwh(a.grid_kwh, this.locale) })}${
+                    a.grid_cost !== null
+                      ? ` · ${euro(a.grid_cost, this.locale)}`
+                      : ""
+                  }</b
+                ></span
+              >`
+            : nothing
+        }
+        <span
+          ><span class="k-l">${this.tr("stroom.house_total")}</span
+          ><b>${kwh(v.today.house_kwh, this.locale)}</b></span
+        >
+      </div>
+      ${(v.devices ?? []).some((d) => d.kind !== "airco") ? nothing : html`<p class="muted small">${this.tr("stroom.devices_hint")}</p>`}
     </section>`;
   }
 
@@ -747,6 +784,20 @@ export class ZephyrStroom extends LitElement {
     }
     .fill.grid {
       background: var(--z-bar);
+    }
+    .fill.house {
+      background: var(--z-charge);
+    }
+    .route.dev {
+      grid-template-columns: 150px minmax(0, 1fr) 70px;
+    }
+    .live {
+      color: var(--z-charge);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .small {
+      font-size: 12px;
     }
     .fill.battery {
       background: var(--z-deliver);

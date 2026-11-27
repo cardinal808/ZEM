@@ -246,3 +246,28 @@ describe("signedW", () => {
     expect(signedW(0, "en")).toBe("0 W");
   });
 });
+
+import { deviceName, deviceRows, type HouseDevice } from "../src/stroom";
+
+describe("consumers today", () => {
+  const d = (id: string, kwh: number | null, shown = true): HouseDevice => ({
+    id,
+    name: id === "airco" ? null : id,
+    kind: id === "airco" ? "airco" : "washer",
+    floor: "ground",
+    shown,
+    power_w: null,
+    today_kwh: kwh,
+  });
+  it("lists shown consumers by kWh today, then the rest of the house", () => {
+    const rows = deviceRows(
+      [d("wash", 0.9), d("airco", 6.3), d("dry", 1.5, false)],
+      3.9,
+    );
+    expect(rows.map((r) => r.id)).toEqual(["airco", "wash", "rest"]);
+  });
+  it("names the airco from the texts", () => {
+    expect(deviceName(d("airco", 1), (k) => k)).toBe("stroom.kind_airco");
+    expect(deviceName(d("wash", 1), (k) => k)).toBe("wash");
+  });
+});

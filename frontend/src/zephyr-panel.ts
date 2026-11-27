@@ -402,6 +402,19 @@ export class ZephyrPanel extends LitElement {
   };
 
   /** Vacation through ZEPHYR's own entities (switch and end time), like an automation would (B42). */
+  private saveHouse = async (
+    floors: Record<string, string>,
+    hidden: string[],
+  ): Promise<void> => {
+    if (!this.hass) return;
+    try {
+      await this.hass.callWS({ type: "zephyr/house/layout", floors, hidden });
+    } catch (err) {
+      this.controlError = (err as { message?: string })?.message ?? String(err);
+    }
+    await this.loadSettings();
+  };
+
   private setVacation = async (
     on: boolean,
     until: string | null,
@@ -708,6 +721,7 @@ export class ZephyrPanel extends LitElement {
         .states=${this.hass?.states}
         .save=${this.saveSettings}
         .setVacation=${this.setVacation}
+        .saveHouse=${this.saveHouse}
       ></zephyr-settings>`;
     }
     if (this.view === "stroom") {

@@ -70,7 +70,7 @@ from .const import (
 from .core.costs import Tariffs
 from .core.settings import Settings
 
-GROUPS: Final = ("battery", "sources", "tariffs", "planner", "corrections", "vacation", "zero_meter", "testing")
+GROUPS: Final = ("battery", "sources", "tariffs", "planner", "corrections", "vacation", "house", "zero_meter", "testing")
 
 
 @dataclass(frozen=True, slots=True)
