@@ -110,3 +110,27 @@ def test_zero_score_survives_a_restart_on_the_same_day_only() -> None:
     other = ZeroScore()
     other.restore(stored, date(2026, 11, 28))
     assert other.view()["steering_s"] == 0
+
+
+def test_regulation_log_keeps_ten_minutes_one_sample_per_second() -> None:
+    from zephyr_core.stroom import RegulationLog
+
+    log = RegulationLog()
+    for i in range(1300):  # two steps per second for 650 s
+        log.add(i / 2, 10.0, 0.0, -500, -480.0, True)
+    view = log.view(649.5)
+    assert len(view["samples"]) == 600
+    assert view["samples"][0][0] == -599.5 and view["samples"][-1][0] == -0.5
+    assert view["follow_w"] == 20 and view["peaks"] == 0 and view["recovery_s"] is None
+
+
+def test_regulation_log_counts_peaks_and_the_time_to_recover() -> None:
+    from zephyr_core.stroom import RegulationLog
+
+    log = RegulationLog()
+    devs = [0] * 10 + [400, 300, 200, 100, 40] + [0] * 10 + [400, 250, 120, 60, 60, 30] + [0] * 5 + [80, 20]
+    for i, dev in enumerate(devs):
+        log.add(float(i), 300.0 + dev, 300.0, 0, 0.0, True)  # target 300 W: airco kept out of the battery
+    view = log.view(float(len(devs)))
+    assert view["peaks"] == 2  # 80 W is outside the band but no peak
+    assert view["recovery_s"] == 5.0  # recoveries 4 s and 5 s: the median of two takes the upper

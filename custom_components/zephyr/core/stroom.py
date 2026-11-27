@@ -218,3 +218,64 @@ class ZeroScore:
                 self.buckets[int(key)] = ZeroBucket(*(float(v) for v in values[:5]))
             except (TypeError, ValueError):
                 continue
+
+
+REG_WINDOW_SECONDS: Final = 600
+REG_JUMP_W: Final = 150.0
+"""A deviation beyond this is a peak; leaving the band towards it starts a recovery."""
+
+
+@dataclass(slots=True)
+class RegulationLog:
+    """The last 10 minutes of the controller, one sample per second (card *Regeling*).
+
+    Per sample: seconds before *now*, P1, the meter's target (0 W or the airco), the setpoint
+    asked of the sets and the battery power measured (both + charging), and whether it steered.
+    """
+
+    band: float = 50.0
+    samples: list[tuple[float, float | None, float, int, float | None, bool]] = field(default_factory=list)
+
+    def add(self, now: float, grid: float | None, target: float, setpoint: int, battery: float | None, steering: bool) -> None:
+        if self.samples and now - self.samples[-1][0] < 1.0:
+            self.samples[-1] = (self.samples[-1][0], grid, target, setpoint, battery, steering)
+        else:
+            self.samples.append((now, grid, target, setpoint, battery, steering))
+        cut = now - REG_WINDOW_SECONDS
+        while self.samples and self.samples[0][0] < cut:
+            self.samples.pop(0)
+
+    def view(self, now: float) -> dict[str, Any]:
+        rows = [
+            [round(at - now, 1), None if g is None else round(g), round(t), s, None if b is None else round(b), steer]
+            for at, g, t, s, b, steer in self.samples
+        ]
+        follow = [abs(s - b) for _at, _g, _t, s, b, steer in self.samples if steer and b is not None]
+        peaks = 0
+        recoveries: list[float] = []
+        out_since: float | None = None
+        peaked = False
+        for at, g, t, _s, _b, steer in self.samples:
+            if not steer or g is None:
+                out_since, peaked = None, False
+                continue
+            dev = abs(g - t)
+            if dev > self.band:
+                if out_since is None:
+                    out_since = at
+                if dev > REG_JUMP_W and not peaked:
+                    peaks += 1
+                    peaked = True
+            elif out_since is not None:
+                if peaked:
+                    recoveries.append(at - out_since)
+                out_since, peaked = None, False
+        recoveries.sort()
+        return {
+            "window_s": REG_WINDOW_SECONDS,
+            "band_w": self.band,
+            "samples": rows,
+            "follow_w": None if not follow else round(sum(follow) / len(follow)),
+            "peaks": peaks,
+            "recovery_s": None if not recoveries else round(recoveries[len(recoveries) // 2], 1),
+        }
