@@ -93,3 +93,13 @@ def test_without_either_day_type_the_mean() -> None:
     p = LoadProfile()
     _days(p, WORKDAY, 1, SHAPE)
     assert p.expected(WEEKEND, 18) == pytest.approx(p.mean)
+
+
+def test_hour_energy_leaves_out_the_appliance_plugs() -> None:
+    from datetime import UTC, datetime
+
+    from zephyr_core.load_profile import HourEnergy
+
+    hour = HourEnergy(datetime(2026, 11, 27, 12, tzinfo=UTC), 2.0, 0.0, 0.5, 0.0, excluded_kwh=0.5, appliance_kwh=1.2)
+    assert hour.house_kwh == 0.8
+    assert HourEnergy(hour.start, 0.5, 0.0, 0.0, 0.0, appliance_kwh=1.2).house_kwh == 0.0

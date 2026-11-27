@@ -65,6 +65,8 @@ class Appliance:
         self.runs: list[Run] = []
         self.samples: list[tuple[datetime, float]] = []
         self.power_w: float | None = None
+        self.power_since: datetime | None = None
+        """When ``power_w`` was read: the plug's energy is integrated from there."""
 
     @property
     def running(self) -> bool | None:
@@ -92,6 +94,7 @@ class ApplianceManager:
         self._listeners: list[Callable[[], None]] = []
         self._on_change: Callable[[], None] | None = None
         self.revision = 0
+        self._energy_kwh = 0.0
         """Goes up with every change, so the panel knows when to fetch again."""
 
     # --- start, store ------------------------------------------------------------------
@@ -106,6 +109,10 @@ class ApplianceManager:
                 self.appliances[appliance_id].runs = [Run.from_dict(r) for r in runs][-RUNS_KEPT:]
         unsubs: list[Callable[[], None]] = []
         plugs = [a.power_entity for a in self.appliances.values() if a.power_entity]
+        for appliance in self.appliances.values():
+            state = self.hass.states.get(appliance.power_entity) if appliance.power_entity else None
+            if state is not None and (watts := _watts(state.state)) is not None:
+                appliance.power_w, appliance.power_since = watts, dt_util.utcnow()
         if plugs:
             unsubs.append(async_track_state_change_event(self.hass, plugs, self._plug_changed))
             self.hass.async_create_background_task(self._learn_history(), "zephyr: appliance history")
@@ -183,12 +190,31 @@ class ApplianceManager:
             if watts is None:
                 return
             was = appliance.running
+            self._integrate(appliance, state.last_changed)
             appliance.power_w = watts
             appliance.samples.append((state.last_changed, watts))
             cutoff = dt_util.utcnow() - timedelta(hours=12)
             appliance.samples = [s for s in appliance.samples if s[0] >= cutoff]
             if was != appliance.running:
                 self._changed(replan=False)
+
+    def _integrate(self, appliance: Appliance, until: datetime) -> None:
+        if appliance.power_w is not None and appliance.power_since is not None and until > appliance.power_since:
+            self._energy_kwh += appliance.power_w * (until - appliance.power_since).total_seconds() / 3_600_000
+        appliance.power_since = until
+
+    @property
+    def plug_entities(self) -> list[str]:
+        """Power sensors of the plugs, sorted: their use is left out of the house profile."""
+        return sorted(a.power_entity for a in self.appliances.values() if a.power_entity)
+
+    def take_energy(self, now: datetime | None = None) -> float:
+        """kWh the plugs used since the last call (the planner takes it every closed quarter)."""
+        now = now or dt_util.utcnow()
+        for appliance in self.appliances.values():
+            self._integrate(appliance, now)
+        energy, self._energy_kwh = self._energy_kwh, 0.0
+        return energy
 
     @callback
     def _tidy(self, now: datetime) -> None:
