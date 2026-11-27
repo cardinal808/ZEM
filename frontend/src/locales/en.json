@@ -114,7 +114,15 @@
     "spread": "spread {value}",
     "spread_title": "How much more the most expensive quarter costs than the cheapest. A rough measure of what charging and delivering later can earn, before losses (about 14 %) and wear. With prices around zero or negative: the difference in euro.",
     "tip_appliances": "Appliances: {kwh}",
-    "runs_label": "Planned appliances"
+    "runs_label": "Planned appliances",
+    "curtail_mark": "Solar surplus is curtailed",
+    "tip_curtail": "Export price {price}: solar surplus {kwh} is curtailed",
+    "tip_export_cost": "Exporting costs {euro} (no curtailing set up)",
+    "neg_today": "Today {hours} h of negative export price. Curtailing is off; that is expected to cost {euro}.",
+    "neg_tomorrow": "Tomorrow {hours} h of negative export price. Curtailing is off; that is expected to cost {euro}.",
+    "neg_both": "Today and tomorrow {hours} h of negative export price. Curtailing is off; that is expected to cost {euro}.",
+    "neg_link": "Change the setting →",
+    "legend_negative": "Negative export price"
   },
   "blocks": {
     "title": "Blocks",
@@ -421,12 +429,12 @@
       },
       "curtail_negative": {
         "label": "Surplus solar at a negative price",
-        "help": "What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and turns on the switch below.",
+        "help": "What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and curtails the inverter: with the switch or with the power limit below (one of the two).",
         "more": "With saldering (until 2027) the export price is rarely below zero (energy tax is part of it); without saldering it happens on sunny spring and summer middays. The sets' own panels are blocked with gridReverse; an inverter such as a SolarEdge needs a switch (e.g. a template switch for an export limiter)."
       },
       "curtail_switch": {
         "label": "Inverter curtail switch",
-        "help": "On while the export price is negative (only with ZEPHYR).",
+        "help": "On while the export price is negative. Alternative to the power limit.",
         "more": "ZEPHYR turns this switch on at the start of a quarter with a negative export price and off again after. A template switch can call any script or set the mode of an export limiter."
       },
       "solar_power_entities": {
@@ -483,7 +491,8 @@
       "p1_pair_same": "Import and export must be two different sensors.",
       "excluded_needs_counter": "The climate entity only works together with the air conditioner's energy counter. Choose the counter or clear the climate entity.",
       "failed": "Saving failed. Please try again.",
-      "range": "Choose a value from {min} to {max}{unit}."
+      "range": "Choose a value from {min} to {max}{unit}.",
+      "entity_domain": "This field expects a {domain} entity"
     },
     "vac_active": "On vacation",
     "vac_home": "At home",
@@ -513,7 +522,10 @@
     "appl_until": "Done by",
     "appl_shown": "Show on Power",
     "appl_after": "Always after the washing",
-    "appl_after_help": "plan the dryer along (once, after the last wash) when you plan the washing"
+    "appl_after_help": "plan the dryer along (once, after the last wash) when you plan the washing",
+    "curtail_head": "Inverter outside the sets (choose one)",
+    "curtail_only": "Only with “ZEPHYR curtails”.",
+    "curtail_rated_missing": "Fill in the rated power, or ZEPHYR does not limit."
   },
   "airco": {
     "blocked": "Air conditioner {kw} kW · not from the battery",
@@ -749,7 +761,10 @@
     "charging": "Battery charging",
     "delivering": "Battery delivering",
     "battery": "Battery",
-    "estimated": "estimated"
+    "estimated": "estimated",
+    "curtailed": "Curtailed to {pct} %",
+    "inverter_off": "Inverter off",
+    "export_blocked": "Export blocked"
   },
   "stroom": {
     "zero_title": "Zero on the meter today",

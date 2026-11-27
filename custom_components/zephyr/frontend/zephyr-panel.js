@@ -739,7 +739,15 @@ var Ye = {
 			spread: "spread {value}",
 			spread_title: "Hoeveel duurder het duurste kwartier is dan het goedkoopste. Ruwe maat voor wat laden en later leveren kan opleveren, vóór verlies (± 14 %) en slijtage. Bij prijzen rond nul of negatief: het verschil in euro.",
 			tip_appliances: "Apparaten: {kwh}",
-			runs_label: "Geplande apparaten"
+			runs_label: "Geplande apparaten",
+			curtail_mark: "Zonoverschot wordt afgeknepen",
+			tip_curtail: "Terugleverprijs {price}: zonoverschot {kwh} wordt afgeknepen",
+			tip_export_cost: "Teruglevering kost {euro} (geen afknijpen ingesteld)",
+			neg_today: "Vandaag {hours} uur negatieve terugleverprijs. Afknijpen staat uit; dat kost naar verwachting {euro}.",
+			neg_tomorrow: "Morgen {hours} uur negatieve terugleverprijs. Afknijpen staat uit; dat kost naar verwachting {euro}.",
+			neg_both: "Vandaag en morgen {hours} uur negatieve terugleverprijs. Afknijpen staat uit; dat kost naar verwachting {euro}.",
+			neg_link: "Instelling aanpassen →",
+			legend_negative: "Negatieve terugleverprijs"
 		},
 		blocks: {
 			title: "Blokken",
@@ -834,7 +842,7 @@ var Ye = {
 			not_judged: "bij vol beoordeeld",
 			not_judged_title: "Het celverschil wordt beoordeeld als de accu (bijna) vol is en met weinig stroom laadt."
 		},
-		settings: /* @__PURE__ */ JSON.parse("{\"title\":\"Instellingen\",\"groups\":{\"battery\":\"Accu en grenzen\",\"sources\":\"Bronnen\",\"tariffs\":\"Tarieven\",\"planner\":\"Planner\",\"corrections\":\"Correcties\",\"zero_meter\":\"Nul op de meter zonder planner\",\"testing\":\"Testfase\",\"vacation\":\"Vakantie\",\"house\":\"Apparaten\"},\"modified_n\":\"{n} gewijzigd\",\"default\":\"standaard: {value}\",\"none\":\"leeg\",\"yes\":\"aan\",\"no\":\"uit\",\"more\":\"Meer uitleg over {label}\",\"readonly\":\"Alleen een beheerder kan instellingen wijzigen.\",\"reload_note\":\"Wijzigingen in deze groep bewaar je samen; ZEPHYR start daarna kort opnieuw.\",\"supplier_note\":\"Met een leverancier gelden de bedragen uit de tarieventabel ({source}). Alleen bij eigen tarieven zijn ze aan te passen.\",\"in_use\":\"in gebruik: {value}\",\"status\":{\"unset\":\"niet ingesteld\",\"missing\":\"niet gevonden: {entities}\",\"ok\":\"werkt\",\"interval\":\"meldt elke {s} s\",\"slots\":\"{n} prijzen in de sensor\",\"unavailable\":\"niet beschikbaar\",\"climate\":\"{mode} · {action}\",\"no_step\":\"nog geen meting\",\"steps\":\"elke {every} een stap van {kwh} kWh\"},\"own\":\"Eigen tarieven\",\"options\":{\"single\":\"Eén sensor (afname − teruglevering)\",\"import_export\":\"Twee sensoren (afname en teruglevering)\",\"heat\":\"Verwarmen\",\"cool\":\"Koelen\",\"dry\":\"Drogen\",\"fan_only\":\"Ventileren\",\"heat_cool\":\"Verwarmen/koelen\",\"auto\":\"Automatisch\",\"off\":\"Uit\",\"curtail_off\":\"Uit (gaat het net op, kost geld)\",\"curtail_external\":\"Ander systeem knijpt af\",\"curtail_zephyr\":\"ZEPHYR knijpt af\"},\"fields\":{\"min_soc\":{\"label\":\"Minimaal laadpercentage\",\"help\":\"Hieronder levert de accu niet meer.\",\"more\":\"Standaard 10 %. Lager geeft meer bruikbare energie, maar de accu staat dan vaker bijna leeg. Wordt ook in de set zelf gezet, zodat die stopt als ZEPHYR niet draait.\\nVoorbeeld: 11 kWh en 10 % = 1,1 kWh blijft altijd over.\"},\"max_soc\":{\"label\":\"Maximaal laadpercentage\",\"help\":\"Hierboven laadt de accu niet verder.\",\"more\":\"Niet op 100 % laden scheelt een beetje slijtage. De set heeft af en toe 100 % nodig om zijn SOC-meting gelijk te zetten en de cellen te balanceren.\"},\"p1_source\":{\"label\":\"P1-meting\",\"help\":\"Eén sensor met het netto vermogen, of afname en teruglevering apart.\",\"more\":\"ZEPHYR kijkt naar het netvermogen en stuurt de accu bij tot het net op nul staat. Hoe vaker de meter meldt, hoe sneller en nauwkeuriger dat gaat. Meldt de meter langer dan 10 s niets, dan stopt ZEPHYR veilig.\"},\"p1_entity\":{\"label\":\"P1-sensor (netto)\",\"help\":\"Vermogen van het net: + = afname, − = teruglevering.\",\"more\":\"Een sensor in W of kW.\"},\"p1_import_entity\":{\"label\":\"P1 afname\",\"help\":\"Vermogen dat uit het net komt.\",\"more\":\"Samen met de teruglevering-sensor; ZEPHYR rekent afname − teruglevering.\"},\"p1_export_entity\":{\"label\":\"P1 teruglevering\",\"help\":\"Vermogen dat naar het net gaat.\",\"more\":\"Samen met de afname-sensor.\"},\"price_entity\":{\"label\":\"Prijssensor\",\"help\":\"Nord Pool met de prijzen van vandaag en morgen.\",\"more\":\"De prijzen van morgen komen rond 13:00. Zonder prijssensor maakt ZEPHYR geen plan; zonder prijzen voor nu valt de planner terug op nul op de meter.\"},\"solar_forecast_entity\":{\"label\":\"Zonverwachting\",\"help\":\"Solcast (morgen) met detail per half uur.\",\"more\":\"Zonder verwachting neemt de planner de opbrengst van gisteren per uur.\"},\"solar_energy_entity\":{\"label\":\"Zonnepanelen-teller\",\"help\":\"Opbrengst in kWh (oplopend).\",\"more\":\"Hiermee weet ZEPHYR wat je panelen echt opbrachten: voor het huisverbruik, het kostenlogboek en het bijstellen van de zonverwachting.\"},\"excluded_energy_entity\":{\"label\":\"Airco: energieteller\",\"help\":\"kWh-teller van een verbruiker die niet uit de accu mag.\",\"more\":\"ZEPHYR schat het vermogen uit de stappen van de teller en levert niet voor de airco zolang die in een geblokkeerde stand draait. De rest van het huis komt wel uit de accu; zon over laadt de accu gewoon.\"},\"excluded_climate_entity\":{\"label\":\"Airco: klimaat-entiteit\",\"help\":\"Zegt direct of hij draait en in welke stand.\",\"more\":\"Zonder deze entiteit ziet ZEPHYR geen verschil tussen verwarmen en koelen en komt de airco nooit uit de accu; een stop merkt ZEPHYR dan pas aan de teller.\"},\"excluded_hvac_modes\":{\"label\":\"Airco: niet uit de accu bij\",\"help\":\"Standen waarin de accu de airco niet voedt.\",\"more\":\"Standaard verwarmen: dan haalt de airco zijn stroom uit het net of van de zon.\"},\"cost_import_counters\":{\"label\":\"Tellers afname\",\"help\":\"De kWh-tellers van je slimme meter (tarief 1 en 2).\",\"more\":\"Voor het kostenlogboek: preciezer dan het vermogen optellen.\"},\"cost_export_counters\":{\"label\":\"Tellers teruglevering\",\"help\":\"De kWh-tellers voor teruglevering (tarief 1 en 2).\",\"more\":\"Voor het kostenlogboek.\"},\"tariff_supplier\":{\"label\":\"Energieleverancier\",\"help\":\"Bedragen uit de tarieventabel van ZEPHYR, of eigen tarieven.\",\"more\":\"De tabel wordt met updates bijgewerkt en elke dag opgehaald. Staat je leverancier er niet in, kies dan eigen tarieven.\"},\"tariff_energy_tax\":{\"label\":\"Energiebelasting\",\"help\":\"Per kWh, zonder btw.\",\"more\":\"Wettelijk bedrag; staat per jaar in de tabel.\"},\"tariff_markup_import\":{\"label\":\"Opslag inkoop\",\"help\":\"Wat de leverancier bovenop de marktprijs rekent, zonder btw.\",\"more\":\"Staat op je contract of factuur.\"},\"tariff_markup_export\":{\"label\":\"Opslag teruglevering\",\"help\":\"Bij de marktprijs opgeteld (negatief = kosten), zonder btw.\",\"more\":\"Sommige leveranciers trekken een vast bedrag af van wat je terugkrijgt: vul dat dan negatief in.\"},\"tariff_vat\":{\"label\":\"Btw\",\"help\":\"Over marktprijs, opslag en energiebelasting.\",\"more\":\"Wettelijk tarief.\"},\"tariff_solar_bonus\":{\"label\":\"Zonnebonus\",\"help\":\"Extra op de terugleverprijs overdag.\",\"more\":\"Bijvoorbeeld 10 % bij Zonneplan. ZEPHYR telt dit alleen mee als de zon op is.\"},\"tariff_fixed_month\":{\"label\":\"Vaste kosten per maand\",\"help\":\"Leveringskosten en netbeheer min heffingskorting.\",\"more\":\"Alleen voor het kostenlogboek; verandert het plan niet.\"},\"plan_wear_cost\":{\"label\":\"Slijtagekosten\",\"help\":\"Per kWh door de accu.\",\"more\":\"De planner laadt en levert alleen als het verschil groter is dan dit bedrag. Standaard € 0,03 (B39).\"},\"plan_grid_charge_cost\":{\"label\":\"Drempel laden uit het net\",\"help\":\"Minimale winst per kWh om uit het net te laden.\",\"more\":\"Voorkomt laden uit het net voor een heel klein voordeel. Standaard € 0,01.\"},\"plan_allow_export\":{\"label\":\"Terugleveren uit de accu\",\"help\":\"Mag de accu naar het net leveren als dat loont?\",\"more\":\"Alleen zinvol als de terugleverprijs soms hoger is dan wat het later kost om bij te laden, inclusief verlies en slijtage. Standaard uit.\"},\"plan_load_margin\":{\"label\":\"Laadmarge\",\"help\":\"Rekenen met meer verbruik dan geleerd.\",\"more\":\"Bij 10 % rekent de planner met 10 % meer verbruik. Nuttig als de accu op drukke avonden te vroeg leeg is.\"},\"plan_buffer\":{\"label\":\"Buffer\",\"help\":\"Deel van de accu dat de planner niet inplant.\",\"more\":\"De regelaar mag de buffer wel gebruiken als het verbruik hoger uitvalt dan verwacht. Daarna vult de planner hem bij als dat goedkoper is (B37).\"},\"expensive_hours\":{\"label\":\"Dure uren\",\"help\":\"Zonder planner: alleen in de N duurste uren leveren.\",\"more\":\"Geldt in de modus Nul op de meter met een prijssensor, maar zonder Dynamische Forecasting.\"},\"reserve_soc\":{\"label\":\"Reserve\",\"help\":\"Zonder planner: bijladen tot dit percentage vóór de dure uren.\",\"more\":\"Gaat op in de buffer van de planner (B37).\"},\"min_price\":{\"label\":\"Minimumprijs\",\"help\":\"Zonder planner: niet leveren onder deze prijs.\",\"more\":\"Leeg = geen minimum.\"},\"live_off_after_restart\":{\"label\":\"Live sturen uit na een herstart (testfase)\",\"help\":\"Uit (standaard): na een herstart komt live sturen vanzelf terug zodra de P1 meldt en de sets online zijn (als het aan stond). Aan: het blijft uit en je zet het zelf weer aan.\",\"more\":\"Voor de testfase: na elke herstart zet je live sturen zelf weer aan.\"},\"vacation_when_away\":{\"label\":\"Vakantie als niemand thuis is\",\"help\":\"Vanzelf aan na 24 uur zonder iemand thuis.\",\"more\":\"Gebruikt zone.home (het aantal mensen thuis). Uit zodra er iemand terug is. De schakelaar Vakantie (met Vakantie tot) werkt daarnaast altijd.\"},\"workday_entity\":{\"label\":\"Werkdag-sensor\",\"help\":\"Feestdagen tellen als weekenddag.\",\"more\":\"ZEPHYR vraagt de integratie Workday (actie workday.check_date) naar vandaag, morgen en de dagen van de eerste vulling. Zonder sensor zijn maandag t/m vrijdag werkdagen.\"},\"curtail_negative\":{\"label\":\"Zonoverschot bij negatieve prijs\",\"help\":\"Wat er met zonoverschot gebeurt als de terugleverprijs onder nul is. Uit: het gaat het net op en kost geld, de planner maakt eerst ruimte in de accu. Ander systeem: een omvormerbegrenzer knijpt zelf af. ZEPHYR: ZEPHYR blokkeert teruglevering van de eigen panelen van de sets en zet de schakelaar hieronder aan.\",\"more\":\"Met saldering (tot 2027) is de terugleverprijs zelden negatief (de energiebelasting zit erin); zonder saldering gebeurt het op zonnige middagen in voorjaar en zomer. De eigen panelen van de sets blokkeert ZEPHYR met gridReverse; een omvormer zoals een SolarEdge heeft een schakelaar nodig (bijv. een sjabloon-schakelaar voor een exportbegrenzer).\"},\"curtail_switch\":{\"label\":\"Schakelaar omvormer afknijpen\",\"help\":\"Aan zolang de terugleverprijs negatief is (alleen met ZEPHYR).\",\"more\":\"ZEPHYR zet deze schakelaar aan aan het begin van een kwartier met een negatieve terugleverprijs en daarna weer uit. Een sjabloon-schakelaar kan elk script aanroepen of de modus van een exportbegrenzer zetten.\"},\"solar_power_entities\":{\"label\":\"Zonnepanelen-vermogen\",\"help\":\"Vermogenssensoren (W) van omvormers, worden opgeteld.\",\"more\":\"Voor omvormers die niet aan een Zendure-set hangen, zoals SolarEdge. ZEPHYR telt ze op bij de PV van de sets en toont dat in Nu en Stroom. Kies hier niet de PV van de Zendure-set zelf: die leest ZEPHYR al uit de set. Leeg: ZEPHYR schat het vermogen uit de zonnepanelen-teller (grover, loopt achter).\"},\"curtail_number\":{\"label\":\"Vermogensbegrenzing omvormer\",\"help\":\"Getal-entiteit die het vermogen van de omvormer begrenst in % (bijv. SolarEdge Modbus active power limit). Alleen met ZEPHYR knijpt af.\",\"more\":\"Zolang de terugleverprijs negatief is zet ZEPHYR die elke 10 s zo dat de omvormer levert wat het huis en de accu afnemen (het net blijft op een kleine afname), en daarna weer op 100 %. Nodig: het nominaal vermogen hieronder en een sensor voor het zonvermogen (Bronnen).\"},\"curtail_inverter_w\":{\"label\":\"Nominaal vermogen omvormer\",\"help\":\"Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld.\",\"more\":\"Bij een SolarEdge het nominale vermogen van het model, bijv. 5000 W voor een SE5K.\"}},\"restarting\":\"ZEPHYR start opnieuw met de nieuwe instellingen…\",\"pending\":\"{n} wijzigingen nog niet bewaard · ZEPHYR start kort opnieuw\",\"pending_one\":\"1 wijziging nog niet bewaard · ZEPHYR start kort opnieuw\",\"cancel\":\"Annuleren\",\"save_restart\":\"Bewaren en herstarten\",\"saving\":\"Bezig…\",\"saved\":\"bewaard\",\"not_saved\":\"niet bewaard\",\"reset\":\"Standaard terugzetten\",\"clear\":\"Leegmaken\",\"remove\":\"Weghalen\",\"choose_entity\":\"Kies of typ een entiteit\",\"actions\":{\"heating\":\"draait\",\"cooling\":\"draait\",\"drying\":\"draait\",\"fan\":\"draait\",\"preheating\":\"draait\",\"defrosting\":\"ontdooit\",\"idle\":\"staat stil\",\"off\":\"uit\"},\"errors\":{\"out_of_range\":\"Buiten de grenzen.\",\"off_step\":\"Past niet bij de stapgrootte.\",\"not_a_number\":\"Geen getal.\",\"not_a_bool\":\"Ongeldige waarde.\",\"required\":\"Mag niet leeg zijn.\",\"unknown_choice\":\"Onbekende keuze.\",\"choose_one\":\"Kies minstens één stand. Uitzetten: maak de teller leeg.\",\"not_an_entity\":\"Dit soort entiteit past hier niet.\",\"entity_missing\":\"Entiteit niet gevonden.\",\"unknown_key\":\"Onbekende instelling.\",\"p1_missing\":\"Kies een P1-sensor.\",\"p1_pair_incomplete\":\"Kies zowel de afname- als de terugleversensor.\",\"p1_pair_same\":\"Afname en teruglevering moeten twee verschillende sensoren zijn.\",\"excluded_needs_counter\":\"De klimaat-entiteit werkt alleen samen met de energieteller van de airco. Kies de teller of maak de klimaat-entiteit leeg.\",\"failed\":\"Bewaren lukte niet. Probeer het opnieuw.\",\"range\":\"Kies een waarde van {min} tot en met {max}{unit}.\"},\"vac_active\":\"Op vakantie\",\"vac_home\":\"Thuis\",\"vac_off\":\"De planner rekent met het gewone verbruik.\",\"vac_until\":\"Tot {until}. De planner rekent tot dan met het verbruik bij afwezigheid en laadt op tijd voor de terugkomst.\",\"vac_open\":\"Zonder einddatum; zet het uit als je terug bent.\",\"vac_auto\":\"Vanzelf aan sinds {since}: niemand is 24 uur thuis geweest (optie hieronder). Gaat uit zodra iemand thuiskomt.\",\"vac_until_label\":\"Terug op\",\"vac_start\":\"Vakantie aanzetten\",\"vac_stop\":\"Vakantie uitzetten\",\"vac_help\":\"Tijdens een vakantie rekent de planner met het sluimerverbruik en leert hij dat apart; het gewone verbruiksprofiel blijft schoon. Een einddatum is optioneel.\",\"house_note\":\"Wanneer je je apparaten meestal laat draaien. Met één tik onder Prijzen en plan kiest ZEPHYR de goedkoopste start binnen dit venster. Een nieuw apparaat met slimme stekker voeg je toe via Apparaten en diensten → ZEPHYR → Apparaat toevoegen. Het venster wijzigen herlaadt ZEPHYR even.\",\"house_floor\":\"Verdieping\",\"save\":\"Opslaan\",\"discard\":\"Annuleren\",\"floors\":{\"attic\":\"Zolder\",\"first\":\"1e verdieping\",\"ground\":\"Begane grond\",\"shed\":\"Schuur\",\"outside\":\"Buiten\"},\"appl_learned\":\"geleerd uit {n} runs\",\"appl_default\":\"standaardprofiel\",\"appl_airco\":\"niet uit de accu (Correcties)\",\"appl_from\":\"Niet vóór\",\"appl_until\":\"Klaar om\",\"appl_shown\":\"Tonen op Stroom\",\"appl_after\":\"Altijd na de was\",\"appl_after_help\":\"plan de droger mee (één keer, na de laatste was) als je de was plant\"}"),
+		settings: /* @__PURE__ */ JSON.parse("{\"title\":\"Instellingen\",\"groups\":{\"battery\":\"Accu en grenzen\",\"sources\":\"Bronnen\",\"tariffs\":\"Tarieven\",\"planner\":\"Planner\",\"corrections\":\"Correcties\",\"zero_meter\":\"Nul op de meter zonder planner\",\"testing\":\"Testfase\",\"vacation\":\"Vakantie\",\"house\":\"Apparaten\"},\"modified_n\":\"{n} gewijzigd\",\"default\":\"standaard: {value}\",\"none\":\"leeg\",\"yes\":\"aan\",\"no\":\"uit\",\"more\":\"Meer uitleg over {label}\",\"readonly\":\"Alleen een beheerder kan instellingen wijzigen.\",\"reload_note\":\"Wijzigingen in deze groep bewaar je samen; ZEPHYR start daarna kort opnieuw.\",\"supplier_note\":\"Met een leverancier gelden de bedragen uit de tarieventabel ({source}). Alleen bij eigen tarieven zijn ze aan te passen.\",\"in_use\":\"in gebruik: {value}\",\"status\":{\"unset\":\"niet ingesteld\",\"missing\":\"niet gevonden: {entities}\",\"ok\":\"werkt\",\"interval\":\"meldt elke {s} s\",\"slots\":\"{n} prijzen in de sensor\",\"unavailable\":\"niet beschikbaar\",\"climate\":\"{mode} · {action}\",\"no_step\":\"nog geen meting\",\"steps\":\"elke {every} een stap van {kwh} kWh\"},\"own\":\"Eigen tarieven\",\"options\":{\"single\":\"Eén sensor (afname − teruglevering)\",\"import_export\":\"Twee sensoren (afname en teruglevering)\",\"heat\":\"Verwarmen\",\"cool\":\"Koelen\",\"dry\":\"Drogen\",\"fan_only\":\"Ventileren\",\"heat_cool\":\"Verwarmen/koelen\",\"auto\":\"Automatisch\",\"off\":\"Uit\",\"curtail_off\":\"Uit (gaat het net op, kost geld)\",\"curtail_external\":\"Ander systeem knijpt af\",\"curtail_zephyr\":\"ZEPHYR knijpt af\"},\"fields\":{\"min_soc\":{\"label\":\"Minimaal laadpercentage\",\"help\":\"Hieronder levert de accu niet meer.\",\"more\":\"Standaard 10 %. Lager geeft meer bruikbare energie, maar de accu staat dan vaker bijna leeg. Wordt ook in de set zelf gezet, zodat die stopt als ZEPHYR niet draait.\\nVoorbeeld: 11 kWh en 10 % = 1,1 kWh blijft altijd over.\"},\"max_soc\":{\"label\":\"Maximaal laadpercentage\",\"help\":\"Hierboven laadt de accu niet verder.\",\"more\":\"Niet op 100 % laden scheelt een beetje slijtage. De set heeft af en toe 100 % nodig om zijn SOC-meting gelijk te zetten en de cellen te balanceren.\"},\"p1_source\":{\"label\":\"P1-meting\",\"help\":\"Eén sensor met het netto vermogen, of afname en teruglevering apart.\",\"more\":\"ZEPHYR kijkt naar het netvermogen en stuurt de accu bij tot het net op nul staat. Hoe vaker de meter meldt, hoe sneller en nauwkeuriger dat gaat. Meldt de meter langer dan 10 s niets, dan stopt ZEPHYR veilig.\"},\"p1_entity\":{\"label\":\"P1-sensor (netto)\",\"help\":\"Vermogen van het net: + = afname, − = teruglevering.\",\"more\":\"Een sensor in W of kW.\"},\"p1_import_entity\":{\"label\":\"P1 afname\",\"help\":\"Vermogen dat uit het net komt.\",\"more\":\"Samen met de teruglevering-sensor; ZEPHYR rekent afname − teruglevering.\"},\"p1_export_entity\":{\"label\":\"P1 teruglevering\",\"help\":\"Vermogen dat naar het net gaat.\",\"more\":\"Samen met de afname-sensor.\"},\"price_entity\":{\"label\":\"Prijssensor\",\"help\":\"Nord Pool met de prijzen van vandaag en morgen.\",\"more\":\"De prijzen van morgen komen rond 13:00. Zonder prijssensor maakt ZEPHYR geen plan; zonder prijzen voor nu valt de planner terug op nul op de meter.\"},\"solar_forecast_entity\":{\"label\":\"Zonverwachting\",\"help\":\"Solcast (morgen) met detail per half uur.\",\"more\":\"Zonder verwachting neemt de planner de opbrengst van gisteren per uur.\"},\"solar_energy_entity\":{\"label\":\"Zonnepanelen-teller\",\"help\":\"Opbrengst in kWh (oplopend).\",\"more\":\"Hiermee weet ZEPHYR wat je panelen echt opbrachten: voor het huisverbruik, het kostenlogboek en het bijstellen van de zonverwachting.\"},\"excluded_energy_entity\":{\"label\":\"Airco: energieteller\",\"help\":\"kWh-teller van een verbruiker die niet uit de accu mag.\",\"more\":\"ZEPHYR schat het vermogen uit de stappen van de teller en levert niet voor de airco zolang die in een geblokkeerde stand draait. De rest van het huis komt wel uit de accu; zon over laadt de accu gewoon.\"},\"excluded_climate_entity\":{\"label\":\"Airco: klimaat-entiteit\",\"help\":\"Zegt direct of hij draait en in welke stand.\",\"more\":\"Zonder deze entiteit ziet ZEPHYR geen verschil tussen verwarmen en koelen en komt de airco nooit uit de accu; een stop merkt ZEPHYR dan pas aan de teller.\"},\"excluded_hvac_modes\":{\"label\":\"Airco: niet uit de accu bij\",\"help\":\"Standen waarin de accu de airco niet voedt.\",\"more\":\"Standaard verwarmen: dan haalt de airco zijn stroom uit het net of van de zon.\"},\"cost_import_counters\":{\"label\":\"Tellers afname\",\"help\":\"De kWh-tellers van je slimme meter (tarief 1 en 2).\",\"more\":\"Voor het kostenlogboek: preciezer dan het vermogen optellen.\"},\"cost_export_counters\":{\"label\":\"Tellers teruglevering\",\"help\":\"De kWh-tellers voor teruglevering (tarief 1 en 2).\",\"more\":\"Voor het kostenlogboek.\"},\"tariff_supplier\":{\"label\":\"Energieleverancier\",\"help\":\"Bedragen uit de tarieventabel van ZEPHYR, of eigen tarieven.\",\"more\":\"De tabel wordt met updates bijgewerkt en elke dag opgehaald. Staat je leverancier er niet in, kies dan eigen tarieven.\"},\"tariff_energy_tax\":{\"label\":\"Energiebelasting\",\"help\":\"Per kWh, zonder btw.\",\"more\":\"Wettelijk bedrag; staat per jaar in de tabel.\"},\"tariff_markup_import\":{\"label\":\"Opslag inkoop\",\"help\":\"Wat de leverancier bovenop de marktprijs rekent, zonder btw.\",\"more\":\"Staat op je contract of factuur.\"},\"tariff_markup_export\":{\"label\":\"Opslag teruglevering\",\"help\":\"Bij de marktprijs opgeteld (negatief = kosten), zonder btw.\",\"more\":\"Sommige leveranciers trekken een vast bedrag af van wat je terugkrijgt: vul dat dan negatief in.\"},\"tariff_vat\":{\"label\":\"Btw\",\"help\":\"Over marktprijs, opslag en energiebelasting.\",\"more\":\"Wettelijk tarief.\"},\"tariff_solar_bonus\":{\"label\":\"Zonnebonus\",\"help\":\"Extra op de terugleverprijs overdag.\",\"more\":\"Bijvoorbeeld 10 % bij Zonneplan. ZEPHYR telt dit alleen mee als de zon op is.\"},\"tariff_fixed_month\":{\"label\":\"Vaste kosten per maand\",\"help\":\"Leveringskosten en netbeheer min heffingskorting.\",\"more\":\"Alleen voor het kostenlogboek; verandert het plan niet.\"},\"plan_wear_cost\":{\"label\":\"Slijtagekosten\",\"help\":\"Per kWh door de accu.\",\"more\":\"De planner laadt en levert alleen als het verschil groter is dan dit bedrag. Standaard € 0,03 (B39).\"},\"plan_grid_charge_cost\":{\"label\":\"Drempel laden uit het net\",\"help\":\"Minimale winst per kWh om uit het net te laden.\",\"more\":\"Voorkomt laden uit het net voor een heel klein voordeel. Standaard € 0,01.\"},\"plan_allow_export\":{\"label\":\"Terugleveren uit de accu\",\"help\":\"Mag de accu naar het net leveren als dat loont?\",\"more\":\"Alleen zinvol als de terugleverprijs soms hoger is dan wat het later kost om bij te laden, inclusief verlies en slijtage. Standaard uit.\"},\"plan_load_margin\":{\"label\":\"Laadmarge\",\"help\":\"Rekenen met meer verbruik dan geleerd.\",\"more\":\"Bij 10 % rekent de planner met 10 % meer verbruik. Nuttig als de accu op drukke avonden te vroeg leeg is.\"},\"plan_buffer\":{\"label\":\"Buffer\",\"help\":\"Deel van de accu dat de planner niet inplant.\",\"more\":\"De regelaar mag de buffer wel gebruiken als het verbruik hoger uitvalt dan verwacht. Daarna vult de planner hem bij als dat goedkoper is (B37).\"},\"expensive_hours\":{\"label\":\"Dure uren\",\"help\":\"Zonder planner: alleen in de N duurste uren leveren.\",\"more\":\"Geldt in de modus Nul op de meter met een prijssensor, maar zonder Dynamische Forecasting.\"},\"reserve_soc\":{\"label\":\"Reserve\",\"help\":\"Zonder planner: bijladen tot dit percentage vóór de dure uren.\",\"more\":\"Gaat op in de buffer van de planner (B37).\"},\"min_price\":{\"label\":\"Minimumprijs\",\"help\":\"Zonder planner: niet leveren onder deze prijs.\",\"more\":\"Leeg = geen minimum.\"},\"live_off_after_restart\":{\"label\":\"Live sturen uit na een herstart (testfase)\",\"help\":\"Uit (standaard): na een herstart komt live sturen vanzelf terug zodra de P1 meldt en de sets online zijn (als het aan stond). Aan: het blijft uit en je zet het zelf weer aan.\",\"more\":\"Voor de testfase: na elke herstart zet je live sturen zelf weer aan.\"},\"vacation_when_away\":{\"label\":\"Vakantie als niemand thuis is\",\"help\":\"Vanzelf aan na 24 uur zonder iemand thuis.\",\"more\":\"Gebruikt zone.home (het aantal mensen thuis). Uit zodra er iemand terug is. De schakelaar Vakantie (met Vakantie tot) werkt daarnaast altijd.\"},\"workday_entity\":{\"label\":\"Werkdag-sensor\",\"help\":\"Feestdagen tellen als weekenddag.\",\"more\":\"ZEPHYR vraagt de integratie Workday (actie workday.check_date) naar vandaag, morgen en de dagen van de eerste vulling. Zonder sensor zijn maandag t/m vrijdag werkdagen.\"},\"curtail_negative\":{\"label\":\"Zonoverschot bij negatieve prijs\",\"help\":\"Wat er met zonoverschot gebeurt als de terugleverprijs onder nul is. Uit: het gaat het net op en kost geld, de planner maakt eerst ruimte in de accu. Ander systeem: een omvormerbegrenzer knijpt zelf af. ZEPHYR: ZEPHYR blokkeert teruglevering van de eigen panelen van de sets en knijpt de omvormer af: met de schakelaar of met de vermogensbegrenzing hieronder (één van beide).\",\"more\":\"Met saldering (tot 2027) is de terugleverprijs zelden negatief (de energiebelasting zit erin); zonder saldering gebeurt het op zonnige middagen in voorjaar en zomer. De eigen panelen van de sets blokkeert ZEPHYR met gridReverse; een omvormer zoals een SolarEdge heeft een schakelaar nodig (bijv. een sjabloon-schakelaar voor een exportbegrenzer).\"},\"curtail_switch\":{\"label\":\"Schakelaar omvormer afknijpen\",\"help\":\"Aan zolang de terugleverprijs negatief is. Alternatief voor de vermogensbegrenzing.\",\"more\":\"ZEPHYR zet deze schakelaar aan aan het begin van een kwartier met een negatieve terugleverprijs en daarna weer uit. Een sjabloon-schakelaar kan elk script aanroepen of de modus van een exportbegrenzer zetten.\"},\"solar_power_entities\":{\"label\":\"Zonnepanelen-vermogen\",\"help\":\"Vermogenssensoren (W) van omvormers, worden opgeteld.\",\"more\":\"Voor omvormers die niet aan een Zendure-set hangen, zoals SolarEdge. ZEPHYR telt ze op bij de PV van de sets en toont dat in Nu en Stroom. Kies hier niet de PV van de Zendure-set zelf: die leest ZEPHYR al uit de set. Leeg: ZEPHYR schat het vermogen uit de zonnepanelen-teller (grover, loopt achter).\"},\"curtail_number\":{\"label\":\"Vermogensbegrenzing omvormer\",\"help\":\"Getal-entiteit die het vermogen van de omvormer begrenst in % (bijv. SolarEdge Modbus active power limit). Alleen met ZEPHYR knijpt af.\",\"more\":\"Zolang de terugleverprijs negatief is zet ZEPHYR die elke 10 s zo dat de omvormer levert wat het huis en de accu afnemen (het net blijft op een kleine afname), en daarna weer op 100 %. Nodig: het nominaal vermogen hieronder en een sensor voor het zonvermogen (Bronnen).\"},\"curtail_inverter_w\":{\"label\":\"Nominaal vermogen omvormer\",\"help\":\"Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld.\",\"more\":\"Bij een SolarEdge het nominale vermogen van het model, bijv. 5000 W voor een SE5K.\"}},\"restarting\":\"ZEPHYR start opnieuw met de nieuwe instellingen…\",\"pending\":\"{n} wijzigingen nog niet bewaard · ZEPHYR start kort opnieuw\",\"pending_one\":\"1 wijziging nog niet bewaard · ZEPHYR start kort opnieuw\",\"cancel\":\"Annuleren\",\"save_restart\":\"Bewaren en herstarten\",\"saving\":\"Bezig…\",\"saved\":\"bewaard\",\"not_saved\":\"niet bewaard\",\"reset\":\"Standaard terugzetten\",\"clear\":\"Leegmaken\",\"remove\":\"Weghalen\",\"choose_entity\":\"Kies of typ een entiteit\",\"actions\":{\"heating\":\"draait\",\"cooling\":\"draait\",\"drying\":\"draait\",\"fan\":\"draait\",\"preheating\":\"draait\",\"defrosting\":\"ontdooit\",\"idle\":\"staat stil\",\"off\":\"uit\"},\"errors\":{\"out_of_range\":\"Buiten de grenzen.\",\"off_step\":\"Past niet bij de stapgrootte.\",\"not_a_number\":\"Geen getal.\",\"not_a_bool\":\"Ongeldige waarde.\",\"required\":\"Mag niet leeg zijn.\",\"unknown_choice\":\"Onbekende keuze.\",\"choose_one\":\"Kies minstens één stand. Uitzetten: maak de teller leeg.\",\"not_an_entity\":\"Dit soort entiteit past hier niet.\",\"entity_missing\":\"Entiteit niet gevonden.\",\"unknown_key\":\"Onbekende instelling.\",\"p1_missing\":\"Kies een P1-sensor.\",\"p1_pair_incomplete\":\"Kies zowel de afname- als de terugleversensor.\",\"p1_pair_same\":\"Afname en teruglevering moeten twee verschillende sensoren zijn.\",\"excluded_needs_counter\":\"De klimaat-entiteit werkt alleen samen met de energieteller van de airco. Kies de teller of maak de klimaat-entiteit leeg.\",\"failed\":\"Bewaren lukte niet. Probeer het opnieuw.\",\"range\":\"Kies een waarde van {min} tot en met {max}{unit}.\",\"entity_domain\":\"Dit veld verwacht een {domain}-entiteit\"},\"vac_active\":\"Op vakantie\",\"vac_home\":\"Thuis\",\"vac_off\":\"De planner rekent met het gewone verbruik.\",\"vac_until\":\"Tot {until}. De planner rekent tot dan met het verbruik bij afwezigheid en laadt op tijd voor de terugkomst.\",\"vac_open\":\"Zonder einddatum; zet het uit als je terug bent.\",\"vac_auto\":\"Vanzelf aan sinds {since}: niemand is 24 uur thuis geweest (optie hieronder). Gaat uit zodra iemand thuiskomt.\",\"vac_until_label\":\"Terug op\",\"vac_start\":\"Vakantie aanzetten\",\"vac_stop\":\"Vakantie uitzetten\",\"vac_help\":\"Tijdens een vakantie rekent de planner met het sluimerverbruik en leert hij dat apart; het gewone verbruiksprofiel blijft schoon. Een einddatum is optioneel.\",\"house_note\":\"Wanneer je je apparaten meestal laat draaien. Met één tik onder Prijzen en plan kiest ZEPHYR de goedkoopste start binnen dit venster. Een nieuw apparaat met slimme stekker voeg je toe via Apparaten en diensten → ZEPHYR → Apparaat toevoegen. Het venster wijzigen herlaadt ZEPHYR even.\",\"house_floor\":\"Verdieping\",\"save\":\"Opslaan\",\"discard\":\"Annuleren\",\"floors\":{\"attic\":\"Zolder\",\"first\":\"1e verdieping\",\"ground\":\"Begane grond\",\"shed\":\"Schuur\",\"outside\":\"Buiten\"},\"appl_learned\":\"geleerd uit {n} runs\",\"appl_default\":\"standaardprofiel\",\"appl_airco\":\"niet uit de accu (Correcties)\",\"appl_from\":\"Niet vóór\",\"appl_until\":\"Klaar om\",\"appl_shown\":\"Tonen op Stroom\",\"appl_after\":\"Altijd na de was\",\"appl_after_help\":\"plan de droger mee (één keer, na de laatste was) als je de was plant\",\"curtail_head\":\"Omvormer buiten de sets (kies één)\",\"curtail_only\":\"Alleen bij “ZEPHYR knijpt af”.\",\"curtail_rated_missing\":\"Vul het nominale vermogen in, anders begrenst ZEPHYR niet.\"}"),
 		airco: {
 			blocked: "Airco {kw} kW · niet uit de accu",
 			blocked_unknown: "Airco · niet uit de accu",
@@ -1069,7 +1077,10 @@ var Ye = {
 			charging: "Accu laadt",
 			delivering: "Accu levert",
 			battery: "Accu",
-			estimated: "geschat"
+			estimated: "geschat",
+			curtailed: "Afgeknepen tot {pct} %",
+			inverter_off: "Omvormer uit",
+			export_blocked: "Teruglevering geblokkeerd"
 		},
 		stroom: {
 			zero_title: "Nul op de meter vandaag",
@@ -1267,7 +1278,15 @@ var Ye = {
 			spread: "spread {value}",
 			spread_title: "How much more the most expensive quarter costs than the cheapest. A rough measure of what charging and delivering later can earn, before losses (about 14 %) and wear. With prices around zero or negative: the difference in euro.",
 			tip_appliances: "Appliances: {kwh}",
-			runs_label: "Planned appliances"
+			runs_label: "Planned appliances",
+			curtail_mark: "Solar surplus is curtailed",
+			tip_curtail: "Export price {price}: solar surplus {kwh} is curtailed",
+			tip_export_cost: "Exporting costs {euro} (no curtailing set up)",
+			neg_today: "Today {hours} h of negative export price. Curtailing is off; that is expected to cost {euro}.",
+			neg_tomorrow: "Tomorrow {hours} h of negative export price. Curtailing is off; that is expected to cost {euro}.",
+			neg_both: "Today and tomorrow {hours} h of negative export price. Curtailing is off; that is expected to cost {euro}.",
+			neg_link: "Change the setting →",
+			legend_negative: "Negative export price"
 		},
 		blocks: {
 			title: "Blocks",
@@ -1362,7 +1381,7 @@ var Ye = {
 			not_judged: "judged when full",
 			not_judged_title: "The cell difference is judged when the battery is (nearly) full and the current is small."
 		},
-		settings: /* @__PURE__ */ JSON.parse("{\"title\":\"Settings\",\"groups\":{\"battery\":\"Battery and limits\",\"sources\":\"Sources\",\"tariffs\":\"Tariffs\",\"planner\":\"Planner\",\"corrections\":\"Corrections\",\"zero_meter\":\"Zero on the meter without planner\",\"testing\":\"Test phase\",\"vacation\":\"Vacation\",\"house\":\"Appliances\"},\"modified_n\":\"{n} changed\",\"default\":\"standard: {value}\",\"none\":\"empty\",\"yes\":\"on\",\"no\":\"off\",\"more\":\"More about {label}\",\"readonly\":\"Only an administrator can change settings.\",\"reload_note\":\"Changes in this group are saved together; ZEPHYR then restarts briefly.\",\"supplier_note\":\"With a supplier the amounts from the tariff table apply ({source}). They can only be changed with own tariffs.\",\"in_use\":\"in use: {value}\",\"status\":{\"unset\":\"not set\",\"missing\":\"not found: {entities}\",\"ok\":\"working\",\"interval\":\"reports every {s} s\",\"slots\":\"{n} prices in the sensor\",\"unavailable\":\"unavailable\",\"climate\":\"{mode} · {action}\",\"no_step\":\"no measurement yet\",\"steps\":\"a step of {kwh} kWh every {every}\"},\"own\":\"Own tariffs\",\"options\":{\"single\":\"One sensor (import − export)\",\"import_export\":\"Two sensors (import and export)\",\"heat\":\"Heating\",\"cool\":\"Cooling\",\"dry\":\"Drying\",\"fan_only\":\"Fan\",\"heat_cool\":\"Heating/cooling\",\"auto\":\"Auto\",\"off\":\"Off\",\"curtail_off\":\"Off (exported, costs money)\",\"curtail_external\":\"Another system curtails\",\"curtail_zephyr\":\"ZEPHYR curtails\"},\"fields\":{\"min_soc\":{\"label\":\"Minimum state of charge\",\"help\":\"Below this the battery stops delivering.\",\"more\":\"Default 10 %. Lower gives more usable energy, but the battery is more often nearly empty. Also written to the set, so it stops when ZEPHYR is not running.\"},\"max_soc\":{\"label\":\"Maximum state of charge\",\"help\":\"Above this the battery stops charging.\",\"more\":\"Not charging to 100 % saves a little wear. The set needs 100 % now and then to reset its SOC and balance the cells.\"},\"p1_source\":{\"label\":\"P1 measurement\",\"help\":\"One sensor with net power, or import and export separately.\",\"more\":\"ZEPHYR watches the grid and steers the battery until the grid is at zero. The more often the meter reports, the faster and more precise. When the meter is silent for more than 10 s, ZEPHYR stops safely.\"},\"p1_entity\":{\"label\":\"P1 sensor (net)\",\"help\":\"Grid power: + = import, − = export.\",\"more\":\"A sensor in W or kW.\"},\"p1_import_entity\":{\"label\":\"P1 import\",\"help\":\"Power from the grid.\",\"more\":\"Together with the export sensor; ZEPHYR uses import − export.\"},\"p1_export_entity\":{\"label\":\"P1 export\",\"help\":\"Power to the grid.\",\"more\":\"Together with the import sensor.\"},\"price_entity\":{\"label\":\"Price sensor\",\"help\":\"Nord Pool with today's and tomorrow's prices.\",\"more\":\"Tomorrow's prices arrive around 13:00. Without a price sensor ZEPHYR makes no plan.\"},\"solar_forecast_entity\":{\"label\":\"Solar forecast\",\"help\":\"Solcast (tomorrow) with half-hour detail.\",\"more\":\"Without a forecast the planner uses yesterday's production per hour.\"},\"solar_energy_entity\":{\"label\":\"Solar counter\",\"help\":\"Production in kWh (increasing).\",\"more\":\"Tells ZEPHYR what your panels really produced: for the house consumption, the cost log and correcting the forecast.\"},\"excluded_energy_entity\":{\"label\":\"Air conditioner: energy counter\",\"help\":\"kWh counter of a load the battery may not feed.\",\"more\":\"ZEPHYR estimates the power from the counter steps and does not deliver for the air conditioner while it runs in a blocked mode. The rest of the house still comes from the battery; solar surplus still charges it.\"},\"excluded_climate_entity\":{\"label\":\"Air conditioner: climate entity\",\"help\":\"Says at once whether it runs and in which mode.\",\"more\":\"Without it ZEPHYR cannot tell heating from cooling and never feeds the air conditioner from the battery; it also notices a stop only from the counter.\"},\"excluded_hvac_modes\":{\"label\":\"Air conditioner: not from the battery when\",\"help\":\"Modes in which the battery does not feed it.\",\"more\":\"Default heating: while heating, the air conditioner takes from the grid or from solar.\"},\"cost_import_counters\":{\"label\":\"Import counters\",\"help\":\"The kWh counters of your smart meter (tariff 1 and 2).\",\"more\":\"For the cost log: more precise than adding up power.\"},\"cost_export_counters\":{\"label\":\"Export counters\",\"help\":\"The kWh counters for export (tariff 1 and 2).\",\"more\":\"For the cost log.\"},\"tariff_supplier\":{\"label\":\"Energy supplier\",\"help\":\"Amounts from ZEPHYR's tariff table, or own tariffs.\",\"more\":\"The table is updated with releases and fetched daily. Supplier not listed? Choose own tariffs.\"},\"tariff_energy_tax\":{\"label\":\"Energy tax\",\"help\":\"Per kWh, excluding VAT.\",\"more\":\"Statutory amount; listed per year in the table.\"},\"tariff_markup_import\":{\"label\":\"Import margin\",\"help\":\"What the supplier adds to the market price, excluding VAT.\",\"more\":\"See your contract or invoice.\"},\"tariff_markup_export\":{\"label\":\"Export margin\",\"help\":\"Added to the market price (negative = a fee), excluding VAT.\",\"more\":\"Some suppliers deduct a fixed amount from what you get back: enter it as negative.\"},\"tariff_vat\":{\"label\":\"VAT\",\"help\":\"On market price, margin and energy tax.\",\"more\":\"Statutory rate.\"},\"tariff_solar_bonus\":{\"label\":\"Solar bonus\",\"help\":\"Extra on the export price during the day.\",\"more\":\"For example 10 % with Zonneplan. Only counted while the sun is up.\"},\"tariff_fixed_month\":{\"label\":\"Fixed costs per month\",\"help\":\"Supply and network costs minus tax credit.\",\"more\":\"Only for the cost log; does not change the plan.\"},\"plan_wear_cost\":{\"label\":\"Wear cost\",\"help\":\"Per kWh through the battery.\",\"more\":\"The planner only charges and delivers when the difference is larger than this. Default €0.03 (B39).\"},\"plan_grid_charge_cost\":{\"label\":\"Grid charging threshold\",\"help\":\"Minimum gain per kWh to charge from the grid.\",\"more\":\"Avoids charging from the grid for a tiny gain. Default €0.01.\"},\"plan_allow_export\":{\"label\":\"Export from the battery\",\"help\":\"May the battery deliver to the grid when that pays?\",\"more\":\"Only useful when the export price is sometimes higher than recharging later, including losses and wear. Off by default.\"},\"plan_load_margin\":{\"label\":\"Consumption margin\",\"help\":\"Plan with more consumption than learned.\",\"more\":\"At 10 % the planner assumes 10 % more consumption.\"},\"plan_buffer\":{\"label\":\"Buffer\",\"help\":\"Part of the battery the planner keeps free.\",\"more\":\"The controller may use the buffer when consumption is higher than expected; the planner refills it when that is cheaper (B37).\"},\"expensive_hours\":{\"label\":\"Expensive hours\",\"help\":\"Without planner: only deliver in the N most expensive hours.\",\"more\":\"Applies in Zero on the meter with a price sensor but without Dynamic Forecasting.\"},\"reserve_soc\":{\"label\":\"Reserve\",\"help\":\"Without planner: charge to this level before the expensive hours.\",\"more\":\"Becomes the planner's buffer (B37).\"},\"min_price\":{\"label\":\"Minimum price\",\"help\":\"Without planner: do not deliver below this price.\",\"more\":\"Empty = no minimum.\"},\"live_off_after_restart\":{\"label\":\"Live control off after a restart (test phase)\",\"help\":\"Off (default): after a restart live control comes back on its own as soon as the P1 reports and the sets are online (if it was on). On: it stays off and you switch it on yourself.\",\"more\":\"For the test phase: after every restart you switch control on yourself.\"},\"vacation_when_away\":{\"label\":\"Vacation when nobody is home\",\"help\":\"On by itself after 24 hours with nobody home.\",\"more\":\"Uses zone.home (the number of people at home). Off as soon as someone is back. The switch Vacation (with Vacation until) always works as well.\"},\"workday_entity\":{\"label\":\"Workday sensor\",\"help\":\"Holidays count as weekend days.\",\"more\":\"ZEPHYR asks the Workday integration (action workday.check_date) about today, tomorrow and the days of the first fill. Without it Monday to Friday are workdays.\"},\"curtail_negative\":{\"label\":\"Surplus solar at a negative price\",\"help\":\"What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and turns on the switch below.\",\"more\":\"With saldering (until 2027) the export price is rarely below zero (energy tax is part of it); without saldering it happens on sunny spring and summer middays. The sets' own panels are blocked with gridReverse; an inverter such as a SolarEdge needs a switch (e.g. a template switch for an export limiter).\"},\"curtail_switch\":{\"label\":\"Inverter curtail switch\",\"help\":\"On while the export price is negative (only with ZEPHYR).\",\"more\":\"ZEPHYR turns this switch on at the start of a quarter with a negative export price and off again after. A template switch can call any script or set the mode of an export limiter.\"},\"solar_power_entities\":{\"label\":\"Solar panel power\",\"help\":\"Power sensors (W) of inverters, added up.\",\"more\":\"For inverters that are not on a Zendure set, such as SolarEdge. ZEPHYR adds them to the sets' PV and shows that in Now and Power. Do not choose the Zendure set's own PV here: ZEPHYR already reads it from the set. Empty: ZEPHYR estimates the power from the solar energy counter (coarser, lags behind).\"},\"curtail_number\":{\"label\":\"Inverter power limit\",\"help\":\"Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.\",\"more\":\"While the export price is negative ZEPHYR sets it every 10 s so the inverter produces what the house and the battery take (the grid stays at a small import), and back to 100 % after. Needs the rated power below and a solar power sensor (Sources).\"},\"curtail_inverter_w\":{\"label\":\"Inverter rated power\",\"help\":\"Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.\",\"more\":\"For a SolarEdge the nominal power of the inverter model, e.g. 5000 W for an SE5K.\"}},\"restarting\":\"ZEPHYR is restarting with the new settings…\",\"pending\":\"{n} changes not saved yet · ZEPHYR restarts briefly\",\"pending_one\":\"1 change not saved yet · ZEPHYR restarts briefly\",\"cancel\":\"Cancel\",\"save_restart\":\"Save and restart\",\"saving\":\"Saving…\",\"saved\":\"saved\",\"not_saved\":\"not saved\",\"reset\":\"Restore standard\",\"clear\":\"Clear\",\"remove\":\"Remove\",\"choose_entity\":\"Choose or type an entity\",\"actions\":{\"heating\":\"running\",\"cooling\":\"running\",\"drying\":\"running\",\"fan\":\"running\",\"preheating\":\"running\",\"defrosting\":\"defrosting\",\"idle\":\"idle\",\"off\":\"off\"},\"errors\":{\"out_of_range\":\"Outside the limits.\",\"off_step\":\"Does not fit the step size.\",\"not_a_number\":\"Not a number.\",\"not_a_bool\":\"Invalid value.\",\"required\":\"May not be empty.\",\"unknown_choice\":\"Unknown choice.\",\"choose_one\":\"Choose at least one mode. To switch off: clear the counter.\",\"not_an_entity\":\"This kind of entity does not fit here.\",\"entity_missing\":\"Entity not found.\",\"unknown_key\":\"Unknown setting.\",\"p1_missing\":\"Choose a P1 sensor.\",\"p1_pair_incomplete\":\"Choose both the import and the export sensor.\",\"p1_pair_same\":\"Import and export must be two different sensors.\",\"excluded_needs_counter\":\"The climate entity only works together with the air conditioner's energy counter. Choose the counter or clear the climate entity.\",\"failed\":\"Saving failed. Please try again.\",\"range\":\"Choose a value from {min} to {max}{unit}.\"},\"vac_active\":\"On vacation\",\"vac_home\":\"At home\",\"vac_off\":\"The planner uses the normal use.\",\"vac_until\":\"Until {until}. Until then the planner uses the use while away and charges in time for the return.\",\"vac_open\":\"Without an end date; switch it off when you are back.\",\"vac_auto\":\"On by itself since {since}: nobody has been home for 24 hours (option below). Goes off as soon as someone comes home.\",\"vac_until_label\":\"Back on\",\"vac_start\":\"Start vacation\",\"vac_stop\":\"End vacation\",\"vac_help\":\"During a vacation the planner uses the standby use and learns it apart; the normal use profile stays clean. An end date is optional.\",\"house_note\":\"When you usually run your appliances. One tap under Prices and plan lets ZEPHYR pick the cheapest start within this window. Add a new appliance with a smart plug via Devices & services → ZEPHYR → Add appliance. Changing the window reloads ZEPHYR briefly.\",\"house_floor\":\"Floor\",\"save\":\"Save\",\"discard\":\"Cancel\",\"floors\":{\"attic\":\"Attic\",\"first\":\"First floor\",\"ground\":\"Ground floor\",\"shed\":\"Shed\",\"outside\":\"Outside\"},\"appl_learned\":\"learned from {n} runs\",\"appl_default\":\"standard profile\",\"appl_airco\":\"not from the battery (Corrections)\",\"appl_from\":\"Not before\",\"appl_until\":\"Done by\",\"appl_shown\":\"Show on Power\",\"appl_after\":\"Always after the washing\",\"appl_after_help\":\"plan the dryer along (once, after the last wash) when you plan the washing\"}"),
+		settings: /* @__PURE__ */ JSON.parse("{\"title\":\"Settings\",\"groups\":{\"battery\":\"Battery and limits\",\"sources\":\"Sources\",\"tariffs\":\"Tariffs\",\"planner\":\"Planner\",\"corrections\":\"Corrections\",\"zero_meter\":\"Zero on the meter without planner\",\"testing\":\"Test phase\",\"vacation\":\"Vacation\",\"house\":\"Appliances\"},\"modified_n\":\"{n} changed\",\"default\":\"standard: {value}\",\"none\":\"empty\",\"yes\":\"on\",\"no\":\"off\",\"more\":\"More about {label}\",\"readonly\":\"Only an administrator can change settings.\",\"reload_note\":\"Changes in this group are saved together; ZEPHYR then restarts briefly.\",\"supplier_note\":\"With a supplier the amounts from the tariff table apply ({source}). They can only be changed with own tariffs.\",\"in_use\":\"in use: {value}\",\"status\":{\"unset\":\"not set\",\"missing\":\"not found: {entities}\",\"ok\":\"working\",\"interval\":\"reports every {s} s\",\"slots\":\"{n} prices in the sensor\",\"unavailable\":\"unavailable\",\"climate\":\"{mode} · {action}\",\"no_step\":\"no measurement yet\",\"steps\":\"a step of {kwh} kWh every {every}\"},\"own\":\"Own tariffs\",\"options\":{\"single\":\"One sensor (import − export)\",\"import_export\":\"Two sensors (import and export)\",\"heat\":\"Heating\",\"cool\":\"Cooling\",\"dry\":\"Drying\",\"fan_only\":\"Fan\",\"heat_cool\":\"Heating/cooling\",\"auto\":\"Auto\",\"off\":\"Off\",\"curtail_off\":\"Off (exported, costs money)\",\"curtail_external\":\"Another system curtails\",\"curtail_zephyr\":\"ZEPHYR curtails\"},\"fields\":{\"min_soc\":{\"label\":\"Minimum state of charge\",\"help\":\"Below this the battery stops delivering.\",\"more\":\"Default 10 %. Lower gives more usable energy, but the battery is more often nearly empty. Also written to the set, so it stops when ZEPHYR is not running.\"},\"max_soc\":{\"label\":\"Maximum state of charge\",\"help\":\"Above this the battery stops charging.\",\"more\":\"Not charging to 100 % saves a little wear. The set needs 100 % now and then to reset its SOC and balance the cells.\"},\"p1_source\":{\"label\":\"P1 measurement\",\"help\":\"One sensor with net power, or import and export separately.\",\"more\":\"ZEPHYR watches the grid and steers the battery until the grid is at zero. The more often the meter reports, the faster and more precise. When the meter is silent for more than 10 s, ZEPHYR stops safely.\"},\"p1_entity\":{\"label\":\"P1 sensor (net)\",\"help\":\"Grid power: + = import, − = export.\",\"more\":\"A sensor in W or kW.\"},\"p1_import_entity\":{\"label\":\"P1 import\",\"help\":\"Power from the grid.\",\"more\":\"Together with the export sensor; ZEPHYR uses import − export.\"},\"p1_export_entity\":{\"label\":\"P1 export\",\"help\":\"Power to the grid.\",\"more\":\"Together with the import sensor.\"},\"price_entity\":{\"label\":\"Price sensor\",\"help\":\"Nord Pool with today's and tomorrow's prices.\",\"more\":\"Tomorrow's prices arrive around 13:00. Without a price sensor ZEPHYR makes no plan.\"},\"solar_forecast_entity\":{\"label\":\"Solar forecast\",\"help\":\"Solcast (tomorrow) with half-hour detail.\",\"more\":\"Without a forecast the planner uses yesterday's production per hour.\"},\"solar_energy_entity\":{\"label\":\"Solar counter\",\"help\":\"Production in kWh (increasing).\",\"more\":\"Tells ZEPHYR what your panels really produced: for the house consumption, the cost log and correcting the forecast.\"},\"excluded_energy_entity\":{\"label\":\"Air conditioner: energy counter\",\"help\":\"kWh counter of a load the battery may not feed.\",\"more\":\"ZEPHYR estimates the power from the counter steps and does not deliver for the air conditioner while it runs in a blocked mode. The rest of the house still comes from the battery; solar surplus still charges it.\"},\"excluded_climate_entity\":{\"label\":\"Air conditioner: climate entity\",\"help\":\"Says at once whether it runs and in which mode.\",\"more\":\"Without it ZEPHYR cannot tell heating from cooling and never feeds the air conditioner from the battery; it also notices a stop only from the counter.\"},\"excluded_hvac_modes\":{\"label\":\"Air conditioner: not from the battery when\",\"help\":\"Modes in which the battery does not feed it.\",\"more\":\"Default heating: while heating, the air conditioner takes from the grid or from solar.\"},\"cost_import_counters\":{\"label\":\"Import counters\",\"help\":\"The kWh counters of your smart meter (tariff 1 and 2).\",\"more\":\"For the cost log: more precise than adding up power.\"},\"cost_export_counters\":{\"label\":\"Export counters\",\"help\":\"The kWh counters for export (tariff 1 and 2).\",\"more\":\"For the cost log.\"},\"tariff_supplier\":{\"label\":\"Energy supplier\",\"help\":\"Amounts from ZEPHYR's tariff table, or own tariffs.\",\"more\":\"The table is updated with releases and fetched daily. Supplier not listed? Choose own tariffs.\"},\"tariff_energy_tax\":{\"label\":\"Energy tax\",\"help\":\"Per kWh, excluding VAT.\",\"more\":\"Statutory amount; listed per year in the table.\"},\"tariff_markup_import\":{\"label\":\"Import margin\",\"help\":\"What the supplier adds to the market price, excluding VAT.\",\"more\":\"See your contract or invoice.\"},\"tariff_markup_export\":{\"label\":\"Export margin\",\"help\":\"Added to the market price (negative = a fee), excluding VAT.\",\"more\":\"Some suppliers deduct a fixed amount from what you get back: enter it as negative.\"},\"tariff_vat\":{\"label\":\"VAT\",\"help\":\"On market price, margin and energy tax.\",\"more\":\"Statutory rate.\"},\"tariff_solar_bonus\":{\"label\":\"Solar bonus\",\"help\":\"Extra on the export price during the day.\",\"more\":\"For example 10 % with Zonneplan. Only counted while the sun is up.\"},\"tariff_fixed_month\":{\"label\":\"Fixed costs per month\",\"help\":\"Supply and network costs minus tax credit.\",\"more\":\"Only for the cost log; does not change the plan.\"},\"plan_wear_cost\":{\"label\":\"Wear cost\",\"help\":\"Per kWh through the battery.\",\"more\":\"The planner only charges and delivers when the difference is larger than this. Default €0.03 (B39).\"},\"plan_grid_charge_cost\":{\"label\":\"Grid charging threshold\",\"help\":\"Minimum gain per kWh to charge from the grid.\",\"more\":\"Avoids charging from the grid for a tiny gain. Default €0.01.\"},\"plan_allow_export\":{\"label\":\"Export from the battery\",\"help\":\"May the battery deliver to the grid when that pays?\",\"more\":\"Only useful when the export price is sometimes higher than recharging later, including losses and wear. Off by default.\"},\"plan_load_margin\":{\"label\":\"Consumption margin\",\"help\":\"Plan with more consumption than learned.\",\"more\":\"At 10 % the planner assumes 10 % more consumption.\"},\"plan_buffer\":{\"label\":\"Buffer\",\"help\":\"Part of the battery the planner keeps free.\",\"more\":\"The controller may use the buffer when consumption is higher than expected; the planner refills it when that is cheaper (B37).\"},\"expensive_hours\":{\"label\":\"Expensive hours\",\"help\":\"Without planner: only deliver in the N most expensive hours.\",\"more\":\"Applies in Zero on the meter with a price sensor but without Dynamic Forecasting.\"},\"reserve_soc\":{\"label\":\"Reserve\",\"help\":\"Without planner: charge to this level before the expensive hours.\",\"more\":\"Becomes the planner's buffer (B37).\"},\"min_price\":{\"label\":\"Minimum price\",\"help\":\"Without planner: do not deliver below this price.\",\"more\":\"Empty = no minimum.\"},\"live_off_after_restart\":{\"label\":\"Live control off after a restart (test phase)\",\"help\":\"Off (default): after a restart live control comes back on its own as soon as the P1 reports and the sets are online (if it was on). On: it stays off and you switch it on yourself.\",\"more\":\"For the test phase: after every restart you switch control on yourself.\"},\"vacation_when_away\":{\"label\":\"Vacation when nobody is home\",\"help\":\"On by itself after 24 hours with nobody home.\",\"more\":\"Uses zone.home (the number of people at home). Off as soon as someone is back. The switch Vacation (with Vacation until) always works as well.\"},\"workday_entity\":{\"label\":\"Workday sensor\",\"help\":\"Holidays count as weekend days.\",\"more\":\"ZEPHYR asks the Workday integration (action workday.check_date) about today, tomorrow and the days of the first fill. Without it Monday to Friday are workdays.\"},\"curtail_negative\":{\"label\":\"Surplus solar at a negative price\",\"help\":\"What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and curtails the inverter: with the switch or with the power limit below (one of the two).\",\"more\":\"With saldering (until 2027) the export price is rarely below zero (energy tax is part of it); without saldering it happens on sunny spring and summer middays. The sets' own panels are blocked with gridReverse; an inverter such as a SolarEdge needs a switch (e.g. a template switch for an export limiter).\"},\"curtail_switch\":{\"label\":\"Inverter curtail switch\",\"help\":\"On while the export price is negative. Alternative to the power limit.\",\"more\":\"ZEPHYR turns this switch on at the start of a quarter with a negative export price and off again after. A template switch can call any script or set the mode of an export limiter.\"},\"solar_power_entities\":{\"label\":\"Solar panel power\",\"help\":\"Power sensors (W) of inverters, added up.\",\"more\":\"For inverters that are not on a Zendure set, such as SolarEdge. ZEPHYR adds them to the sets' PV and shows that in Now and Power. Do not choose the Zendure set's own PV here: ZEPHYR already reads it from the set. Empty: ZEPHYR estimates the power from the solar energy counter (coarser, lags behind).\"},\"curtail_number\":{\"label\":\"Inverter power limit\",\"help\":\"Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.\",\"more\":\"While the export price is negative ZEPHYR sets it every 10 s so the inverter produces what the house and the battery take (the grid stays at a small import), and back to 100 % after. Needs the rated power below and a solar power sensor (Sources).\"},\"curtail_inverter_w\":{\"label\":\"Inverter rated power\",\"help\":\"Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.\",\"more\":\"For a SolarEdge the nominal power of the inverter model, e.g. 5000 W for an SE5K.\"}},\"restarting\":\"ZEPHYR is restarting with the new settings…\",\"pending\":\"{n} changes not saved yet · ZEPHYR restarts briefly\",\"pending_one\":\"1 change not saved yet · ZEPHYR restarts briefly\",\"cancel\":\"Cancel\",\"save_restart\":\"Save and restart\",\"saving\":\"Saving…\",\"saved\":\"saved\",\"not_saved\":\"not saved\",\"reset\":\"Restore standard\",\"clear\":\"Clear\",\"remove\":\"Remove\",\"choose_entity\":\"Choose or type an entity\",\"actions\":{\"heating\":\"running\",\"cooling\":\"running\",\"drying\":\"running\",\"fan\":\"running\",\"preheating\":\"running\",\"defrosting\":\"defrosting\",\"idle\":\"idle\",\"off\":\"off\"},\"errors\":{\"out_of_range\":\"Outside the limits.\",\"off_step\":\"Does not fit the step size.\",\"not_a_number\":\"Not a number.\",\"not_a_bool\":\"Invalid value.\",\"required\":\"May not be empty.\",\"unknown_choice\":\"Unknown choice.\",\"choose_one\":\"Choose at least one mode. To switch off: clear the counter.\",\"not_an_entity\":\"This kind of entity does not fit here.\",\"entity_missing\":\"Entity not found.\",\"unknown_key\":\"Unknown setting.\",\"p1_missing\":\"Choose a P1 sensor.\",\"p1_pair_incomplete\":\"Choose both the import and the export sensor.\",\"p1_pair_same\":\"Import and export must be two different sensors.\",\"excluded_needs_counter\":\"The climate entity only works together with the air conditioner's energy counter. Choose the counter or clear the climate entity.\",\"failed\":\"Saving failed. Please try again.\",\"range\":\"Choose a value from {min} to {max}{unit}.\",\"entity_domain\":\"This field expects a {domain} entity\"},\"vac_active\":\"On vacation\",\"vac_home\":\"At home\",\"vac_off\":\"The planner uses the normal use.\",\"vac_until\":\"Until {until}. Until then the planner uses the use while away and charges in time for the return.\",\"vac_open\":\"Without an end date; switch it off when you are back.\",\"vac_auto\":\"On by itself since {since}: nobody has been home for 24 hours (option below). Goes off as soon as someone comes home.\",\"vac_until_label\":\"Back on\",\"vac_start\":\"Start vacation\",\"vac_stop\":\"End vacation\",\"vac_help\":\"During a vacation the planner uses the standby use and learns it apart; the normal use profile stays clean. An end date is optional.\",\"house_note\":\"When you usually run your appliances. One tap under Prices and plan lets ZEPHYR pick the cheapest start within this window. Add a new appliance with a smart plug via Devices & services → ZEPHYR → Add appliance. Changing the window reloads ZEPHYR briefly.\",\"house_floor\":\"Floor\",\"save\":\"Save\",\"discard\":\"Cancel\",\"floors\":{\"attic\":\"Attic\",\"first\":\"First floor\",\"ground\":\"Ground floor\",\"shed\":\"Shed\",\"outside\":\"Outside\"},\"appl_learned\":\"learned from {n} runs\",\"appl_default\":\"standard profile\",\"appl_airco\":\"not from the battery (Corrections)\",\"appl_from\":\"Not before\",\"appl_until\":\"Done by\",\"appl_shown\":\"Show on Power\",\"appl_after\":\"Always after the washing\",\"appl_after_help\":\"plan the dryer along (once, after the last wash) when you plan the washing\",\"curtail_head\":\"Inverter outside the sets (choose one)\",\"curtail_only\":\"Only with “ZEPHYR curtails”.\",\"curtail_rated_missing\":\"Fill in the rated power, or ZEPHYR does not limit.\"}"),
 		airco: {
 			blocked: "Air conditioner {kw} kW · not from the battery",
 			blocked_unknown: "Air conditioner · not from the battery",
@@ -1597,7 +1616,10 @@ var Ye = {
 			charging: "Battery charging",
 			delivering: "Battery delivering",
 			battery: "Battery",
-			estimated: "estimated"
+			estimated: "estimated",
+			curtailed: "Curtailed to {pct} %",
+			inverter_off: "Inverter off",
+			export_blocked: "Export blocked"
 		},
 		stroom: {
 			zero_title: "Zero on the meter today",
@@ -1761,8 +1783,11 @@ function rt(e) {
 		avg: i / t.length
 	};
 }
-function it(e) {
-	return e.findIndex((e) => !e.past);
+function it(e, t = Date.now()) {
+	let n = e.findIndex((e) => !e.past);
+	if (n !== 0) return n;
+	let r = new Date(e[0].start).getTime();
+	return t >= r && t < r + 9e5 ? 0 : -1;
 }
 function at(e) {
 	let t = [];
@@ -1777,7 +1802,7 @@ function at(e) {
 	}), t;
 }
 function ot(e) {
-	let t = e.map((e) => e.buy).filter((e) => e !== null);
+	let t = e.flatMap((e) => [e.buy, e.sell !== null && e.sell < 0 ? e.sell : null]).filter((e) => e !== null);
 	if (!t.length) return {
 		lo: 0,
 		hi: .4
@@ -1809,7 +1834,12 @@ function ct(e, t, n) {
 }
 function lt(e, t) {
 	let n = it(e), r = [];
-	return n >= 0 && t !== null && r.push(`${n},${(100 - t).toFixed(1)}`), e.forEach((e, t) => {
+	if (n >= 0 && t !== null) r.push(`${n},${(100 - t).toFixed(1)}`);
+	else if (n < 0) {
+		let t = e.find((e) => !e.past && e.soc !== null);
+		t && t.soc !== null && r.push(`0,${(100 - t.soc).toFixed(1)}`);
+	}
+	return e.forEach((e, t) => {
 		!e.past && e.soc !== null && r.push(`${t + 1},${(100 - e.soc).toFixed(1)}`);
 	}), r.join(" ");
 }
@@ -1864,8 +1894,18 @@ function ht(e, t) {
 	}
 	return i;
 }
+function gt(e, t) {
+	let n = e.filter((e) => !e.past && e.sell !== null && e.sell < 0);
+	if (!n.length) return null;
+	let r = et(e, t)[0], i = n.some((e) => B(e.start, t) === r), a = n.some((e) => B(e.start, t) !== r);
+	return {
+		hours: n.length / 4,
+		cost: n.reduce((e, t) => e + (t.export_cost ?? 0), 0),
+		when: i && a ? "both" : i ? "today" : "tomorrow"
+	};
+}
 // src/theme.ts
-var gt = o`
+var _t = o`
   :host {
     --z-bg: #f4f5f2;
     --z-card: #ffffff;
@@ -1932,14 +1972,14 @@ function H(e, t, n, r) {
 	return i > 3 && a && Object.defineProperty(t, n, a), a;
 }
 // src/prices-plan.ts
-var _t = "zephyr.period", vt = [
+var vt = "zephyr.period", yt = (e, t) => Ge(t, { maximumFractionDigits: 2 }).format(e), bt = [
 	["today", "plan.today"],
 	["tomorrow", "plan.tomorrow"],
 	["both", "plan.both"]
 ];
-function yt() {
+function xt() {
 	try {
-		let e = window.localStorage.getItem(_t);
+		let e = window.localStorage.getItem(vt);
 		return e === "tomorrow" || e === "both" ? e : "today";
 	} catch {
 		return "today";
@@ -1947,7 +1987,7 @@ function yt() {
 }
 var U = class extends D {
 	constructor(...e) {
-		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.narrow = !1, this.runs = [], this.period = yt(), this.sel = null, this.scrolledFor = "";
+		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.narrow = !1, this.runs = [], this.period = xt(), this.sel = null, this.scrolledFor = "";
 	}
 	tr(e, t = {}) {
 		return z(this.uiLang, e, t);
@@ -1959,7 +1999,7 @@ var U = class extends D {
 			composed: !0
 		})), this.sel = null, this.scrolledFor = "";
 		try {
-			window.localStorage.setItem(_t, e);
+			window.localStorage.setItem(vt, e);
 		} catch {}
 	}
 	updated(e) {
@@ -1982,7 +2022,7 @@ var U = class extends D {
       <div class="head">
         <h2>${this.tr("plan.title")} · ${this.tr(c)}</h2>
         <div class="tabs" role="group" aria-label=${this.tr("plan.period")}>
-          ${vt.map(([e, t]) => x`<button
+          ${bt.map(([e, t]) => x`<button
                 type="button"
                 class=${this.period === e ? "on" : ""}
                 aria-pressed=${this.period === e ? "true" : "false"}
@@ -2007,7 +2047,7 @@ var U = class extends D {
       </div>
       ${this.notes(e, a)}
       ${t.length ? this.chart(t) : x`<p class="empty">${this.tr("plan.no_quarters")}</p>`}
-      ${this.legend()}
+      ${this.legend(t)}
       <slot></slot>
     </section>`;
 	}
@@ -2044,7 +2084,25 @@ var U = class extends D {
 	}
 	notes(e, t) {
 		let n = [];
-		return e.state === "no_prices" && n.push(x`<p class="note warn">${this.tr("plan.no_prices")}</p>`), e.state === "price_reserve" && n.push(x`<p class="note">${this.tr("plan.reserve")}</p>`), !t && this.period !== "today" && n.push(x`<p class="note">${this.tr("plan.indicative")}</p>`), n.length ? x`${n}` : w;
+		e.state === "no_prices" && n.push(x`<p class="note warn">${this.tr("plan.no_prices")}</p>`), e.state === "price_reserve" && n.push(x`<p class="note">${this.tr("plan.reserve")}</p>`), !t && this.period !== "today" && n.push(x`<p class="note">${this.tr("plan.indicative")}</p>`);
+		let r = e.curtail_mode === "curtail_off" ? gt(e.quarters, this.timeZone) : null;
+		return r && r.cost >= .01 && n.push(x`<p class="note warn negnote">
+          ${this.tr(`plan.neg_${r.when}`, {
+			hours: yt(r.hours, this.locale),
+			euro: M(r.cost, this.locale)
+		})}
+          <button
+            type="button"
+            class="link"
+            @click=${() => this.dispatchEvent(new CustomEvent("zephyr-open-settings", {
+			detail: "planner",
+			bubbles: !0,
+			composed: !0
+		}))}
+          >
+            ${this.tr("plan.neg_link")}
+          </button>
+        </p>`), n.length ? x`${n}` : w;
 	}
 	chart(e) {
 		let t = e.length, n = ot(e), r = it(e), i = (e) => `${(e / t * 100).toFixed(3)}%`, a = et(e, this.timeZone), o = a.length > 1 ? new Date(nt(e, 1, this.timeZone)[0].start).getTime() : null, s = o === null ? -1 : e.findIndex((e) => new Date(e.start).getTime() >= o), c = [];
@@ -2086,11 +2144,13 @@ var U = class extends D {
           ${p === null ? w : x`<div class="zero" style="bottom:${p}%"></div>`}
           ${e.map((e, t) => {
 			if (e.buy === null) return w;
-			let a = st(e.buy, n);
+			let a = st(e.buy, n), o = `bar${e.past ? " past" : ""}${e.indicative ? " ind" : ""}${t === r ? " cur" : ""}${t === u ? " focus" : ""}`, s = e.sell !== null && e.sell < 0 ? st(e.sell, n) : null;
 			return x`<div
-              class=${`bar${e.past ? " past" : ""}${e.indicative ? " ind" : ""}${t === r ? " cur" : ""}${t === u ? " focus" : ""}`}
-              style="left:${i(t)};width:${i(1)};bottom:${a.bottom}%;height:${a.height}%"
-            ></div>`;
+                class=${o}
+                style="left:${i(t)};width:${i(1)};bottom:${a.bottom}%;height:${a.height}%"
+              ></div>
+              ${s ? x`<div class=${`neg${e.past ? " past" : ""}`} style="left:${i(t)};width:${i(1)};bottom:${s.bottom}%;height:${s.height}%"></div>` : w}
+              ${(e.curtail_kwh ?? 0) > 0 ? x`<span class="cut" style="left:${i(t + .5)}" title=${this.tr("plan.curtail_mark")}></span>` : w}`;
 		})}
           <svg
             viewBox="0 0 ${t} 100"
@@ -2180,9 +2240,17 @@ var U = class extends D {
       ${e.buy === null ? x`<span>${this.tr("plan.unknown")}</span>` : x`<span
                 >${this.tr("plan.tip_buy", { price: M(e.buy, this.locale) })}</span
               >
-              <span
+              <span class=${e.sell !== null && e.sell < 0 ? "negtext" : ""}
                 >${this.tr("plan.tip_sell", { price: M(e.sell, this.locale) })}</span
-              >`}
+              >
+              ${(e.curtail_kwh ?? 0) > 0 ? x`<span
+                      >${this.tr("plan.tip_curtail", {
+			price: M(e.sell, this.locale),
+			kwh: P(e.curtail_kwh ?? 0, this.locale, 1)
+		})}</span
+                    >` : (e.export_cost ?? 0) > 0 ? x`<span
+                        >${this.tr("plan.tip_export_cost", { euro: M(e.export_cost ?? 0, this.locale) })}</span
+                      >` : w}`}
       ${a ? x`<span>${a}</span>` : w}
       ${e.soc === null ? w : x`<span>${this.tr(e.past ? "plan.tip_soc_past" : "plan.tip_soc", { soc: F(e.soc, this.locale) })}</span>`}
       ${e.solar !== null && e.load !== null ? x`<span
@@ -2204,19 +2272,20 @@ var U = class extends D {
 			high_time: I(t.max.start, this.locale, this.timeZone)
 		}) : this.tr("plan.title");
 	}
-	legend() {
-		let e = (e, t, n = "sw") => x`<span class="li"
+	legend(e = []) {
+		let t = e.some((e) => e.sell !== null && e.sell < 0), n = (e, t, n = "sw") => x`<span class="li"
         ><span class=${n} style="background:${e}"></span
         >${this.tr(t)}</span
       >`;
 		return x`<div class="legend">
-      ${e("var(--z-bar)", "plan.legend_price")}
-      ${e(V("charge"), "action.charge")}
-      ${e(V("deliver"), "action.deliver")}
-      ${e(V("hold"), "action.hold")}
-      ${e(V("export"), "action.export")}
-      ${e("var(--z-solar)", "plan.legend_solar")}
-      ${e("var(--z-solar)", "plan.legend_solar_over", "sw over")}
+      ${n("var(--z-bar)", "plan.legend_price")}
+      ${n(V("charge"), "action.charge")}
+      ${n(V("deliver"), "action.deliver")}
+      ${n(V("hold"), "action.hold")}
+      ${n(V("export"), "action.export")}
+      ${n("var(--z-solar)", "plan.legend_solar")}
+      ${n("var(--z-solar)", "plan.legend_solar_over", "sw over")}
+      ${t ? n("var(--z-red, #d64545)", "plan.legend_negative") : w}
       <span class="li"
         ><span class="line solid"></span
         >${this.tr("plan.legend_soc_past")}</span
@@ -2530,6 +2599,52 @@ var U = class extends D {
       .seg.past {
         opacity: 0.4;
       }
+      .neg {
+        position: absolute;
+        background: var(--z-red, #d64545);
+        opacity: 0.8;
+        border-radius: 0 0 2px 2px;
+      }
+      .neg.past {
+        opacity: 0.35;
+      }
+      .cut {
+        position: absolute;
+        bottom: 2px;
+        width: 10px;
+        height: 10px;
+        margin-left: -5px;
+        border-radius: 2px;
+        background:
+          linear-gradient(
+            135deg,
+            transparent 42%,
+            var(--z-red, #d64545) 42% 58%,
+            transparent 58%
+          ),
+          var(--z-solar);
+        opacity: 0.9;
+      }
+      .negtext {
+        color: var(--z-red, #d64545);
+        font-weight: 600;
+      }
+      .negnote {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        align-items: center;
+      }
+      button.link {
+        border: 0;
+        background: none;
+        padding: 0;
+        font: inherit;
+        font-weight: 700;
+        color: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+      }
       .runlane {
         position: relative;
         margin-top: 4px;
@@ -2642,11 +2757,11 @@ var U = class extends D {
 };
 H([k({ attribute: !1 })], U.prototype, "view", void 0), H([k({ attribute: !1 })], U.prototype, "uiLang", void 0), H([k()], U.prototype, "locale", void 0), H([k()], U.prototype, "timeZone", void 0), H([k({ type: Boolean })], U.prototype, "narrow", void 0), H([k({ attribute: !1 })], U.prototype, "runs", void 0), H([k({ attribute: !1 })], U.prototype, "period", void 0), H([A()], U.prototype, "sel", void 0), U = H([O("zephyr-prices-plan")], U);
 // src/sets.ts
-function bt(e, t, n) {
+function St(e, t, n) {
 	return e.built_in ? z(n, "sets.built_in") : e.model ? t.filter((t) => t.model === e.model).length > 1 ? `${e.model} ${e.number}` : e.model : z(n, "sets.pack", { n: e.index + 1 });
 }
-var xt = (e) => e <= 30 ? "good" : e <= 100 ? "balancing" : "imbalance";
-function St(e) {
+var Ct = (e) => e <= 30 ? "good" : e <= 100 ? "balancing" : "imbalance";
+function wt(e) {
 	let t = e.flatMap((e) => e.packs), n = t.map((e) => e.soc), r = t.map((e) => e.temp).filter((e) => e !== null), i = null;
 	for (let e of t) e.cell_judged && e.cell_delta_mv !== null && e.cell_status !== null && (!i || e.cell_delta_mv > i.mv) && (i = {
 		pack: e,
@@ -2661,7 +2776,7 @@ function St(e) {
 			a = {
 				day: o[e],
 				mv: t,
-				status: xt(t)
+				status: Ct(t)
 			};
 		}
 	}
@@ -2708,7 +2823,7 @@ var W = class extends D {
 		let e = this.view;
 		if (!e) return x`<div class="card skeleton" aria-hidden="true"></div>`;
 		if (!e.sets.length) return x`<section class="card"><p class="text">${this.tr("sets.none")}</p></section>`;
-		let t = St(e.sets), n = e.sets.flatMap((e) => e.packs);
+		let t = wt(e.sets), n = e.sets.flatMap((e) => e.packs);
 		return x`
       ${this.renderSummary(t, e.sets)}
       ${e.sets.map((t) => x`<div class="row">
@@ -2723,13 +2838,13 @@ var W = class extends D {
 	renderSummary(e, t) {
 		let n = t.flatMap((e) => e.packs), r;
 		r = e.offline.length ? this.tr("sets.offline_line", { sets: e.offline.map((e) => this.tr("sets.set", { n: e.number })).join(", ") }) : e.imbalance && e.imbalance.days >= 3 ? this.tr("sets.line_persistent", {
-			pack: bt(e.imbalance.pack, n, this.uiLang),
+			pack: St(e.imbalance.pack, n, this.uiLang),
 			days: e.imbalance.days
 		}) : e.now?.status === "imbalance" ? this.tr("sets.line_now", {
-			pack: bt(e.now.pack, n, this.uiLang),
+			pack: St(e.now.pack, n, this.uiLang),
 			mv: e.now.mv
 		}) : e.imbalance ? this.tr("sets.line_recent", {
-			pack: bt(e.imbalance.pack, n, this.uiLang),
+			pack: St(e.imbalance.pack, n, this.uiLang),
 			day: L(`${e.imbalance.lastDay}T12:00:00Z`, this.locale, this.timeZone),
 			mv: e.imbalance.mv
 		}) : e.notFull ? this.tr("sets.line_not_full") : this.tr("sets.line_ok");
@@ -2790,7 +2905,7 @@ var W = class extends D {
         ${e.packs.map((t) => {
 			let n = t.cell_status;
 			return x`<div class="pack ${e.online ? "" : "off"}">
-            <div class="ph"><strong>${bt(t, e.packs, this.uiLang)}</strong><span class="muted">${t.capacity_kwh ? P(t.capacity_kwh, this.locale, 2) : this.tr("sets.unknown_type")}</span></div>
+            <div class="ph"><strong>${St(t, e.packs, this.uiLang)}</strong><span class="muted">${t.capacity_kwh ? P(t.capacity_kwh, this.locale, 2) : this.tr("sets.unknown_type")}</span></div>
             <div class="big-row">
               <span class="mid">${F(t.soc, this.locale)}</span>
               ${t.energy_kwh === null ? w : x`<span class="muted">${P(t.energy_kwh, this.locale, 2)}</span>`}
@@ -2830,7 +2945,7 @@ var W = class extends D {
           ${t.map((e) => x`<span role="columnheader" class="dh">${L(`${e.day}T12:00:00Z`, this.locale, this.timeZone)}</span>`)}
         </div>
         ${e.flatMap((t) => t.packs.map((n) => x`<div class="tr" role="row">
-              <span role="rowheader" class="rh">${e.length > 1 ? `${t.number} · ` : ""}${bt(n, t.packs, this.uiLang)}</span>
+              <span role="rowheader" class="rh">${e.length > 1 ? `${t.number} · ` : ""}${St(n, t.packs, this.uiLang)}</span>
               ${n.history.map((e) => x`<span
                   role="cell"
                   class="cell ${e.status ?? "none"}"
@@ -3215,19 +3330,19 @@ var W = class extends D {
 };
 H([k({ attribute: !1 })], W.prototype, "view", void 0), H([k({ attribute: !1 })], W.prototype, "uiLang", void 0), H([k()], W.prototype, "locale", void 0), H([k()], W.prototype, "timeZone", void 0), W = H([O("zephyr-sets")], W);
 // src/settings-edit.ts
-function Ct(e, t) {
+function Tt(e, t) {
 	let n = e.trim().replace(/\s/g, "");
 	if (!n || (n = (new Intl.NumberFormat(t).format(1.5).includes(",") ? "," : ".") == "," ? n.replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".") : n.replace(/,(?=\d{3}(\D|$))/g, ""), !/^[-+]?\d*\.?\d+$/.test(n))) return null;
 	let r = Number(n);
 	return Number.isFinite(r) ? r : null;
 }
-function wt(e, t, n) {
+function Et(e, t, n) {
 	return e ? Object.entries(e).filter(([e, r]) => e.startsWith(`${t}.`) && (!n || r.attributes?.device_class === n)).map(([e, t]) => ({
 		id: e,
 		name: String(t.attributes?.friendly_name ?? e)
 	})).sort((e, t) => e.name.localeCompare(t.name) || e.id.localeCompare(t.id)) : [];
 }
-function Tt(e, t) {
+function Dt(e, t) {
 	let n = e.trim();
 	if (!n) return null;
 	let r = t.find((e) => e.id === n);
@@ -3237,34 +3352,60 @@ function Tt(e, t) {
 	let a = t.filter((e) => e.name.toLowerCase() === n.toLowerCase());
 	return a.length === 1 ? a[0].id : null;
 }
-function Et(e) {
+function Ot(e) {
 	return e.name === e.id ? e.id : `${e.name} (${e.id})`;
 }
-function Dt(e, t) {
+function kt(e, t) {
 	return Array.isArray(e) && Array.isArray(t) ? e.length === t.length && e.every((e, n) => e === t[n]) : (e ?? null) === (t ?? null);
 }
-function Ot(e, t, n) {
+function At(e, t, n) {
 	let r = e.includes(t) ? e.filter((e) => e !== t) : [...e, t];
 	return n.filter((e) => r.includes(e));
 }
-function kt(e, t) {
+function jt(e, t) {
 	return e < 90 ? `${Math.round(e)} s` : `${new Intl.NumberFormat(t, { maximumFractionDigits: 1 }).format(e / 60)} min`;
 }
+function Mt(e, t, n = 8) {
+	let r = t.toLowerCase().split(/[\s()]+/).filter(Boolean);
+	if (!r.length) return e.slice(0, n);
+	let i = [];
+	for (let t of e) {
+		let e = t.name.toLowerCase(), n = t.id.toLowerCase();
+		if (!r.every((t) => e.includes(t) || n.includes(t))) continue;
+		let a = r[0], o = e.startsWith(a) ? 0 : RegExp(`(^|[\\s._-])${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(`${e} ${n}`) ? 1 : 2;
+		i.push([o, t]);
+	}
+	return i.sort((e, t) => e[0] - t[0] || e[1].name.localeCompare(t[1].name)).slice(0, n).map(([, e]) => e);
+}
+function Nt(e, t) {
+	let n = /^([a-z_]+)\.[a-z0-9_]+$/.exec(e.trim());
+	return n && n[1] !== t ? n[1] : null;
+}
 // src/settings.ts
-var At = Symbol("reset");
-function jt(e, t, n) {
+var Pt = Symbol("reset"), Ft = [
+	"curtail_switch",
+	"curtail_number",
+	"curtail_inverter_w"
+];
+function G(e, t, n) {
 	let r = typeof t == "number" && t < 1 ? Math.min(5, Math.max(0, Math.ceil(-Math.log10(t) - 1e-9))) : t === "any" ? 5 : 0;
 	return new Intl.NumberFormat(n, {
 		minimumFractionDigits: 0,
 		maximumFractionDigits: r
 	}).format(e);
 }
-var G = class extends D {
+var K = class extends D {
 	constructor(...e) {
-		super(...e), this.uiLang = "en", this.locale = "en", this.friendlyName = () => void 0, this.group = 0, this.tip = null, this.draft = {}, this.errors = {}, this.busy = !1, this.saved = null, this.restarting = !1, this.houseDraft = null, this.vacUntil = null;
+		super(...e), this.uiLang = "en", this.locale = "en", this.friendlyName = () => void 0, this.group = 0, this.openGroup = null, this.openedFor = null, this.tip = null, this.draft = {}, this.errors = {}, this.busy = !1, this.saved = null, this.restarting = !1, this.houseDraft = null, this.vacUntil = null, this.domainErrors = {}, this.pickFor = null, this.pickQuery = "", this.pickIndex = 0;
+	}
+	applyOpenGroup(e) {
+		if ((e.has("openGroup") || e.has("view")) && this.openGroup && this.view && this.openedFor !== this.openGroup) {
+			let e = this.view.groups.findIndex((e) => e.key === this.openGroup);
+			e >= 0 && (this.group = e, this.openedFor = this.openGroup);
+		}
 	}
 	willUpdate(e) {
-		e.has("view") && e.get("view") !== void 0 && (this.restarting = !1);
+		e.has("view") && e.get("view") !== void 0 && (this.restarting = !1), this.applyOpenGroup(e);
 	}
 	get editable() {
 		return !!(this.view?.can_edit && this.save);
@@ -3272,28 +3413,28 @@ var G = class extends D {
 	shown(e) {
 		if (!(e.key in this.draft)) return e.value;
 		let t = this.draft[e.key];
-		return t === At ? e.default : t;
+		return t === Pt ? e.default : t;
 	}
 	isModified(e) {
 		if (e.kind === "entity" || e.kind === "entities") return !1;
 		if (!(e.key in this.draft)) return e.modified;
 		let t = this.draft[e.key];
-		return t !== At && !Dt(t, e.default) && (!e.optional || t !== null && t !== "");
+		return t !== Pt && !kt(t, e.default) && (!e.optional || t !== null && t !== "");
 	}
 	change(e, t) {
 		let { [e.key]: n, ...r } = this.errors;
 		if (this.errors = r, e.reload) {
 			let { [e.key]: n, ...r } = this.draft;
-			this.draft = Dt(t, e.value) ? r : {
+			this.draft = kt(t, e.value) ? r : {
 				...r,
 				[e.key]: t
 			};
-		} else Dt(t, e.value) || this.send({ [e.key]: t }, [], e.key);
+		} else kt(t, e.value) || this.send({ [e.key]: t }, [], e.key);
 	}
 	reset(e) {
 		e.reload ? this.draft = {
 			...this.draft,
-			[e.key]: At
+			[e.key]: Pt
 		} : this.send({}, [e.key], e.key);
 	}
 	localError(e, t) {
@@ -3322,7 +3463,7 @@ var G = class extends D {
 	}
 	async saveDraft() {
 		let e = {}, t = [];
-		for (let [n, r] of Object.entries(this.draft)) r === At ? t.push(n) : e[n] = r;
+		for (let [n, r] of Object.entries(this.draft)) r === Pt ? t.push(n) : e[n] = r;
 		let { base: n, ...r } = this.errors;
 		this.errors = r, await this.send(e, t, null) && (this.draft = {}, this.restarting = !0);
 	}
@@ -3555,37 +3696,52 @@ var G = class extends D {
             </div>` : w}
     </div>`;
 	}
+	curtailOff(e) {
+		if (!Ft.includes(e.key)) return !1;
+		let t = this.view?.groups.flatMap((e) => e.fields).find((e) => e.key === "curtail_negative");
+		return !t || this.shown(t) !== "curtail_zephyr";
+	}
+	curtailWarning(e) {
+		if (e.key !== "curtail_inverter_w" || this.curtailOff(e)) return !1;
+		let t = this.view?.groups.flatMap((e) => e.fields).find((e) => e.key === "curtail_number");
+		return !!t && !!this.shown(t) && !this.shown(e);
+	}
 	renderField(e) {
-		let t = this.tip === e.key, n = `f-${e.key}`;
-		return x`<li class=${e.active === !1 ? "inactive" : ""}>
-      <div class="text">
-        <div class="labelrow">
-          <label for=${n}>${this.label(e.key)}</label>
-          <button
-            type="button"
-            class=${t ? "info on" : "info"}
-            aria-expanded=${t ? "true" : "false"}
-            aria-label=${this.tr("settings.more", { label: this.label(e.key) })}
-            @click=${() => this.tip = t ? null : e.key}
-          >
-            i
-          </button>
-          ${this.isModified(e) ? x`<span class="dot" title=${this.defaultText(e)}></span>` : w}
-          ${e.key in this.draft ? x`<span class="pending">${this.tr("settings.not_saved")}</span>` : w}
-          ${this.saved === e.key ? x`<span class="saved" role="status">${this.tr("settings.saved")}</span>` : w}
+		let t = this.tip === e.key, n = `f-${e.key}`, r = this.curtailOff(e);
+		return x`${e.key === "curtail_switch" ? x`<li class="subhead">
+              <b>${this.tr("settings.curtail_head")}</b
+              >${r ? x`<span class="muted">${this.tr("settings.curtail_only")}</span>` : w}
+            </li>` : w}
+      <li class=${e.active === !1 || r ? "inactive" : ""}>
+        <div class="text">
+          <div class="labelrow">
+            <label for=${n}>${this.label(e.key)}</label>
+            <button
+              type="button"
+              class=${t ? "info on" : "info"}
+              aria-expanded=${t ? "true" : "false"}
+              aria-label=${this.tr("settings.more", { label: this.label(e.key) })}
+              @click=${() => this.tip = t ? null : e.key}
+            >
+              i
+            </button>
+            ${this.isModified(e) ? x`<span class="dot" title=${this.defaultText(e)}></span>` : w}
+            ${e.key in this.draft ? x`<span class="pending">${this.tr("settings.not_saved")}</span>` : w}
+            ${this.saved === e.key ? x`<span class="saved" role="status">${this.tr("settings.saved")}</span>` : w}
+          </div>
+          <span class="help">${this.tr(`settings.fields.${e.key}.help`)}</span>
+          ${t ? x`<div class="more" role="note">${this.tr(`settings.fields.${e.key}.more`)}</div>` : w}
+          ${this.meta(e)}
+          ${this.errors[e.key] ? x`<span class="error" role="alert">${this.errorText(e, this.errors[e.key])}</span>` : w}
+          ${this.curtailWarning(e) ? x`<span class="warnline" role="note">${this.tr("settings.curtail_rated_missing")}</span>` : w}
         </div>
-        <span class="help">${this.tr(`settings.fields.${e.key}.help`)}</span>
-        ${t ? x`<div class="more" role="note">${this.tr(`settings.fields.${e.key}.more`)}</div>` : w}
-        ${this.meta(e)}
-        ${this.errors[e.key] ? x`<span class="error" role="alert">${this.errorText(e, this.errors[e.key])}</span>` : w}
-      </div>
-      <div class="control">${this.control(e, n)}</div>
-    </li>`;
+        <div class="control">${this.control(e, n)}</div>
+      </li>`;
 	}
 	errorText(e, t) {
-		return t === "out_of_range" && e.min !== null && e.max !== null ? this.tr("settings.errors.range", {
-			min: jt(e.min, e.step, this.locale),
-			max: jt(e.max, e.step, this.locale),
+		return t === "entity_domain" ? this.tr("settings.errors.entity_domain", { domain: this.domainErrors[e.key] ?? e.domain }) : t === "out_of_range" && e.min !== null && e.max !== null ? this.tr("settings.errors.range", {
+			min: G(e.min, e.step, this.locale),
+			max: G(e.max, e.step, this.locale),
 			unit: e.unit ? ` ${e.unit}` : ""
 		}) : this.tr(`settings.errors.${t}`);
 	}
@@ -3593,20 +3749,20 @@ var G = class extends D {
 		return this.tr("settings.default", { value: this.display(e, e.default) });
 	}
 	display(e, t) {
-		return t == null || t === "" || Array.isArray(t) && !t.length ? this.tr("settings.none") : e.kind === "bool" ? this.tr(t ? "settings.yes" : "settings.no") : e.kind === "number" ? `${jt(Number(t), e.step, this.locale)}${e.unit ? ` ${e.unit}` : ""}` : e.kind === "select" ? e.key === "tariff_supplier" ? e.choices?.find((e) => e.value === t)?.label ?? this.tr("settings.own") : Array.isArray(t) ? t.map((e) => this.tr(`settings.options.${e}`)).join(", ") : this.tr(`settings.options.${String(t)}`) : (Array.isArray(t) ? t : [String(t)]).map((e) => this.friendlyName(e) ?? e).join(", ");
+		return t == null || t === "" || Array.isArray(t) && !t.length ? this.tr("settings.none") : e.kind === "bool" ? this.tr(t ? "settings.yes" : "settings.no") : e.kind === "number" ? `${G(Number(t), e.step, this.locale)}${e.unit ? ` ${e.unit}` : ""}` : e.kind === "select" ? e.key === "tariff_supplier" ? e.choices?.find((e) => e.value === t)?.label ?? this.tr("settings.own") : Array.isArray(t) ? t.map((e) => this.tr(`settings.options.${e}`)).join(", ") : this.tr(`settings.options.${String(t)}`) : (Array.isArray(t) ? t : [String(t)]).map((e) => this.friendlyName(e) ?? e).join(", ");
 	}
 	meta(e) {
 		let t = [], n = this.isModified(e);
 		n && t.push(this.defaultText(e)), e.tariff && e.active === !1 && e.in_use !== void 0 && e.in_use !== null && t.push(this.tr("settings.in_use", { value: this.display(e, e.in_use) }));
 		let r = e.status;
 		r && (r.state === "unset" ? t.push(this.tr("settings.status.unset")) : r.state === "missing" ? t.push(this.tr("settings.status.missing", { entities: (r.entities ?? []).join(", ") })) : r.state === "unavailable" ? t.push(this.tr("settings.status.unavailable")) : r.mode === void 0 ? r.no_step ? t.push(this.tr("settings.status.no_step")) : r.step_interval_s != null && r.step_kwh != null ? t.push(this.tr("settings.status.steps", {
-			every: kt(r.step_interval_s, this.locale),
-			kwh: jt(r.step_kwh, .01, this.locale)
-		})) : r.interval_s == null ? r.price_slots == null ? t.push(this.tr("settings.status.ok")) : t.push(this.tr("settings.status.slots", { n: r.price_slots })) : t.push(this.tr("settings.status.interval", { s: jt(r.interval_s, .1, this.locale) })) : t.push(r.action ? this.tr("settings.status.climate", {
+			every: jt(r.step_interval_s, this.locale),
+			kwh: G(r.step_kwh, .01, this.locale)
+		})) : r.interval_s == null ? r.price_slots == null ? t.push(this.tr("settings.status.ok")) : t.push(this.tr("settings.status.slots", { n: r.price_slots })) : t.push(this.tr("settings.status.interval", { s: G(r.interval_s, .1, this.locale) })) : t.push(r.action ? this.tr("settings.status.climate", {
 			mode: this.tr(`settings.options.${r.mode}`),
 			action: this.tr(`settings.actions.${r.action}`)
 		}) : this.tr(`settings.options.${r.mode}`)));
-		let i = n && this.editable && !(e.key in this.draft && this.draft[e.key] === At);
+		let i = n && this.editable && !(e.key in this.draft && this.draft[e.key] === Pt);
 		return !t.length && !i ? w : x`<span class=${r && r.state !== "ok" && r.state !== "unset" ? "meta warn" : "meta"}
       >${t.join(" · ")}${i ? x` <button
               type="button"
@@ -3619,7 +3775,7 @@ var G = class extends D {
     >`;
 	}
 	control(e, t) {
-		let n = !this.editable || this.busy || e.active === !1 && e.tariff, r = this.shown(e);
+		let n = !this.editable || this.busy || e.active === !1 && e.tariff || this.curtailOff(e), r = this.shown(e);
 		switch (e.kind) {
 			case "bool": return x`<button
           id=${t}
@@ -3637,7 +3793,7 @@ var G = class extends D {
             id=${t}
             type="text"
             inputmode="decimal"
-            .value=${r == null ? "" : jt(Number(r), e.step, this.locale)}
+            .value=${r == null ? "" : G(Number(r), e.step, this.locale)}
             ?disabled=${n}
             aria-invalid=${this.errors[e.key] ? "true" : "false"}
             @change=${(t) => this.numberChanged(e, t.target)}
@@ -3661,7 +3817,7 @@ var G = class extends D {
 		}
 	}
 	numberChanged(e, t) {
-		let n = Ct(t.value, this.locale);
+		let n = Tt(t.value, this.locale);
 		n === null ? !t.value.trim() && e.optional ? this.change(e, null) : this.localError(e, t.value.trim() ? "not_a_number" : "required") : this.change(e, n);
 	}
 	multi(e, t, n, r) {
@@ -3677,7 +3833,7 @@ var G = class extends D {
             aria-pressed=${n.includes(t) ? "true" : "false"}
             ?disabled=${r}
             @click=${() => {
-			let r = Ot(n, t, e.options);
+			let r = At(n, t, e.options);
 			r.length ? this.change(e, r) : this.localError(e, "choose_one");
 		}}
           >
@@ -3686,28 +3842,68 @@ var G = class extends D {
     </div>`;
 	}
 	choices(e) {
-		return wt(this.states, e.domain, e.device_class);
+		return Et(this.states, e.domain, e.device_class);
 	}
 	picker(e, t, n, r, i) {
-		let a = this.choices(e);
-		return x`<input
+		let a = this.choices(e), o = this.pickFor === t, s = o ? Mt(a, this.pickQuery) : [], c = (t) => {
+			this.pickFor = null;
+			let n = Nt(t, e.domain), r = Dt(t, a);
+			!r && n ? (this.domainErrors = {
+				...this.domainErrors,
+				[e.key]: e.domain
+			}, this.localError(e, "entity_domain")) : i(r, t);
+		}, l = (e) => {
+			this.pickFor = null, i(e.id, e.id);
+		};
+		return x`<span class="pickwrap">
+      <input
         id=${t}
         class="pick"
         type="text"
-        list=${`${t}-list`}
+        role="combobox"
+        aria-expanded=${o && s.length ? "true" : "false"}
+        aria-controls=${`${t}-list`}
+        aria-autocomplete="list"
         placeholder=${this.tr("settings.choose_entity")}
         autocomplete="off"
-        .value=${n}
+        .value=${o ? this.pickQuery : n}
         ?disabled=${r}
         aria-invalid=${this.errors[e.key] ? "true" : "false"}
-        @change=${(e) => {
-			let t = e.target.value;
-			i(Tt(t, a), t);
+        @focus=${(e) => {
+			this.pickFor = t, this.pickQuery = "", this.pickIndex = 0, e.target.select();
+		}}
+        @input=${(e) => {
+			this.pickQuery = e.target.value, this.pickIndex = 0;
+		}}
+        @keydown=${(e) => {
+			if (o) {
+				if (e.key === "ArrowDown") this.pickIndex = Math.min(s.length - 1, this.pickIndex + 1);
+				else if (e.key === "ArrowUp") this.pickIndex = Math.max(0, this.pickIndex - 1);
+				else if (e.key === "Enter") s[this.pickIndex] && this.pickQuery.trim() ? l(s[this.pickIndex]) : c(this.pickQuery);
+				else if (e.key === "Escape") this.pickFor = null;
+				else return;
+				e.preventDefault();
+			}
+		}}
+        @blur=${() => {
+			if (this.pickFor !== t) return;
+			let e = this.pickQuery;
+			this.pickFor = null, e.trim() && c(e);
 		}}
       />
-      <datalist id=${`${t}-list`}>
-        ${a.map((e) => x`<option value=${Et(e)}></option>`)}
-      </datalist>`;
+      ${o && s.length ? x`<ul class="picklist" id=${`${t}-list`} role="listbox">
+              ${s.map((e, t) => x`<li
+                    role="option"
+                    aria-selected=${t === this.pickIndex ? "true" : "false"}
+                    class=${t === this.pickIndex ? "on" : ""}
+                    @mousedown=${(t) => {
+			t.preventDefault(), l(e);
+		}}
+                  >
+                    <span>${e.name}</span><small>${e.id}</small>
+                  </li>`)}
+            </ul>` : w}
+    </span>`;
 	}
 	entity(e, t, n, r) {
 		let i = n ? this.choices(e).find((e) => e.id === n) ?? {
@@ -3715,7 +3911,7 @@ var G = class extends D {
 			name: this.friendlyName(n) ?? n
 		} : null;
 		return x`<span class="entityrow">
-      ${this.picker(e, t, i ? Et(i) : "", r, (t, n) => {
+      ${this.picker(e, t, i ? Ot(i) : "", r, (t, n) => {
 			t ? this.change(e, t) : n.trim() ? this.localError(e, "entity_missing") : e.optional ? this.change(e, null) : this.localError(e, "required");
 		})}
       ${n && e.optional ? x`<button
@@ -4142,6 +4338,63 @@ var G = class extends D {
       color: var(--z-text);
       font: inherit;
     }
+    li.subhead {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 14px 0 0;
+    }
+    .warnline {
+      color: var(--z-warn-text, #7a4a06);
+      background: var(--z-warn-bg, #fdf0dc);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12.5px;
+    }
+    .pickwrap {
+      position: relative;
+      display: inline-block;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .pickwrap .pick {
+      width: 100%;
+    }
+    .picklist {
+      position: absolute;
+      z-index: 5;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      background: var(--z-card);
+      border: 1px solid var(--z-border);
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      max-height: 300px;
+      overflow: auto;
+    }
+    .picklist li {
+      display: flex;
+      flex-direction: column;
+      padding: 8px 10px;
+      border-top: 1px solid var(--z-border);
+      cursor: pointer;
+    }
+    .picklist li:first-child {
+      border-top: 0;
+    }
+    .picklist li.on,
+    .picklist li:hover {
+      background: color-mix(in srgb, var(--z-charge) 10%, var(--z-card));
+    }
+    .picklist small {
+      color: var(--z-muted);
+      font-size: 11.5px;
+      word-break: break-all;
+    }
     .entityrow {
       display: inline-flex;
       align-items: center;
@@ -4296,35 +4549,35 @@ var G = class extends D {
   `;
 	}
 };
-H([k({ attribute: !1 })], G.prototype, "view", void 0), H([k({ attribute: !1 })], G.prototype, "uiLang", void 0), H([k()], G.prototype, "locale", void 0), H([k({ attribute: !1 })], G.prototype, "friendlyName", void 0), H([k({ attribute: !1 })], G.prototype, "states", void 0), H([k({ attribute: !1 })], G.prototype, "save", void 0), H([A()], G.prototype, "group", void 0), H([A()], G.prototype, "tip", void 0), H([A()], G.prototype, "draft", void 0), H([A()], G.prototype, "errors", void 0), H([A()], G.prototype, "busy", void 0), H([A()], G.prototype, "saved", void 0), H([A()], G.prototype, "restarting", void 0), H([k({ attribute: !1 })], G.prototype, "saveHouse", void 0), H([A()], G.prototype, "houseDraft", void 0), H([k({ attribute: !1 })], G.prototype, "appliances", void 0), H([k({ attribute: !1 })], G.prototype, "saveAppliances", void 0), H([k({ attribute: !1 })], G.prototype, "setVacation", void 0), H([A()], G.prototype, "vacUntil", void 0), G = H([O("zephyr-settings")], G);
+H([k({ attribute: !1 })], K.prototype, "view", void 0), H([k({ attribute: !1 })], K.prototype, "uiLang", void 0), H([k()], K.prototype, "locale", void 0), H([k({ attribute: !1 })], K.prototype, "friendlyName", void 0), H([k({ attribute: !1 })], K.prototype, "states", void 0), H([k({ attribute: !1 })], K.prototype, "save", void 0), H([A()], K.prototype, "group", void 0), H([k({ attribute: !1 })], K.prototype, "openGroup", void 0), H([A()], K.prototype, "tip", void 0), H([A()], K.prototype, "draft", void 0), H([A()], K.prototype, "errors", void 0), H([A()], K.prototype, "busy", void 0), H([A()], K.prototype, "saved", void 0), H([A()], K.prototype, "restarting", void 0), H([k({ attribute: !1 })], K.prototype, "saveHouse", void 0), H([A()], K.prototype, "houseDraft", void 0), H([k({ attribute: !1 })], K.prototype, "appliances", void 0), H([k({ attribute: !1 })], K.prototype, "saveAppliances", void 0), H([k({ attribute: !1 })], K.prototype, "setVacation", void 0), H([A()], K.prototype, "vacUntil", void 0), H([A()], K.prototype, "domainErrors", void 0), H([A()], K.prototype, "pickFor", void 0), H([A()], K.prototype, "pickQuery", void 0), H([A()], K.prototype, "pickIndex", void 0), K = H([O("zephyr-settings")], K);
 // src/diag.ts
-var Mt = [
+var It = [
 	"charged",
 	"discharged",
 	"solar"
 ];
-function Nt(e) {
+function Lt(e) {
 	let t = 0, n = 0;
-	for (let r of Mt) t += e.estimated[r] ?? 0, n += e.kwh[r] ?? 0;
+	for (let r of It) t += e.estimated[r] ?? 0, n += e.kwh[r] ?? 0;
 	return {
 		kwh: t,
 		share: n > 0 ? t / n : null
 	};
 }
-function Pt(e) {
+function Rt(e) {
 	return e.sets.flatMap((e, t) => e.gaps.map((n) => ({
 		...n,
 		set: e.set ?? t + 1
 	}))).sort((e, t) => t.end.localeCompare(e.end));
 }
-function Ft(e, t) {
+function zt(e, t) {
 	let n = e.find((e) => e.day === t) ?? null, r = e.filter((e) => e.day !== t), i = r.length ? r : e;
 	return {
 		today: n,
 		mean: i.length ? i.reduce((e, t) => e + t.kwh, 0) / i.length : null
 	};
 }
-function It(e, t, n) {
+function Bt(e, t, n) {
 	let r = (e) => new Intl.NumberFormat(n, {
 		minimumFractionDigits: 1,
 		maximumFractionDigits: 1
@@ -4341,10 +4594,10 @@ function It(e, t, n) {
 		default: return z(t, `diag.event.${e.kind}`);
 	}
 }
-function Lt(e) {
+function Vt(e) {
 	return e.kind === "mode" ? "mode" : e.kind === "live" || e.kind === "shadow" || e.kind === "test" || e.kind === "test_end" ? "live" : e.kind === "excluded_on" || e.kind === "excluded_off" ? "airco" : e.kind === "flash" ? "write" : e.kind === "second_controller" ? "warning" : "control";
 }
-function Rt(e, t, n) {
+function Ht(e, t, n) {
 	let r = n === "fast_charge" || n === "fast_discharge" ? "zero_meter" : n;
 	return ["fast_charge", "fast_discharge"].filter((e) => t.includes(e)).map((t) => ({
 		mode: t,
@@ -4352,7 +4605,7 @@ function Rt(e, t, n) {
 		target: e === t ? r : t
 	}));
 }
-var zt = [
+var Ut = [
 	[/^no P1 sensor chosen$/, "no_p1"],
 	[/^P1 is not reporting$/, "p1_silent"],
 	[/^no sets$/, "no_sets"],
@@ -4361,14 +4614,14 @@ var zt = [
 	[/^set (\d+) reports an error$/, "fault"],
 	[/^a write test is running$/, "test"]
 ];
-function Bt(e, t) {
-	for (let [n, r] of zt) {
+function Wt(e, t) {
+	for (let [n, r] of Ut) {
 		let i = n.exec(e);
 		if (i) return z(t, `control.blocker.${r}`, { set: i[1] ?? "" });
 	}
 	return e;
 }
-function Vt(e) {
+function Gt(e) {
 	let t = e.house.reduce((e, t) => e + t, 0), n = e.airco.reduce((e, t) => e + t, 0), r = Math.max(0, ...e.house.map((t, n) => t + (e.airco[n] ?? 0)));
 	return {
 		total: t,
@@ -4377,20 +4630,20 @@ function Vt(e) {
 		learned: e.counts.filter((t) => t >= e.min_count).length
 	};
 }
-function Ht(e) {
+function Kt(e) {
 	return Math.abs(e.expected) < .05 ? null : (e.actual - e.expected) / Math.abs(e.expected);
 }
-function Ut(e, t) {
+function qt(e, t) {
 	return e.planned.filter((e) => e.appliance === t).sort((e, t) => (e.best_start ?? "9999").localeCompare(t.best_start ?? "9999") || e.index - t.index);
 }
-function Wt(e, t) {
+function Jt(e, t) {
 	return t >= (e === "washer" ? 2 : 1) ? "clear" : "plan";
 }
-var Gt = (e) => {
+var Yt = (e) => {
 	let [t, n] = e.split(":").map(Number);
 	return t * 60 + n;
 };
-function Kt(e, t, n, r) {
+function Xt(e, t, n, r) {
 	let i = j("en-GB", {
 		timeZone: r,
 		hour: "2-digit",
@@ -4398,11 +4651,11 @@ function Kt(e, t, n, r) {
 		hourCycle: "h23"
 	}), a = Math.max(1, t.minutes), o = t.profile_w && t.profile_w.length ? t.profile_w.map((e) => e / 6e4) : Array(a).fill(t.kwh / a), s = o.length, c = /* @__PURE__ */ new Map();
 	for (let t of e) t.buy !== null && c.set(new Date(t.start).getTime(), t.buy);
-	let l = t.window.from ? Gt(t.window.from) : null, u = Gt(t.window.until), d = (e) => l === null ? !0 : l <= u ? e >= l && e <= u : e >= l || e <= u, f = null;
+	let l = t.window.from ? Yt(t.window.from) : null, u = Yt(t.window.until), d = (e) => l === null ? !0 : l <= u ? e >= l && e <= u : e >= l || e <= u, f = null;
 	for (let t of e) {
 		let e = new Date(t.start).getTime();
 		if (e + 9e5 <= n || t.buy === null || l === null && e - n > 864e5) continue;
-		let r = Gt(i.format(new Date(e)));
+		let r = Yt(i.format(new Date(e)));
 		if (!d(r) || !d((r + s) % 1440)) continue;
 		let a = 0, u = !0;
 		for (let t = 0; t < s; t++) {
@@ -4417,7 +4670,7 @@ function Kt(e, t, n, r) {
 	}
 	return f;
 }
-var K = class extends D {
+var q = class extends D {
 	constructor(...e) {
 		super(...e), this.quarters = [], this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.clockMs = Date.now(), this.busy = null;
 	}
@@ -4432,7 +4685,7 @@ var K = class extends D {
 		if (!this.busy) {
 			this.busy = e.id;
 			try {
-				Wt(e.kind, t) === "clear" ? await this.clear?.(e.id) : await this.plan?.(e.id, {});
+				Jt(e.kind, t) === "clear" ? await this.clear?.(e.id) : await this.plan?.(e.id, {});
 			} finally {
 				this.busy = null;
 			}
@@ -4445,20 +4698,20 @@ var K = class extends D {
       role="group"
       aria-label=${this.tr("appl.title")}
     >
-      ${e.appliances.map((t) => this.button(t, Ut(e, t.id)))}
+      ${e.appliances.map((t) => this.button(t, qt(e, t.id)))}
     </div>`;
 	}
 	button(e, t) {
 		let n = t.length > 0, r = t.map((e) => e.fixed_start ?? e.best_start).filter((e) => !!e), i = t.reduce((e, t) => e + (t.cost ?? 0), 0), a = t.reduce((e, t) => e + (t.saving ?? 0), 0), o = t.find((e) => e.after)?.after ?? null, s, c = null;
 		if (!n) {
-			let t = Kt(this.quarters, e, this.clockMs, this.timeZone);
+			let t = Xt(this.quarters, e, this.clockMs, this.timeZone);
 			s = t === null ? this.tr("appl.tap") : this.tr("appl.per_run", { euro: M(t, this.locale) });
 		} else if (!r.length) s = this.tr("appl.calculating");
 		else {
 			let e = r.map((e, t) => t === 0 ? this.when(e) : I(e, this.locale, this.timeZone));
 			s = `${this.tr("appl.start")} ${e.join(` ${this.tr("appl.and")} `)} · ${M(i, this.locale)}`, c = o ? this.tr("appl.after_wash") : a >= .01 ? this.tr("appl.cheaper", { euro: M(a, this.locale) }) : null;
 		}
-		let l = n ? `${e.name} ${t.length}×` : e.name, u = Wt(e.kind, t.length) === "clear" ? "appl.tap_clear" : n ? "appl.tap_more" : "appl.tap_plan";
+		let l = n ? `${e.name} ${t.length}×` : e.name, u = Jt(e.kind, t.length) === "clear" ? "appl.tap_clear" : n ? "appl.tap_more" : "appl.tap_plan";
 		return x`<button
       type="button"
       class=${`b${n ? " on" : ""}`}
@@ -4555,12 +4808,12 @@ var K = class extends D {
   `;
 	}
 };
-H([k({ attribute: !1 })], K.prototype, "view", void 0), H([k({ attribute: !1 })], K.prototype, "quarters", void 0), H([k({ attribute: !1 })], K.prototype, "uiLang", void 0), H([k()], K.prototype, "locale", void 0), H([k()], K.prototype, "timeZone", void 0), H([k({ type: Number })], K.prototype, "clockMs", void 0), H([k({ attribute: !1 })], K.prototype, "plan", void 0), H([k({ attribute: !1 })], K.prototype, "clear", void 0), H([A()], K.prototype, "busy", void 0), K = H([O("zephyr-appliances")], K);
-function qt(e) {
+H([k({ attribute: !1 })], q.prototype, "view", void 0), H([k({ attribute: !1 })], q.prototype, "quarters", void 0), H([k({ attribute: !1 })], q.prototype, "uiLang", void 0), H([k()], q.prototype, "locale", void 0), H([k()], q.prototype, "timeZone", void 0), H([k({ type: Number })], q.prototype, "clockMs", void 0), H([k({ attribute: !1 })], q.prototype, "plan", void 0), H([k({ attribute: !1 })], q.prototype, "clear", void 0), H([A()], q.prototype, "busy", void 0), q = H([O("zephyr-appliances")], q);
+function Zt(e) {
 	return e.startsWith("dryer") ? "dryer" : ["washer", "dishwasher"].includes(e) ? e : "other";
 }
 // src/diagnostics.ts
-var q = class extends D {
+var J = class extends D {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.peakInfo = !1, this.admin = !1, this.busy = null, this.note = null, this.dayKind = "workday", this.metric = "load";
 	}
@@ -4674,7 +4927,7 @@ var q = class extends D {
       <p class="muted small">${this.tr("diag.counters_note")}</p>`;
 	}
 	renderPeaks(e) {
-		let t = new Intl.DateTimeFormat("en-CA", { timeZone: this.timeZone }).format(/* @__PURE__ */ new Date()), n = Ft(e, t), r = Math.max(.05, ...e.map((e) => e.kwh)), i = (e) => P(e, this.locale, 2);
+		let t = new Intl.DateTimeFormat("en-CA", { timeZone: this.timeZone }).format(/* @__PURE__ */ new Date()), n = zt(e, t), r = Math.max(.05, ...e.map((e) => e.kwh)), i = (e) => P(e, this.locale, 2);
 		return x`<section class="card" aria-labelledby="pk-title">
       <div class="head">
         <h2 id="pk-title">${this.tr("diag.peaks_title")}</h2>
@@ -4740,7 +4993,7 @@ var q = class extends D {
       <div class="ahead">
         <b>${e.name}</b>
         <span class="muted small"
-          >${this.tr(`diag.kind_${qt(e.kind)}`)}</span
+          >${this.tr(`diag.kind_${Zt(e.kind)}`)}</span
         >
         ${e.running ? x`<span class="chip on">${this.tr("diag.appl_running")}</span>` : w}
       </div>
@@ -4776,7 +5029,7 @@ var q = class extends D {
 			hour: "2-digit",
 			minute: "2-digit",
 			timeZone: this.timeZone
-		}), r = (e) => e < 120 ? `${Math.round(e)} s` : e < 7200 ? `${Math.round(e / 60)} min` : `${(e / 3600).toLocaleString(this.locale, { maximumFractionDigits: 1 })} h`, i = Pt(e).slice(0, 8), a = e.sets.length > 1;
+		}), r = (e) => e < 120 ? `${Math.round(e)} s` : e < 7200 ? `${Math.round(e / 60)} min` : `${(e / 3600).toLocaleString(this.locale, { maximumFractionDigits: 1 })} h`, i = Rt(e).slice(0, 8), a = e.sets.length > 1;
 		return x`<section class="card" aria-labelledby="en-title">
       <div>
         <h2 id="en-title">${this.tr("diag.energy_title")}</h2>
@@ -4786,17 +5039,17 @@ var q = class extends D {
         <thead>
           <tr>
             <th scope="col">${this.tr("diag.set")}</th>
-            ${Mt.map((e) => x`<th scope="col">${this.tr(`diag.energy_${e}`)}</th>`)}
+            ${It.map((e) => x`<th scope="col">${this.tr(`diag.energy_${e}`)}</th>`)}
             <th scope="col">${this.tr("diag.energy_estimated")}</th>
             <th scope="col">${this.tr("diag.energy_failed")}</th>
           </tr>
         </thead>
         <tbody>
           ${e.sets.map((e, r) => {
-			let i = Nt(e);
+			let i = Lt(e);
 			return x`<tr>
                 <th scope="row">${e.set ?? r + 1}</th>
-                ${Mt.map((n) => x`<td>${t(e.kwh[n])}</td>`)}
+                ${It.map((n) => x`<td>${t(e.kwh[n])}</td>`)}
                 <td>
                   ${t(i.kwh)}${i.share !== null && i.kwh > 0 ? x` <span class="muted">(${F(i.share * 100, this.locale)})</span>` : w}
                 </td>
@@ -4810,7 +5063,7 @@ var q = class extends D {
 		})}
           ${a ? x`<tr class="total">
                   <th scope="row">${this.tr("diag.energy_total")}</th>
-                  ${Mt.map((n) => x`<td>${t(e.totals[n])}</td>`)}
+                  ${It.map((n) => x`<td>${t(e.totals[n])}</td>`)}
                   <td></td>
                   <td></td>
                 </tr>` : w}
@@ -4831,7 +5084,7 @@ var q = class extends D {
 		].includes(e.method) ? e.method : "none"}`)}${e.restart ? ` · ${this.tr("diag.energy_restart")}` : ""}</span
                     >
                     <span class="muted"
-                      >${Object.entries(e.kwh).filter(([e]) => Mt.includes(e)).map(([e, n]) => `${this.tr(`diag.energy_${e}`).toLowerCase()} ${t(n)} kWh`).join(" · ") || this.tr("diag.energy_nothing")}</span
+                      >${Object.entries(e.kwh).filter(([e]) => It.includes(e)).map(([e, n]) => `${this.tr(`diag.energy_${e}`).toLowerCase()} ${t(n)} kWh`).join(" · ") || this.tr("diag.energy_nothing")}</span
                     >
                   </li>`)}
             </ul>` : x`<p class="muted">${this.tr("diag.energy_no_gaps")}</p>`}
@@ -4878,7 +5131,7 @@ var q = class extends D {
                   ${t.map((t) => {
 			let r = e.summary[t];
 			if (!r) return w;
-			let i = Ht(r);
+			let i = Kt(r);
 			return x`<tr
                       class=${t === this.metric ? "on" : ""}
                       @click=${() => this.metric = t}
@@ -4948,7 +5201,7 @@ var q = class extends D {
     </section>`;
 	}
 	renderProfile(e) {
-		let t = e[this.dayKind], n = Vt(t), r = (e, t = 1) => new Intl.NumberFormat(this.locale, {
+		let t = e[this.dayKind], n = Gt(t), r = (e, t = 1) => new Intl.NumberFormat(this.locale, {
 			minimumFractionDigits: t,
 			maximumFractionDigits: t
 		}).format(e), i = t.airco.some((e) => e > 0) || e.workday.airco.some((e) => e > 0);
@@ -5036,11 +5289,11 @@ var q = class extends D {
 		let t = (/* @__PURE__ */ new Date()).toISOString();
 		return x`<ol>
       ${e.events.map((e) => {
-			let n = Lt(e), r = R(e.time, t, this.timeZone) ? I(e.time, this.locale, this.timeZone) : `${L(e.time, this.locale, this.timeZone)} ${I(e.time, this.locale, this.timeZone)}`;
+			let n = Vt(e), r = R(e.time, t, this.timeZone) ? I(e.time, this.locale, this.timeZone) : `${L(e.time, this.locale, this.timeZone)} ${I(e.time, this.locale, this.timeZone)}`;
 			return x`<li>
           <time datetime=${e.time}>${r}</time>
           <span class="kind k-${n}">${this.tr(`diag.kind.${n}`)}</span>
-          <span class="text">${It(e, this.uiLang, this.locale)}</span>
+          <span class="text">${Bt(e, this.uiLang, this.locale)}</span>
         </li>`;
 		})}
     </ol>`;
@@ -5557,22 +5810,22 @@ var q = class extends D {
   `;
 	}
 };
-H([k({ attribute: !1 })], q.prototype, "view", void 0), H([k({ attribute: !1 })], q.prototype, "uiLang", void 0), H([k()], q.prototype, "locale", void 0), H([k()], q.prototype, "timeZone", void 0), H([k({ attribute: !1 })], q.prototype, "appliances", void 0), H([A()], q.prototype, "peakInfo", void 0), H([k({ type: Boolean })], q.prototype, "admin", void 0), H([k({ attribute: !1 })], q.prototype, "download", void 0), H([k({ attribute: !1 })], q.prototype, "exportCosts", void 0), H([k({ attribute: !1 })], q.prototype, "refresh", void 0), H([k({ attribute: !1 })], q.prototype, "planCheck", void 0), H([A()], q.prototype, "busy", void 0), H([A()], q.prototype, "note", void 0), H([A()], q.prototype, "dayKind", void 0), H([A()], q.prototype, "metric", void 0), q = H([O("zephyr-diagnostics")], q);
+H([k({ attribute: !1 })], J.prototype, "view", void 0), H([k({ attribute: !1 })], J.prototype, "uiLang", void 0), H([k()], J.prototype, "locale", void 0), H([k()], J.prototype, "timeZone", void 0), H([k({ attribute: !1 })], J.prototype, "appliances", void 0), H([A()], J.prototype, "peakInfo", void 0), H([k({ type: Boolean })], J.prototype, "admin", void 0), H([k({ attribute: !1 })], J.prototype, "download", void 0), H([k({ attribute: !1 })], J.prototype, "exportCosts", void 0), H([k({ attribute: !1 })], J.prototype, "refresh", void 0), H([k({ attribute: !1 })], J.prototype, "planCheck", void 0), H([A()], J.prototype, "busy", void 0), H([A()], J.prototype, "note", void 0), H([A()], J.prototype, "dayKind", void 0), H([A()], J.prototype, "metric", void 0), J = H([O("zephyr-diagnostics")], J);
 // src/savings.ts
-var Jt, Yt = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
-function Xt(e) {
+var Qt, $t = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
+function en(e) {
 	let t = e.map((e) => e.savings_battery ?? 0), n = t.map(Math.abs).filter((e) => e > 0).sort((e, t) => e - t), r = n.length ? n[Math.floor(n.length * .75)] : .5, i = Math.max(.5, r * 2), a = Math.min(i, Math.max(0, ...t)), o = Math.max(-i, Math.min(0, ...t));
 	return {
-		top: Math.max(.5, Yt(a)),
-		bottom: -Yt(-o)
+		top: Math.max(.5, $t(a)),
+		bottom: -$t(-o)
 	};
 }
-var J = class extends D {
+var Y = class extends D {
 	static {
-		Jt = this;
+		Qt = this;
 	}
 	constructor(...e) {
-		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = Jt.storedForm(), this.busy = !1, this.result = null;
+		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = Qt.storedForm(), this.busy = !1, this.result = null;
 	}
 	tr(e, t = {}) {
 		return z(this.uiLang, e, t);
@@ -5620,7 +5873,7 @@ var J = class extends D {
     </div>`;
 	}
 	choices(e, t = "sensor") {
-		return wt(this.states, t, e);
+		return Et(this.states, t, e);
 	}
 	picker(e, t, n, r, i) {
 		let a = `bf-${e}`, o = r ? n.find((e) => e.id === r) ?? {
@@ -5635,16 +5888,16 @@ var J = class extends D {
         list=${`${a}-list`}
         autocomplete="off"
         placeholder=${this.tr("savings.choose_entity")}
-        .value=${o ? Et(o) : ""}
+        .value=${o ? Ot(o) : ""}
         @change=${(t) => {
 			let r = t.target.value;
 			this.form = {
 				...this.form,
-				[e]: Tt(r, n) ?? (r.trim() ? r.trim() : null)
+				[e]: Dt(r, n) ?? (r.trim() ? r.trim() : null)
 			};
 		}}
       />
-      <datalist id=${`${a}-list`}>${n.map((e) => x`<option value=${Et(e)}></option>`)}</datalist>
+      <datalist id=${`${a}-list`}>${n.map((e) => x`<option value=${Ot(e)}></option>`)}</datalist>
     </label>`;
 	}
 	defaultFirst(e) {
@@ -5781,7 +6034,7 @@ var J = class extends D {
 	}
 	renderDays(e) {
 		if (!e.length) return x`<p class="muted">${this.tr("savings.no_data")}</p>`;
-		let { top: t, bottom: n } = Xt(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
+		let { top: t, bottom: n } = en(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
 			weekday: "short",
 			day: "numeric",
 			month: "short",
@@ -6271,9 +6524,9 @@ var J = class extends D {
   `;
 	}
 };
-H([k({ attribute: !1 })], J.prototype, "view", void 0), H([k({ attribute: !1 })], J.prototype, "uiLang", void 0), H([k()], J.prototype, "locale", void 0), H([k()], J.prototype, "timeZone", void 0), H([k({ type: Boolean })], J.prototype, "admin", void 0), H([k({ attribute: !1 })], J.prototype, "states", void 0), H([k({ attribute: !1 })], J.prototype, "backfill", void 0), H([A()], J.prototype, "period", void 0), H([A()], J.prototype, "form", void 0), H([A()], J.prototype, "busy", void 0), H([A()], J.prototype, "result", void 0), J = Jt = H([O("zephyr-savings")], J);
+H([k({ attribute: !1 })], Y.prototype, "view", void 0), H([k({ attribute: !1 })], Y.prototype, "uiLang", void 0), H([k()], Y.prototype, "locale", void 0), H([k()], Y.prototype, "timeZone", void 0), H([k({ type: Boolean })], Y.prototype, "admin", void 0), H([k({ attribute: !1 })], Y.prototype, "states", void 0), H([k({ attribute: !1 })], Y.prototype, "backfill", void 0), H([A()], Y.prototype, "period", void 0), H([A()], Y.prototype, "form", void 0), H([A()], Y.prototype, "busy", void 0), H([A()], Y.prototype, "result", void 0), Y = Qt = H([O("zephyr-savings")], Y);
 // src/flow.ts
-function Zt(e, t, n, r = 0) {
+function tn(e, t, n, r = 0) {
 	let i = Math.max(0, e ?? 0), a = t ?? 0, o = n ?? 0, s = Math.max(0, a + i - o), c = Math.max(0, o), l = Math.max(0, -o), u = Math.min(i, s), d = Math.min(i - u, c), f = Math.max(0, i - u - d), p = Math.min(l, s - u), m = Math.max(0, l - p), h = Math.max(0, s - u - p), ee = Math.max(0, c - d);
 	return {
 		solar: i,
@@ -6292,25 +6545,25 @@ function Zt(e, t, n, r = 0) {
 		}
 	};
 }
-var Y = {
+var X = {
 	solar: [320, 92],
 	grid: [104, 250],
 	house: [536, 250],
 	battery: [320, 408]
-}, X = [320, 250], Qt = 50;
-function $t(e, t) {
-	let [n, r] = Y[e], [i, a] = Y[t], o = (e, t, n, r) => {
+}, Z = [320, 250], nn = 50;
+function rn(e, t) {
+	let [n, r] = X[e], [i, a] = X[t], o = (e, t, n, r) => {
 		let i = Math.hypot(n - e, r - t) || 1;
 		return [e + (n - e) / i * 56, t + (r - t) / i * 56];
-	}, [s, c] = o(n, r, X[0], X[1]), [l, u] = o(i, a, X[0], X[1]);
-	return `M${s.toFixed(1)},${c.toFixed(1)} Q${X[0]},${X[1]} ${l.toFixed(1)},${u.toFixed(1)}`;
+	}, [s, c] = o(n, r, Z[0], Z[1]), [l, u] = o(i, a, Z[0], Z[1]);
+	return `M${s.toFixed(1)},${c.toFixed(1)} Q${Z[0]},${Z[1]} ${l.toFixed(1)},${u.toFixed(1)}`;
 }
-var en = {
+var an = {
 	solar: "M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5v2.5m0 15V22M2 12h2.5m15 0H22M4.9 4.9l1.8 1.8m10.6 10.6 1.8 1.8M4.9 19.1l1.8-1.8m10.6-10.6 1.8-1.8",
 	grid: "M9 2 6 22m9-20 3 20M5.5 8h13M4.5 14h15M12 2v20",
 	house: "M3.5 11.5 12 4.5l8.5 7M6 10v9.5h12V10M10 19.5v-5h4v5",
 	battery: "M8 5.5h8a1.5 1.5 0 0 1 1.5 1.5v12.5A1.5 1.5 0 0 1 16 21H8a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 8 5.5zM10 3h4"
-}, Z = class extends D {
+}, on = class extends D {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.narrow = !1, this.onMedia = () => this.narrow = !!this.media?.matches;
 	}
@@ -6326,8 +6579,8 @@ var en = {
 	render() {
 		let e = this.now;
 		if (!e) return x`<div class="skeleton"></div>`;
-		let t = e.excluded?.active ? e.excluded.power_w ?? 0 : 0, n = Zt(e.solar_w, e.grid_w, e.battery_w, t), r = n.paths, i = Math.max(500, ...Object.values(r)), a = (e, t, n, a) => {
-			let o = r[e], s = $t(t, n);
+		let t = e.excluded?.active ? e.excluded.power_w ?? 0 : 0, n = tn(e.solar_w, e.grid_w, e.battery_w, t), r = n.paths, i = Math.max(500, ...Object.values(r)), a = (e, t, n, a) => {
+			let o = r[e], s = rn(t, n);
 			if (o < 10) return S`<path d=${s} class="track"></path>`;
 			let c = Math.min(1, o / i), l = 2 + Math.round(c * 3), u = (3.2 - c * 1.8).toFixed(2);
 			return S`<path d=${s} class="track lit ${a}" style=${`stroke-width:${2 + c * 3}`}></path>
@@ -6352,7 +6605,7 @@ var en = {
             <stop offset="100%" class="glow1"></stop>
           </radialGradient>
         </defs>
-        <circle cx=${X[0]} cy=${X[1]} r="150" fill="url(#glow)"></circle>
+        <circle cx=${Z[0]} cy=${Z[1]} r="150" fill="url(#glow)"></circle>
         ${a("solar_house", "solar", "house", "sun")}
         ${a("solar_battery", "solar", "battery", "sun")}
         ${a("solar_grid", "solar", "grid", "sun")}
@@ -6360,14 +6613,14 @@ var en = {
         ${a("grid_battery", "grid", "battery", "grid")}
         ${a("battery_house", "battery", "house", "bat")}
         ${a("battery_grid", "battery", "grid", "bat")}
-        <circle cx=${X[0]} cy=${X[1]} r="5" class="hub"></circle>
-        ${this.node("solar", this.tr("flow.solar"), N(n.solar, this.locale), n.solar < 10 ? this.tr("flow.none") : e.solar_estimated ? this.tr("flow.estimated") : "", n.solar >= 10)}
+        <circle cx=${Z[0]} cy=${Z[1]} r="5" class="hub"></circle>
+        ${this.node("solar", this.tr("flow.solar"), N(n.solar, this.locale), e.curtail?.active && e.curtail.percent !== null ? this.tr("flow.curtailed", { pct: e.curtail.percent }) : e.curtail?.active && e.curtail.switch_on ? this.tr("flow.inverter_off") : n.solar < 10 ? this.tr("flow.none") : e.solar_estimated ? this.tr("flow.estimated") : "", n.solar >= 10)}
         ${this.node("grid", this.tr(Math.abs(n.grid) < 30 ? "flow.grid" : n.grid > 0 ? "flow.grid_in" : "flow.grid_out"), N(Math.abs(n.grid), this.locale), Math.abs(n.grid) < 30 ? this.tr("flow.balanced") : "", Math.abs(n.grid) >= 30)}
         ${this.node("house", this.tr("flow.house"), N(n.house, this.locale), n.airco >= 10 ? this.tr("flow.airco", { w: N(n.airco, this.locale) }) : "", !0)}
-        ${this.node("battery", this.tr(n.battery > 10 ? "flow.charging" : n.battery < -10 ? "flow.delivering" : "flow.battery"), N(Math.abs(n.battery), this.locale), o === null ? "" : F(o, this.locale), Math.abs(n.battery) > 10)}
-        ${o === null ? w : S`<circle cx=${Y.battery[0]} cy=${Y.battery[1]} r=${46} class="socring"
+        ${this.node("battery", this.tr(n.battery > 10 ? "flow.charging" : n.battery < -10 ? "flow.delivering" : "flow.battery"), N(Math.abs(n.battery), this.locale), e.curtail?.export_blocked ? `${o === null ? "" : `${F(o, this.locale)} · `}${this.tr("flow.export_blocked")}` : o === null ? "" : F(o, this.locale), Math.abs(n.battery) > 10)}
+        ${o === null ? w : S`<circle cx=${X.battery[0]} cy=${X.battery[1]} r=${46} class="socring"
               stroke-dasharray=${`${s * Math.max(0, Math.min(100, o)) / 100} ${s}`}
-              transform=${`rotate(-90 ${Y.battery[0]} ${Y.battery[1]})`}></circle>`}
+              transform=${`rotate(-90 ${X.battery[0]} ${X.battery[1]})`}></circle>`}
       </svg>
       <p class="sum">${this.summary(n)}</p>
     </section>`;
@@ -6379,12 +6632,12 @@ var en = {
 		return `${i.charAt(0).toUpperCase()}${i.slice(1)}.`;
 	}
 	node(e, t, n, r, i) {
-		let [a, o] = Y[e], s = this.narrow ? 1.7 : 1, c = e === "solar" && this.narrow, l = c ? a + Qt + 16 : a, u = c ? o - 30 : e === "solar" ? o - Qt - 44 : o + Qt + 26 * s, d = c ? "start" : "middle";
+		let [a, o] = X[e], s = this.narrow ? 1.7 : 1, c = e === "solar" && this.narrow, l = c ? a + nn + 16 : a, u = c ? o - 30 : e === "solar" ? o - nn - 44 : o + nn + 26 * s, d = c ? "start" : "middle";
 		return S`<g class=${`node ${e}${i ? " active" : ""}`} text-anchor=${d}>
       <circle cx=${a} cy=${o} r=${58} class="halo"></circle>
-      <circle cx=${a} cy=${o} r=${Qt} class="disc"></circle>
+      <circle cx=${a} cy=${o} r=${nn} class="disc"></circle>
       <circle cx=${a} cy=${o} r=${46} class="ring"></circle>
-      <g transform=${`translate(${a - 22} ${o - 22}) scale(1.833)`}><path d=${en[e]} class="icon"></path></g>
+      <g transform=${`translate(${a - 22} ${o - 22}) scale(1.833)`}><path d=${an[e]} class="icon"></path></g>
       <text x=${l} y=${u} class="label" text-anchor=${d}>${t.toUpperCase()}</text>
       <text x=${l} y=${u + 26 * s} class="value" text-anchor=${d}>${n}</text>
       ${r ? S`<text x=${l} y=${u + 44 * s} class="sub" text-anchor=${d}>${r}</text>` : w}
@@ -6580,12 +6833,12 @@ var en = {
   `;
 	}
 };
-H([k({ attribute: !1 })], Z.prototype, "now", void 0), H([k({ attribute: !1 })], Z.prototype, "uiLang", void 0), H([k()], Z.prototype, "locale", void 0), H([A()], Z.prototype, "narrow", void 0), Z = H([O("zephyr-flow")], Z);
+H([k({ attribute: !1 })], on.prototype, "now", void 0), H([k({ attribute: !1 })], on.prototype, "uiLang", void 0), H([k()], on.prototype, "locale", void 0), H([A()], on.prototype, "narrow", void 0), on = H([O("zephyr-flow")], on);
 // src/stroom.ts
-function tn(e, t) {
+function sn(e, t) {
 	return e.name ?? t(`stroom.kind_${e.kind}`);
 }
-function nn(e, t) {
+function cn(e, t) {
 	let n = e.filter((e) => e.shown).map((e) => ({
 		id: e.id,
 		device: e,
@@ -6597,27 +6850,27 @@ function nn(e, t) {
 		kwh: t
 	}), n;
 }
-function rn(e, t, n) {
+function ln(e, t, n) {
 	let r = "", i = !1;
 	for (let [a, o] of e) o === null ? i = !1 : (r += `${i ? "L" : "M"}${t(a).toFixed(1)},${n(o).toFixed(1)}`, i = !0);
 	return r;
 }
-function an(e, t) {
+function un(e, t) {
 	let n = Math.round(e);
 	return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toLocaleString(t)} W`;
 }
-function on(e) {
+function dn(e) {
 	let t = 200;
 	for (let [, n, r] of e) n !== null && (t = Math.max(t, Math.abs(n - r)));
 	return Math.ceil(t / 100) * 100;
 }
-var sn = .8;
-function cn(e) {
+var fn = .8;
+function pn(e) {
 	if (!e) return "none";
 	let [t, n, r, i] = e;
 	return t < 30 ? "idle" : n / t >= .8 ? "good" : r >= i ? "import" : "export";
 }
-var ln = [
+var mn = [
 	["solar", [
 		["solar_house", "house"],
 		["solar_battery", "battery"],
@@ -6660,7 +6913,7 @@ var ln = [
             </p>` : x`<div class="row">
               <span class="big">${F(n * 100, this.locale)}</span>
               <span class=${r ? "pill good" : "pill warn"}
-                >${this.tr(r ? "stroom.zero_good" : "stroom.zero_low", { goal: F(sn * 100, this.locale) })}</span
+                >${this.tr(r ? "stroom.zero_good" : "stroom.zero_low", { goal: F(fn * 100, this.locale) })}</span
               >
             </div>`}
       ${t ? this.strip(t) : w}
@@ -6691,7 +6944,7 @@ var ln = [
 	}
 	strip(e) {
 		let t = 360 / (e.buckets.length || 288), n = e.buckets.map((e, n) => {
-			let r = cn(e);
+			let r = pn(e);
 			return r === "none" ? w : S`<rect x=${(n * t).toFixed(2)} y="2" width=${(t + .3).toFixed(2)} height="22" class=${`c ${r}`}></rect>`;
 		});
 		return x`<svg
@@ -6725,7 +6978,7 @@ var ln = [
           ${n ? this.tr("stroom.routes_sub", { until: n }) : this.tr("stroom.routes_none")}
         </p>
       </div>
-      ${ln.map(([n, r]) => x`<div class="grp">${this.tr(`stroom.src_${n}`)}</div>
+      ${mn.map(([n, r]) => x`<div class="grp">${this.tr(`stroom.src_${n}`)}</div>
             ${r.map(([r, i]) => x`<div class="route">
                   <span>→ ${this.tr(`stroom.to_${i}`)}</span>
                   <div class="bar">
@@ -6753,9 +7006,9 @@ var ln = [
     </section>`;
 	}
 	renderRegulation(e, t) {
-		let n = typeof window < "u" && window.matchMedia?.("(max-width: 600px)").matches, r = n ? 360 : 760, i = n ? 50 : 52, a = r - 8, o = e.window_s, s = (e) => i + (e + o) / o * (a - i), c = on(e.samples), l = (e) => 69 - Math.max(-c, Math.min(c, e)) / c * 55, u = 0, d = 0;
+		let n = typeof window < "u" && window.matchMedia?.("(max-width: 600px)").matches, r = n ? 360 : 760, i = n ? 50 : 52, a = r - 8, o = e.window_s, s = (e) => i + (e + o) / o * (a - i), c = dn(e.samples), l = (e) => 69 - Math.max(-c, Math.min(c, e)) / c * 55, u = 0, d = 0;
 		for (let [, , , t, n] of e.samples) u = Math.min(u, t, n ?? 0), d = Math.max(d, t, n ?? 0);
-		let f = Math.max(500, Math.ceil((d - u) / 250) * 250), p = Math.floor(u / 250) * 250, m = (e) => 248 - (e - p) / f * 90, h = rn(e.samples.map(([e, t, n]) => [e, t === null ? null : t - n]), s, l), ee = rn(e.samples.map(([e, , , t]) => [e, t]), s, m), te = rn(e.samples.map(([e, , , , t]) => [e, t]), s, m), ne = [], g = null;
+		let f = Math.max(500, Math.ceil((d - u) / 250) * 250), p = Math.floor(u / 250) * 250, m = (e) => 248 - (e - p) / f * 90, h = ln(e.samples.map(([e, t, n]) => [e, t === null ? null : t - n]), s, l), ee = ln(e.samples.map(([e, , , t]) => [e, t]), s, m), te = ln(e.samples.map(([e, , , , t]) => [e, t]), s, m), ne = [], g = null;
 		e.samples.forEach(([t, , , , , n], r) => {
 			let i = r === e.samples.length - 1;
 			!n && g === null && (g = t), (n || i) && g !== null && (ne.push(S`<rect x=${s(g)} y=${14} width=${Math.max(1, s(t) - s(g))} height=${234} class="idle"></rect>`), g = null);
@@ -6795,13 +7048,13 @@ var ln = [
 			c,
 			0,
 			-c
-		].map((e) => S`<text x=${i - 6} y=${l(e) + 3} text-anchor="end">${an(e, this.locale)}</text>`)}
+		].map((e) => S`<text x=${i - 6} y=${l(e) + 3} text-anchor="end">${un(e, this.locale)}</text>`)}
                 <text x=${i} y=${11} class="cap">
                   ${this.tr("stroom.reg_p1")}
                 </text>
                 <path d=${h} class="dev"></path>
                 ${re.map((e) => S`<line x1=${i} x2=${a} y1=${m(e)} y2=${m(e)} class="grid"></line>
-                  <text x=${i - 6} y=${m(e) + 3} text-anchor="end">${an(e, this.locale)}</text>`)}
+                  <text x=${i - 6} y=${m(e) + 3} text-anchor="end">${un(e, this.locale)}</text>`)}
                 <text x=${i} y=${153} class="cap">
                   ${this.tr("stroom.reg_battery")}
                 </text>
@@ -6844,7 +7097,7 @@ var ln = [
     </section>`;
 	}
 	renderDevices(e) {
-		let t = (e) => this.tr(e), n = nn(e.devices ?? [], e.rest_today_kwh ?? null), r = Math.max(.5, ...n.map((e) => e.kwh ?? 0)), i = e.today.airco;
+		let t = (e) => this.tr(e), n = cn(e.devices ?? [], e.rest_today_kwh ?? null), r = Math.max(.5, ...n.map((e) => e.kwh ?? 0)), i = e.today.airco;
 		return x`<section class="card" aria-labelledby="dv-title">
       <div>
         <h2 id="dv-title">${this.tr("stroom.devices_title")}</h2>
@@ -6852,7 +7105,7 @@ var ln = [
       </div>
       ${n.map((e) => x`<div class="route dev">
             <span
-              >${e.device ? tn(e.device, t) : this.tr("stroom.rest")}${e.device && e.device.power_w !== null && e.device.power_w >= 10 ? x` <span class="live"
+              >${e.device ? sn(e.device, t) : this.tr("stroom.rest")}${e.device && e.device.power_w !== null && e.device.power_w >= 10 ? x` <span class="live"
                       >${N(e.device.power_w, this.locale)}</span
                     >` : w}</span
             >
@@ -7139,7 +7392,7 @@ var ln = [
 };
 H([k({ attribute: !1 })], Q.prototype, "now", void 0), H([k({ attribute: !1 })], Q.prototype, "view", void 0), H([k({ attribute: !1 })], Q.prototype, "uiLang", void 0), H([k()], Q.prototype, "locale", void 0), H([k()], Q.prototype, "timeZone", void 0), Q = H([O("zephyr-stroom")], Q);
 // src/zephyr-panel.ts
-var un = "/zephyr_static", dn = [
+var hn = "/zephyr_static", gn = [
 	[
 		"Inter",
 		400,
@@ -7161,15 +7414,15 @@ var un = "/zephyr_static", dn = [
 		"space-grotesk-latin-700-normal.woff2"
 	]
 ];
-function fn(e) {
+function _n(e) {
 	let t = "zephyr-fonts";
 	if (document.getElementById(t)) return;
 	let n = document.createElement("style");
-	n.id = t, n.textContent = dn.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
+	n.id = t, n.textContent = gn.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
 }
 var $ = class extends D {
 	constructor(...e) {
-		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.period = yt(), this.appliancesFor = null, this.confirmLive = !1, this.controlBusy = !1, this.controlError = null, this.pendingMode = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
+		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.period = xt(), this.openGroup = null, this.appliancesFor = null, this.confirmLive = !1, this.controlBusy = !1, this.controlError = null, this.pendingMode = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
 			this.status = "loading", this.subscribe();
 		}, this.onDisconnected = () => {
 			this.unsubscribe = void 0, this.status = "disconnected";
@@ -7281,7 +7534,7 @@ var $ = class extends D {
 		};
 	}
 	get base() {
-		return this.panel?.config?.static ?? un;
+		return this.panel?.config?.static ?? hn;
 	}
 	get uiLang() {
 		return Xe(this.hass?.locale?.language ?? this.hass?.language);
@@ -7296,7 +7549,7 @@ var $ = class extends D {
 		return z(this.uiLang, e, t);
 	}
 	connectedCallback() {
-		super.connectedCallback(), fn(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
+		super.connectedCallback(), _n(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), window.clearInterval(this.clockTimer), window.clearInterval(this.planTimer), window.clearInterval(this.setsTimer), window.clearTimeout(this.retryTimer), this.watch(void 0), this.stop();
@@ -7516,7 +7769,7 @@ var $ = class extends D {
       <strong>${this.tr("control.live_title")}</strong>
       <p>${this.tr(t ? "control.live_blocked" : "control.live_text")}</p>
       ${t ? x`<ul>
-              ${e.blockers.map((e) => x`<li>${Bt(e, this.uiLang)}</li>`)}
+              ${e.blockers.map((e) => x`<li>${Wt(e, this.uiLang)}</li>`)}
             </ul>` : w}
       <div class="row">
         <button
@@ -7539,7 +7792,7 @@ var $ = class extends D {
 	}
 	renderFast(e) {
 		if (!this.admin || !e.entities?.mode) return w;
-		let t = Rt(e.mode, e.modes, e.previous_mode), n = this.pendingMode !== null && this.pendingMode !== e.mode, r = t.find((e) => e.active);
+		let t = Ht(e.mode, e.modes, e.previous_mode), n = this.pendingMode !== null && this.pendingMode !== e.mode, r = t.find((e) => e.active);
 		return x`<div
       class="fast"
       role="group"
@@ -7602,6 +7855,7 @@ var $ = class extends D {
         .save=${this.saveSettings}
         .setVacation=${this.setVacation}
         .saveHouse=${this.saveHouse}
+        .openGroup=${this.openGroup}
         .appliances=${this.appliancesView}
         .saveAppliances=${this.saveAppliances}
       ></zephyr-settings>` : this.view === "stroom" ? x`<zephyr-stroom
@@ -7672,6 +7926,9 @@ var $ = class extends D {
         .period=${this.period}
         .runs=${this.runInputs()}
         @zephyr-period=${(e) => this.period = e.detail}
+        @zephyr-open-settings=${(e) => {
+			this.openGroup = e.detail, this.show("settings");
+		}}
         ><zephyr-appliances
           .view=${this.appliancesView}
           .quarters=${this.planView?.quarters ?? []}
@@ -7887,7 +8144,7 @@ var $ = class extends D {
 		return this.tr(`next.${t.action}`, n);
 	}
 	static {
-		this.styles = [gt, o`
+		this.styles = [_t, o`
       :host {
         display: block;
         min-height: 100%;
@@ -8358,5 +8615,5 @@ var $ = class extends D {
     `];
 	}
 };
-H([k({ attribute: !1 })], $.prototype, "hass", void 0), H([k({ type: Boolean })], $.prototype, "narrow", void 0), H([k({ attribute: !1 })], $.prototype, "panel", void 0), H([A()], $.prototype, "now", void 0), H([A()], $.prototype, "status", void 0), H([A()], $.prototype, "view", void 0), H([A()], $.prototype, "clockMs", void 0), H([A()], $.prototype, "planView", void 0), H([A()], $.prototype, "setsView", void 0), H([A()], $.prototype, "settingsView", void 0), H([A()], $.prototype, "period", void 0), H([A()], $.prototype, "eventsView", void 0), H([A()], $.prototype, "savingsView", void 0), H([A()], $.prototype, "stroomView", void 0), H([A()], $.prototype, "appliancesView", void 0), H([A()], $.prototype, "planCheck", void 0), H([A()], $.prototype, "confirmLive", void 0), H([A()], $.prototype, "controlBusy", void 0), H([A()], $.prototype, "controlError", void 0), H([A()], $.prototype, "pendingMode", void 0), $ = H([O("zephyr-panel")], $);
+H([k({ attribute: !1 })], $.prototype, "hass", void 0), H([k({ type: Boolean })], $.prototype, "narrow", void 0), H([k({ attribute: !1 })], $.prototype, "panel", void 0), H([A()], $.prototype, "now", void 0), H([A()], $.prototype, "status", void 0), H([A()], $.prototype, "view", void 0), H([A()], $.prototype, "clockMs", void 0), H([A()], $.prototype, "planView", void 0), H([A()], $.prototype, "setsView", void 0), H([A()], $.prototype, "settingsView", void 0), H([A()], $.prototype, "period", void 0), H([A()], $.prototype, "eventsView", void 0), H([A()], $.prototype, "savingsView", void 0), H([A()], $.prototype, "stroomView", void 0), H([A()], $.prototype, "appliancesView", void 0), H([A()], $.prototype, "openGroup", void 0), H([A()], $.prototype, "planCheck", void 0), H([A()], $.prototype, "confirmLive", void 0), H([A()], $.prototype, "controlBusy", void 0), H([A()], $.prototype, "controlError", void 0), H([A()], $.prototype, "pendingMode", void 0), $ = H([O("zephyr-panel")], $);
 export { $ as ZephyrPanel };

@@ -374,3 +374,58 @@ describe("short peaks", () => {
     expect(peakStats([], "2026-11-27")).toEqual({ today: null, mean: null });
   });
 });
+
+import { negativeAhead } from "../src/plan";
+import { searchChoices, wrongDomain } from "../src/settings-edit";
+
+describe("curtailing and the entity picker", () => {
+  const q = (iso: string, sell: number, cost = 0, past = false) => ({
+    start: iso,
+    past,
+    market: null,
+    buy: 0.02,
+    sell,
+    action: null,
+    soc: null,
+    solar: null,
+    load: null,
+    indicative: false,
+    export_cost: cost,
+  });
+  it("sums the negative export prices still to come", () => {
+    const quarters = [
+      q("2026-11-27T12:00:00Z", -0.03, 0.05, true),
+      q("2026-11-27T13:00:00Z", 0.05),
+      q("2026-11-28T12:00:00Z", -0.04, 0.1),
+      q("2026-11-28T12:15:00Z", -0.04, 0.1),
+    ];
+    expect(negativeAhead(quarters, "UTC")).toEqual({
+      hours: 0.5,
+      cost: 0.2,
+      when: "tomorrow",
+    });
+    expect(negativeAhead([q("2026-11-27T13:00:00Z", 0.05)], "UTC")).toBeNull();
+  });
+  it("finds entities on any part of name and id", () => {
+    const choices = [
+      {
+        id: "switch.solaredge_export_limit",
+        name: "SolarEdge exportbegrenzer",
+      },
+      { id: "switch.inverter_solar_power", name: "Omvormer solar aan/uit" },
+      { id: "switch.kitchen", name: "Keuken" },
+    ];
+    expect(searchChoices(choices, "export").map((c) => c.id)).toEqual([
+      "switch.solaredge_export_limit",
+    ]);
+    expect(searchChoices(choices, "solar").length).toBe(2);
+    expect(searchChoices(choices, "omv aan").map((c) => c.id)).toEqual([
+      "switch.inverter_solar_power",
+    ]);
+  });
+  it("names the wrong domain", () => {
+    expect(wrongDomain("sensor.solaredge_ac_power", "number")).toBe("sensor");
+    expect(wrongDomain("number.limit", "number")).toBeNull();
+    expect(wrongDomain("SolarEdge", "number")).toBeNull();
+  });
+});

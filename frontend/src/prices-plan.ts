@@ -10,7 +10,7 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { clock, day, euro, kwh, percent } from "./format";
+import { clock, day, euro, kwh, numberFormat, percent } from "./format";
 import { t, type Lang } from "./i18n";
 import {
   bands,
@@ -30,12 +30,17 @@ import {
   type PlanView,
   type PriceStats,
   type Quarter,
+  negativeAhead,
   runBars,
   type RunInput,
 } from "./plan";
 import { actionFill } from "./theme";
 
 const PERIOD_KEY = "zephyr.period";
+/** Hours as a short number (1, 1,5). */
+const numberText = (v: number, locale: string): string =>
+  numberFormat(locale, { maximumFractionDigits: 2 }).format(v);
+
 const PERIODS: [Period, string][] = [
   ["today", "plan.today"],
   ["tomorrow", "plan.tomorrow"],
@@ -168,7 +173,7 @@ export class ZephyrPricesPlan extends LitElement {
       </div>
       ${this.notes(view, tomorrow)}
       ${quarters.length ? this.chart(quarters) : html`<p class="empty">${this.tr("plan.no_quarters")}</p>`}
-      ${this.legend()}
+      ${this.legend(quarters)}
       <slot></slot>
     </section>`;
   }
@@ -234,6 +239,24 @@ export class ZephyrPricesPlan extends LitElement {
       notes.push(html`<p class="note">${this.tr("plan.reserve")}</p>`);
     if (!tomorrow && this.period !== "today")
       notes.push(html`<p class="note">${this.tr("plan.indicative")}</p>`);
+    // Negative export prices ahead while nothing is curtailed (B45): one notice with a link to the setting.
+    const neg =
+      view.curtail_mode === "curtail_off"
+        ? negativeAhead(view.quarters, this.timeZone)
+        : null;
+    if (neg && neg.cost >= 0.01)
+      notes.push(
+        html`<p class="note warn negnote">
+          ${this.tr(`plan.neg_${neg.when}`, { hours: numberText(neg.hours, this.locale), euro: euro(neg.cost, this.locale) })}
+          <button
+            type="button"
+            class="link"
+            @click=${() => this.dispatchEvent(new CustomEvent("zephyr-open-settings", { detail: "planner", bubbles: true, composed: true }))}
+          >
+            ${this.tr("plan.neg_link")}
+          </button>
+        </p>`,
+      );
     return notes.length ? html`${notes}` : nothing;
   }
 
@@ -304,10 +327,13 @@ export class ZephyrPricesPlan extends LitElement {
             if (q.buy === null) return nothing;
             const b = bar(q.buy, s);
             const cls = `bar${q.past ? " past" : ""}${q.indicative ? " ind" : ""}${i === now ? " cur" : ""}${i === focus ? " focus" : ""}`;
+            const neg = q.sell !== null && q.sell < 0 ? bar(q.sell, s) : null;
             return html`<div
-              class=${cls}
-              style="left:${pct(i)};width:${pct(1)};bottom:${b.bottom}%;height:${b.height}%"
-            ></div>`;
+                class=${cls}
+                style="left:${pct(i)};width:${pct(1)};bottom:${b.bottom}%;height:${b.height}%"
+              ></div>
+              ${neg ? html`<div class=${`neg${q.past ? " past" : ""}`} style="left:${pct(i)};width:${pct(1)};bottom:${neg.bottom}%;height:${neg.height}%"></div>` : nothing}
+              ${(q.curtail_kwh ?? 0) > 0 ? html`<span class="cut" style="left:${pct(i + 0.5)}" title=${this.tr("plan.curtail_mark")}></span>` : nothing}`;
           })}
           <svg
             viewBox="0 0 ${n} 100"
@@ -444,9 +470,20 @@ export class ZephyrPricesPlan extends LitElement {
           ? html`<span
                 >${this.tr("plan.tip_buy", { price: euro(q.buy, this.locale) })}</span
               >
-              <span
+              <span class=${q.sell !== null && q.sell < 0 ? "negtext" : ""}
                 >${this.tr("plan.tip_sell", { price: euro(q.sell as number, this.locale) })}</span
-              >`
+              >
+              ${
+                (q.curtail_kwh ?? 0) > 0
+                  ? html`<span
+                      >${this.tr("plan.tip_curtail", { price: euro(q.sell as number, this.locale), kwh: kwh(q.curtail_kwh ?? 0, this.locale, 1) })}</span
+                    >`
+                  : (q.export_cost ?? 0) > 0
+                    ? html`<span
+                        >${this.tr("plan.tip_export_cost", { euro: euro(q.export_cost ?? 0, this.locale) })}</span
+                      >`
+                    : nothing
+              }`
           : html`<span>${this.tr("plan.unknown")}</span>`
       }
       ${action ? html`<span>${action}</span>` : nothing}
@@ -474,7 +511,8 @@ export class ZephyrPricesPlan extends LitElement {
     });
   }
 
-  private legend(): TemplateResult {
+  private legend(quarters: Quarter[] = []): TemplateResult {
+    const negative = quarters.some((q) => q.sell !== null && q.sell < 0);
     const item = (fill: string, key: string, cls = "sw"): TemplateResult =>
       html`<span class="li"
         ><span class=${cls} style="background:${fill}"></span
@@ -488,6 +526,7 @@ export class ZephyrPricesPlan extends LitElement {
       ${item(actionFill("export"), "action.export")}
       ${item("var(--z-solar)", "plan.legend_solar")}
       ${item("var(--z-solar)", "plan.legend_solar_over", "sw over")}
+      ${negative ? item("var(--z-red, #d64545)", "plan.legend_negative") : nothing}
       <span class="li"
         ><span class="line solid"></span
         >${this.tr("plan.legend_soc_past")}</span
@@ -802,6 +841,52 @@ export class ZephyrPricesPlan extends LitElement {
       }
       .seg.past {
         opacity: 0.4;
+      }
+      .neg {
+        position: absolute;
+        background: var(--z-red, #d64545);
+        opacity: 0.8;
+        border-radius: 0 0 2px 2px;
+      }
+      .neg.past {
+        opacity: 0.35;
+      }
+      .cut {
+        position: absolute;
+        bottom: 2px;
+        width: 10px;
+        height: 10px;
+        margin-left: -5px;
+        border-radius: 2px;
+        background:
+          linear-gradient(
+            135deg,
+            transparent 42%,
+            var(--z-red, #d64545) 42% 58%,
+            transparent 58%
+          ),
+          var(--z-solar);
+        opacity: 0.9;
+      }
+      .negtext {
+        color: var(--z-red, #d64545);
+        font-weight: 600;
+      }
+      .negnote {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        align-items: center;
+      }
+      button.link {
+        border: 0;
+        background: none;
+        padding: 0;
+        font: inherit;
+        font-weight: 700;
+        color: inherit;
+        text-decoration: underline;
+        cursor: pointer;
       }
       .runlane {
         position: relative;

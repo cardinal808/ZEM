@@ -84,6 +84,15 @@ export interface Now {
   excluded?: import("./airco").Excluded | null;
   /** Goes up when appliances or their planned runs change (B36): fetch zephyr/appliances again. */
   appliances_revision?: number | null;
+  /** Curtailing at a negative export price now (B45); null without a curtail manager. */
+  curtail?: {
+    mode: string;
+    negative: boolean;
+    active: boolean;
+    percent: number | null;
+    switch_on: boolean | null;
+    export_blocked: boolean;
+  } | null;
 }
 
 export type SubscribeEvent = { type: "now"; data: Now } | { type: "unloaded" };

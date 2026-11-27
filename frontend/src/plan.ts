@@ -16,6 +16,10 @@ export interface Quarter {
   excluded?: number | null;
   /** kWh of planned appliance runs in this quarter (B36). */
   appliances?: number | null;
+  /** Solar surplus the planner counts as curtailed at a negative export price (B45). */
+  curtail_kwh?: number;
+  /** Cost of exporting that surplus when nothing is curtailed (€, B45). */
+  export_cost?: number;
   indicative: boolean;
 }
 
@@ -37,6 +41,8 @@ export interface PlanView {
   tomorrow_known_at: string | null;
   quarters: Quarter[];
   blocks: PlanBlock[];
+  /** curtail_off / curtail_external / curtail_zephyr (B45). */
+  curtail_mode?: string | null;
 }
 
 export type Period = "today" | "tomorrow" | "both";
@@ -105,8 +111,15 @@ export function stats(quarters: Quarter[]): PriceStats | null {
 }
 
 /** Index of the running quarter (the first one that is not past), or -1. */
-export function currentIndex(quarters: Quarter[]): number {
-  return quarters.findIndex((q) => !q.past);
+export function currentIndex(
+  quarters: Quarter[],
+  nowMs: number = Date.now(),
+): number {
+  const i = quarters.findIndex((q) => !q.past);
+  if (i !== 0) return i;
+  // Without a past quarter in view (the view "tomorrow") the first quarter is only "now" when it is.
+  const start = new Date(quarters[0].start).getTime();
+  return nowMs >= start && nowMs < start + 15 * 60_000 ? 0 : -1;
 }
 
 export interface Band {
@@ -135,8 +148,9 @@ export interface Scale {
 
 /** Price axis: from 0 (or the lowest negative price) to the highest price, on 5-cent steps. */
 export function scale(quarters: Quarter[]): Scale {
+  // A negative export price is drawn below zero too (B45).
   const prices = quarters
-    .map((q) => q.buy)
+    .flatMap((q) => [q.buy, q.sell !== null && q.sell < 0 ? q.sell : null])
     .filter((p): p is number => p !== null);
   if (!prices.length) return { lo: 0, hi: 0.4 };
   const lo = Math.min(0, Math.floor(Math.min(...prices) * 20) / 20);
@@ -184,6 +198,12 @@ export function socPoints(quarters: Quarter[], socNow: number | null): string {
   const pts: string[] = [];
   if (now >= 0 && socNow !== null)
     pts.push(`${now},${(100 - socNow).toFixed(1)}`);
+  else if (now < 0) {
+    // Now is not in view (tomorrow): start the line at the left edge with the first quarter's value.
+    const first = quarters.find((q) => !q.past && q.soc !== null);
+    if (first && first.soc !== null)
+      pts.push(`0,${(100 - first.soc).toFixed(1)}`);
+  }
   quarters.forEach((q, i) => {
     if (!q.past && q.soc !== null)
       pts.push(`${i + 1},${(100 - q.soc).toFixed(1)}`);
@@ -330,4 +350,30 @@ export function runBars(quarters: Quarter[], runs: RunInput[]): RunBar[] {
     });
   }
   return out;
+}
+
+export interface NegativeSummary {
+  hours: number;
+  cost: number;
+  /** "today", "tomorrow" or "both": the days with a negative export price still to come. */
+  when: "today" | "tomorrow" | "both";
+}
+
+/** Negative export prices still to come, and what exporting the surplus then costs (no curtailing); null when none. */
+export function negativeAhead(
+  quarters: Quarter[],
+  timeZone: string,
+): NegativeSummary | null {
+  const ahead = quarters.filter(
+    (q) => !q.past && q.sell !== null && q.sell < 0,
+  );
+  if (!ahead.length) return null;
+  const first = days(quarters, timeZone)[0];
+  const today = ahead.some((q) => dayKey(q.start, timeZone) === first);
+  const later = ahead.some((q) => dayKey(q.start, timeZone) !== first);
+  return {
+    hours: ahead.length / 4,
+    cost: ahead.reduce((sum, q) => sum + (q.export_cost ?? 0), 0),
+    when: today && later ? "both" : today ? "today" : "tomorrow",
+  };
 }

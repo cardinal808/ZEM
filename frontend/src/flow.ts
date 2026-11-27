@@ -195,11 +195,15 @@ export class ZephyrFlow extends LitElement {
           "solar",
           this.tr("flow.solar"),
           watts(f.solar, this.locale),
-          f.solar < 10
-            ? this.tr("flow.none")
-            : now.solar_estimated
-              ? this.tr("flow.estimated")
-              : "",
+          now.curtail?.active && now.curtail.percent !== null
+            ? this.tr("flow.curtailed", { pct: now.curtail.percent })
+            : now.curtail?.active && now.curtail.switch_on
+              ? this.tr("flow.inverter_off")
+              : f.solar < 10
+                ? this.tr("flow.none")
+                : now.solar_estimated
+                  ? this.tr("flow.estimated")
+                  : "",
           f.solar >= 10,
         )}
         ${this.node(
@@ -226,7 +230,11 @@ export class ZephyrFlow extends LitElement {
                 : "flow.battery",
           ),
           watts(Math.abs(f.battery), this.locale),
-          soc !== null ? percent(soc, this.locale) : "",
+          now.curtail?.export_blocked
+            ? `${soc !== null ? `${percent(soc, this.locale)} · ` : ""}${this.tr("flow.export_blocked")}`
+            : soc !== null
+              ? percent(soc, this.locale)
+              : "",
           Math.abs(f.battery) > 10,
         )}
         ${
