@@ -13,7 +13,7 @@ distributor of SPEC-meerdere-sets follows in M7.
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Any
@@ -159,6 +159,16 @@ class Command:
     kind: str
     """"power", "standby", "soc_limits" or "grid_reverse" (``gridReverse`` may also ride along
     with another command for the same set)."""
+    cause: str | None = None
+    """For the counters, when it differs from ``kind``: "startup" for SOC limits when the set is first seen."""
+
+    @property
+    def kinds(self) -> list[str]:
+        """What to count for this command: its cause, and ``grid_reverse`` when it rides along."""
+        first = self.cause or self.kind
+        if self.kind != "grid_reverse" and "gridReverse" in self.props:
+            return [first, "grid_reverse"]
+        return [first]
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,6 +201,8 @@ class _SetState:
     full: bool = False
     empty: bool = False
     limits_checked: bool = False
+    seen: bool = False
+    """SOC limits checked once since the start: a later check is a settings change, not ``startup``."""
     flash_paused: bool = False
     grid_reverse_sent: tuple[GridReverse, float] | None = None
     counters: SetCounters = field(default_factory=SetCounters)
@@ -213,6 +225,11 @@ class ZephyrEngine:
         self.peak_kwh = 0.0
         """Energy of short peaks the step filter (B20) left to the grid, since the start (PLANNING 1.3)."""
         self._peak_at: tuple[float, float] | None = None
+        self.count_commands = True
+        """Count commands when they are decided (shadow mode, tests). Live, the writer counts
+        them once the set accepted them (``counters_record``)."""
+        self.day_of: Callable[[float], str | None] = lambda _now: None
+        """Local calendar day for the day totals of the counters (set by the HA layer)."""
         self._price_block: Reason | None = None
         self._align_p1 = False
         self._grid_history: deque[tuple[float, float]] = deque(maxlen=100)
@@ -389,7 +406,10 @@ class ZephyrEngine:
             state = self._sets.setdefault(view.key, _SetState())
             self._update_flags(state, view)
             if view.report is not None and view.online:
-                state.counters.observe_ac_status(view.report.ac_status, now)
+                day = self.day_of(now)
+                state.counters.observe_ac_status(view.report.ac_status, now, day)
+                pack_state = view.report.pack_state
+                state.counters.observe_pack_state(None if pack_state is None else int(pack_state), now, day)
         usable = [v for v in sorted(sets, key=lambda v: v.number) if self._usable(v)]
         primary = usable[0] if usable else None
 
@@ -703,9 +723,11 @@ class ZephyrEngine:
             state.flash_paused = not flash_ok
             if not state.limits_checked and flash_ok:
                 state.limits_checked = True
+                cause = "soc_limits" if state.seen else "startup"
+                state.seen = True
                 if r.min_soc != s.min_soc or r.max_soc != s.max_soc:
-                    commands.append(Command(view.key, soc_limits_command(s.min_soc, s.max_soc), "soc_limits"))
-                    state.counters.record("soc_limits", now)
+                    commands.append(Command(view.key, soc_limits_command(s.min_soc, s.max_soc), "soc_limits", cause))
+                    self._record(state, cause, now)
             target = targets.get(view.key, 0)
             offgrid = r.offgrid_power > 0
             if target == 0:
@@ -720,7 +742,7 @@ class ZephyrEngine:
             if go_standby:
                 if not state.standby:
                     commands.append(Command(view.key, standby_command(), "standby"))
-                    state.counters.record("standby", now)
+                    self._record(state, "standby", now)
                     state.standby = True
                     state.last_power = 0
                     state.last_sent_at = now
@@ -730,7 +752,7 @@ class ZephyrEngine:
             if target == state.last_power and _report_matches(r, target):
                 # Refresh due, but the set already reports exactly this command: nothing to send.
                 state.last_sent_at = now
-                state.counters.record("skipped", now)
+                state.counters.record("skipped", now, self.day_of(now))
                 continue
             direction = AcMode.CHARGE if target > 0 else AcMode.DELIVER if target < 0 else None
             include_ac = direction is not None and (direction is not state.last_ac_mode or state.standby or r.ac_mode is not direction)
@@ -741,7 +763,9 @@ class ZephyrEngine:
                     "power",
                 )
             )
-            state.counters.record("power", now)
+            self._record(state, "power", now)
+            if include_ac and direction is not None and r.ac_mode is not None and r.ac_mode is not direction:
+                state.counters.record("relay_commanded", now, self.day_of(now))
             if direction is not None:
                 state.last_ac_mode = direction
             state.last_power = target
@@ -782,7 +806,7 @@ class ZephyrEngine:
             else:
                 commands.append(Command(view.key, props, "grid_reverse"))
             state.grid_reverse_sent = (wanted, now)
-            state.counters.record("grid_reverse", now)
+            self._record(state, "grid_reverse", now)
 
     def _should_send(self, state: _SetState, target: int, now: float) -> bool:
         """Write rules (SPEC-meerdere-sets §2.3)."""
@@ -841,9 +865,22 @@ class ZephyrEngine:
         """W of the excluded load (B41) the battery did not deliver for in the last step."""
         return self._excluded_now
 
+    def _record(self, state: _SetState, kind: str, now: float) -> None:
+        if self.count_commands:
+            state.counters.record(kind, now, self.day_of(now))
+
     def counters_record(self, key: str, kind: str, now: float) -> None:
-        """Count a write made outside the engine (the write test)."""
-        self._sets.setdefault(key, _SetState()).counters.record(kind, now)
+        """Count a write made outside the engine (live writes, the write test)."""
+        self._sets.setdefault(key, _SetState()).counters.record(kind, now, self.day_of(now))
+
+    def counters_export(self, now: float, wall: float) -> dict[str, Any]:
+        """The counters of every set, to keep over a restart (wall-clock seconds)."""
+        return {key: state.counters.as_dict(now, wall) for key, state in self._sets.items()}
+
+    def counters_restore(self, data: Mapping[str, Any] | None, now: float, wall: float) -> None:
+        for key, stored in (data or {}).items():
+            if isinstance(stored, Mapping):
+                self._sets.setdefault(key, _SetState()).counters.restore(stored, now, wall)
 
     def counters(self, now: float) -> dict[str, dict[str, int]]:
         """Writes and relay switches per set over the last hour and 24 hours (B33)."""
