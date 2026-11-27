@@ -50,6 +50,9 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_savings_backfill)
     async_register_command(hass, ws_stroom)
     async_register_command(hass, ws_house_layout)
+    async_register_command(hass, ws_house_picture)
+    async_register_command(hass, ws_house_picture_upload)
+    async_register_command(hass, ws_house_picture_delete)
     async_register_command(hass, ws_appliances_update)
     async_register_command(hass, ws_appliances)
     async_register_command(hass, ws_appliances_plan)
@@ -434,6 +437,7 @@ def settings_view(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, An
         "tariffs_source": in_use.get("source"),
         "vacation": _vacation(hass, entry),
         "house": runtime.house.view(None) if runtime.house is not None else [],
+        "house_picture": runtime.house.picture_view() if runtime.house is not None else None,
     }
 
 
@@ -715,6 +719,7 @@ def stroom_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         "devices": devices,
         "rest_today_kwh": round(max(0.0, today["house_kwh"] - known), 3) if devices else None,
         "battery_label": _battery_label(entry),
+        "picture": runtime.house.picture_view() if runtime.house is not None and runtime.house.picture["custom"] else None,
         "zero": control.zero.view() if control is not None else None,
         "regulation": control.regulation.view(time.monotonic()) if control is not None else None,
         "live": control is not None and not control.shadow,
@@ -739,6 +744,70 @@ async def ws_house_layout(hass: HomeAssistant, connection: ActiveConnection, msg
         return
     await entry.runtime_data.house.async_set_layout(msg["floors"], msg["hidden"])
     connection.send_result(msg["id"], {"ok": True})
+
+
+_POINT = vol.All([vol.Coerce(float)], vol.Length(min=2, max=2))
+
+
+@websocket_command(
+    {
+        vol.Required("type"): "zephyr/house/picture",
+        vol.Required("custom"): bool,
+        vol.Optional("items", default=dict): {str: {vol.Optional("box"): _POINT, vol.Optional("point"): _POINT}},
+        vol.Optional("hidden", default=list): [str],
+    }
+)
+@require_admin
+@async_response
+async def ws_house_picture(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Own picture on or off, and where each item's box and spot go (Instellingen → Apparaten)."""
+    entry = _entry(hass)
+    if entry is None or entry.runtime_data.house is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    await entry.runtime_data.house.async_set_picture(msg["custom"], msg["items"], msg["hidden"])
+    connection.send_result(msg["id"], entry.runtime_data.house.picture_view())
+
+
+@websocket_command(
+    {
+        vol.Required("type"): "zephyr/house/picture/upload",
+        vol.Required("data"): str,
+        vol.Required("width"): vol.All(int, vol.Range(min=1, max=10000)),
+        vol.Required("height"): vol.All(int, vol.Range(min=1, max=10000)),
+    }
+)
+@require_admin
+@async_response
+async def ws_house_picture_upload(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Upload an own picture (base64; the panel scales it down first). It stays in this Home Assistant."""
+    import base64
+    import binascii
+
+    entry = _entry(hass)
+    if entry is None or entry.runtime_data.house is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    try:
+        data = base64.b64decode(msg["data"], validate=True)
+        await entry.runtime_data.house.async_set_picture_image(data, msg["width"], msg["height"])
+    except (binascii.Error, ValueError) as err:
+        connection.send_error(msg["id"], "invalid_picture", str(err))
+        return
+    connection.send_result(msg["id"], entry.runtime_data.house.picture_view())
+
+
+@websocket_command({vol.Required("type"): "zephyr/house/picture/delete"})
+@require_admin
+@async_response
+async def ws_house_picture_delete(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Remove the own picture; the default house returns."""
+    entry = _entry(hass)
+    if entry is None or entry.runtime_data.house is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    await entry.runtime_data.house.async_clear_picture()
+    connection.send_result(msg["id"], entry.runtime_data.house.picture_view())
 
 
 @websocket_command({vol.Required("type"): "zephyr/stroom"})

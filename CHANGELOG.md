@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.53 — Stroom: own picture
+- *Instellingen → Apparaten → Plaatje op Stroom*: choose *Standaard huis* or *Eigen afbeelding*. An own picture (JPG, PNG or WebP) is scaled down in the panel (max 1800 px wide) and stays in this Home Assistant (`.storage`), never in the repo; it is served only to logged-in users (signed URL).
+- Placing: pick an item (roof and shed panels, battery, grid, charge point, the four floors), tap where its box goes, then where its line connects; the next unplaced item follows. Items can be hidden or placed again; positions are kept as fractions, so another picture of a similar layout keeps them.
+- On *Stroom* each placed item gets its box and a line with one bend to its spot (only drawn with power); the card keeps the picture's own proportions and still fits the screen.
+- Tests: upload, refusing a non-image, clamped positions, serving only with a login, removing (HA); the line and the next item to place (vitest).
+
 ### 0.8.52 — Stroom: clean house picture, cards line up
 - New base picture from Bjorn without lines or text (no more smudge on the roof), widened on the right so each floor has its box next to it. Every line runs from its box to its spot (panels, battery, meter, car, floor) and is only drawn with power.
 - Wide panel: the *Nu* card is as high as *Energie per route* and *Verbruikers vandaag* together, so the bottoms line up (Bjorn 27-11, 90 % zoom).

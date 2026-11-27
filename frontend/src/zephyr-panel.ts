@@ -497,6 +497,22 @@ export class ZephyrPanel extends LitElement {
     }
   };
 
+  /** A signed URL for an <img> of the HA API (the own house picture needs a login). */
+  private signPath = async (path: string): Promise<string> => {
+    if (!this.hass) throw new Error("no hass");
+    const r = await this.hass.callWS<{ path: string }>({
+      type: "auth/sign_path",
+      path,
+      expires: 86400,
+    });
+    return r.path;
+  };
+
+  private houseCall = async (msg: Record<string, unknown>): Promise<unknown> => {
+    if (!this.hass) throw new Error("no hass");
+    return this.hass.callWS(msg as { type: string });
+  };
+
   private saveHouse = async (
     floors: Record<string, string>,
     hidden: string[],
@@ -818,6 +834,9 @@ export class ZephyrPanel extends LitElement {
         .save=${this.saveSettings}
         .setVacation=${this.setVacation}
         .saveHouse=${this.saveHouse}
+        .houseCall=${this.houseCall}
+        .sign=${this.signPath}
+        .reload=${() => this.loadSettings()}
         .openGroup=${this.openGroup}
         .appliances=${this.appliancesView}
         .saveAppliances=${this.saveAppliances}
@@ -829,6 +848,7 @@ export class ZephyrPanel extends LitElement {
         .now=${this.now}
         .view=${this.stroomView}
         .base=${this.base}
+        .sign=${this.signPath}
         .uiLang=${this.uiLang}
         .locale=${this.locale}
         .timeZone=${this.timeZone}

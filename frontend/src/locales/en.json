@@ -870,5 +870,23 @@
     "import_l": "(import)",
     "export_t": "Grid → zero",
     "export_l": "(export)"
+  },
+  "picture": {
+    "title": "Picture on Power",
+    "default": "Default house",
+    "own": "Own picture",
+    "note": "Your picture stays in your own Home Assistant. JPG, PNG or WebP; ZEPHYR scales it down before uploading.",
+    "pick": "Pick an item and tap the picture: first where its box goes, then where its line connects.",
+    "step_box": "Tap where the box of {item} goes.",
+    "step_point": "Tap where the line of {item} connects.",
+    "hide": "Hide",
+    "show": "Show",
+    "reset": "Place again",
+    "replace": "Other picture",
+    "delete": "Remove picture",
+    "uploading": "Uploading…",
+    "error": "Upload failed: {msg}",
+    "unplaced": "Not placed yet",
+    "hidden": "Hidden"
   }
 }

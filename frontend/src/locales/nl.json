@@ -870,5 +870,23 @@
     "import_l": "(afname)",
     "export_t": "Net → op nul",
     "export_l": "(teruglevering)"
+  },
+  "picture": {
+    "title": "Plaatje op Stroom",
+    "default": "Standaard huis",
+    "own": "Eigen afbeelding",
+    "note": "Je afbeelding blijft in je eigen Home Assistant. JPG, PNG of WebP; ZEPHYR verkleint hem vóór het uploaden.",
+    "pick": "Kies een onderdeel en tik op het plaatje: eerst waar het vak komt, dan waar de lijn aansluit.",
+    "step_box": "Tik waar het vak van {item} komt.",
+    "step_point": "Tik waar de lijn van {item} aansluit.",
+    "hide": "Verberg",
+    "show": "Toon",
+    "reset": "Opnieuw plaatsen",
+    "replace": "Andere afbeelding",
+    "delete": "Afbeelding verwijderen",
+    "uploading": "Uploaden…",
+    "error": "Uploaden mislukt: {msg}",
+    "unplaced": "Nog niet geplaatst",
+    "hidden": "Verborgen"
   }
 }
