@@ -7,6 +7,8 @@ announced runs in a store, gives them to the planner, and shows the advised star
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -35,8 +37,10 @@ from .core.appliances import (
     WASHER,
     PlannedRun,
     Run,
+    RunMeter,
     default_profile,
     detect_runs,
+    hourly_energy,
     learned_profile,
     standard_window,
 )
@@ -47,6 +51,10 @@ if TYPE_CHECKING:
 STORAGE_VERSION = 1
 HISTORY_DAYS = 10
 RUNNING_W = 5.0
+
+
+NO_PLUG_SHARE = 0.5
+"""Share of a planned run without a plug that the planner adds on top of the house profile."""
 
 
 class Appliance:
@@ -66,6 +74,8 @@ class Appliance:
         self.samples: list[tuple[datetime, float]] = []
         self.power_w: float | None = None
         self.power_since: datetime | None = None
+        self.meter = RunMeter()
+        """Counts the plug's energy only in real runs (not the pulses of a tap on the same plug)."""
         """When ``power_w`` was read: the plug's energy is integrated from there."""
 
     @property
@@ -95,6 +105,7 @@ class ApplianceManager:
         self._on_change: Callable[[], None] | None = None
         self.revision = 0
         self._energy_kwh = 0.0
+        self._history: asyncio.Task[None] | None = None
         """Goes up with every change, so the panel knows when to fetch again."""
 
     # --- start, store ------------------------------------------------------------------
@@ -115,7 +126,7 @@ class ApplianceManager:
                 appliance.power_w, appliance.power_since = watts, dt_util.utcnow()
         if plugs:
             unsubs.append(async_track_state_change_event(self.hass, plugs, self._plug_changed))
-            self.hass.async_create_background_task(self._learn_history(), "zephyr: appliance history")
+            self._history = self.hass.async_create_background_task(self._learn_history(), "zephyr: appliance history")
         unsubs.append(async_track_time_interval(self.hass, self._tidy, timedelta(minutes=1)))
 
         def stop() -> None:
@@ -200,8 +211,18 @@ class ApplianceManager:
 
     def _integrate(self, appliance: Appliance, until: datetime) -> None:
         if appliance.power_w is not None and appliance.power_since is not None and until > appliance.power_since:
-            self._energy_kwh += appliance.power_w * (until - appliance.power_since).total_seconds() / 3_600_000
+            self._energy_kwh += appliance.meter.add(appliance.power_since, until, appliance.power_w)
         appliance.power_since = until
+
+    async def async_history_ready(self, timeout: float = 30.0) -> None:
+        """Wait (bounded) until the runs from the recorder are in, for the planner's first fill."""
+        if self._history is not None and not self._history.done():
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(asyncio.shield(self._history), timeout)
+
+    def run_energy_per_hour(self) -> dict[datetime, float]:
+        """kWh of the known runs (plugs only) per hour in UTC, for the planner's fill from the recorder."""
+        return hourly_energy(run for a in self.appliances.values() if a.power_entity for run in a.runs)
 
     @property
     def plug_entities(self) -> list[str]:
@@ -321,11 +342,27 @@ class ApplianceManager:
     def profiles(self) -> dict[str, list[float]]:
         return {a.id: a.profile() for a in self.appliances.values()}
 
+    def planning_profiles(self) -> dict[str, list[float]]:
+        """The profiles as the planner adds them to the expected use.
+
+        With a plug, the plug's use is left out of the house profile (0.8.54), so a planned run
+        counts in full. Without a plug its usual runs are already in the house profile: a planned
+        run then counts for ``NO_PLUG_SHARE`` (SPEC-geplande-verbruikers §3.2), so a dishwasher
+        on a schedule is not counted twice.
+        """
+        return {a.id: a.profile() if a.power_entity else [w * NO_PLUG_SHARE for w in a.profile()] for a in self.appliances.values()}
+
     def runs_of(self, appliance_id: str) -> list[PlannedRun]:
         return [p for p in self.planned if p.appliance == appliance_id]
 
     def published(self) -> None:
         """The planner placed the runs (best starts set): update the entities."""
+        for run in self.planned:
+            appliance = self.appliances.get(run.appliance)
+            if appliance is not None and not appliance.power_entity and "kwh" in run.details:
+                # Show the run's full use; the plan counted only part of it on top of the profile.
+                run.details["counted_kwh"] = run.details["kwh"]
+                run.details["kwh"] = round(run.details["kwh"] / NO_PLUG_SHARE, 3)
         self._changed(replan=False)
 
     def by_name(self, name: str) -> Appliance | None:

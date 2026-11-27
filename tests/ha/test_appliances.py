@@ -256,3 +256,53 @@ async def test_plug_use_is_left_out_of_the_house_profile(hass: HomeAssistant, fa
         freezer.move_to(start + timedelta(minutes=15 * (q + 1)))
         planner.quarter_closed(start + timedelta(minutes=15 * q), {"complete": True, "house_kwh": 0.6}, True)
     assert planner.profile.recent[-1][0] == pytest.approx(0.8)  # 2.4 − 4 × 0.4
+
+
+async def test_a_run_without_plug_counts_half_on_top_of_the_profile(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    """SPEC-geplande-verbruikers §3.2: without a plug its usual runs are already in the house profile."""
+    import pytest
+
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (9, 0), price_entity=PRICE)
+    await _add(hass, entry, "Vaatwasser", "dishwasher", window_from="09:00:00", window_until="23:00:00")
+    await _tick(hass, freezer, 5)
+    entry = hass.config_entries.async_get_entry(entry.entry_id)
+    manager = entry.runtime_data.appliances
+    full = sum(manager.profiles()[next(iter(manager.appliances))]) / 60000
+    await hass.services.async_call("button", "press", {"entity_id": "button.zephyr_vaatwasser_plan"}, blocking=True)
+    await _tick(hass, freezer, 70)
+    planner = entry.runtime_data.planner
+    assert sum(s.appliance_kwh for s in planner.outcome.slots) == pytest.approx(full / 2, abs=0.01)
+    run = manager.planned[0].details
+    assert run["kwh"] == pytest.approx(full, abs=0.01) and run["counted_kwh"] == pytest.approx(full / 2, abs=0.01)
+
+
+async def test_a_tap_on_the_dishwasher_plug_stays_in_the_house_profile(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    """Bjorn's dishwasher plug also feeds the boiling-water tap: its pulses are house use."""
+    import pytest
+
+    _set_prices(hass)
+    hass.states.async_set(PLUG, "0", {"unit_of_measurement": "W", "device_class": "power"})
+    entry = await _setup(hass, fake_sets, freezer, (11, 0), price_entity=PRICE)
+    await _add(hass, entry, "Vaatwasser", "dishwasher", power_entity=PLUG, window_from="09:00:00", window_until="23:00:00")
+    await _tick(hass, freezer, 5)
+    entry = hass.config_entries.async_get_entry(entry.entry_id)
+    planner = entry.runtime_data.planner
+    start = dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0)
+    freezer.move_to(start)
+    entry.runtime_data.appliances.take_energy()
+    for q in range(4):
+        # One tap pulse per quarter: 2 kW for 8 s.
+        freezer.move_to(start + timedelta(minutes=15 * q + 3))
+        hass.states.async_set(PLUG, "2000", {"unit_of_measurement": "W", "device_class": "power"})
+        await hass.async_block_till_done()
+        freezer.tick(timedelta(seconds=8))
+        hass.states.async_set(PLUG, "0", {"unit_of_measurement": "W", "device_class": "power"})
+        await hass.async_block_till_done()
+        freezer.move_to(start + timedelta(minutes=15 * (q + 1)))
+        planner.quarter_closed(start + timedelta(minutes=15 * q), {"complete": True, "house_kwh": 0.3}, True)
+    assert planner.profile.recent[-1][0] == pytest.approx(1.2)  # nothing taken off for the tap

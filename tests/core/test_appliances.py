@@ -156,3 +156,34 @@ def test_run_cost_is_its_own_share_not_the_whole_plan() -> None:
     own = sum(kwh * _price(q) for q, kwh in quarter_energy(profiles["Wasmachine"], washer.best_start).items())
     assert washer.details["cost"] == pytest.approx(own, abs=0.001)
     assert washer.details["cost_now"] - washer.details["cost"] == pytest.approx(washer.details["saving"], abs=0.001)
+
+
+def test_run_meter_skips_tap_pulses_on_the_same_plug() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from zephyr_core.appliances import RunMeter
+
+    t = datetime(2026, 11, 27, 20, 0, tzinfo=UTC)
+    meter = RunMeter()
+    # A boiling-water tap: 2 kW for 8 s, then off for 30 minutes.
+    assert meter.add(t, t + timedelta(seconds=8), 2000) == 0.0
+    assert meter.add(t + timedelta(seconds=8), t + timedelta(minutes=30), 0) == 0.0
+    # The dishwasher: 1.8 kW for 20 minutes; counted from its start once it lasts 10 minutes.
+    start = t + timedelta(minutes=30)
+    first = meter.add(start, start + timedelta(minutes=5), 1800)
+    second = meter.add(start + timedelta(minutes=5), start + timedelta(minutes=20), 1800)
+    assert first == 0.0 and second == pytest.approx(1800 * 20 / 60 / 1000)
+    # A short dip inside the run stays part of it.
+    assert meter.add(start + timedelta(minutes=20), start + timedelta(minutes=22), 0) == 0.0
+    assert meter.add(start + timedelta(minutes=22), start + timedelta(minutes=32), 60) == pytest.approx(60 * 10 / 60 / 1000)
+
+
+def test_hourly_energy_of_runs() -> None:
+    from datetime import UTC, datetime
+
+    from zephyr_core.appliances import Run, hourly_energy
+
+    run = Run(datetime(2026, 11, 27, 20, 50, tzinfo=UTC), 20, 0.4, tuple([1200.0] * 20))
+    hours = hourly_energy([run])
+    assert hours[datetime(2026, 11, 27, 20, tzinfo=UTC)] == pytest.approx(1200 * 10 / 60_000)
+    assert hours[datetime(2026, 11, 27, 21, tzinfo=UTC)] == pytest.approx(1200 * 10 / 60_000)
