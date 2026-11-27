@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.40 — Inverter power limit at a negative export price
+- With *ZEPHYR curtails*, new optional settings **Inverter power limit** (a number entity in %, e.g. `number.solaredge_modbus_active_power_limit`) and **Inverter rated power** (W).
+- While the export price is negative ZEPHYR sets the limit every 10 s so the inverter produces what the house and the batteries take: wanted production = solar now (solar power sensors) + measured grid power − 50 W, plus the power the sets could still charge (not when full), as % of the rated power. Written only on a change of at least 2 % (or to 0 / 100 %); back to 100 % when the price is no longer negative. Not fully off, because the import price is often still positive then.
+- The planner counts the surplus as curtailed with a switch or with this limit (both need *ZEPHYR curtails*).
+- Diagnostics `curtail`: `number_set`, `rated_w`, `limit_written`. Engine: `p1_now` (measured grid power).
+- Tests: the wanted % and when to write; in HA the limit at a negative price and back to 100 %.
+
 ### 0.8.39 — Diagnose: energy counters
 - New card **Energietellers** in Diagnose for ZEPHYR's own counters per set (SPEC-tellers T1/T2): charged, delivered and solar (kWh since the start), the part filled in after gaps (kWh and %), failed reads, an open gap (set unreachable or restart), and the latest gaps with duration, method (interpolated / from the state of charge / nothing to fill in) and kWh. With more sets also the installation's totals.
 - `zephyr/events` gives `energy` (the counters' diagnostics).

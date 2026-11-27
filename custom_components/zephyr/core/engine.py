@@ -832,6 +832,11 @@ class ZephyrEngine:
         return aligned
 
     @property
+    def p1_now(self) -> float | None:
+        """Latest grid power as measured by the P1 (W, + import): unfiltered, without the twin."""
+        return self._p1_measured
+
+    @property
     def excluded_now(self) -> float:
         """W of the excluded load (B41) the battery did not deliver for in the last step."""
         return self._excluded_now

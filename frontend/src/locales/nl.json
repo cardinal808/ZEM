@@ -430,6 +430,16 @@
         "label": "Zonnepanelen-vermogen",
         "help": "Vermogenssensoren (W) van omvormers, worden opgeteld.",
         "more": "Voor omvormers die niet aan een Zendure-set hangen, zoals SolarEdge. ZEPHYR telt ze op bij de PV van de sets en toont dat in Nu en Stroom. Kies hier niet de PV van de Zendure-set zelf: die leest ZEPHYR al uit de set. Leeg: ZEPHYR schat het vermogen uit de zonnepanelen-teller (grover, loopt achter)."
+      },
+      "curtail_number": {
+        "label": "Vermogensbegrenzing omvormer",
+        "help": "Getal-entiteit die het vermogen van de omvormer begrenst in % (bijv. SolarEdge Modbus active power limit). Alleen met ZEPHYR knijpt af.",
+        "more": "Zolang de terugleverprijs negatief is zet ZEPHYR die elke 10 s zo dat de omvormer levert wat het huis en de accu afnemen (het net blijft op een kleine afname), en daarna weer op 100 %. Nodig: het nominaal vermogen hieronder en een sensor voor het zonvermogen (Bronnen)."
+      },
+      "curtail_inverter_w": {
+        "label": "Nominaal vermogen omvormer",
+        "help": "Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld.",
+        "more": "Bij een SolarEdge het nominale vermogen van het model, bijv. 5000 W voor een SE5K."
       }
     },
     "restarting": "ZEPHYR start opnieuw met de nieuwe instellingen…",
