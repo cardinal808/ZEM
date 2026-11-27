@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import time
+from collections.abc import Sequence
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
@@ -11,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from . import ZephyrConfigEntry
-from .const import CONF_HOST, CONF_SERIAL
+from .const import CONF_COST_IMPORT_COUNTERS, CONF_HOST, CONF_SERIAL
 from .coordinator import unknown_pack_details
 
 TO_REDACT = {"sn", CONF_SERIAL, CONF_HOST, "serial"}
@@ -30,17 +31,27 @@ def _redact_report(raw: dict[str, Any]) -> dict[str, Any]:
     return report
 
 
-def _dsmr_version(hass: HomeAssistant, control: Any) -> str | None:
-    """The DSMR version a meter reader (e.g. HomeWizard P1) reports on the P1 sensor's device, if any."""
-    entity = control.p1_entity or (control.p1_pair[0] if control.p1_pair else None)
-    reg = er.async_get(hass).async_get(entity) if entity else None
-    if reg is None or reg.device_id is None:
-        return None
-    for other in er.async_entries_for_device(er.async_get(hass), reg.device_id):
-        if "dsmr_version" in other.entity_id or "dsmr_version" in (other.unique_id or ""):
-            state = hass.states.get(other.entity_id)
-            return None if state is None else state.state
-    return None
+def _dsmr_version(hass: HomeAssistant, control: Any, counters: Sequence[str] = ()) -> str | None:
+    """The DSMR version of the smart meter, if a meter reader reports it (diagnostics).
+
+    Looked for on the device of the P1 sensor, then on the device of the meter counters for the
+    cost log (a P1 power sensor may be a template, the counters are the reader's own), and last
+    as the one sensor whose id ends in ``dsmr_version`` (none or several: unknown).
+    """
+    registry = er.async_get(hass)
+    sources = [control.p1_entity, *(control.p1_pair or ()), *counters]
+    seen: set[str] = set()
+    for entity in sources:
+        reg = registry.async_get(entity) if entity else None
+        if reg is None or reg.device_id is None or reg.device_id in seen:
+            continue
+        seen.add(reg.device_id)
+        for other in er.async_entries_for_device(registry, reg.device_id):
+            if "dsmr_version" in other.entity_id or "dsmr_version" in (other.unique_id or ""):
+                state = hass.states.get(other.entity_id)
+                return None if state is None else state.state
+    named = [st for st in hass.states.async_all("sensor") if st.entity_id.endswith("dsmr_version")]
+    return named[0].state if len(named) == 1 else None
 
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any]:
@@ -107,7 +118,10 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
             if result
             else None,
             "p1_profile": control.engine.p1_profile_view(time.monotonic())
-            | {"timestamps": "last_reported", "dsmr_version": _dsmr_version(hass, control)},
+            | {
+                "timestamps": "last_reported",
+                "dsmr_version": _dsmr_version(hass, control, list(entry.options.get(CONF_COST_IMPORT_COUNTERS, []))),
+            },
             "p1_filter": {
                 "step_holds": control.engine.grid_filter.holds,
                 "peak_kwh": round(control.engine.peak_kwh, 4),

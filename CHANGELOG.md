@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.8.65 — DSMR version found via the meter counters or by name
+- Diagnostics `control.p1_profile.dsmr_version`: besides the P1 sensor's own device, ZEPHYR now looks on the device of the meter counters for the cost log (a P1 power sensor can be a template, e.g. `p1_meter_dsmr_version` of a HomeWizard), and last for the one sensor whose id ends in `dsmr_version` (DSMR integration: `sensor.dsmr_version`). Several by name: left unknown.
+
 ### 0.8.64 — P1 profile: slow meters (DSMR 4) without the step filter
 - **P1 profile** from the measured meter interval (OPDRACHT-p1-profiel): fast (≤ 2 s), medium (≤ 7 s), slow (≤ 25 s), too slow. Medium until 10 intervals are known; a change only after 10 minutes in the new range and 20 % past the bound (slow → medium below 5.6 s).
 - **Slow profile:** the step filter (B20) is off. With one sample per 10 s it held a real rise for a whole extra sample; on such a meter a boiling-water tap's peak is mostly not seen anyway.

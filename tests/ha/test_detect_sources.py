@@ -67,4 +67,24 @@ async def test_diagnostics_show_the_p1_profile_and_dsmr_version(hass: HomeAssist
     hass.states.async_set(version, "42")
     control = SimpleNamespace(p1_entity=meter, p1_pair=None)
     assert _dsmr_version(hass, control) == "42"
-    assert _dsmr_version(hass, SimpleNamespace(p1_entity="sensor.other", p1_pair=None)) is None
+    assert _dsmr_version(hass, SimpleNamespace(p1_entity="sensor.other", p1_pair=None)) == "42"  # the only one by name
+
+
+async def test_dsmr_version_via_the_meter_counters_or_by_name(hass: HomeAssistant) -> None:
+    """Peter: the P1 power is a template; the reader's counters show the device. Bjorn: sensor.dsmr_version."""
+    from custom_components.zephyr.diagnostics import _dsmr_version
+
+    counter = _entity(hass, "homewizard", "p1_import_t1", "p1_meter_energy_import_tariff_1", ENERGY, model="HWE-P1")
+    device_id = er.async_get(hass).async_get(counter).device_id
+    version = (
+        er.async_get(hass)
+        .async_get_or_create("sensor", "homewizard", "p1_dsmr", suggested_object_id="p1_meter_dsmr_version", device_id=device_id)
+        .entity_id
+    )
+    hass.states.async_set(version, "40")
+    hass.states.async_set("sensor.homewizard_p1_vermogen", "300", POWER)  # a template: no device
+    control = SimpleNamespace(p1_entity="sensor.homewizard_p1_vermogen", p1_pair=None)
+    assert _dsmr_version(hass, control, [counter]) == "40"
+    assert _dsmr_version(hass, control) == "40"  # by name: the only ...dsmr_version sensor
+    hass.states.async_set("sensor.dsmr_version", "50")
+    assert _dsmr_version(hass, control) is None  # two by name: unknown
