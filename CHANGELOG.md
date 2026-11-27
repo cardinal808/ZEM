@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.66 — Settings: fields only when they apply
+- A field can have a condition (`show_if` in `settings_schema.py`, sent by `settings/get`): the panel shows it only when another field, as entered and before saving, has a given value; otherwise it is hidden (not greyed out) and its stored value is kept, so switching back brings it back.
+- *P1-sensor* only with P1 source *one sensor*; *P1 afname* and *P1 teruglevering* only with *two sensors* (Bjorn, Peter: one P1 sensor, two empty fields). The three inverter fields only with *ZEPHYR knijpt af* (replaces greying them out, SPEC-ui-planner §2.3). The air-conditioner climate entity and its modes only when the energy counter is filled in.
+- Hidden fields are left out when saving, so a wrong entity in a hidden field never blocks saving. A climate entity without the counter is now kept instead of refused in the panel (it is hidden and not used); the options flow of HA still asks for the counter and is unchanged.
+- Tests: every condition names an existing field and choice (HA); visibility while switching, `*` = filled in, hidden fields not saved (vitest).
+
 ### 0.8.65 — DSMR version found via the meter counters or by name
 - Diagnostics `control.p1_profile.dsmr_version`: besides the P1 sensor's own device, ZEPHYR now looks on the device of the meter counters for the cost log (a P1 power sensor can be a template, e.g. `p1_meter_dsmr_version` of a HomeWizard), and last for the one sensor whose id ends in `dsmr_version` (DSMR integration: `sensor.dsmr_version`). Several by name: left unknown.
 

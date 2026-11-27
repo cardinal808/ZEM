@@ -69,6 +69,7 @@ export interface SettingField {
   active?: boolean;
   in_use?: number | null;
   status?: SourceStatus | null;
+  show_if?: { key: string; values: string[] } | null;
 }
 
 export interface SettingsGroup {
@@ -87,11 +88,25 @@ export interface VacationView {
   entities?: { switch: string | null; until: string | null };
 }
 
-const CURTAIL_FIELDS = [
-  "curtail_switch",
-  "curtail_number",
-  "curtail_inverter_w",
-];
+/**
+ * A field with a condition is only shown when the other field (as entered, before saving) has one
+ * of the values; "*" means filled in. Hidden values are kept, not cleared.
+ */
+export function fieldVisible(f: SettingField, valueOf: (key: string) => unknown): boolean {
+  if (!f.show_if) return true;
+  const v = valueOf(f.show_if.key);
+  if (f.show_if.values.includes("*"))
+    return Array.isArray(v) ? v.length > 0 : v !== null && v !== undefined && v !== "";
+  return typeof v === "string" && f.show_if.values.includes(v);
+}
+
+/** The changes to save: hidden fields are left out (they are not used, so they never block saving). */
+export function draftToSave(
+  draft: Record<string, unknown>,
+  visible: (key: string) => boolean,
+): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(draft).filter(([k]) => visible(k)));
+}
 
 export interface SettingsView {
   groups: SettingsGroup[];
@@ -249,7 +264,11 @@ export class ZephyrSettings extends LitElement {
   private async saveDraft(): Promise<void> {
     const changes: Record<string, unknown> = {};
     const reset: string[] = [];
-    for (const [key, value] of Object.entries(this.draft)) {
+    const visible = (key: string) => {
+      const f = this.fieldByKey(key);
+      return !f || this.visible(f);
+    };
+    for (const [key, value] of Object.entries(draftToSave(this.draft, visible))) {
       if (value === RESET) reset.push(key);
       else changes[key] = value;
     }
@@ -571,7 +590,12 @@ export class ZephyrSettings extends LitElement {
   }
 
   private renderBar(): TemplateResult | typeof nothing {
-    const n = Object.keys(this.draft).length;
+    const n = Object.keys(
+      draftToSave(this.draft, (key) => {
+        const f = this.fieldByKey(key);
+        return !f || this.visible(f);
+      }),
+    ).length;
     const base = this.errors.base;
     if (!n && !base) return nothing;
     return html`<div
@@ -610,18 +634,20 @@ export class ZephyrSettings extends LitElement {
     </div>`;
   }
 
-  /** The inverter fields only count when ZEPHYR curtails (B45, SPEC-ui-planner §2.3). */
-  private curtailOff(f: SettingField): boolean {
-    if (!CURTAIL_FIELDS.includes(f.key)) return false;
-    const mode = this.view?.groups
-      .flatMap((g) => g.fields)
-      .find((x) => x.key === "curtail_negative");
-    return !mode || this.shown(mode) !== "curtail_zephyr";
+  private fieldByKey(key: string): SettingField | undefined {
+    return this.view?.groups.flatMap((g) => g.fields).find((x) => x.key === key);
+  }
+
+  private visible(f: SettingField): boolean {
+    return fieldVisible(f, (key) => {
+      const other = this.fieldByKey(key);
+      return other ? this.shown(other) : undefined;
+    });
   }
 
   /** Limit set but no rated power: ZEPHYR cannot limit in % (a warning at the rated power). */
   private curtailWarning(f: SettingField): boolean {
-    if (f.key !== "curtail_inverter_w" || this.curtailOff(f)) return false;
+    if (f.key !== "curtail_inverter_w" || !this.visible(f)) return false;
     const number = this.view?.groups
       .flatMap((g) => g.fields)
       .find((x) => x.key === "curtail_number");
@@ -631,16 +657,13 @@ export class ZephyrSettings extends LitElement {
   private renderField(f: SettingField): TemplateResult {
     const open = this.tip === f.key;
     const id = `f-${f.key}`;
-    const off = this.curtailOff(f);
+    if (!this.visible(f)) return html``;
     return html`${
         f.key === "curtail_switch"
-          ? html`<li class="subhead">
-              <b>${this.tr("settings.curtail_head")}</b
-              >${off ? html`<span class="muted">${this.tr("settings.curtail_only")}</span>` : nothing}
-            </li>`
+          ? html`<li class="subhead"><b>${this.tr("settings.curtail_head")}</b></li>`
           : nothing
       }
-      <li class=${f.active === false || off ? "inactive" : ""}>
+      <li class=${f.active === false ? "inactive" : ""}>
         <div class="text">
           <div class="labelrow">
             <label for=${id}>${this.label(f.key)}</label>
@@ -793,8 +816,7 @@ export class ZephyrSettings extends LitElement {
     const disabled =
       !this.editable ||
       this.busy ||
-      (f.active === false && f.tariff) ||
-      this.curtailOff(f);
+      (f.active === false && f.tariff);
     const value = this.shown(f);
     switch (f.kind) {
       case "bool":

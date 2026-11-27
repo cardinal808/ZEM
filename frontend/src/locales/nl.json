@@ -524,7 +524,6 @@
     "appl_after": "Altijd na de was",
     "appl_after_help": "plan de droger mee (één keer, na de laatste was) als je de was plant",
     "curtail_head": "Omvormer buiten de sets (kies één)",
-    "curtail_only": "Alleen bij “ZEPHYR knijpt af”.",
     "curtail_rated_missing": "Vul het nominale vermogen in, anders begrenst ZEPHYR niet."
   },
   "airco": {
