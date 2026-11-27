@@ -1,7 +1,7 @@
 {
   "domain": "zephyr",
   "name": "ZEPHYR",
-  "after_dependencies": ["frontend", "http", "panel_custom", "recorder", "websocket_api"],
+  "after_dependencies": ["energy", "frontend", "http", "panel_custom", "recorder", "websocket_api"],
   "codeowners": ["@cardinal808"],
   "config_flow": true,
   "documentation": "https://github.com/cardinal808/ZEPHYR",
