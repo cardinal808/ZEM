@@ -521,7 +521,10 @@ PLAN_SENSORS: tuple[ZephyrPlanSensorDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=list(PlanState.ALL),
         value_fn=lambda r, o: o.state,
-        attrs_fn=lambda r, o: {"no_prices_since": None if o.no_prices_since is None else o.no_prices_since.isoformat()},
+        attrs_fn=lambda r, o: {
+            "no_prices_since": None if o.no_prices_since is None else o.no_prices_since.isoformat(),
+            "buffer": o.buffer,
+        },
     ),
     ZephyrPlanSensorDescription(
         key="plan_reason",

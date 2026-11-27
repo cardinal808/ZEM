@@ -188,12 +188,14 @@ def test_battery_empty_state_and_empty_at() -> None:
     assert reason(outcome, "nl", TZ).startswith("Leveren is nu gunstig: €0,52")
 
 
-def test_buffer_makes_the_battery_smaller_for_the_planner() -> None:
+def test_buffer_is_a_reserve_at_the_bottom_of_the_battery() -> None:
+    """B37: the planner never plans to deliver from the buffer, but sees and refills it."""
     bat = BatteryInput(capacity_kwh=10.0, soc=30.0, min_soc=10.0, max_soc=90.0, charge_kw=2.4, deliver_kw=2.4, buffer=10.0)
-    assert bat.battery().capacity_kwh == pytest.approx(7.0)
-    assert bat.energy_now == pytest.approx(1.0)
+    assert bat.battery().capacity_kwh == pytest.approx(8.0)
+    assert bat.battery().reserve_kwh == pytest.approx(1.0)
+    assert bat.energy_now == pytest.approx(2.0)
     below = BatteryInput(capacity_kwh=10.0, soc=15.0, min_soc=10.0, max_soc=90.0, charge_kw=2.4, deliver_kw=2.4, buffer=10.0)
-    assert below.energy_now == 0.0
+    assert below.energy_now == pytest.approx(0.5)
 
 
 def test_hold_reason_names_the_delivery_block() -> None:
@@ -245,3 +247,18 @@ def test_charge_with_a_full_battery_is_shown_as_hold() -> None:
         assert action is not Action.CHARGE or grid >= 0.01
     assert all(b.action is not Action.CHARGE or b.kwh >= 0.01 for b in outcome.blocks)
     assert outcome.action is not Action.CHARGE
+
+
+def test_buffer_status_in_the_outcome() -> None:
+    """B37: short buffer, refilled in a cheap hour or not at all (reason)."""
+    markets, now = _night_and_evening()
+    cfg = PlannerSettings(wear_cost=0.03, grid_charge_cost=0.01)
+    short = BatteryInput(capacity_kwh=10.0, soc=12.0, min_soc=10.0, max_soc=90.0, charge_kw=2.4, deliver_kw=2.4, buffer=10.0)
+    status = make_plan(_horizon(markets, now), short, now, cfg).buffer
+    assert status is not None and status["short"] and status["kwh"] == 1.0 and status["now_kwh"] == 0.2
+    assert status["refill_by"] == "grid" and status["refill_at"] is not None
+    flat = [(t, 0.30, ind) for t, _, ind in markets]
+    none = make_plan(_horizon(flat, now), short, now, cfg).buffer
+    assert none is not None and none["refill_at"] is None and none["reason"] == "no_cheap_moment"
+    full = BatteryInput(capacity_kwh=10.0, soc=50.0, min_soc=10.0, max_soc=90.0, charge_kw=2.4, deliver_kw=2.4, buffer=10.0)
+    assert make_plan(_horizon(markets, now), full, now, cfg).buffer == {"kwh": 1.0, "now_kwh": 1.0, "short": False}

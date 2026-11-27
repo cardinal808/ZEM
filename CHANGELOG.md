@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.67 — Buffer refilled when it pays (B37)
+- The buffer is now a **reserve at the bottom of the battery** instead of a smaller battery: the planner never plans to deliver from it, but sees how full it is and refills it. Energy in the buffer is worth the mean buy price of the horizon (× discharge efficiency), so the planner charges it from the grid only in an hour that is clearly cheaper (with the grid-charge threshold and wear as before); solar fills it for free. Planned delivery stops at min_SOC + buffer as before; the regulator may still use the buffer when the load is higher than expected.
+- Plan state attribute and diagnostics `buffer`: size and content (kWh), *short*, and when and how it is refilled (`refill_at`, `refill_by` grid/solar), or `reason: no_cheap_moment` when it is not refilled in the horizon ("buffer not refilled").
+- With a buffer of 0 % nothing changes.
+
 ### 0.8.66 — Settings: fields only when they apply
 - A field can have a condition (`show_if` in `settings_schema.py`, sent by `settings/get`): the panel shows it only when another field, as entered and before saving, has a given value; otherwise it is hidden (not greyed out) and its stored value is kept, so switching back brings it back.
 - *P1-sensor* only with P1 source *one sensor*; *P1 afname* and *P1 teruglevering* only with *two sensors* (Bjorn, Peter: one P1 sensor, two empty fields). The three inverter fields only with *ZEPHYR knijpt af* (replaces greying them out, SPEC-ui-planner §2.3). The air-conditioner climate entity and its modes only when the energy counter is filled in.

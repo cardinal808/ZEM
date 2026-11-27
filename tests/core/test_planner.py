@@ -138,3 +138,29 @@ def test_makes_room_before_a_negative_price_when_not_curtailed() -> None:
     curtailed = plan(slots, battery, 1.0, PlannerSettings(charge_start_cost=0, hold_start_cost=0, curtail=True))
     assert curtailed.actions[0] is not Action.DELIVER  # surplus is curtailed anyway: keep the energy for the evening
     assert curtailed.actions[2] is Action.DELIVER
+
+
+def test_buffer_is_never_planned_away() -> None:
+    """B37: with 1 kWh buffer and 1.5 kWh in the battery, only 0.5 kWh is delivered."""
+    from zephyr_core.planner import Battery, Slot, plan
+
+    battery = Battery(capacity_kwh=8.0, charge_kw=2.4, deliver_kw=2.4, eta_in=1.0, eta_out=1.0, reserve_kwh=1.0)
+    slots = [Slot(hours=1.0, buy=0.40, sell=0.10, load_kwh=1.0, solar_kwh=0.0) for _ in range(4)]
+    result = plan(slots, battery, 1.5)
+    assert sum(s.delivered for s in result.steps) == pytest.approx(0.5)
+    assert result.steps[-1].energy_after == pytest.approx(1.0)
+
+
+def test_buffer_is_refilled_in_a_cheap_hour_not_in_an_expensive_one() -> None:
+    from zephyr_core.planner import Action, Battery, PlannerSettings, Slot, plan
+
+    battery = Battery(capacity_kwh=8.0, charge_kw=2.4, deliver_kw=2.4, eta_in=0.93, eta_out=0.93, reserve_kwh=1.0)
+    cheap = Slot(hours=1.0, buy=0.20, sell=0.05, load_kwh=0.2, solar_kwh=0.0)
+    dear = Slot(hours=1.0, buy=0.40, sell=0.05, load_kwh=0.2, solar_kwh=0.0)
+    cfg = PlannerSettings(wear_cost=0.03, grid_charge_cost=0.01)
+    result = plan([dear, cheap, dear, dear], battery, 0.2, cfg)  # 0.8 kWh short of the buffer
+    assert result.actions[0] is not Action.CHARGE and result.actions[1] is Action.CHARGE
+    assert result.steps[1].energy_after >= 1.0 - 1e-6
+    # Flat prices: refilling never pays, the buffer waits (for solar).
+    flat = plan([dear] * 4, battery, 0.2, cfg)
+    assert Action.CHARGE not in flat.actions
