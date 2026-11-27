@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.39 — Diagnose: energy counters
+- New card **Energietellers** in Diagnose for ZEPHYR's own counters per set (SPEC-tellers T1/T2): charged, delivered and solar (kWh since the start), the part filled in after gaps (kWh and %), failed reads, an open gap (set unreachable or restart), and the latest gaps with duration, method (interpolated / from the state of charge / nothing to fill in) and kWh. With more sets also the installation's totals.
+- `zephyr/events` gives `energy` (the counters' diagnostics).
+- Tests: estimated share and gap order in vitest.
+
 ### 0.8.38 — Stroom: card Regeling, last 10 minutes
 - New card on *Stroom*: the last 10 minutes of the controller, one sample per second.
   - Top: P1 against its target (0 W, or the airco), with the ±50 W band.

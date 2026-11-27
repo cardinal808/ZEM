@@ -159,6 +159,55 @@ describe("cellKind", () => {
   });
 });
 
+import { allGaps, estimatedShare } from "../src/diag";
+
+describe("energy counters", () => {
+  const gap = (end: string) => ({
+    start: end,
+    end,
+    seconds: 60,
+    method: "soc",
+    restart: false,
+    kwh: {},
+    pack_delta_kwh: null,
+  });
+  it("gives the estimated part of charged, delivered and solar", () => {
+    const s = {
+      kwh: { charged: 8, discharged: 2, solar: 0, dc_charged: 9 },
+      estimated: { charged: 0.5, dc_charged: 3 },
+      failed_reads: 0,
+      open_gap: null,
+      gaps: [],
+    };
+    expect(estimatedShare(s)).toEqual({ kwh: 0.5, share: 0.05 });
+    expect(estimatedShare({ ...s, kwh: {}, estimated: {} }).share).toBeNull();
+  });
+  it("lists the gaps of all sets, newest first", () => {
+    const view = {
+      totals: {},
+      sets: [
+        {
+          set: 1,
+          kwh: {},
+          estimated: {},
+          failed_reads: 0,
+          open_gap: null,
+          gaps: [gap("2026-11-27T08:00:00Z")],
+        },
+        {
+          set: 2,
+          kwh: {},
+          estimated: {},
+          failed_reads: 0,
+          open_gap: null,
+          gaps: [gap("2026-11-27T09:00:00Z")],
+        },
+      ],
+    };
+    expect(allGaps(view).map((g) => g.set)).toEqual([2, 1]);
+  });
+});
+
 import { devLimit, linePath } from "../src/stroom";
 
 describe("regulation chart", () => {
