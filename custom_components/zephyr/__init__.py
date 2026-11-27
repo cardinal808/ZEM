@@ -18,6 +18,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Supp
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_LIVE_OFF_AFTER_RESTART, DOMAIN, SUBENTRY_SET
@@ -260,6 +261,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
     entry.async_on_unload(await runtime.energy.async_start())
     entry.runtime_data = runtime
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+    from . import foreign
+
+    foreign.check(hass, entry.options)
+    entry.async_on_unload(lambda: ir.async_delete_issue(hass, DOMAIN, foreign.ISSUE_ID))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(runtime.control.async_start())
     entry.async_on_unload(await runtime.tariffs.async_start())
@@ -313,6 +318,9 @@ async def _async_options_updated(hass: HomeAssistant, entry: ZephyrConfigEntry) 
         await hass.config_entries.async_reload(entry.entry_id)
         return
     runtime.options = new
+    from . import foreign
+
+    foreign.check(hass, new)
     if runtime.control is not None:
         runtime.control.apply_options(new)
     if runtime.tariffs is not None:

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.44 — Notice for entities of another Zendure integration
+- A repair notice lists every setting that uses an entity of another Zendure integration (by integration, device maker or a `zendure` entity name), with what to use instead: set PV is read by ZEPHYR itself (otherwise counted twice), the inverter's counter for solar energy, the smart meter for P1 and cost counters, `sensor.zephyr_energy_charged`/`_discharged` for the battery. Checked at start and after every settings change.
+- Diagnostics: all options and the list `foreign_entities`.
+
 ### 0.8.42 — Live control stays live after a restart
 - **A new installation starts in shadow mode** (as before). **Once you switch live control on, it stays on**: after a restart or reload of Home Assistant ZEPHYR goes live again by itself as soon as it can (P1 reporting, sets online), trying every 5 s for up to 10 minutes. If it cannot, it stays in shadow mode and shows a repair issue *ZEPHYR did not resume live control* with the reasons. Switching it off yourself stays off.
 - The test-phase setting *Live control off after a restart* now defaults to **off**, and is turned off once for existing installations (config entry 1.2). Switch it on again to keep the old behaviour.

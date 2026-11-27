@@ -361,6 +361,10 @@
     "live_not_resumed": {
       "title": "ZEPHYR did not resume live control",
       "description": "Live control was on before the restart, but could not start again within 10 minutes: {reasons}. Switch \"ZEPHYR controls the battery\" on again once that is solved."
+    },
+    "foreign_entities": {
+      "title": "ZEPHYR uses entities of another Zendure integration",
+      "description": "These settings point to an entity of another Zendure integration:\n{entities}\n\nZEPHYR reads the sets itself and has its own energy counters. Replace them in ZEPHYR's settings:\n- Solar panel power: only inverters outside the sets. ZEPHYR already counts the set's own PV; with the set's sensor it is counted twice.\n- Solar energy counter: the inverter's energy counter.\n- P1 and cost counters: the smart meter (DSMR).\n- Battery charge and discharge: sensor.zephyr_energy_charged and sensor.zephyr_energy_discharged.\nThis notice disappears once no setting uses such an entity."
     }
   },
   "options": {
