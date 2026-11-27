@@ -16,4 +16,6 @@ writeFileSync(
   `Inter\n=====\n${licence("@fontsource/inter")}\n\nSpace Grotesk\n=============\n${licence("@fontsource/space-grotesk")}\n`,
 );
 copyFileSync("../custom_components/zephyr/brand/icon.png", "../custom_components/zephyr/frontend/logo.png");
-console.log(`assets: ${files.length} fonts and the logo`);
+// House picture on the screen Stroom (an illustration, not a real house).
+copyFileSync("assets/house.webp", "../custom_components/zephyr/frontend/house.webp");
+console.log(`assets: ${files.length} fonts, the logo and the house picture`);
