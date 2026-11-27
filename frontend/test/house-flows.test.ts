@@ -32,3 +32,11 @@ describe("flowParts", () => {
     ]);
   });
 });
+
+describe("hubPath", () => {
+  it("runs level to the Huis spot, then straight", async () => {
+    const { hubPath } = await import("../src/house");
+    expect(hubPath([100, 50], [400, 300])).toEqual([[100, 50], [400, 50], [400, 300]]);
+    expect(hubPath([400, 50], [400, 300])).toEqual([[400, 50], [400, 300]]);
+  });
+});
