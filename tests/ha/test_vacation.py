@@ -14,7 +14,7 @@ from custom_components.zephyr.const import DOMAIN
 from custom_components.zephyr.diagnostics import async_get_config_entry_diagnostics
 
 from .conftest import FakeSets
-from .test_planner import PRICE, _set_prices, _setup, _tick
+from .test_planner import PRICE, _set_prices, _setup, _test_day, _tick  # noqa: F401 (_test_day: autouse, fixed test day)
 
 
 async def _on(hass: HomeAssistant, entity: str, service: str = "turn_on", **data: Any) -> None:

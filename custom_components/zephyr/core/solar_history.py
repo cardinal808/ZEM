@@ -15,6 +15,7 @@ from __future__ import annotations
 import datetime as dt
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
+from itertools import pairwise
 from typing import Any
 
 KEEP_DAYS = 400
@@ -125,11 +126,14 @@ class SolarHistory:
         if midnight is not None:
             readings[24] = midnight
         out: dict[int, float] = {}
-        for hour in range(24):
-            if hour in readings and hour + 1 in readings:
-                delta = readings[hour + 1] - readings[hour]
-                if delta >= 0:
-                    out[hour] = round(delta, 4)
+        known = sorted(h for h in readings if 0 <= h <= 24)
+        for start, end in pairwise(known):
+            delta = readings[end] - readings[start]
+            if delta < 0:
+                continue
+            # A missing reading in between (HA restart, unknown): spread the step evenly.
+            for hour in range(start, end):
+                out[hour] = round(delta / (end - start), 4)
         return out
 
     def summary(self, last: int = 30) -> list[dict[str, Any]]:

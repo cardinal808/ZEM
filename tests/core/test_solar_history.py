@@ -60,3 +60,18 @@ def test_counter_drop_gives_no_value_and_old_days_are_pruned() -> None:
 
 def test_energy_units() -> None:
     assert energy_kwh(1500, "Wh") == 1.5 and energy_kwh(2, "kWh") == 2 and energy_kwh(1, "W") is None
+
+
+def test_missing_reading_is_spread_over_the_hours() -> None:
+    """26-11: no reading in hour 1 (restart); the day total still counts."""
+    h = SolarHistory()
+    counter = 100.0
+    for hour in range(24):
+        if hour != 11:  # no reading in the middle of the day
+            h.record_counter("2026-11-26", hour, counter)
+        counter += 1.0 if 9 <= hour < 15 else 0.0
+    h.record_counter("2026-11-27", 0, counter)
+    hourly = h.production_per_hour("2026-11-26")
+    assert len(hourly) == 24
+    assert hourly[10] == hourly[11] == 1.0  # the 2 kWh from 10 to 12 o'clock, spread evenly
+    assert h.summary()[0]["actual_kwh"] == 6.0

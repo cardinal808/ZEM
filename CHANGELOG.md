@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.30 — Weekend profile and solar day total (diagnostics 27-11)
+- **Load profile:** an hour of a day type that has not been learned yet (the weekend after a first install) now takes the other day type's hour, before the flat mean. Saturday's plan keeps the shape of the day (quiet night, busy evening) instead of the same 0.6 kWh every hour.
+- **Solar history:** a missing hourly reading of the solar counter (e.g. a restart) no longer drops the whole day: the step between the readings around it is spread evenly over the hours. On 26-11 the real production stayed empty because of one missing hour.
+- Tests: the vacation test now uses the fixed test day too (it failed on a real date other than 26-11).
+
 ### 0.8.29 — Recharge below the minimum starts right below min_SOC
 - **Recharging below the minimum** (self-consumption in standby, SPEC-basis §10) started only at min_SOC − 1: with min_SOC 10 % and a set that reports whole percents, at 8 %. It now starts as soon as the SOC is below min_SOC (9 % with 10 %) and goes on up to min_SOC, with the same gentle power (default 300 W). Delivering still waits until min_SOC + 2 (hysteresis), so the battery does not swing around the minimum.
 - Tests: recharge at 9 % and 5 % with min_SOC 10 %, none at 10 %.
