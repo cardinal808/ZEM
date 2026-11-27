@@ -854,6 +854,7 @@ export class ZephyrPanel extends LitElement {
         .exportCosts=${this.exportCosts}
         .refresh=${() => void this.loadEvents()}
         .planCheck=${this.planCheck}
+        .appliances=${this.appliancesView}
       ></zephyr-diagnostics>`;
     }
     return this.renderComing();

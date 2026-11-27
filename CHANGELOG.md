@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.47 — Diagnose: short peaks and appliance profiles
+- Card **Korte pieken** (B20, SPEC-ui-planner §3): energy from the grid during the short peaks ZEPHYR does not follow, today (kWh and count) and the mean per day, with bars for the last 14 days and an explanation behind (i).
+- Card **Apparaatprofielen** (SPEC-ui-planner §1.3): per appliance learned or standard profile, runs seen, kWh and duration per run, plug yes/no, running now, and the learned profile as a small chart (W per minute). Empty: where to add appliances.
+- Tests: short-peak figures in vitest.
+
 ### 0.8.46 — Plan: appliance buttons; Instellingen: Apparaten
 - Under *Prijzen en plan* one button per appliance (B36). A tap plans a run in the appliance's window; the washing machine goes 1× → 2× → off, the others 1× → off. Nothing planned: the expected cost of one run (cheapest start in the window at the quarter prices). Planned: the advised start(s), the cost of the run(s) and how much cheaper than starting now; a dryer planned along shows *na de was*.
 - Planned runs appear in the chart as bars under the solar lane (a fixed start with a lock); the tooltip shows the appliances' kWh in that quarter.

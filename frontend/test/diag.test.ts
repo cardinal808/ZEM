@@ -358,3 +358,19 @@ describe("appliance buttons", () => {
     ]);
   });
 });
+
+import { peakStats } from "../src/diag";
+
+describe("short peaks", () => {
+  it("gives today and the mean of the finished days", () => {
+    const days = [
+      { day: "2026-11-25", kwh: 0.04, holds: 10 },
+      { day: "2026-11-26", kwh: 0.08, holds: 20 },
+      { day: "2026-11-27", kwh: 0.02, holds: 5 },
+    ];
+    const st = peakStats(days, "2026-11-27");
+    expect(st.today?.holds).toBe(5);
+    expect(st.mean).toBeCloseTo(0.06);
+    expect(peakStats([], "2026-11-27")).toEqual({ today: null, mean: null });
+  });
+});
