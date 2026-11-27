@@ -286,6 +286,7 @@ async def test_live_counters_match_the_writes_and_survive_a_reload(
     assert counts["days"] and counts["days"][-1]["ram"] == counts["ram_24h"]
     decisions = diag["control"]["decisions"]
     assert all(d["commands"] for d in decisions if d.get("sent"))
+    assert diag["control"]["p1_profile"]["timestamps"] == "last_reported"
     assert any(d.get("sent") for d in decisions)
 
     before = counts["ram_24h"]

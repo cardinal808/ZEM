@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.64 — P1 profile: slow meters (DSMR 4) without the step filter
+- **P1 profile** from the measured meter interval (OPDRACHT-p1-profiel): fast (≤ 2 s), medium (≤ 7 s), slow (≤ 25 s), too slow. Medium until 10 intervals are known; a change only after 10 minutes in the new range and 20 % past the bound (slow → medium below 5.6 s).
+- **Slow profile:** the step filter (B20) is off. With one sample per 10 s it held a real rise for a whole extra sample; on such a meter a boiling-water tap's peak is mostly not seen anyway.
+- **Times follow the interval:** *P1 stale* after 3 × the interval (was 2.5 ×; a DSMR 4 gap of 20 s no longer comes close), the check for a second controller over at least 2 samples. Lost after 6 × and the hold at a balanced P1 stayed as they were; one decision per new sample and the slow control (B26) too.
+- **Diagnostics** `control.p1_profile`: interval, samples, profile and since when, step filter on/off, the times in use, *P1 stale* per 24 h, timestamp source, and the DSMR version of a HomeWizard P1 meter.
+
 ### 0.8.62 — Solar forecast from the Energy dashboard
 - Without a forecast sensor, ZEPHYR now takes the solar forecast of Home Assistant's **Energy dashboard**: every forecast integration set there (Forecast.Solar, Solcast, Open-Meteo, Helios Forecast if it provides one, …), summed over the solar sources. Read at the start and every 30 minutes. Per hour (or the source's own step) and without the 10/90 % bounds; Solcast via its sensor stays the richer choice (half hours and bounds, B32).
 - The planner and the day-ahead history (23:00, B31) use the same forecast; its source is in the diagnostics (`planner.inputs.solar_forecast_source`, `solar.forecast_source`, `energy:<integrations>`).

@@ -24,6 +24,7 @@ from .device_table import charging_allowed_by_temperature, delivering_allowed_by
 from .excluded_load import exclusion_for_controller
 from .grid_filter import GridFilter
 from .models import AcMode, GridReverse, SetReport
+from .p1_profile import P1Profile
 from .planner import Action as PlanAction
 from .settings import Settings
 from .twin import GridTally, TwinSet
@@ -225,6 +226,9 @@ class ZephyrEngine:
         self.peak_kwh = 0.0
         """Energy of short peaks the step filter (B20) left to the grid, since the start (PLANNING 1.3)."""
         self._peak_at: tuple[float, float] | None = None
+        self.p1_profile = P1Profile()
+        self._stale = False
+        self._stale_events: deque[float] = deque(maxlen=10_000)
         self.count_commands = True
         """Count commands when they are decided (shadow mode, tests). Live, the writer counts
         them once the set accepted them (``counters_record``)."""
@@ -356,6 +360,8 @@ class ZephyrEngine:
                     ordered = sorted(self._p1_gaps)
                     self._p1_interval = ordered[len(ordered) // 4]
             self._p1_changed_at = now
+            self.p1_profile.update(now, self._p1_interval, len(self._p1_gaps))
+            self.grid_filter.step_enabled = self.p1_profile.step_filter
         # A new sample: a changed value, or the same value after a full meter interval
         # (the load can really be constant). Repeats in between add nothing.
         if changed or self._p1_interval is None or self._p1_sample_at is None or now - self._p1_sample_at >= self._p1_interval:
@@ -421,7 +427,7 @@ class ZephyrEngine:
         p1_age = None if self._p1_at is None else now - self._p1_at
         meter = self._p1_interval or 0.0
         # Until the meter's interval is known, only a lost P1 counts (no 0 W after 10 s at start-up).
-        stale_after = max(s.p1_stale_after, 2.5 * meter) if self._p1_interval is not None else s.p1_lost_after
+        stale_after = max(s.p1_stale_after, 3 * meter) if self._p1_interval is not None else s.p1_lost_after
         # Many P1 sensors only report a change. A grid that is exactly balanced (often 0 W
         # when import and export are both 0.000 kW) then stays silent. That is not a stale
         # meter: hold the setpoint a little longer (p1_balanced_silence).
@@ -458,6 +464,9 @@ class ZephyrEngine:
         elif not p1_ok:
             reason = Reason(ReasonCode.P1_STALE, {"age": round(p1_age)})
             self.controller.reset(now)
+            if not self._stale:
+                self._stale_events.append(now)
+            self._stale = True
         elif self._p1_interval is not None and self._p1_interval > s.too_slow_p1_interval:
             reason = Reason(ReasonCode.P1_TOO_SLOW, {"interval": round(self._p1_interval)})
             self.controller.reset(now)
@@ -465,6 +474,8 @@ class ZephyrEngine:
             total, reason = self._forecast(now, primary, usable, blocked)
         else:
             total, reason = self._zero_meter(now, primary, usable, blocked)
+        if reason.code is not ReasonCode.P1_STALE:
+            self._stale = False
         if self.mode is not Mode.FORECAST or total <= 0 or reason.code is not ReasonCode.PLAN_CHARGE:
             self._stop_grid_charge(now)
         if self.mode is not Mode.FORECAST or reason.code is not ReasonCode.PLAN_EXPORT:
@@ -868,6 +879,26 @@ class ZephyrEngine:
     def _record(self, state: _SetState, kind: str, now: float) -> None:
         if self.count_commands:
             state.counters.record(kind, now, self.day_of(now))
+
+    def p1_profile_view(self, now: float) -> dict[str, Any]:
+        """The P1 profile and the times that follow from the meter interval (diagnostics)."""
+        s = self.settings
+        meter = self._p1_interval or 0.0
+        while self._stale_events and now - self._stale_events[0] > 86_400:
+            self._stale_events.popleft()
+        profile = self.p1_profile
+        return {
+            "interval_s": None if self._p1_interval is None else round(self._p1_interval, 2),
+            "samples": len(self._p1_gaps),
+            "profile": profile.profile if profile.decided else None,
+            "since_s": None if profile.changed_at is None else round(now - profile.changed_at),
+            "step_filter": profile.step_filter,
+            "stale_after_s": round(max(s.p1_stale_after, 3 * meter), 1) if self._p1_interval is not None else s.p1_lost_after,
+            "lost_after_s": round(max(s.p1_lost_after, 6 * meter), 1),
+            "deviation_time_s": round(max(s.deviation_time, 2 * meter), 1),
+            "slow_control": meter > s.slow_p1_interval,
+            "stale_24h": len(self._stale_events),
+        }
 
     def counters_record(self, key: str, kind: str, now: float) -> None:
         """Count a write made outside the engine (live writes, the write test)."""
