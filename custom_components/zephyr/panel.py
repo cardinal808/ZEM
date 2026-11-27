@@ -10,7 +10,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
+from aiohttp import web
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.http import KEY_HASS, HomeAssistantView
 from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
@@ -34,6 +36,7 @@ async def async_register_panel(hass: HomeAssistant, entry_id: str) -> bool:
         from homeassistant.components.http import StaticPathConfig
 
         await hass.http.async_register_static_paths([StaticPathConfig(STATIC_URL, str(FRONTEND_DIR), cache_headers=False)])
+        hass.http.register_view(HousePictureView())
         data["static"] = True
     if not data["registered"]:
         from homeassistant.components import panel_custom
@@ -72,3 +75,22 @@ def async_remove_panel(hass: HomeAssistant, entry_id: str, *, final: bool) -> No
 
         frontend.async_remove_panel(hass, PANEL_URL, warn_if_unknown=False)
         data["registered"] = False
+
+
+class HousePictureView(HomeAssistantView):
+    """The own house picture (Stroom), for logged-in users only; the panel asks HA for a signed URL."""
+
+    url = "/api/zephyr/house_picture"
+    name = "api:zephyr:house_picture"
+    requires_auth = True
+
+    async def get(self, request: web.Request) -> web.Response:
+        from .websocket_api import _entry
+
+        hass = request.app[KEY_HASS]
+        entry = _entry(hass)
+        found = await entry.runtime_data.house.async_read_picture() if entry and entry.runtime_data.house else None
+        if found is None:
+            return web.Response(status=404)
+        data, mime = found
+        return web.Response(body=data, content_type=mime, headers={"Cache-Control": "private, max-age=86400"})

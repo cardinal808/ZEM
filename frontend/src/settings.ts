@@ -1,7 +1,8 @@
 // Screen "Instellingen" (SPEC-ui §4.4; UI-6 reading, UI-7 changing).
 // Live fields save at once; sources and corrections are collected and saved together, because ZEPHYR restarts for them.
 import type { AppliancesView } from "./appliances";
-import type { HouseDevice } from "./stroom";
+import "./house-editor";
+import type { HouseDevice, HousePicture } from "./stroom";
 
 interface HouseDraft {
   floor: string;
@@ -95,6 +96,7 @@ const CURTAIL_FIELDS = [
 export interface SettingsView {
   groups: SettingsGroup[];
   house?: HouseDevice[];
+  house_picture?: HousePicture | null;
   vacation?: VacationView | null;
   supplier: string;
   tariffs_source: string | null;
@@ -314,6 +316,18 @@ export class ZephyrSettings extends LitElement {
             : nothing
         }
         ${current.key === "vacation" && view.vacation ? this.renderVacation(view.vacation, view.can_edit) : nothing}
+        ${
+          current.key === "house"
+            ? html`<zephyr-house-editor
+                .picture=${view.house_picture ?? null}
+                .canEdit=${view.can_edit}
+                .uiLang=${this.uiLang}
+                .call=${this.houseCall}
+                .sign=${this.sign}
+                .changed=${this.reload}
+              ></zephyr-house-editor>`
+            : nothing
+        }
         ${current.key === "house" ? this.renderHouse(view.house ?? [], view.can_edit) : nothing}
         <ul>
           ${current.fields.map((f) => this.renderField(f))}
@@ -323,6 +337,10 @@ export class ZephyrSettings extends LitElement {
     </div>`;
   }
 
+  /** For the own house picture: a websocket call, a signed URL, and loading the settings again. */
+  @property({ attribute: false }) houseCall?: (msg: Record<string, unknown>) => Promise<unknown>;
+  @property({ attribute: false }) sign?: (path: string) => Promise<string>;
+  @property({ attribute: false }) reload?: () => Promise<void>;
   @property({ attribute: false }) saveHouse?: (
     floors: Record<string, string>,
     hidden: string[],

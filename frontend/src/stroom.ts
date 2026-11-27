@@ -71,6 +71,17 @@ export interface RegulationView {
 }
 
 /** A consumer in view: an appliance with a plug (B36) or the airco (B41). */
+/** An own house picture: boxes and spots as fractions (0–1) of the picture. */
+export interface HousePicture {
+  custom: boolean;
+  has_image: boolean;
+  version: number;
+  width: number;
+  height: number;
+  items: Partial<Record<string, { box?: [number, number]; point?: [number, number] }>>;
+  hidden: string[];
+}
+
 export interface HouseDevice {
   id: string;
   /** null for the airco: the panel names it. */
@@ -111,6 +122,7 @@ export interface StroomView {
   devices?: HouseDevice[];
   /** "SolarFlow 2400 Pro + 3 × AB3000L" per set. */
   battery_label?: string | null;
+  picture?: HousePicture | null;
   rest_today_kwh?: number | null;
   today: StroomToday;
   zero: ZeroView | null;
@@ -201,6 +213,7 @@ export class ZephyrStroom extends LitElement {
   @property() timeZone = "UTC";
   /** URL of the panel's files (the house picture). */
   @property() base = "";
+  @property({ attribute: false }) sign?: (path: string) => Promise<string>;
 
   private tr(
     key: string,
@@ -211,8 +224,11 @@ export class ZephyrStroom extends LitElement {
 
   protected override render(): TemplateResult {
     const v = this.view;
-    return html`<div class="layout">
+    const pic = v?.picture;
+    const ar = pic && pic.width && pic.height ? pic.width / pic.height : 1614 / 1225;
+    return html`<div class="layout" style=${`--house-ar:${ar.toFixed(4)}`}>
       <zephyr-house
+        .sign=${this.sign}
         .now=${this.now}
         .view=${v}
         .uiLang=${this.uiLang}
@@ -816,7 +832,7 @@ export class ZephyrStroom extends LitElement {
     @container (min-width: 1200px) {
       /* Wide panel: picture on the left (as high as the screen allows), today's cards next to it. */
       .layout {
-        grid-template-columns: minmax(0, calc((100vh - 300px) * 1.3176 + 30px)) minmax(360px, 1fr);
+        grid-template-columns: minmax(0, calc((100vh - 300px) * var(--house-ar, 1.3176) + 30px)) minmax(360px, 1fr);
         grid-template-rows: auto 1fr;
         align-items: stretch;
       }
