@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import copy
+import threading
+import traceback
 from collections.abc import Generator
 from typing import Any
 from unittest.mock import patch
@@ -16,6 +19,27 @@ from custom_components.zephyr.core.client import ZendureTimeout
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
     """Allow loading custom_components/zephyr."""
+
+
+@pytest.fixture(autouse=True)
+def no_timers_from_other_threads() -> Generator[None]:
+    """Fail when a timer is scheduled on the event loop from a worker thread.
+
+    That happens when a plain function (no ``@callback``, no coroutine) is given to an HA
+    helper such as ``async_track_time_interval``: HA runs it in the executor. The loop's timer
+    heap is not thread-safe; it broke now and then as "list changed size during iteration".
+    """
+    original = asyncio.BaseEventLoop.call_at
+    offenders: list[str] = []
+
+    def call_at(self: asyncio.BaseEventLoop, when: float, callback: Any, *args: Any, **kwargs: Any) -> Any:
+        if threading.current_thread() is not threading.main_thread():
+            offenders.append("".join(traceback.format_stack(limit=8)))
+        return original(self, when, callback, *args, **kwargs)
+
+    with patch.object(asyncio.BaseEventLoop, "call_at", call_at):
+        yield
+    assert not offenders, offenders[0]
 
 
 class FakeSets:
