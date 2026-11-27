@@ -428,7 +428,7 @@
           "excluded_climate_entity": "Optional. The climate entity of that air conditioner: it tells at once whether it runs and in which mode. Without it, the load is never fed from the battery.",
           "excluded_hvac_modes": "Modes in which the air conditioner may not be fed from the battery. Default: heating.",
           "live_off_after_restart": "Off (default): after a restart live control comes back on its own as soon as the P1 reports and the sets are online (if it was on). On: it stays off and you switch it on yourself.",
-          "price_entity": "Optional. With a Nord Pool sensor (today's prices in its attributes) zero-meter control delivers only in the most expensive hours of the day. Without it ZEPHYR delivers whenever the house asks.",
+          "price_entity": "Optional. With a Nord Pool sensor (the HACS Nord Pool integration with the prices in its attributes, or the current price of Home Assistant's own Nord Pool integration) zero-meter control delivers only in the most expensive hours of the day. Without it ZEPHYR delivers whenever the house asks.",
           "expensive_hours": "Hours per day in which ZEPHYR may deliver: the most expensive according to Nord Pool.",
           "reserve_soc": "Extra charge that may be used freely: below it ZEPHYR charges in the cheapest hours before the next expensive block. In the expensive hours it delivers down to the minimum SOC. 0 = off.",
           "min_price": "Optional, bare Nord Pool price: never deliver below it, not even in the most expensive hours.",

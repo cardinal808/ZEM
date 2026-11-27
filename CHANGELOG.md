@@ -2,10 +2,14 @@
 
 ## Unreleased
 
-### 0.8.59 — Solar forecast from the Energy dashboard
+### 0.8.62 — Solar forecast from the Energy dashboard
 - Without a forecast sensor, ZEPHYR now takes the solar forecast of Home Assistant's **Energy dashboard**: every forecast integration set there (Forecast.Solar, Solcast, Open-Meteo, Helios Forecast if it provides one, …), summed over the solar sources. Read at the start and every 30 minutes. Per hour (or the source's own step) and without the 10/90 % bounds; Solcast via its sensor stays the richer choice (half hours and bounds, B32).
 - The planner and the day-ahead history (23:00, B31) use the same forecast; its source is in the diagnostics (`planner.inputs.solar_forecast_source`, `solar.forecast_source`, `energy:<integrations>`).
 - Settings text for *Solar forecast* says what an empty field does.
+
+### 0.8.60 — Prices from Home Assistant's own Nord Pool integration
+- The price sensor may now also be the **current price of the Nord Pool integration that ships with Home Assistant** (until now only the HACS Nord Pool with `raw_today`). ZEPHYR fetches today and tomorrow with the action `nordpool.get_prices_for_date` (bare price per MWh, converted to €/kWh) at the start, when the sensor appears and every 15 minutes while a day is missing (tomorrow around 13:00); a new day starts a new plan. Control, planner, cost log, curtailing and the panel read them as before.
+- Settings suggest that sensor when there is no HACS Nord Pool. Diagnostics: `prices` (area, days, last error).
 
 ### 0.8.58 — Stroom: flows on an own picture
 - On an own picture, place the item *Huis* (the meter cupboard) with its spot: then every flow runs through that spot like the main line on the default picture: roof and shed panels, battery and grid to *Huis* (battery and grid reverse when charging or exporting), and from *Huis* to the floors and the charge point, with moving dots and the colour of the biggest source. Each box then only points at its spot with a thin line.

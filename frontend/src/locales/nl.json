@@ -299,7 +299,7 @@
       },
       "price_entity": {
         "label": "Prijssensor",
-        "help": "Nord Pool met de prijzen van vandaag en morgen.",
+        "help": "Nord Pool: de integratie van HACS, of de huidige prijs van de Nord Pool-integratie van HA zelf.",
         "more": "De prijzen van morgen komen rond 13:00. Zonder prijssensor maakt ZEPHYR geen plan; zonder prijzen voor nu valt de planner terug op nul op de meter."
       },
       "solar_forecast_entity": {

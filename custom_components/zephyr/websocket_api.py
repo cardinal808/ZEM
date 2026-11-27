@@ -28,6 +28,7 @@ from .core.engine import Mode
 from .core.forecast_plan import ACTION_KEYS, PlanOutcome, reason
 from .core.packs import PackHistory, cell_delta_mv, cell_status, judged
 from .core.plan_view import past_action
+from .prices import price_state
 
 if TYPE_CHECKING:
     from . import ZephyrConfigEntry
@@ -596,7 +597,7 @@ def _backfill_price(costs: Any) -> str:
     """Price for the backfill: the price sensor only if HA keeps statistics of it (state_class), otherwise EnergyZero."""
     from .core.backfill import PRICE_ENERGYZERO
 
-    state = costs.hass.states.get(costs.price_entity) if costs.price_entity else None
+    state = price_state(costs.hass, costs.price_entity)
     return costs.price_entity if state is not None and state.attributes.get("state_class") else PRICE_ENERGYZERO
 
 

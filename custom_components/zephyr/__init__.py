@@ -21,7 +21,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_LIVE_OFF_AFTER_RESTART, DOMAIN, SUBENTRY_SET
+from .const import CONF_LIVE_OFF_AFTER_RESTART, CONF_PRICE_ENTITY, DOMAIN, SUBENTRY_SET
 from .coordinator import SetCoordinator
 from .core.totals import CostFlows, Totals, compute_totals, cost_flows
 
@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from .energy_recorder import EnergyRecorder
     from .pack_recorder import PackRecorder
     from .planner_runner import PlanRunner
+    from .prices import CoreNordPool
     from .solar_recorder import SolarRecorder
     from .stroom_devices import StroomDevices
     from .tariff_provider import TariffProvider
@@ -63,6 +64,8 @@ class ZephyrRuntime:
     energy: EnergyRecorder | None = None
     curtail: CurtailManager | None = None
     appliances: ApplianceManager | None = None
+    prices: CoreNordPool | None = None
+    """Prices from HA's own Nord Pool integration, when the price sensor is one of its sensors."""
     house: StroomDevices | None = None
     """Consumers in view on the screen Stroom (plugs of the appliances, airco)."""
     options: dict[str, Any] = field(default_factory=dict)
@@ -238,8 +241,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
 
     runtime.control = ZephyrControl(hass, entry, runtime)
     from .cost_recorder import CostRecorder
+    from .prices import CoreNordPool
     from .tariff_provider import TariffProvider
 
+    runtime.prices = CoreNordPool(
+        hass,
+        entry.options.get(CONF_PRICE_ENTITY),
+        lambda: runtime.planner.async_request() if runtime.planner is not None else None,
+    )
+    entry.async_on_unload(await runtime.prices.async_start())
     runtime.tariffs = TariffProvider(hass, entry.entry_id, dict(entry.options))
     runtime.costs = CostRecorder(hass, entry.entry_id, dict(entry.options), runtime, runtime.tariffs)
     from .planner_runner import PlanRunner

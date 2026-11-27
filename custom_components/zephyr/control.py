@@ -61,6 +61,7 @@ from .core.settings import Settings
 from .core.solar_now import CounterPower, total, watts
 from .core.stroom import ZERO_REASONS, RegulationLog, ZeroScore
 from .core.zensdk import power_command, standby_command
+from .prices import price_state
 from .writer import SetWriter
 
 if TYPE_CHECKING:
@@ -669,7 +670,7 @@ class ZephyrControl:
 
     def _decide_prices(self, views: list[SetView]) -> PriceDecision:
         assert self.price_entity is not None
-        state = self.hass.states.get(self.price_entity)
+        state = price_state(self.hass, self.price_entity)
         if state is None:
             return NO_PRICES
         slots = parse_nordpool_raw(state.attributes.get("raw_today")) + parse_nordpool_raw(state.attributes.get("raw_tomorrow"))

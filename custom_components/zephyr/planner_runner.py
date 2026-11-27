@@ -77,6 +77,7 @@ from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
 from .core.vacation import base_load
 from .curtail import planner_curtails
+from .prices import price_state
 from .solar_recorder import solar_entities
 
 if TYPE_CHECKING:
@@ -397,7 +398,7 @@ class PlanRunner:
         assert self.price_entity is not None
         now = dt_util.utcnow()
         tz = dt_util.get_default_time_zone()
-        state = self.hass.states.get(self.price_entity)
+        state = price_state(self.hass, self.price_entity)
         source = market_slots(state.attributes) if state is not None else []
         prices = merge_reserve(source, self.reserve)
         outcome = self.outcome
@@ -426,7 +427,7 @@ class PlanRunner:
         assert self.price_entity is not None
         now = dt_util.utcnow()
         tz = dt_util.get_default_time_zone()
-        state = self.hass.states.get(self.price_entity)
+        state = price_state(self.hass, self.price_entity)
         source = market_slots(state.attributes) if state is not None else []
         self._check_format(state, bool(source))
         self._note_known(source, now)

@@ -428,7 +428,7 @@
           "excluded_climate_entity": "Optioneel. De klimaat-entiteit van die airco: die zegt direct of hij draait en in welke stand. Zonder deze entiteit komt de verbruiker nooit uit de accu.",
           "excluded_hvac_modes": "Standen waarin de airco niet uit de accu mag. Standaard: verwarmen.",
           "live_off_after_restart": "Uit (standaard): na een herstart komt live sturen vanzelf terug zodra de P1 meldt en de sets online zijn (als het aan stond). Aan: het blijft uit en je zet het zelf weer aan.",
-          "price_entity": "Optioneel. Met een Nord Pool-sensor (met de prijzen van vandaag in de attributen) levert Nul op de meter alleen in de duurste uren van de dag. Zonder sensor levert ZEPHYR zodra het huis vraagt.",
+          "price_entity": "Optioneel. Met een Nord Pool-sensor (de Nord Pool-integratie van HACS met de prijzen in de attributen, of de huidige prijs van de Nord Pool-integratie van HA zelf) levert Nul op de meter alleen in de duurste uren van de dag. Zonder sensor levert ZEPHYR zodra het huis vraagt.",
           "expensive_hours": "Aantal uren per dag waarin ZEPHYR mag leveren: de duurste volgens Nord Pool.",
           "reserve_soc": "Extra lading die vrij gebruikt mag worden: zit de accu eronder, dan laadt ZEPHYR bij in de goedkoopste uren vóór het volgende dure blok. In de dure uren levert hij door tot de minimale laadtoestand. 0 = uit.",
           "min_price": "Optioneel, kale Nord Pool-prijs: daaronder nooit leveren, ook niet in de duurste uren.",
