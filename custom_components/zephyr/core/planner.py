@@ -100,6 +100,8 @@ class Step:
     """kWh out of the battery (AC side)."""
     grid_charged: float = 0.0
     """kWh from the grid into the battery (L, AC side)."""
+    spill: float = 0.0
+    """Solar surplus that fits neither the house nor the battery (exported, or curtailed at a negative price)."""
 
 
 def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margin: float = 0.0, curtail: bool = False) -> Step:
@@ -142,7 +144,7 @@ def step(slot: Slot, battery: Battery, energy: float, action: Action, load_margi
         battery_export = exp - spill if action is Action.EXPORT else 0.0
         cost = imp * slot.buy - battery_export * slot.sell
         exp = battery_export
-    return Step(max(min(s1, battery.capacity_kwh), 0.0), imp, exp, cost, charged, delivered, grid_charged)
+    return Step(max(min(s1, battery.capacity_kwh), 0.0), imp, exp, cost, charged, delivered, grid_charged, spill)
 
 
 @dataclass(slots=True)

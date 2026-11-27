@@ -88,6 +88,8 @@ class ApplianceManager:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.appliances")
         self._listeners: list[Callable[[], None]] = []
         self._on_change: Callable[[], None] | None = None
+        self.revision = 0
+        """Goes up with every change, so the panel knows when to fetch again."""
 
     # --- start, store ------------------------------------------------------------------
 
@@ -122,6 +124,7 @@ class ApplianceManager:
         }
 
     def _changed(self, replan: bool = True) -> None:
+        self.revision += 1
         for listener in list(self._listeners):
             listener()
         if replan and self._on_change is not None:
@@ -250,6 +253,15 @@ class ApplianceManager:
         self._changed()
         return before - len(self.planned)
 
+    def remove(self, index: int) -> bool:
+        """Remove one planned run (its place in ``planned``)."""
+        if not 0 <= index < len(self.planned):
+            return False
+        del self.planned[index]
+        self._save()
+        self._changed()
+        return True
+
     def profiles(self) -> dict[str, list[float]]:
         return {a.id: a.profile() for a in self.appliances.values()}
 
@@ -263,6 +275,43 @@ class ApplianceManager:
     def by_name(self, name: str) -> Appliance | None:
         lowered = name.strip().lower()
         return next((a for a in self.appliances.values() if a.name.lower() == lowered or a.id == name), None)
+
+    def view(self) -> dict[str, Any]:
+        """Appliances and planned runs for the panel (SPEC-ui-planner §4.1)."""
+        appliances = []
+        for a in self.appliances.values():
+            profile = a.profile()
+            item: dict[str, Any] = {
+                "id": a.id,
+                "name": a.name,
+                "kind": a.kind,
+                "plug": a.power_entity is not None,
+                "running": a.running,
+                "profile": a.profile_source,
+                "runs_seen": len(a.runs),
+                "kwh": round(sum(profile) / 60000, 3),
+                "minutes": len(profile),
+                "window": {"from": a.window_from or None, "until": a.window_until},
+            }
+            if a.profile_source == "learned":
+                item["profile_w"] = [round(w) for w in profile]
+            appliances.append(item)
+        planned = []
+        for index, p in enumerate(self.planned):
+            after = self.appliances.get(p.after) if p.after else None
+            planned.append(
+                {
+                    "index": index,
+                    "appliance": p.appliance,
+                    "window_start": p.window_start.isoformat(),
+                    "window_end": p.window_end.isoformat(),
+                    "fixed_start": None if p.fixed_start is None else p.fixed_start.isoformat(),
+                    "after": None if after is None else after.name,
+                    "best_start": None if p.best_start is None else p.best_start.isoformat(),
+                    **p.details,
+                }
+            )
+        return {"revision": self.revision, "appliances": appliances, "planned": planned}
 
     def diagnostics(self) -> dict[str, Any]:
         return {

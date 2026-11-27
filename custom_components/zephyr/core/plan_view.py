@@ -69,6 +69,7 @@ def plan_quarters(
     sell: SellFn,
     daylight: DaylightFn,
     history: Mapping[datetime, Mapping[str, Any]] | None = None,
+    curtail: bool = False,
 ) -> list[dict[str, Any]]:
     """Quarters from midnight today to the end of tomorrow (local), in UTC steps (DST: 92 or 100 per day)."""
     start = local_midnight(now, tz)
@@ -93,6 +94,7 @@ def plan_quarters(
                 "excluded": round(slot.excluded_kwh, 3),
                 "appliances": round(slot.appliance_kwh, 3),
                 "indicative": slot.indicative,
+                **_surplus(slot.sell, step.spill, curtail),
             }
 
     out: list[dict[str, Any]] = []
@@ -153,6 +155,8 @@ def plan_view(
     tomorrow_known_at: datetime | None,
     reason: dict[str, str] | None,
     history: Mapping[datetime, Mapping[str, Any]] | None = None,
+    curtail_mode: str | None = None,
+    curtail: bool = False,
 ) -> dict[str, Any]:
     """Everything the chart *Prijzen en plan* and the cards *Blokken* and *Waarom* need."""
     bat = outcome.battery if outcome is not None else None
@@ -163,9 +167,19 @@ def plan_view(
         "reason": reason,
         "soc_now": None if bat is None else round(bat.soc, 1),
         "tomorrow_known_at": None if tomorrow_known_at is None else tomorrow_known_at.astimezone(UTC).isoformat(),
-        "quarters": plan_quarters(outcome, prices, now, tz, buy=buy, sell=sell, daylight=daylight, history=history),
+        "curtail_mode": curtail_mode,
+        "quarters": plan_quarters(outcome, prices, now, tz, buy=buy, sell=sell, daylight=daylight, history=history, curtail=curtail),
         "blocks": [] if outcome is None else [b.as_dict() for b in outcome.blocks],
     }
+
+
+def _surplus(sell: float, spill: float, curtail: bool) -> dict[str, float]:
+    """Solar surplus at a negative export price (B45): curtailed, or exported at a cost."""
+    if sell >= 0 or spill <= 0:
+        return {"curtail_kwh": 0.0, "export_cost": 0.0}
+    if curtail:
+        return {"curtail_kwh": round(spill, 3), "export_cost": 0.0}
+    return {"curtail_kwh": 0.0, "export_cost": round(-sell * spill, 4)}
 
 
 def _house(record: Mapping[str, Any]) -> dict[str, Any]:

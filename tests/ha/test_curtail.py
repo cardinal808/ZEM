@@ -11,6 +11,7 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from custom_components.zephyr.curtail import planner_curtails
 from custom_components.zephyr.diagnostics import async_get_config_entry_diagnostics
+from custom_components.zephyr.websocket_api import events_view, now_snapshot
 
 from .conftest import FakeSets
 from .test_costs import P1, PRICE, _run
@@ -111,9 +112,15 @@ async def test_zephyr_limits_the_inverter_power(hass: HomeAssistant, fake_sets: 
     assert room > 0  # the set is not full: it may still charge from the surplus
     assert values and values[-1] == round((3000 + room - 1000 - 50) / 5000 * 100)
     assert planner_curtails(dict(entry.options))
+    now = now_snapshot(hass, entry)["curtail"]
+    assert now["active"] and now["negative"] and now["export_blocked"] and now["percent"] == values[-1] and now["switch_on"] is None
+    events = events_view(entry)
+    assert [p["day"] for p in events["peaks"]] == ["2026-11-25"] and set(events["peaks"][0]) == {"day", "kwh", "holds"}
     _prices(hass, 0.10)
     freezer.move_to(datetime(2026, 11, 25, 12, 15, 4, tzinfo=dt_util.get_default_time_zone()))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     await _run(hass, freezer, 20, watts=-1000.0)
     assert values[-1] == 100
+    now = now_snapshot(hass, entry)["curtail"]
+    assert not now["active"] and now["percent"] is None and now["mode"] == "curtail_zephyr"

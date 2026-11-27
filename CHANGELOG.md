@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.43 — Panel data for appliances, curtailing and short peaks
+- New websocket commands `zephyr/appliances`, `zephyr/appliances/plan` and `zephyr/appliances/clear` (one run by index, one appliance, or all) for the panel (SPEC-ui-planner §4.1). The view gives per appliance the profile (watt per minute when learned), window and plug, and per planned run the advised start and saving.
+- `zephyr/plan`: per future quarter `curtail_kwh` (surplus the planner counts as curtailed at a negative export price) and `export_cost` (what exporting it costs when nothing curtails); `curtail_mode` in the head.
+- `zephyr/subscribe` (`now`): `curtail` (active, percent, switch, export blocked) and `appliances_revision`; appliance changes now trigger an update.
+- `zephyr/events`: `peaks`, the short peaks per day the step filter left to the grid (B20).
+
 ### 0.8.42 — Live control stays live after a restart
 - **A new installation starts in shadow mode** (as before). **Once you switch live control on, it stays on**: after a restart or reload of Home Assistant ZEPHYR goes live again by itself as soon as it can (P1 reporting, sets online), trying every 5 s for up to 10 minutes. If it cannot, it stays in shadow mode and shows a repair issue *ZEPHYR did not resume live control* with the reasons. Switching it off yourself stays off.
 - The test-phase setting *Live control off after a restart* now defaults to **off**, and is turned off once for existing installations (config entry 1.2). Switch it on again to keep the old behaviour.

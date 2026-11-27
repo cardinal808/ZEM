@@ -18,6 +18,7 @@ from homeassistant.components.websocket_api.connection import ActiveConnection
 from homeassistant.components.websocket_api.decorators import async_response, require_admin, websocket_command
 from homeassistant.components.websocket_api.messages import event_message
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
@@ -48,6 +49,9 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_plan_check)
     async_register_command(hass, ws_savings_backfill)
     async_register_command(hass, ws_stroom)
+    async_register_command(hass, ws_appliances)
+    async_register_command(hass, ws_appliances_plan)
+    async_register_command(hass, ws_appliances_clear)
 
 
 def _entry(hass: HomeAssistant) -> ZephyrConfigEntry | None:
@@ -181,6 +185,8 @@ def now_snapshot(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any
         "price_entity": bool(control.price_entity),
         "excluded": _excluded(control),
         "plan": None if outcome is None else _plan(hass, outcome),
+        "curtail": runtime.curtail.view() if runtime.curtail is not None else None,
+        "appliances_revision": runtime.appliances.revision if runtime.appliances is not None else None,
     }
 
 
@@ -241,6 +247,8 @@ def ws_subscribe(hass: HomeAssistant, connection: ActiveConnection, msg: dict[st
     unsubs.append(runtime.control.async_add_listener(changed))
     if runtime.planner is not None:
         unsubs.append(runtime.planner.async_add_listener(changed))
+    if runtime.appliances is not None:
+        unsubs.append(runtime.appliances.async_add_listener(changed))
     for coordinator in runtime.coordinators.values():
         unsubs.append(coordinator.async_add_listener(changed))
     entry.async_on_unload(unloaded)
@@ -529,6 +537,7 @@ def events_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         "sets": sets,
         "profile": _profile(runtime.planner),
         "energy": runtime.energy.diagnostics() if runtime.energy is not None else None,
+        "peaks": [{"day": day, **values} for day, values in sorted(control.peak_days.items())],
     }
 
 
@@ -733,3 +742,87 @@ async def ws_savings_backfill(hass: HomeAssistant, connection: ActiveConnection,
         first, entities["charge_entity"], entities["discharge_entity"], entities["solar_entity"], entities["price_entity"]
     )
     connection.send_result(msg["id"], {"ok": True, **result})
+
+
+# --- planned appliances (B36, SPEC-ui-planner §4.1) -------------------------------------
+
+
+def _appliances(hass: HomeAssistant, connection: ActiveConnection, msg_id: int) -> Any:
+    entry = _entry(hass)
+    if entry is None or entry.runtime_data.appliances is None:
+        connection.send_error(msg_id, "not_loaded", "ZEPHYR is not loaded")
+        return None
+    return entry.runtime_data.appliances
+
+
+@websocket_command({vol.Required("type"): "zephyr/appliances"})
+@callback
+def ws_appliances(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Appliances, their profiles and the planned runs with the advised start."""
+    manager = _appliances(hass, connection, msg["id"])
+    if manager is not None:
+        connection.send_result(msg["id"], manager.view())
+
+
+@websocket_command(
+    {
+        vol.Required("type"): "zephyr/appliances/plan",
+        vol.Required("appliance"): str,
+        vol.Optional("runs", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=5)),
+        vol.Optional("start_after"): cv.datetime,
+        vol.Optional("done_before"): cv.datetime,
+        vol.Optional("fixed_start"): cv.datetime,
+    }
+)
+@callback
+def ws_appliances_plan(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Announce runs, like the button and the action zephyr.plan_appliance."""
+    manager = _appliances(hass, connection, msg["id"])
+    if manager is None:
+        return
+    appliance = manager.by_name(msg["appliance"])
+    if appliance is None:
+        connection.send_error(msg["id"], "not_found", "Unknown appliance")
+        return
+    tz = dt_util.get_default_time_zone()
+
+    def local(key: str) -> datetime | None:
+        value: datetime | None = msg.get(key)
+        return None if value is None else (value if value.tzinfo else value.replace(tzinfo=tz))
+
+    manager.plan(
+        appliance.id,
+        msg["runs"],
+        start_after=local("start_after"),
+        done_before=local("done_before"),
+        fixed_start=local("fixed_start"),
+    )
+    connection.send_result(msg["id"], manager.view())
+
+
+@websocket_command(
+    {
+        vol.Required("type"): "zephyr/appliances/clear",
+        vol.Optional("appliance"): str,
+        vol.Optional("index"): vol.All(vol.Coerce(int), vol.Range(min=0)),
+    }
+)
+@callback
+def ws_appliances_clear(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Remove one planned run (index), all runs of an appliance, or everything."""
+    manager = _appliances(hass, connection, msg["id"])
+    if manager is None:
+        return
+    if "index" in msg:
+        if not manager.remove(msg["index"]):
+            connection.send_error(msg["id"], "not_found", "No planned run at that index")
+            return
+    elif "appliance" in msg:
+        appliance = manager.by_name(msg["appliance"])
+        if appliance is None:
+            connection.send_error(msg["id"], "not_found", "Unknown appliance")
+            return
+        manager.clear(appliance.id)
+    else:
+        manager.clear()
+    connection.send_result(msg["id"], manager.view())

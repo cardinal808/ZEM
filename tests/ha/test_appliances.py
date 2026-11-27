@@ -116,3 +116,54 @@ async def test_profile_learned_from_the_recorder_at_once(hass: HomeAssistant, fa
     assert len(washer.runs) == 3 and washer.profile_source == "learned"
     assert len(washer.profile()) == 70
     assert SimpleNamespace(**hass.states.get("sensor.zephyr_wasmachine_planned").attributes).profile == "learned"
+
+
+async def test_panel_plans_and_clears_runs_over_the_websocket(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, hass_ws_client: Any
+) -> None:
+    """SPEC-ui-planner §4.1: list, plan, remove one run, clear; the subscription carries a revision."""
+    client = await hass_ws_client(hass)
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (9, 0), price_entity=PRICE)
+    await _add(hass, entry, "Wasmachine", "washer", window_from="08:00:00", window_until="20:00:00")
+    await _add(hass, entry, "Droger", "dryer_condenser", window_from="08:00:00", window_until="20:00:00")
+    await _tick(hass, freezer, 5)
+
+    await client.send_json_auto_id({"type": "zephyr/appliances"})
+    msg = await client.receive_json()
+    assert msg["success"] is True
+    view = msg["result"]
+    assert {a["name"] for a in view["appliances"]} == {"Wasmachine", "Droger"} and view["planned"] == []
+    washer = next(a for a in view["appliances"] if a["name"] == "Wasmachine")
+    assert washer["profile"] == "default" and "profile_w" not in washer and washer["plug"] is False
+    assert washer["window"] == {"from": "08:00:00", "until": "20:00:00"} and washer["kwh"] > 0
+    revision = view["revision"]
+
+    await client.send_json_auto_id({"type": "zephyr/appliances/plan", "appliance": washer["id"], "runs": 2})
+    msg = await client.receive_json()
+    assert msg["success"] is True and len(msg["result"]["planned"]) == 2
+    await client.send_json_auto_id({"type": "zephyr/appliances/plan", "appliance": "droger"})
+    msg = await client.receive_json()
+    assert msg["result"]["planned"][-1]["after"] == "Wasmachine"
+    assert msg["result"]["revision"] > revision
+    await _tick(hass, freezer, 70)
+
+    await client.send_json_auto_id({"type": "zephyr/appliances"})
+    planned = (await client.receive_json())["result"]["planned"]
+    assert all(p["best_start"] is not None and "saving" in p for p in planned)
+
+    await client.send_json_auto_id({"type": "zephyr/appliances/clear", "index": 0})
+    msg = await client.receive_json()
+    assert len(msg["result"]["planned"]) == 2
+    await client.send_json_auto_id({"type": "zephyr/appliances/clear", "index": 9})
+    assert (await client.receive_json())["success"] is False
+    await client.send_json_auto_id({"type": "zephyr/appliances/clear", "appliance": "Droger"})
+    assert len((await client.receive_json())["result"]["planned"]) == 1
+    await client.send_json_auto_id({"type": "zephyr/appliances/clear"})
+    assert (await client.receive_json())["result"]["planned"] == []
+    await client.send_json_auto_id({"type": "zephyr/appliances/plan", "appliance": "Vaatwasser"})
+    assert (await client.receive_json())["success"] is False
+
+    from custom_components.zephyr.websocket_api import now_snapshot
+
+    assert now_snapshot(hass, entry)["appliances_revision"] == entry.runtime_data.appliances.revision
