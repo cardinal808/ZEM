@@ -32,6 +32,7 @@ from homeassistant.helpers.sun import is_up
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_CURTAIL_MODE,
     CONF_EXCLUDED_CLIMATE,
     CONF_EXCLUDED_ENERGY,
     CONF_EXCLUDED_MODES,
@@ -43,6 +44,7 @@ from .const import (
     CONF_PRICE_ENTITY,
     CONF_SOLAR_FORECAST,
     CONF_WORKDAY_ENTITY,
+    CURTAIL_OFF,
     DEFAULT_EXCLUDED_MODES,
     DEFAULT_PLAN_GRID_CHARGE_COST,
     DEFAULT_PLAN_WEAR_COST,
@@ -145,6 +147,7 @@ class PlanRunner:
         self.price_entity: str | None = options.get(CONF_PRICE_ENTITY)
         self.solar_entities = solar_entities(options.get(CONF_SOLAR_FORECAST))
         self.settings = planner_settings(options)
+        self.curtail_mode: str = options.get(CONF_CURTAIL_MODE, CURTAIL_OFF)
         self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
         self.profile = LoadProfile()
         self.excluded_entity: str | None = options.get(CONF_EXCLUDED_ENERGY)
@@ -186,6 +189,7 @@ class PlanRunner:
     def apply_options(self, options: Mapping[str, Any]) -> None:
         """Planner settings changed without a reload (UI-7): plan again with them."""
         self.settings = planner_settings(options)
+        self.curtail_mode = options.get(CONF_CURTAIL_MODE, CURTAIL_OFF)
         self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
         self.async_request()
 
@@ -429,6 +433,8 @@ class PlanRunner:
             tomorrow_known_at=self.known_at.get(tomorrow),
             reason=why,
             history=history,
+            curtail_mode=self.curtail_mode,
+            curtail=self.settings.curtail,
         )
 
     async def async_calculate(self) -> PlanOutcome | None:

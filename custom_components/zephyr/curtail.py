@@ -176,6 +176,18 @@ class CurtailManager:
         self._switch_set = on
         self.last_error = None
 
+    def view(self) -> dict[str, Any]:
+        """For the panel (SPEC-ui-planner §4.3): is ZEPHYR curtailing now, and how."""
+        active = self.mode == CURTAIL_ZEPHYR and self.negative
+        return {
+            "mode": self.mode,
+            "negative": self.negative,
+            "active": active,
+            "percent": self.limit_written if active and self.number is not None else None,
+            "switch_on": self._switch_set if active and self.switch is not None else None,
+            "export_blocked": bool(self.export_blocked),
+        }
+
     def diagnostics(self) -> dict[str, Any]:
         return {
             "mode": self.mode,
