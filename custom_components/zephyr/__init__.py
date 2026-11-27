@@ -29,6 +29,7 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.S
 if TYPE_CHECKING:
     from .control import ZephyrControl
     from .cost_recorder import CostRecorder
+    from .curtail import CurtailManager
     from .energy_recorder import EnergyRecorder
     from .pack_recorder import PackRecorder
     from .planner_runner import PlanRunner
@@ -50,6 +51,7 @@ class ZephyrRuntime:
     packs: PackRecorder | None = None
     vacation: VacationManager | None = None
     energy: EnergyRecorder | None = None
+    curtail: CurtailManager | None = None
     options: dict[str, Any] = field(default_factory=dict)
     """The options in use; a change of only live fields is applied without a reload (UI-7)."""
 
@@ -200,6 +202,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
     entry.async_on_unload(runtime.control.async_start())
     entry.async_on_unload(await runtime.tariffs.async_start())
     entry.async_on_unload(await runtime.costs.async_start())
+
+    from .curtail import CurtailManager
+
+    runtime.curtail = CurtailManager(hass, dict(entry.options), runtime)
+    entry.async_on_unload(await runtime.curtail.async_start())
     from .pack_recorder import PackRecorder
 
     runtime.packs = PackRecorder(hass, entry.entry_id, runtime)

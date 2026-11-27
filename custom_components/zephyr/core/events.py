@@ -15,7 +15,7 @@ from typing import Any, Final
 from .engine import REASON_TEXT, Reason, ReasonCode
 
 MAX_EVENTS: Final = 100
-FLASH_KINDS: Final = ("standby", "soc_limits")
+FLASH_KINDS: Final = ("standby", "soc_limits", "grid_reverse")
 MARKERS: Final = ("live", "shadow", "test", "test_end", "second_controller")
 
 

@@ -326,6 +326,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--alpha", type=float, default=0.0, help="cautious solar 0–1 (B32): plan with mid − alpha × (mid − p10)")
     ap.add_argument("--rules", choices=["both", "2026", "2027"], default="both")
     ap.add_argument("--quick", action="store_true", help="only no battery, zero meter and the planner with wear")
+    ap.add_argument("--curtail", action="store_true", help="the planner counts surplus solar at a negative export price as curtailed")
     ap.add_argument(
         "--wear", type=float, default=0.03, help="€ per kWh out of the battery (PU3), for the 'incl. wear' column and the wear runs"
     )
@@ -363,6 +364,7 @@ def main(argv: list[str] | None = None) -> None:
 
         def run(name: str, cfg: PlannerSettings, tariffs: Tariffs = tariffs) -> Result:
             forecaster = Forecaster(quarters, args.load, args.sun, solcast, args.alpha)
+            cfg = replace(cfg, curtail=args.curtail)
             return simulate(name, quarters, tariffs, battery, planner_strategy(tariffs, battery, cfg, forecaster))
 
         runs = [

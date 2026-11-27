@@ -332,7 +332,9 @@
           "plan_load_margin": "Planner: load margin",
           "plan_buffer": "Planner: buffer above the minimum",
           "vacation_when_away": "Vacation when nobody is home",
-          "workday_entity": "Workday sensor (holidays)"
+          "workday_entity": "Workday sensor (holidays)",
+          "curtail_negative": "Surplus solar at a negative price",
+          "curtail_switch": "Inverter curtail switch"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -366,7 +368,9 @@
           "plan_load_margin": "The planner chooses as if the house uses this much more (buffer against a low estimate). Not in the costs. 0 = off.",
           "plan_buffer": "The planner never plans below the minimum state of charge plus this buffer; the controller may use it when the house uses more than expected. 0 = off.",
           "vacation_when_away": "Switches the vacation on by itself when nobody has been home (zone.home = 0) for 24 hours, and off when someone is back. While on vacation the planner uses the standby use, the air conditioner counts as off, and the hours are learned apart from the normal profile.",
-          "workday_entity": "Optional. The binary sensor of the Workday integration. Holidays then count as weekend days in the consumption profile (learning and planning). Without it: Monday-Friday are workdays."
+          "workday_entity": "Optional. The binary sensor of the Workday integration. Holidays then count as weekend days in the consumption profile (learning and planning). Without it: Monday-Friday are workdays.",
+          "curtail_negative": "What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and turns on the switch below.",
+          "curtail_switch": "On while the export price is negative (only with ZEPHYR)."
         }
       }
     },
@@ -392,6 +396,13 @@
         "fan_only": "Fan",
         "heat_cool": "Heating/cooling",
         "auto": "Auto"
+      }
+    },
+    "curtail_mode": {
+      "options": {
+        "curtail_off": "Off (exported, costs money)",
+        "curtail_external": "Another system curtails",
+        "curtail_zephyr": "ZEPHYR curtails"
       }
     }
   },

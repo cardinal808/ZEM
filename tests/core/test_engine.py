@@ -387,3 +387,31 @@ def test_no_recharge_at_the_minimum() -> None:
     r = e.step(0, [_at_soc(10)])
     assert r.reason.code is not ReasonCode.RECHARGE_MIN
     assert r.setpoint <= 0
+
+
+def _grid_reverse(result) -> list[int]:  # type: ignore[no-untyped-def]
+    return [c.props["gridReverse"] for c in result.commands if "gridReverse" in c.props]
+
+
+def test_grid_reverse_follows_a_negative_export_price() -> None:
+    """The fixture reports gridReverse 1 (export allowed)."""
+    e = ZephyrEngine(Settings(min_soc=10, max_soc=100))
+    e.p1_reported(0, 0)
+    assert _grid_reverse(e.step(0, [_view()])) == []  # not managed
+    e.p1_reported(2, 0)
+    blocked = e.step(2, [_view()], export_blocked=True)
+    assert _grid_reverse(blocked) == [2]
+    assert len([c for c in blocked.commands if c.key == "a"]) == len({c.kind for c in blocked.commands if c.key == "a"})
+    e.p1_reported(4, 0)
+    assert _grid_reverse(e.step(4, [_view()], export_blocked=True)) == []  # sent, waiting for the report
+    e.p1_reported(70, 0)
+    assert _grid_reverse(e.step(70, [_view()], export_blocked=True)) == [2]  # still not taken after 60 s: again
+    e.p1_reported(72, 0)
+    assert _grid_reverse(e.step(72, [_view()], export_blocked=False)) == []  # the set already allows export
+
+
+def test_grid_reverse_rides_along_with_a_power_command() -> None:
+    e = ZephyrEngine(Settings(min_soc=10, max_soc=100))
+    e.p1_reported(0, 600)
+    result = e.step(0, [_view()], export_blocked=True)
+    assert [(c.kind, c.props["gridReverse"]) for c in result.commands] == [("power", 2)]  # one write, not two
