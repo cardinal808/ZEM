@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.39 — Diagnose: energy counters
+- New card **Energietellers** in Diagnose for ZEPHYR's own counters per set (SPEC-tellers T1/T2): charged, delivered and solar (kWh since the start), the part filled in after gaps (kWh and %), failed reads, an open gap (set unreachable or restart), and the latest gaps with duration, method (interpolated / from the state of charge / nothing to fill in) and kWh. With more sets also the installation's totals.
+- `zephyr/events` gives `energy` (the counters' diagnostics).
+- Tests: estimated share and gap order in vitest.
+
 ### 0.8.37 — Short peaks counted (PLANNING 1.3)
 - The step filter (B20) leaves short peaks (a boiling-water tap, a kettle) to the grid for up to 10 s; ZEPHYR now counts the energy of those peaks: the part of the grid power the controller did not see while a peak was held (not while charging, where the filter does not apply).
 - Diagnostics `control.p1_filter`: `peak_kwh` (since the start), and per local day `kwh` and `holds` (last 14 days, in memory). Basis for the panel (Besparing) later.

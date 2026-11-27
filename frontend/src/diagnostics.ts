@@ -2,8 +2,21 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { eventKind, eventText, profileStats, relDiff, type CheckMetric, type EventsView, type PlanCheckView, type ProfileView } from "./diag";
-import { clock, day, sameDay } from "./format";
+import {
+  allGaps,
+  ENERGY_KEYS,
+  estimatedShare,
+  eventKind,
+  eventText,
+  profileStats,
+  relDiff,
+  type CheckMetric,
+  type EnergyView,
+  type EventsView,
+  type PlanCheckView,
+  type ProfileView,
+} from "./diag";
+import { clock, day, percent, sameDay } from "./format";
 import { t, type Lang } from "./i18n";
 
 export type ExportResult = { path: string; rows: number };
@@ -25,7 +38,10 @@ export class ZephyrDiagnostics extends LitElement {
   @state() private dayKind: "workday" | "weekend" = "workday";
   @state() private metric: CheckMetric = "load";
 
-  private tr(key: string, params: Record<string, string | number> = {}): string {
+  private tr(
+    key: string,
+    params: Record<string, string | number> = {},
+  ): string {
     return t(this.uiLang, key, params);
   }
 
@@ -37,10 +53,19 @@ export class ZephyrDiagnostics extends LitElement {
       if (kind === "download") await this.download?.();
       else {
         const r = await this.exportCosts?.();
-        if (r) this.note = { text: this.tr("diag.exported", { path: r.path, rows: r.rows }), error: false };
+        if (r)
+          this.note = {
+            text: this.tr("diag.exported", { path: r.path, rows: r.rows }),
+            error: false,
+          };
       }
     } catch (err) {
-      this.note = { text: this.tr("diag.failed", { error: (err as { message?: string })?.message ?? String(err) }), error: true };
+      this.note = {
+        text: this.tr("diag.failed", {
+          error: (err as { message?: string })?.message ?? String(err),
+        }),
+        error: true,
+      };
     } finally {
       this.busy = null;
     }
@@ -53,23 +78,43 @@ export class ZephyrDiagnostics extends LitElement {
         <h2>${this.tr("diag.title")}</h2>
         <p class="muted">${this.tr("diag.intro")}</p>
         <div class="buttons">
-          <button type="button" class="primary" ?disabled=${!view || this.busy !== null} @click=${() => void this.run("download")}>
+          <button
+            type="button"
+            class="primary"
+            ?disabled=${!view || this.busy !== null}
+            @click=${() => void this.run("download")}
+          >
             ${this.tr(this.busy === "download" ? "diag.busy" : "diag.download")}
           </button>
-          ${this.admin
-            ? html`<button type="button" class="ghost" ?disabled=${this.busy !== null} @click=${() => void this.run("export")}>
-                ${this.tr(this.busy === "export" ? "diag.busy" : "diag.export")}
-              </button>`
-            : nothing}
+          ${
+            this.admin
+              ? html`<button
+                  type="button"
+                  class="ghost"
+                  ?disabled=${this.busy !== null}
+                  @click=${() => void this.run("export")}
+                >
+                  ${this.tr(this.busy === "export" ? "diag.busy" : "diag.export")}
+                </button>`
+              : nothing
+          }
         </div>
         ${this.note ? html`<p class=${this.note.error ? "note error" : "note"} role="status">${this.note.text}</p>` : nothing}
         ${view ? this.renderCounters(view) : html`<div class="skeleton"></div>`}
       </section>
-      ${this.planCheck ? this.renderCheck(this.planCheck) : nothing} ${view?.profile ? this.renderProfile(view.profile) : nothing}
+      ${view?.energy ? this.renderEnergy(view.energy) : nothing}
+      ${this.planCheck ? this.renderCheck(this.planCheck) : nothing}
+      ${view?.profile ? this.renderProfile(view.profile) : nothing}
       <section class="card events" aria-labelledby="events-title">
         <div class="head">
           <h2 id="events-title">${this.tr("diag.events")}</h2>
-          <button type="button" class="ghost small" @click=${() => this.refresh?.()}>${this.tr("diag.refresh")}</button>
+          <button
+            type="button"
+            class="ghost small"
+            @click=${() => this.refresh?.()}
+          >
+            ${this.tr("diag.refresh")}
+          </button>
         </div>
         ${view ? this.renderEvents(view) : html`<div class="skeleton"></div>`}
       </section>
@@ -77,9 +122,13 @@ export class ZephyrDiagnostics extends LitElement {
   }
 
   private renderCounters(view: EventsView): TemplateResult {
-    if (!view.sets.length) return html`<p class="muted">${this.tr("diag.no_sets")}</p>`;
-    const n = (v: number | null) => (v === null ? "–" : new Intl.NumberFormat(this.locale).format(v));
-    return html`<h3>${this.tr(view.shadow ? "diag.counters_shadow" : "diag.counters")}</h3>
+    if (!view.sets.length)
+      return html`<p class="muted">${this.tr("diag.no_sets")}</p>`;
+    const n = (v: number | null) =>
+      v === null ? "–" : new Intl.NumberFormat(this.locale).format(v);
+    return html`<h3>
+        ${this.tr(view.shadow ? "diag.counters_shadow" : "diag.counters")}
+      </h3>
       ${view.shadow ? html`<p class="note">${this.tr("diag.shadow_counts")}</p>` : nothing}
       <table>
         <thead>
@@ -93,26 +142,144 @@ export class ZephyrDiagnostics extends LitElement {
         </thead>
         <tbody>
           ${view.sets.map(
-            (s) => html`<tr>
-                <th scope="row">${s.number}</th>
-                <td>${n(s.ram_24h)}</td>
-                <td>${n(s.flash_24h)}</td>
-                <td>${n(s.relay_24h)}</td>
-                <td class=${s.failed_24h ? "bad" : ""}>${n(s.failed_24h)}</td>
-              </tr>
-              ${s.last_error
-                ? html`<tr>
-                    <td colspan="5" class="lasterror">${this.tr("diag.last_error", { error: s.last_error })}</td>
-                  </tr>`
-                : nothing}`,
+            (s) =>
+              html`<tr>
+                  <th scope="row">${s.number}</th>
+                  <td>${n(s.ram_24h)}</td>
+                  <td>${n(s.flash_24h)}</td>
+                  <td>${n(s.relay_24h)}</td>
+                  <td class=${s.failed_24h ? "bad" : ""}>${n(s.failed_24h)}</td>
+                </tr>
+                ${
+                  s.last_error
+                    ? html`<tr>
+                        <td colspan="5" class="lasterror">
+                          ${this.tr("diag.last_error", { error: s.last_error })}
+                        </td>
+                      </tr>`
+                    : nothing
+                }`,
           )}
         </tbody>
       </table>
       <p class="muted small">${this.tr("diag.counters_note")}</p>`;
   }
 
+  private renderEnergy(e: EnergyView): TemplateResult {
+    const k = (v: number | undefined) =>
+      v === undefined
+        ? "–"
+        : new Intl.NumberFormat(this.locale, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(v);
+    const time = (iso: string) =>
+      new Date(iso).toLocaleString(this.locale, {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: this.timeZone,
+      });
+    const dur = (s: number) =>
+      s < 120
+        ? `${Math.round(s)} s`
+        : s < 7200
+          ? `${Math.round(s / 60)} min`
+          : `${(s / 3600).toLocaleString(this.locale, { maximumFractionDigits: 1 })} h`;
+    const gaps = allGaps(e).slice(0, 8);
+    const multi = e.sets.length > 1;
+    return html`<section class="card" aria-labelledby="en-title">
+      <div>
+        <h2 id="en-title">${this.tr("diag.energy_title")}</h2>
+        <p class="muted">${this.tr("diag.energy_sub")}</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">${this.tr("diag.set")}</th>
+            ${ENERGY_KEYS.map((key) => html`<th scope="col">${this.tr(`diag.energy_${key}`)}</th>`)}
+            <th scope="col">${this.tr("diag.energy_estimated")}</th>
+            <th scope="col">${this.tr("diag.energy_failed")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${e.sets.map((s, i) => {
+            const est = estimatedShare(s);
+            return html`<tr>
+                <th scope="row">${s.set ?? i + 1}</th>
+                ${ENERGY_KEYS.map((key) => html`<td>${k(s.kwh[key])}</td>`)}
+                <td>
+                  ${k(est.kwh)}${est.share !== null && est.kwh > 0 ? html` <span class="muted">(${percent(est.share * 100, this.locale)})</span>` : nothing}
+                </td>
+                <td class=${s.failed_reads ? "bad" : ""}>${s.failed_reads}</td>
+              </tr>
+              ${
+                s.open_gap
+                  ? html`<tr>
+                      <td colspan="6" class="lasterror">
+                        ${this.tr(s.open_gap.restart ? "diag.energy_open_restart" : "diag.energy_open", { since: time(s.open_gap.start) })}
+                      </td>
+                    </tr>`
+                  : nothing
+              }`;
+          })}
+          ${
+            multi
+              ? html`<tr class="total">
+                  <th scope="row">${this.tr("diag.energy_total")}</th>
+                  ${ENERGY_KEYS.map((key) => html`<td>${k(e.totals[key])}</td>`)}
+                  <td></td>
+                  <td></td>
+                </tr>`
+              : nothing
+          }
+        </tbody>
+      </table>
+      <h3>${this.tr("diag.energy_gaps")}</h3>
+      ${
+        gaps.length
+          ? html`<ul class="gaps">
+              ${gaps.map(
+                (g) =>
+                  html`<li>
+                    <span class="when"
+                      >${time(g.start)} ·
+                      ${dur(g.seconds)}${multi ? html` · ${this.tr("diag.set")} ${g.set}` : nothing}</span
+                    >
+                    <span
+                      >${this.tr(`diag.energy_m_${["none", "interpolate", "soc"].includes(g.method) ? g.method : "none"}`)}${g.restart ? ` · ${this.tr("diag.energy_restart")}` : ""}</span
+                    >
+                    <span class="muted"
+                      >${
+                        Object.entries(g.kwh)
+                          .filter(([key]) =>
+                            (ENERGY_KEYS as readonly string[]).includes(key),
+                          )
+                          .map(
+                            ([key, v]) =>
+                              `${this.tr(`diag.energy_${key}`).toLowerCase()} ${k(v)} kWh`,
+                          )
+                          .join(" · ") || this.tr("diag.energy_nothing")
+                      }</span
+                    >
+                  </li>`,
+              )}
+            </ul>`
+          : html`<p class="muted">${this.tr("diag.energy_no_gaps")}</p>`
+      }
+      <p class="muted small">${this.tr("diag.energy_note")}</p>
+    </section>`;
+  }
+
   private renderCheck(pc: PlanCheckView): TemplateResult {
-    const metrics: CheckMetric[] = ["load", "solar", "import", "export", "cost"];
+    const metrics: CheckMetric[] = [
+      "load",
+      "solar",
+      "import",
+      "export",
+      "cost",
+    ];
     const fmt = (m: CheckMetric, v: number, sign = false) => {
       const s = sign && v > 0 ? "+" : v < 0 ? "−" : "";
       const a = Math.abs(v);
@@ -121,107 +288,198 @@ export class ZephyrDiagnostics extends LitElement {
         : `${s}${new Intl.NumberFormat(this.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(a)} kWh`;
     };
     const days = pc.days.filter((d) => d[this.metric]);
-    const top = Math.max(0.1, ...days.flatMap((d) => [d[this.metric]?.expected ?? 0, d[this.metric]?.actual ?? 0].map(Math.abs)));
+    const top = Math.max(
+      0.1,
+      ...days.flatMap((d) =>
+        [d[this.metric]?.expected ?? 0, d[this.metric]?.actual ?? 0].map(
+          Math.abs,
+        ),
+      ),
+    );
     const dayLabel = (iso: string) =>
-      new Intl.DateTimeFormat(this.locale, { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T12:00:00Z`));
+      new Intl.DateTimeFormat(this.locale, {
+        weekday: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(`${iso}T12:00:00Z`));
     return html`<section class="card check" aria-labelledby="pc-title">
       <h2 id="pc-title">${this.tr("diag.check_title")}</h2>
-      <p class="muted">${this.tr("diag.check_intro", { n: pc.summary.days })}</p>
-      ${pc.summary.days === 0
-        ? html`<p class="note">${this.tr("diag.check_none")}</p>`
-        : html`<table class="ctable">
-            <thead>
-              <tr>
-                <th scope="col"></th>
-                <th scope="col">${this.tr("diag.check_expected")}</th>
-                <th scope="col">${this.tr("diag.check_actual")}</th>
-                <th scope="col">${this.tr("diag.check_diff")}</th>
-                <th scope="col">${this.tr("diag.check_daily")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${metrics.map((m) => {
-                const r = pc.summary[m];
-                if (!r) return nothing;
-                const rel = relDiff(r);
-                return html`<tr class=${m === this.metric ? "on" : ""} @click=${() => (this.metric = m)}>
-                  <th scope="row"><button type="button" class="linkish" aria-pressed=${m === this.metric ? "true" : "false"}>${this.tr(`diag.m_${m}`)}</button></th>
-                  <td>${fmt(m, r.expected)}</td>
-                  <td>${fmt(m, r.actual)}</td>
-                  <td class=${rel !== null && Math.abs(rel) > 0.15 ? "warnc" : ""}>
-                    ${fmt(m, r.diff, true)}${rel !== null ? html` <small>(${rel > 0 ? "+" : "−"}${Math.round(Math.abs(rel) * 100)} %)</small>` : nothing}
-                  </td>
-                  <td>${r.mean_abs_day !== undefined ? fmt(m, r.mean_abs_day) : "–"}</td>
-                </tr>`;
-              })}
-            </tbody>
-          </table>
-          <h3>${this.tr("diag.check_per_day", { metric: this.tr(`diag.m_${this.metric}`).toLowerCase() })}</h3>
-          <div class="cbars" role="img" aria-label=${this.tr("diag.check_per_day", { metric: this.tr(`diag.m_${this.metric}`) })}>
-            ${days.map((d) => {
-              const r = d[this.metric] as { expected: number; actual: number; diff: number };
-              const partial = d.quarters < d.of - 4;
-              return html`<div class="cday" title=${`${dayLabel(d.date)}: ${this.tr("diag.check_expected").toLowerCase()} ${fmt(this.metric, r.expected)}, ${this.tr("diag.check_actual").toLowerCase()} ${fmt(this.metric, r.actual)}${partial ? ` (${this.tr("diag.check_partial", { n: d.quarters, of: d.of })})` : ""}`}>
-                <div class="cpair">
-                  <i class="exp" style=${`height:${(Math.abs(r.expected) / top) * 100}%`}></i>
-                  <i class=${partial ? "act part" : "act"} style=${`height:${(Math.abs(r.actual) / top) * 100}%`}></i>
-                </div>
-                <span>${dayLabel(d.date)}</span>
-              </div>`;
-            })}
-          </div>
-          <div class="plegend">
-            <span><i class="sw exp"></i>${this.tr("diag.check_expected")}</span>
-            <span><i class="sw act"></i>${this.tr("diag.check_actual")}</span>
-          </div>`}
+      <p class="muted">
+        ${this.tr("diag.check_intro", { n: pc.summary.days })}
+      </p>
+      ${
+        pc.summary.days === 0
+          ? html`<p class="note">${this.tr("diag.check_none")}</p>`
+          : html`<table class="ctable">
+                <thead>
+                  <tr>
+                    <th scope="col"></th>
+                    <th scope="col">${this.tr("diag.check_expected")}</th>
+                    <th scope="col">${this.tr("diag.check_actual")}</th>
+                    <th scope="col">${this.tr("diag.check_diff")}</th>
+                    <th scope="col">${this.tr("diag.check_daily")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${metrics.map((m) => {
+                    const r = pc.summary[m];
+                    if (!r) return nothing;
+                    const rel = relDiff(r);
+                    return html`<tr
+                      class=${m === this.metric ? "on" : ""}
+                      @click=${() => (this.metric = m)}
+                    >
+                      <th scope="row">
+                        <button
+                          type="button"
+                          class="linkish"
+                          aria-pressed=${m === this.metric ? "true" : "false"}
+                        >
+                          ${this.tr(`diag.m_${m}`)}
+                        </button>
+                      </th>
+                      <td>${fmt(m, r.expected)}</td>
+                      <td>${fmt(m, r.actual)}</td>
+                      <td
+                        class=${rel !== null && Math.abs(rel) > 0.15 ? "warnc" : ""}
+                      >
+                        ${fmt(m, r.diff, true)}${rel !== null ? html` <small>(${rel > 0 ? "+" : "−"}${Math.round(Math.abs(rel) * 100)} %)</small>` : nothing}
+                      </td>
+                      <td>
+                        ${r.mean_abs_day !== undefined ? fmt(m, r.mean_abs_day) : "–"}
+                      </td>
+                    </tr>`;
+                  })}
+                </tbody>
+              </table>
+              <h3>
+                ${this.tr("diag.check_per_day", { metric: this.tr(`diag.m_${this.metric}`).toLowerCase() })}
+              </h3>
+              <div
+                class="cbars"
+                role="img"
+                aria-label=${this.tr("diag.check_per_day", { metric: this.tr(`diag.m_${this.metric}`) })}
+              >
+                ${days.map((d) => {
+                  const r = d[this.metric] as {
+                    expected: number;
+                    actual: number;
+                    diff: number;
+                  };
+                  const partial = d.quarters < d.of - 4;
+                  return html`<div
+                    class="cday"
+                    title=${`${dayLabel(d.date)}: ${this.tr("diag.check_expected").toLowerCase()} ${fmt(this.metric, r.expected)}, ${this.tr("diag.check_actual").toLowerCase()} ${fmt(this.metric, r.actual)}${partial ? ` (${this.tr("diag.check_partial", { n: d.quarters, of: d.of })})` : ""}`}
+                  >
+                    <div class="cpair">
+                      <i
+                        class="exp"
+                        style=${`height:${(Math.abs(r.expected) / top) * 100}%`}
+                      ></i>
+                      <i
+                        class=${partial ? "act part" : "act"}
+                        style=${`height:${(Math.abs(r.actual) / top) * 100}%`}
+                      ></i>
+                    </div>
+                    <span>${dayLabel(d.date)}</span>
+                  </div>`;
+                })}
+              </div>
+              <div class="plegend">
+                <span
+                  ><i class="sw exp"></i>${this.tr("diag.check_expected")}</span
+                >
+                <span
+                  ><i class="sw act"></i>${this.tr("diag.check_actual")}</span
+                >
+              </div>`
+      }
     </section>`;
   }
 
   private renderProfile(p: ProfileView): TemplateResult {
     const d = p[this.dayKind];
     const st = profileStats(d);
-    const nf = (v: number, digits = 1) => new Intl.NumberFormat(this.locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(v);
-    const hasAirco = d.airco.some((v) => v > 0) || p.workday.airco.some((v) => v > 0);
+    const nf = (v: number, digits = 1) =>
+      new Intl.NumberFormat(this.locale, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      }).format(v);
+    const hasAirco =
+      d.airco.some((v) => v > 0) || p.workday.airco.some((v) => v > 0);
     return html`<section class="card profile" aria-labelledby="profile-title">
       <div class="head">
         <h2 id="profile-title">${this.tr("diag.profile")}</h2>
         <div class="tabs" role="group">
           ${(["workday", "weekend"] as const).map(
-            (k) => html`<button type="button" class=${this.dayKind === k ? "on" : ""} aria-pressed=${this.dayKind === k ? "true" : "false"} @click=${() => (this.dayKind = k)}>
-              ${this.tr(`diag.${k}`)}
-            </button>`,
+            (k) =>
+              html`<button
+                type="button"
+                class=${this.dayKind === k ? "on" : ""}
+                aria-pressed=${this.dayKind === k ? "true" : "false"}
+                @click=${() => (this.dayKind = k)}
+              >
+                ${this.tr(`diag.${k}`)}
+              </button>`,
           )}
         </div>
       </div>
-      <p class="muted">${this.tr("diag.profile_source", { source: p.source, hours: p.hours })}</p>
-      ${st.learned === 0
-        ? html`<p class="note">${this.tr(`diag.profile_empty_${this.dayKind}`, { mean: nf(p.mean, 2) })}</p>`
-        : html`<p class="sum">
-              ${this.tr("diag.profile_total", { kwh: nf(st.total) })}${hasAirco ? html` · ${this.tr("diag.profile_airco", { kwh: nf(st.aircoTotal) })}` : nothing}
-            </p>
-            <div class="pchart" role="img" aria-label=${this.tr("diag.profile_total", { kwh: nf(st.total) })}>
-              <div class="paxis"><span>${nf(st.top)}</span><span>0</span></div>
-              <div class="pbars">
-                ${d.house.map((h, i) => {
-                  const a = d.airco[i] ?? 0;
-                  return html`<div class=${d.counts[i] >= d.min_count ? "pcol" : "pcol none"} title=${this.tr("diag.profile_hour", { hour: i, house: nf(h, 2), airco: nf(a, 2), n: d.counts[i] })}>
-                    ${a > 0 ? html`<i class="air" style="height:${(a / st.top) * 100}%"></i>` : nothing}
-                    <i class="house" style="height:${(h / st.top) * 100}%"></i>
-                  </div>`;
-                })}
+      <p class="muted">
+        ${this.tr("diag.profile_source", { source: p.source, hours: p.hours })}
+      </p>
+      ${
+        st.learned === 0
+          ? html`<p class="note">
+              ${this.tr(`diag.profile_empty_${this.dayKind}`, { mean: nf(p.mean, 2) })}
+            </p>`
+          : html`<p class="sum">
+                ${this.tr("diag.profile_total", { kwh: nf(st.total) })}${hasAirco ? html` · ${this.tr("diag.profile_airco", { kwh: nf(st.aircoTotal) })}` : nothing}
+              </p>
+              <div
+                class="pchart"
+                role="img"
+                aria-label=${this.tr("diag.profile_total", { kwh: nf(st.total) })}
+              >
+                <div class="paxis">
+                  <span>${nf(st.top)}</span><span>0</span>
+                </div>
+                <div class="pbars">
+                  ${d.house.map((h, i) => {
+                    const a = d.airco[i] ?? 0;
+                    return html`<div
+                      class=${d.counts[i] >= d.min_count ? "pcol" : "pcol none"}
+                      title=${this.tr("diag.profile_hour", { hour: i, house: nf(h, 2), airco: nf(a, 2), n: d.counts[i] })}
+                    >
+                      ${a > 0 ? html`<i class="air" style="height:${(a / st.top) * 100}%"></i>` : nothing}
+                      <i
+                        class="house"
+                        style="height:${(h / st.top) * 100}%"
+                      ></i>
+                    </div>`;
+                  })}
+                </div>
+                <div class="pticks">
+                  ${[0, 6, 12, 18, 23].map((h) => html`<span style="left:${((h + 0.5) / 24) * 100}%">${String(h).padStart(2, "0")}</span>`)}
+                </div>
               </div>
-              <div class="pticks">${[0, 6, 12, 18, 23].map((h) => html`<span style="left:${((h + 0.5) / 24) * 100}%">${String(h).padStart(2, "0")}</span>`)}</div>
-            </div>
-            <div class="plegend">
-              <span><i class="sw house"></i>${this.tr("diag.profile_house")}</span>
-              ${hasAirco ? html`<span><i class="sw air"></i>${this.tr("diag.profile_airco_legend")}</span>` : nothing}
-              <span><i class="sw house faint"></i>${this.tr("diag.profile_learned", { n: st.learned, mean: nf(p.mean, 2) })}</span>
-            </div>`}
+              <div class="plegend">
+                <span
+                  ><i class="sw house"></i
+                  >${this.tr("diag.profile_house")}</span
+                >
+                ${hasAirco ? html`<span><i class="sw air"></i>${this.tr("diag.profile_airco_legend")}</span>` : nothing}
+                <span
+                  ><i class="sw house faint"></i
+                  >${this.tr("diag.profile_learned", { n: st.learned, mean: nf(p.mean, 2) })}</span
+                >
+              </div>`
+      }
     </section>`;
   }
 
   private renderEvents(view: EventsView): TemplateResult {
-    if (!view.events.length) return html`<p class="muted">${this.tr("diag.no_events")}</p>`;
+    if (!view.events.length)
+      return html`<p class="muted">${this.tr("diag.no_events")}</p>`;
     const nowIso = new Date().toISOString();
     return html`<ol>
       ${view.events.map((e) => {
@@ -419,7 +677,11 @@ export class ZephyrDiagnostics extends LitElement {
       border-radius: 0 0 2px 2px;
     }
     .pcol .air {
-      background: repeating-linear-gradient(45deg, var(--z-deliver) 0 2px, transparent 2px 5px);
+      background: repeating-linear-gradient(
+        45deg,
+        var(--z-deliver) 0 2px,
+        transparent 2px 5px
+      );
       border: 1px solid var(--z-deliver);
       border-bottom: 0;
       box-sizing: border-box;
@@ -465,7 +727,11 @@ export class ZephyrDiagnostics extends LitElement {
       opacity: 0.35;
     }
     .sw.air {
-      background: repeating-linear-gradient(45deg, var(--z-deliver) 0 2px, transparent 2px 4px);
+      background: repeating-linear-gradient(
+        45deg,
+        var(--z-deliver) 0 2px,
+        transparent 2px 4px
+      );
       border: 1px solid var(--z-deliver);
       box-sizing: border-box;
     }
@@ -565,6 +831,31 @@ export class ZephyrDiagnostics extends LitElement {
     td.bad {
       color: var(--z-bad-text, #b3261e);
       font-weight: 700;
+    }
+    .gaps {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .gaps li {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px 12px;
+      border-bottom: 1px solid var(--z-border);
+      padding-bottom: 6px;
+    }
+    .gaps .when {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+    tr.total th,
+    tr.total td {
+      border-top: 2px solid var(--z-border);
+      font-weight: 600;
     }
     .lasterror {
       text-align: left;

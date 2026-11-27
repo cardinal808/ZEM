@@ -528,6 +528,7 @@ def events_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         "events": events_from_log(control.log),
         "sets": sets,
         "profile": _profile(runtime.planner),
+        "energy": runtime.energy.diagnostics() if runtime.energy is not None else None,
     }
 
 
