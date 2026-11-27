@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from .pack_recorder import PackRecorder
     from .planner_runner import PlanRunner
     from .solar_recorder import SolarRecorder
+    from .stroom_devices import StroomDevices
     from .tariff_provider import TariffProvider
     from .vacation import VacationManager
 
@@ -62,6 +63,8 @@ class ZephyrRuntime:
     energy: EnergyRecorder | None = None
     curtail: CurtailManager | None = None
     appliances: ApplianceManager | None = None
+    house: StroomDevices | None = None
+    """Consumers in view on the screen Stroom (plugs of the appliances, airco)."""
     options: dict[str, Any] = field(default_factory=dict)
     """The options in use; a change of only live fields is applied without a reload (UI-7)."""
 
@@ -255,6 +258,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
     entry.async_on_unload(
         await runtime.appliances.async_start(runtime.planner.async_request if runtime.planner is not None else lambda: None)
     )
+    from .stroom_devices import StroomDevices
+
+    runtime.house = StroomDevices(hass, entry.entry_id, runtime)
+    entry.async_on_unload(await runtime.house.async_start())
     from .energy_recorder import EnergyRecorder
 
     runtime.energy = EnergyRecorder(hass, entry.entry_id, runtime)

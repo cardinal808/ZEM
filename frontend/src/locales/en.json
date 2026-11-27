@@ -217,7 +217,8 @@
       "corrections": "Corrections",
       "zero_meter": "Zero on the meter without planner",
       "testing": "Test phase",
-      "vacation": "Vacation"
+      "vacation": "Vacation",
+      "house": "House view"
     },
     "modified_n": "{n} changed",
     "default": "standard: {value}",
@@ -491,7 +492,18 @@
     "vac_until_label": "Back on",
     "vac_start": "Start vacation",
     "vac_stop": "End vacation",
-    "vac_help": "During a vacation the planner uses the standby use and learns it apart; the normal use profile stays clean. An end date is optional."
+    "vac_help": "During a vacation the planner uses the standby use and learns it apart; the normal use profile stays clean. An end date is optional.",
+    "house_note": "Which appliances appear on the Power screen, and on which floor. Add appliances with a smart plug via Devices & services → ZEPHYR → Add appliance; the air con comes from Corrections.",
+    "house_floor": "Floor",
+    "save": "Save",
+    "discard": "Cancel",
+    "floors": {
+      "attic": "Attic",
+      "first": "First floor",
+      "ground": "Ground floor",
+      "shed": "Shed",
+      "outside": "Outside"
+    }
   },
   "airco": {
     "blocked": "Air conditioner {kw} kW · not from the battery",
@@ -758,6 +770,19 @@
     "reg_recovery": "Recovery after a peak (median)",
     "reg_seconds": "{s} s",
     "reg_follow": "Battery follows, avg difference",
-    "reg_peaks": "Peaks > 150 W"
+    "reg_peaks": "Peaks > 150 W",
+    "devices_title": "Consumers today",
+    "devices_sub": "Per appliance with its own plug or meter (kWh, 00:00–now)",
+    "rest": "Rest of the house",
+    "airco_not_battery": "Air con not from the battery",
+    "airco_fed_line": "solar {solar} · grid {grid}",
+    "house_total": "House total",
+    "devices_hint": "Add appliances with a smart plug via Devices & services → ZEPHYR → Add appliance.",
+    "kind_airco": "Air con",
+    "kind_washer": "Washing machine",
+    "kind_dishwasher": "Dishwasher",
+    "kind_dryer_heat_pump": "Dryer",
+    "kind_dryer_condenser": "Dryer",
+    "kind_other": "Appliance"
   }
 }

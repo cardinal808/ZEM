@@ -167,3 +167,32 @@ async def test_panel_plans_and_clears_runs_over_the_websocket(
     from custom_components.zephyr.websocket_api import now_snapshot
 
     assert now_snapshot(hass, entry)["appliances_revision"] == entry.runtime_data.appliances.revision
+
+
+async def test_stroom_shows_the_plugs_with_floor_and_energy_today(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, hass_ws_client: Any
+) -> None:
+    """Screen Stroom: power now and kWh today per plug; the floor is set in the panel."""
+    from custom_components.zephyr.websocket_api import settings_view, stroom_view
+
+    client = await hass_ws_client(hass)
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (9, 0), price_entity=PRICE)
+    hass.states.async_set(PLUG, "0", {"unit_of_measurement": "W", "device_class": "power"})
+    await _add(hass, entry, "Wasmachine", "washer", power_entity=PLUG, window_from="08:00:00", window_until="20:00:00")
+    entry = hass.config_entries.async_get_entry(entry.entry_id)
+    washer = next(d for d in stroom_view(entry)["devices"] if d["name"] == "Wasmachine")
+    assert washer["floor"] == "attic" and washer["shown"] is True
+
+    await client.send_json_auto_id({"type": "zephyr/house/layout", "floors": {washer["id"]: "first"}, "hidden": []})
+    assert (await client.receive_json())["success"]
+    assert next(d for d in settings_view(hass, entry)["house"] if d["id"] == washer["id"])["floor"] == "first"
+
+    hass.states.async_set(PLUG, "2", {"unit_of_measurement": "kW", "device_class": "power"})
+    await hass.async_block_till_done()
+    await _tick(hass, freezer, 30 * 60, step=60)
+    hass.states.async_set(PLUG, "0", {"unit_of_measurement": "W", "device_class": "power"})
+    await hass.async_block_till_done()
+    washer = next(d for d in stroom_view(entry)["devices"] if d["name"] == "Wasmachine")
+    assert washer["power_w"] == 0
+    assert 0.95 < washer["today_kwh"] < 1.05  # 2 kW for half an hour

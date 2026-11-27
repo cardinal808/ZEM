@@ -217,7 +217,8 @@
       "corrections": "Correcties",
       "zero_meter": "Nul op de meter zonder planner",
       "testing": "Testfase",
-      "vacation": "Vakantie"
+      "vacation": "Vakantie",
+      "house": "Huis in beeld"
     },
     "modified_n": "{n} gewijzigd",
     "default": "standaard: {value}",
@@ -491,7 +492,18 @@
     "vac_until_label": "Terug op",
     "vac_start": "Vakantie aanzetten",
     "vac_stop": "Vakantie uitzetten",
-    "vac_help": "Tijdens een vakantie rekent de planner met het sluimerverbruik en leert hij dat apart; het gewone verbruiksprofiel blijft schoon. Een einddatum is optioneel."
+    "vac_help": "Tijdens een vakantie rekent de planner met het sluimerverbruik en leert hij dat apart; het gewone verbruiksprofiel blijft schoon. Een einddatum is optioneel.",
+    "house_note": "Welke apparaten op het Stroom-scherm staan, en op welke verdieping. Apparaten met een slimme stekker voeg je toe via Apparaten en diensten → ZEPHYR → Apparaat toevoegen; de airco komt uit Correcties.",
+    "house_floor": "Verdieping",
+    "save": "Opslaan",
+    "discard": "Annuleren",
+    "floors": {
+      "attic": "Zolder",
+      "first": "1e verdieping",
+      "ground": "Begane grond",
+      "shed": "Schuur",
+      "outside": "Buiten"
+    }
   },
   "airco": {
     "blocked": "Airco {kw} kW · niet uit de accu",
@@ -758,6 +770,19 @@
     "reg_recovery": "Hersteltijd na een piek (mediaan)",
     "reg_seconds": "{s} s",
     "reg_follow": "Accu volgt opdracht, gem. verschil",
-    "reg_peaks": "Pieken > 150 W"
+    "reg_peaks": "Pieken > 150 W",
+    "devices_title": "Verbruikers vandaag",
+    "devices_sub": "Per apparaat met een eigen stekker of meter (kWh, 00:00–nu)",
+    "rest": "Overig huis",
+    "airco_not_battery": "Airco niet uit de accu",
+    "airco_fed_line": "zon {solar} · net {grid}",
+    "house_total": "Huis totaal",
+    "devices_hint": "Voeg apparaten met een slimme stekker toe via Apparaten en diensten → ZEPHYR → Apparaat toevoegen.",
+    "kind_airco": "Airco",
+    "kind_washer": "Wasmachine",
+    "kind_dishwasher": "Vaatwasser",
+    "kind_dryer_heat_pump": "Droger",
+    "kind_dryer_condenser": "Droger",
+    "kind_other": "Apparaat"
   }
 }
