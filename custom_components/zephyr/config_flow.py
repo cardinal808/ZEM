@@ -145,6 +145,7 @@ class ZephyrConfigFlow(ConfigFlow, domain=DOMAIN):
     """Install ZEPHYR by adding the first set (by hand or via discovery)."""
 
     VERSION = 1
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         self._host: str | None = None
@@ -623,7 +624,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                     )
                 ),
                 vol.Required(CONF_VACATION_AWAY, default=options.get(CONF_VACATION_AWAY, False)): bool,
-                vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, True)): bool,
+                vol.Required(CONF_LIVE_OFF_AFTER_RESTART, default=options.get(CONF_LIVE_OFF_AFTER_RESTART, False)): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

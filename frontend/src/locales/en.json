@@ -402,8 +402,8 @@
         "more": "Empty = no minimum."
       },
       "live_off_after_restart": {
-        "label": "Control off after restart",
-        "help": "After a restart of HA start in shadow mode.",
+        "label": "Live control off after a restart (test phase)",
+        "help": "Off (default): after a restart live control comes back on its own as soon as the P1 reports and the sets are online (if it was on). On: it stays off and you switch it on yourself.",
         "more": "For the test phase: after every restart you switch control on yourself."
       },
       "vacation_when_away": {

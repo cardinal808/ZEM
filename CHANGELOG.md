@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.42 — Live control stays live after a restart
+- **A new installation starts in shadow mode** (as before). **Once you switch live control on, it stays on**: after a restart or reload of Home Assistant ZEPHYR goes live again by itself as soon as it can (P1 reporting, sets online), trying every 5 s for up to 10 minutes. If it cannot, it stays in shadow mode and shows a repair issue *ZEPHYR did not resume live control* with the reasons. Switching it off yourself stays off.
+- The test-phase setting *Live control off after a restart* now defaults to **off**, and is turned off once for existing installations (config entry 1.2). Switch it on again to keep the old behaviour.
+- Tests: new installation in shadow, live after a restart, the setting on, a set that stays away, the migration.
+
 ### 0.8.41 — Planned appliances: dishwasher, washing machine, dryer (B36)
 - **New subentry *Appliance*** (ZEPHYR → Add appliance): name, kind (dishwasher, washing machine, dryer heat pump / condenser, other), optional smart-plug power and energy sensor, standard window (*from* — empty = from now — and *done by*; a time before the start = the next day). Dishwasher defaults to now → 07:00, the others 08:00 → 20:00.
 - **Per appliance:** `button.zephyr_<name>_plan` (one run in the standard window; press again for another), `button.zephyr_<name>_clear`, `sensor.zephyr_<name>_planned` (number of runs; windows, kWh per run, profile source), `sensor.zephyr_<name>_best_start` (timestamp; cost, cost when started at once, saving, all starts) and, with a plug, `binary_sensor.zephyr_<name>_running`. Actions `zephyr.plan_appliance` (runs, start after, done before, fixed start) and `zephyr.clear_appliance`.

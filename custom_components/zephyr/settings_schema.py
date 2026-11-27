@@ -164,7 +164,7 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_EXPENSIVE_HOURS, "zero_meter", "number", DEFAULT_EXPENSIVE_HOURS, "h", 1, 12, 1),
     Field(CONF_RESERVE_SOC, "zero_meter", "number", DEFAULT_RESERVE_SOC, "%", 0, 80, 1),
     Field(CONF_MIN_PRICE, "zero_meter", "number", None, "€/kWh", -1, 2, 0.01, optional=True),
-    Field(CONF_LIVE_OFF_AFTER_RESTART, "testing", "bool", True),
+    Field(CONF_LIVE_OFF_AFTER_RESTART, "testing", "bool", False),
 )
 
 BY_KEY: Final = {f.key: f for f in FIELDS}
