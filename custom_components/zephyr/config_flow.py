@@ -17,6 +17,7 @@ from homeassistant.config_entries import (
     SubentryFlowResult,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -357,16 +358,59 @@ class ApplianceSubentryFlow(ConfigSubentryFlow):
 
 
 P1_HINTS = ("p1", "power_consumption", "net_power", "grid_power", "electricity_meter", "homewizard")
+P1_PLATFORMS = ("dsmr", "dsmr_reader", "p1_monitor", "homewizard", "slimmelezer")
+"""Integrations of smart-meter readers; HomeWizard only for its P1 meter (not its plugs)."""
+SOLAR_PLATFORMS = (
+    "solaredge",
+    "solaredge_modbus",
+    "solaredge_modbus_multi",
+    "enphase_envoy",
+    "fronius",
+    "sma",
+    "growatt_server",
+    "huawei_solar",
+    "goodwe",
+    "solax",
+    "sungrow",
+    "solarman",
+    "foxess",
+    "apsystems",
+    "hoymiles",
+    "opendtu",
+)
+"""Inverter integrations: their production counter is a good solar counter."""
+_PHASE = ("phase", "_l1", "_l2", "_l3")
+
+
+def _platform_and_model(hass: HomeAssistant, entity_id: str) -> tuple[str | None, str]:
+    entry = er.async_get(hass).async_get(entity_id)
+    if entry is None:
+        return None, ""
+    model = ""
+    if entry.device_id:
+        device = dr.async_get(hass).async_get(entry.device_id)
+        model = f"{device.manufacturer or ''} {device.model or ''}" if device is not None else ""
+    return entry.platform, model
+
+
+def _is_meter_reader(hass: HomeAssistant, entity_id: str) -> bool:
+    platform, model = _platform_and_model(hass, entity_id)
+    if platform not in P1_PLATFORMS:
+        return False
+    return platform != "homewizard" or "p1" in model.lower()
 
 
 def suggest_p1_entity(hass: HomeAssistant) -> str | None:
-    """Best guess for the P1 power sensor: a power sensor whose id looks like a grid meter."""
+    """Best guess for the P1 power sensor: a meter reader's total power, else a name like a grid meter."""
     candidates: list[tuple[int, str]] = []
     for state in hass.states.async_all("sensor"):
         if state.attributes.get("device_class") != SensorDeviceClass.POWER or state.entity_id.startswith("sensor.zephyr_"):
             continue
         name = state.entity_id.lower()
         score = sum(10 - i for i, hint in enumerate(P1_HINTS) if hint in name)
+        if _is_meter_reader(hass, state.entity_id) and not any(p in name for p in _PHASE):
+            # By integration: also a meter whose sensor has another name. A net (signed) total first.
+            score += 50 + (5 if "production" not in name and "produced" not in name and "export" not in name else 0)
         if score:
             candidates.append((score, state.entity_id))
     return max(candidates)[1] if candidates else None
@@ -448,9 +492,13 @@ def suggest_solar(hass: HomeAssistant) -> tuple[str | None, str | None]:
             continue
         if st.attributes.get("state_class") != "total_increasing":
             continue
-        if any(word in name for word in ("solaredge", "solar", "pv", "inverter", "omvormer")) and "forecast" not in name:
+        if "forecast" in name:
+            continue
+        platform, _model = _platform_and_model(hass, st.entity_id)
+        if platform in SOLAR_PLATFORMS:
+            return forecast, st.entity_id  # an inverter's counter wins over a name
+        if energy is None and any(word in name for word in ("solaredge", "solar", "pv", "inverter", "omvormer")):
             energy = st.entity_id
-            break
     return forecast, energy
 
 
@@ -459,7 +507,13 @@ def suggest_meter_counters(hass: HomeAssistant) -> tuple[list[str], list[str]]:
     names = sorted(st.entity_id for st in hass.states.async_all("sensor") if st.attributes.get("device_class") == SensorDeviceClass.ENERGY)
     imports = [n for n in names if "energy_consumed_tariff_" in n or "energy_import_tariff_" in n]
     exports = [n for n in names if "energy_produced_tariff_" in n or "energy_export_tariff_" in n]
-    return (imports, exports) if imports and exports else ([], [])
+    if imports and exports:
+        return imports, exports
+    # A meter reader with one total counter per direction (no tariffs), by integration.
+    readers = [n for n in names if _is_meter_reader(hass, n) and not any(p in n for p in _PHASE)]
+    imports = [n for n in readers if any(w in n for w in ("import", "consum", "delivered_to_client"))]
+    exports = [n for n in readers if any(w in n for w in ("export", "produc", "delivered_by_client"))]
+    return (imports[:1], exports[:1]) if imports and exports else ([], [])
 
 
 def _energy_sensors() -> selector.EntitySelector:

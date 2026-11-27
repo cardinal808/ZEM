@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.61 — Settings suggest sources by integration
+- **P1:** a power sensor of a smart-meter reader (DSMR, DSMR Reader, P1 Monitor, SlimmeLezer, the HomeWizard P1 meter — not its plugs) is suggested whatever its name; per-phase sensors are skipped. The name hints stay as fallback.
+- **Solar counter:** a production counter of an inverter integration (SolarEdge, SolarEdge Modbus, Enphase, Fronius, SMA, Growatt, Huawei, GoodWe, Solax, Sungrow, Solarman, FoxESS, APsystems, Hoymiles, OpenDTU) wins over a name match; forecast sensors are skipped.
+- **Meter counters for the cost log:** without per-tariff counters, the import and export total of a meter reader (e.g. HomeWizard P1).
+
 ### 0.8.60 — Prices from Home Assistant's own Nord Pool integration
 - The price sensor may now also be the **current price of the Nord Pool integration that ships with Home Assistant** (until now only the HACS Nord Pool with `raw_today`). ZEPHYR fetches today and tomorrow with the action `nordpool.get_prices_for_date` (bare price per MWh, converted to €/kWh) at the start, when the sensor appears and every 15 minutes while a day is missing (tomorrow around 13:00); a new day starts a new plan. Control, planner, cost log, curtailing and the panel read them as before.
 - Settings suggest that sensor when there is no HACS Nord Pool. Diagnostics: `prices` (area, days, last error).
