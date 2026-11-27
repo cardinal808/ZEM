@@ -8,7 +8,8 @@
 - *Instellingen → Planner* (§2.3): the three inverter fields under *Omvormer buiten de sets (kies één)*, only usable with *ZEPHYR knijpt af*; a warning when a limit is set without the rated power.
 - **Entity picker** for all entity fields: its own list (instead of the browser's `datalist`, which shows nothing in the Android app and only matches the start in Safari), filtering on any part of the name and the id, with arrow keys and Enter; an id of another domain says which domain the field expects.
 - Text fixes (§5) in the panel and in HA's options.
-- Tests: negative prices ahead, search and wrong domain in vitest.
+- *Morgen* on its own (Bjorn 27-11): no *nu* mark and no highlighted first quarter (now is not in view), and the SOC line starts at the first quarter's value instead of the SOC now.
+- Tests: negative prices ahead, search and wrong domain, the view *morgen* in vitest.
 
 ### 0.8.48 — Plan: 48 hours fast again
 - Bjorn 27-11: the Plan screen, and above all *48 uur*, reacted slowly. Measured in the test page: switching to 48 hours took ~3.7 s, now ~30 ms.

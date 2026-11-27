@@ -111,8 +111,15 @@ export function stats(quarters: Quarter[]): PriceStats | null {
 }
 
 /** Index of the running quarter (the first one that is not past), or -1. */
-export function currentIndex(quarters: Quarter[]): number {
-  return quarters.findIndex((q) => !q.past);
+export function currentIndex(
+  quarters: Quarter[],
+  nowMs: number = Date.now(),
+): number {
+  const i = quarters.findIndex((q) => !q.past);
+  if (i !== 0) return i;
+  // Without a past quarter in view (the view "tomorrow") the first quarter is only "now" when it is.
+  const start = new Date(quarters[0].start).getTime();
+  return nowMs >= start && nowMs < start + 15 * 60_000 ? 0 : -1;
 }
 
 export interface Band {
@@ -191,6 +198,12 @@ export function socPoints(quarters: Quarter[], socNow: number | null): string {
   const pts: string[] = [];
   if (now >= 0 && socNow !== null)
     pts.push(`${now},${(100 - socNow).toFixed(1)}`);
+  else if (now < 0) {
+    // Now is not in view (tomorrow): start the line at the left edge with the first quarter's value.
+    const first = quarters.find((q) => !q.past && q.soc !== null);
+    if (first && first.soc !== null)
+      pts.push(`0,${(100 - first.soc).toFixed(1)}`);
+  }
   quarters.forEach((q, i) => {
     if (!q.past && q.soc !== null)
       pts.push(`${i + 1},${(100 - q.soc).toFixed(1)}`);

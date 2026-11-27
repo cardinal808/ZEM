@@ -153,3 +153,16 @@ describe("plan helpers", () => {
     expect(spreadPct(-0.05, 0.3)).toBeNull();
   });
 });
+
+describe("tomorrow on its own", () => {
+  const q = (iso: string, soc: number) => ({ start: iso, past: false, market: null, buy: 0.3, sell: 0.2, action: null, soc, solar: null, load: null, indicative: false });
+  const tomorrow = [q("2026-11-28T00:00:00Z", 40), q("2026-11-28T00:15:00Z", 39)];
+  it("has no 'now' when now is not in view", () => {
+    expect(currentIndex(tomorrow, Date.UTC(2026, 10, 27, 17, 0))).toBe(-1);
+    expect(currentIndex(tomorrow, Date.UTC(2026, 10, 28, 0, 5))).toBe(0);
+  });
+  it("starts the SOC line at the first quarter's value, not at the SOC now", () => {
+    const pts = socPoints(tomorrow, 43).split(" ");
+    expect(pts[0]).toBe("0,60.0");
+  });
+});

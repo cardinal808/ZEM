@@ -1783,8 +1783,11 @@ function rt(e) {
 		avg: i / t.length
 	};
 }
-function it(e) {
-	return e.findIndex((e) => !e.past);
+function it(e, t = Date.now()) {
+	let n = e.findIndex((e) => !e.past);
+	if (n !== 0) return n;
+	let r = new Date(e[0].start).getTime();
+	return t >= r && t < r + 9e5 ? 0 : -1;
 }
 function at(e) {
 	let t = [];
@@ -1831,7 +1834,12 @@ function ct(e, t, n) {
 }
 function lt(e, t) {
 	let n = it(e), r = [];
-	return n >= 0 && t !== null && r.push(`${n},${(100 - t).toFixed(1)}`), e.forEach((e, t) => {
+	if (n >= 0 && t !== null) r.push(`${n},${(100 - t).toFixed(1)}`);
+	else if (n < 0) {
+		let t = e.find((e) => !e.past && e.soc !== null);
+		t && t.soc !== null && r.push(`0,${(100 - t.soc).toFixed(1)}`);
+	}
+	return e.forEach((e, t) => {
 		!e.past && e.soc !== null && r.push(`${t + 1},${(100 - e.soc).toFixed(1)}`);
 	}), r.join(" ");
 }
