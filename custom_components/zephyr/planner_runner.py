@@ -42,7 +42,6 @@ from .const import (
     CONF_PLAN_LOAD_MARGIN,
     CONF_PLAN_WEAR_COST,
     CONF_PRICE_ENTITY,
-    CONF_SOLAR_FORECAST,
     CONF_WORKDAY_ENTITY,
     CURTAIL_OFF,
     DEFAULT_EXCLUDED_MODES,
@@ -76,9 +75,9 @@ from .core.plan_check import expectations, record_fields
 from .core.plan_view import local_midnight, plan_view
 from .core.planner import Action, PlannerSettings
 from .core.price_window import PriceSlot
-from .core.solar_history import parse_detailed_forecast
 from .core.vacation import base_load
 from .curtail import planner_curtails
+from .solar_recorder import solar_entities
 
 if TYPE_CHECKING:
     from . import ZephyrRuntime
@@ -114,17 +113,6 @@ def day_type(local: datetime, workdays: Mapping[date, bool] | None = None) -> st
     return day_type_of(local, workdays)
 
 
-def solar_entities(entity: str | None) -> list[str]:
-    """The chosen forecast sensor and its Solcast sibling (today ↔ tomorrow), so the horizon has both days."""
-    if not entity:
-        return []
-    out = [entity]
-    for a, b in (("forecast_tomorrow", "forecast_today"), ("forecast_today", "forecast_tomorrow")):
-        if entity.endswith(a):
-            out.append(entity[: -len(a)] + b)
-    return out
-
-
 def house_kwh(record: Mapping[str, Any], solar_known: bool) -> float | None:
     """House consumption of a closed cost quarter; without a solar counter only when there is no solar at all."""
     value = record.get("house_kwh")
@@ -145,7 +133,6 @@ class PlanRunner:
         self.runtime = runtime
         self.profile_source = "none"
         self.price_entity: str | None = options.get(CONF_PRICE_ENTITY)
-        self.solar_entities = solar_entities(options.get(CONF_SOLAR_FORECAST))
         self.settings = planner_settings(options)
         self.curtail_mode: str = options.get(CONF_CURTAIL_MODE, CURTAIL_OFF)
         self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
@@ -341,15 +328,10 @@ class PlanRunner:
         )
 
     def _solar(self) -> tuple[Callable[[datetime], float], str]:
-        periods = []
-        for entity in self.solar_entities:
-            state = self.hass.states.get(entity)
-            if state is not None:
-                periods += parse_detailed_forecast(state.attributes.get("detailedForecast"))
-        forecast = solar_per_quarter(periods)
+        solar = self.runtime.solar
+        forecast = solar_per_quarter(solar.forecast_periods() if solar is not None else [])
         if forecast:
             return lambda t: forecast.get(t, 0.0), "forecast"
-        solar = self.runtime.solar
         if solar is not None and solar.energy_entity:
             yesterday: dict[date, dict[int, float]] = {}
 
@@ -499,7 +481,8 @@ class PlanRunner:
                 "reserve_slots": len(self.reserve),
                 "price_source": "reserve" if from_reserve else "source",
                 "solar_source": solar_source,
-                "solar_entities": self.solar_entities,
+                "solar_entities": solar_entities(self.runtime.solar.forecast_entity) if self.runtime.solar is not None else [],
+                "solar_forecast_source": self.runtime.solar.source if self.runtime.solar is not None else None,
                 "tariffs": tariffs.tariffs_for(dt_util.as_local(now).date()).source,
                 "battery": {
                     "capacity_kwh": battery.capacity_kwh,

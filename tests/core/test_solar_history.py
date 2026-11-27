@@ -75,3 +75,14 @@ def test_missing_reading_is_spread_over_the_hours() -> None:
     assert len(hourly) == 24
     assert hourly[10] == hourly[11] == 1.0  # the 2 kWh from 10 to 12 o'clock, spread evenly
     assert h.summary()[0]["actual_kwh"] == 6.0
+
+
+def test_energy_dashboard_forecast_in_kw() -> None:
+    """Forecast.Solar and others give Wh per period (``wh_hours``); the planner takes kW."""
+    from zephyr_core.solar_history import periods_from_wh_hours
+
+    hourly = periods_from_wh_hours({"2026-11-28T12:00:00+00:00": 1500, "2026-11-28T11:00:00+00:00": 900})
+    assert [(p.start[11:16], p.estimate, p.estimate10) for p in hourly] == [("11:00", 0.9, None), ("12:00", 1.5, None)]
+    half = periods_from_wh_hours({"2026-11-28T11:00:00+00:00": 400, "2026-11-28T11:30:00+00:00": 600})
+    assert [p.estimate for p in half] == [0.8, 1.2]
+    assert periods_from_wh_hours({}) == []

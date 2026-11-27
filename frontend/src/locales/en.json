@@ -304,8 +304,8 @@
       },
       "solar_forecast_entity": {
         "label": "Solar forecast",
-        "help": "Solcast (tomorrow) with half-hour detail.",
-        "more": "Without a forecast the planner uses yesterday's production per hour."
+        "help": "Solcast (tomorrow) with half-hour detail. Empty: the solar forecast of HA's Energy dashboard.",
+        "more": "Left empty it works with any source in the Energy dashboard (Forecast.Solar, Solcast, Open-Meteo and others), per hour and without lower and upper bounds. Without a forecast there either, the planner uses yesterday's production per hour."
       },
       "solar_energy_entity": {
         "label": "Solar counter",
