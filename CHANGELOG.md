@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.54 — Appliance plugs left out of the house profile
+- The consumption profile no longer holds what the appliances on a smart plug used (B36): planned runs are added on top, so a planned wash was counted twice. Live, every closed quarter subtracts the plug energy (integrated from the plug's power); the first fill from the recorder subtracts the plugs' hourly mean power (an hour without plug statistics counts as 0). Vacation hours keep the plugs in, as before.
+- When the set of plugs changes, the profile is filled again from the recorder once (like a changed air-conditioner counter, B41). Appliances without a plug (e.g. a dishwasher) leave the profile as it is.
+- Diagnostics: `planner.appliance_plugs`.
+
 ### 0.8.53 — Stroom: own picture
 - *Instellingen → Apparaten → Plaatje op Stroom*: choose *Standaard huis* or *Eigen afbeelding*. An own picture (JPG, PNG or WebP) is scaled down in the panel (max 1800 px wide) and stays in this Home Assistant (`.storage`), never in the repo; it is served only to logged-in users (signed URL).
 - Placing: pick an item (roof and shed panels, battery, grid, charge point, the four floors), tap where its box goes, then where its line connects; the next unplaced item follows. Items can be hidden or placed again; positions are kept as fractions, so another picture of a similar layout keeps them.

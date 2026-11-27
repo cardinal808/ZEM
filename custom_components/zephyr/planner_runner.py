@@ -204,12 +204,15 @@ class PlanRunner:
         self.ahead = {str(k): v for k, v in (stored.get("ahead") or {}).items() if isinstance(v, dict)}
         # B41: a profile learned with another (or no) excluded load mixes it in: fill again.
         changed = stored.get("profile", None) is not None and stored.get("excluded_entity") != self.excluded_entity
+        plugs_changed = stored.get("profile", None) is not None and stored.get("appliance_plugs", []) != self._plugs()
+        if plugs_changed:
+            LOGGER.debug("Appliance plugs changed: consumption profile filled again without them")
         if changed:
             LOGGER.debug(
                 "Excluded load changed (%s → %s): consumption profile filled again", stored.get("excluded_entity"), self.excluded_entity
             )
             self.excluded_profile = LoadProfile()
-        if self.profile.mean_count < FILL_BELOW_HOURS or changed:
+        if self.profile.mean_count < FILL_BELOW_HOURS or changed or plugs_changed:
             await self._fill_profile()
         assert self.price_entity is not None
         unsubs: list[Callable[[], None]] = [
@@ -582,7 +585,8 @@ class PlanRunner:
 
     def quarter_closed(self, start: datetime, record: Mapping[str, Any], solar_known: bool) -> dict[str, Any]:
         """Learn from a closed cost quarter; return the plan fields for its record (B38)."""
-        self._learn_quarter(start, record, solar_known)
+        appliances = self.runtime.appliances
+        self._learn_quarter(start, record, solar_known, appliances.take_energy() if appliances is not None else 0.0)
         self._store.async_delay_save(self._data, 30)
         key = dt_util.as_utc(start).isoformat()
         fields = record_fields(self.ahead.get(dt_util.as_local(start).date().isoformat(), {}).get(key))
@@ -591,7 +595,11 @@ class PlanRunner:
             fields.update({"plan_action": planned[0], "plan_cost": planned[1]})
         return fields
 
-    def _learn_quarter(self, start: datetime, record: Mapping[str, Any], solar_known: bool) -> None:
+    def _plugs(self) -> list[str]:
+        appliances = self.runtime.appliances
+        return appliances.plug_entities if appliances is not None else []
+
+    def _learn_quarter(self, start: datetime, record: Mapping[str, Any], solar_known: bool, appliance_kwh: float = 0.0) -> None:
         local = dt_util.as_local(start)
         hour_start = local.replace(minute=0, second=0, microsecond=0).isoformat()
         if self.hour.get("start") != hour_start:
@@ -603,13 +611,15 @@ class PlanRunner:
         if kwh is not None:
             excluded = float(record.get("excluded_kwh") or 0.0)
             # B41: the house without the excluded load; that load is learned apart.
-            self.hour["kwh"] += max(kwh - excluded, 0.0)
+            # B36: without the appliances on plugs too; their planned runs come on top.
+            self.hour["kwh"] += max(kwh - excluded - appliance_kwh, 0.0)
             self.hour["excluded_kwh"] = self.hour.get("excluded_kwh", 0.0) + excluded
+            self.hour["appliance_kwh"] = self.hour.get("appliance_kwh", 0.0) + min(appliance_kwh, max(kwh - excluded, 0.0))
             self.hour["quarters"] += 1
         if local.minute == 45:
             if self.hour["quarters"] == 4 and self.hour.get("vacation"):
                 # B42: away hours go into the vacation profile only (house and air conditioner together).
-                total = self.hour["kwh"] + self.hour.get("excluded_kwh", 0.0)
+                total = self.hour["kwh"] + self.hour.get("excluded_kwh", 0.0) + self.hour.get("appliance_kwh", 0.0)
                 self.vacation_profile.learn(day_type(local, self.workdays), local.hour, total)
             elif self.hour["quarters"] == 4:
                 self.profile.learn(day_type(local, self.workdays), local.hour, self.hour["kwh"])
@@ -659,7 +669,15 @@ class PlanRunner:
         battery = self._battery_entity()
         solar = costs.solar_entity
         excluded = self.excluded_entity
-        ids = [*costs.import_counters, *costs.export_counters, battery, *([solar] if solar else []), *([excluded] if excluded else [])]
+        plugs = self._plugs()
+        ids = [
+            *costs.import_counters,
+            *costs.export_counters,
+            battery,
+            *([solar] if solar else []),
+            *([excluded] if excluded else []),
+            *plugs,
+        ]
         end = dt_util.now().replace(minute=0, second=0, microsecond=0)
         start = end - timedelta(days=LEARN_FROM_DAYS)
         stats = await hourly_statistics(self.hass, start, end, ids)
@@ -684,6 +702,7 @@ class PlanRunner:
         solar_rows = by_hour(solar, "change") if solar else None
         battery_rows = by_hour(battery, "mean")
         excluded_rows = by_hour(excluded, "change") if excluded else None
+        plug_rows = [by_hour(plug, "mean") for plug in plugs]
         hours: list[HourEnergy] = []
         for key, mean_w in battery_rows.items():
             parts = [rows.get(key) for rows in imports + exports]
@@ -710,6 +729,8 @@ class PlanRunner:
                     solar_kwh=sun,
                     battery_kwh=mean_w / 1000,
                     excluded_kwh=aside,
+                    # B36: a plug without statistics for this hour (not there yet) counts as 0.
+                    appliance_kwh=sum(max(rows.get(key, 0.0), 0.0) for rows in plug_rows) / 1000,
                 )
             )
         if len(hours) < MIN_FILL_HOURS:
@@ -744,6 +765,7 @@ class PlanRunner:
             "hour": self.hour,
             "profile_source": self.profile_source,
             "excluded_entity": self.excluded_entity,
+            "appliance_plugs": self._plugs(),
             "excluded_profile": self.excluded_profile.as_dict(),
             "vacation_profile": self.vacation_profile.as_dict(),
             "ahead": self.ahead,
@@ -768,6 +790,7 @@ class PlanRunner:
             "snapshots": list(self.snapshots),
             "profile": self.profile.as_dict(),
             "excluded_profile": None if not self.excluded_entity else self.excluded_profile.as_dict(),
+            "appliance_plugs": self._plugs(),
             "vacation_profile": self.vacation_profile.as_dict() if self.vacation_profile.mean_count else None,
             "vacation": None if self.runtime.vacation is None else self.runtime.vacation.diagnostics(),
             "planned_quarters": self.by_quarter,

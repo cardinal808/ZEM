@@ -121,11 +121,13 @@ class HourEnergy:
     """Into the battery (+) or out of it (−)."""
     excluded_kwh: float = 0.0
     """Use of a load the battery may not feed in that hour (B41); not part of ``house_kwh``."""
+    appliance_kwh: float = 0.0
+    """Use of the planned appliances' plugs (B36): planned runs come on top, so not part of ``house_kwh``."""
 
     @property
     def house_kwh(self) -> float:
         total = max(self.import_kwh - self.export_kwh + self.solar_kwh - self.battery_kwh, 0.0)
-        return max(total - self.excluded_kwh, 0.0)
+        return max(total - self.excluded_kwh - self.appliance_kwh, 0.0)
 
 
 def day_type_of(local: datetime, workdays: Mapping[date, bool] | None = None) -> str:

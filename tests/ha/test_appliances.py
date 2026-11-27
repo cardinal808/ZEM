@@ -232,3 +232,27 @@ async def test_dryer_goes_along_with_the_washing_and_settings_from_the_panel(
     await hass.async_block_till_done()
     data = hass.config_entries.async_get_entry(entry.entry_id).subentries[dryer_id].data
     assert data["window_from"] == "15:00:00" and data["after_washer"] is False
+
+
+async def test_plug_use_is_left_out_of_the_house_profile(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    """B36 / PLANNING 2.1: planned runs come on top, so the plug's use is not in the house profile."""
+    import pytest
+
+    _set_prices(hass)
+    hass.states.async_set(PLUG, "0", {"unit_of_measurement": "W", "device_class": "power"})
+    entry = await _setup(hass, fake_sets, freezer, (11, 0), price_entity=PRICE)
+    await _add(hass, entry, "Wasmachine", "washer", power_entity=PLUG, window_from="08:00:00", window_until="20:00:00")
+    await _tick(hass, freezer, 5)
+    entry = hass.config_entries.async_get_entry(entry.entry_id)
+    planner = entry.runtime_data.planner
+    assert planner.diagnostics()["appliance_plugs"] == [PLUG]
+
+    start = dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0)
+    freezer.move_to(start)
+    entry.runtime_data.appliances.take_energy()  # what the plug used before this hour
+    hass.states.async_set(PLUG, "1600", {"unit_of_measurement": "W", "device_class": "power"})
+    await hass.async_block_till_done()
+    for q in range(4):
+        freezer.move_to(start + timedelta(minutes=15 * (q + 1)))
+        planner.quarter_closed(start + timedelta(minutes=15 * q), {"complete": True, "house_kwh": 0.6}, True)
+    assert planner.profile.recent[-1][0] == pytest.approx(0.8)  # 2.4 − 4 × 0.4
