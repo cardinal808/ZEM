@@ -177,7 +177,6 @@ class ZephyrControl:
         def stop() -> None:
             for unsub in unsubs:
                 unsub()
-            self.hass.async_create_task(self._save_zero(), "zephyr: save the zero score")
             if self._test_task is not None and not self._test_task.done():
                 self._test_task.cancel()
             if not self.shadow:
