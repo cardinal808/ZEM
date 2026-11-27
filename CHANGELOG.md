@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.32 — Cost log on the own energy counters, corrected after a gap (SPEC-tellers T3)
+- **Charged, delivered and set PV per quarter now come from the own energy counters** (the change of the installation totals between the quarter boundaries), like the grid import and export from the P1 counters. The meter of 0.8.26 stays as the fallback (first quarter after a start, no counters). Each quarter says which one it used: `battery_source` = `counters` or `meter`.
+- **Correction after a gap:** when the counters fill a gap, the filled energy is spread over the closed quarters of the gap by time, and the cost log of the current month is **evaluated again** from the first corrected quarter up to now (costs, the three situations, the pools of solar/grid in the battery, saldering part), with the day totals updated. Corrected quarters get `estimated: true` and `corrected_at`. The quarter in which the set returns no longer gets the whole fill as a jump.
+- Limits: gaps that started more than 48 hours ago (or quarters from before this version, or in an earlier month) are not corrected; their energy is left out of the current quarter. The tariffs of the day are used again for the new evaluation.
+- Every quarter now also keeps the inputs for a correction: `pools` (before the quarter), `stored_kwh`, `daylight`, `coverage`. CSV export: `battery_source`, `estimated`, `corrected_at`.
+- Diagnostics: `costs.gap_corrections` (the last gaps, kWh, whether corrected).
+- Tests: shares of a gap per quarter; a corrected log equals one that measured the energy (costs, pools); day totals; quarters without inputs; in HA quarters from the counters and a gap over a quarter boundary corrected without a jump.
+
 ### 0.8.30 — Weekend profile and solar day total (diagnostics 27-11)
 - **Load profile:** an hour of a day type that has not been learned yet (the weekend after a first install) now takes the other day type's hour, before the flat mean. Saturday's plan keeps the shape of the day (quiet night, busy evening) instead of the same 0.6 kWh every hour.
 - **Solar history:** a missing hourly reading of the solar counter (e.g. a restart) no longer drops the whole day: the step between the readings around it is spread evenly over the hours. On 26-11 the real production stayed empty because of one missing hour.

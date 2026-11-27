@@ -230,10 +230,16 @@ RECORD_FIELDS: Final = (
     "ahead_export_kwh",
     "ahead_cost",
     "ahead_soc",
+    "battery_source",
+    "estimated",
+    "corrected_at",
 )
 """Fields of a stored quarter (and the CSV columns). ``plan_*``: the plan at the start of the quarter.
 ``soc``: state of charge at the end of the quarter (%, 0.8.2), for the panel's past.
-``excluded_kwh`` (B41), ``vacation`` (B42). ``ahead_*``: the day-ahead plan (plan against reality, 0.8.21)."""
+``excluded_kwh`` (B41), ``vacation`` (B42). ``ahead_*``: the day-ahead plan (plan against reality, 0.8.21).
+``battery_source``: ``counters`` (own energy counters) or ``meter``; ``estimated`` / ``corrected_at``: energy
+of a filled counter gap was added afterwards (SPEC-tellers T3). Kept but not exported: ``pools`` (before the
+quarter), ``stored_kwh``, ``daylight``, ``coverage``."""
 
 
 def _r(value: float | None, digits: int = 4) -> float | None:
