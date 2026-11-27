@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### 0.8.37 — Stroom: card Regeling, last 10 minutes
+- New card on *Stroom*: the last 10 minutes of the controller, one sample per second.
+  - Top: P1 against its target (0 W, or the airco), with the ±50 W band.
+  - Bottom: the setpoint asked of the sets (dashed) and the battery power measured (+ charging).
+  - Time ZEPHYR did not steer to zero is shaded.
+- Below the chart: median recovery after a peak (> 150 W, back within the band), mean difference between asked and actual battery power while steering, number of peaks.
+- *Stroom* refreshes every 5 s while open; on a phone the chart is drawn narrower so the labels stay readable.
+- `zephyr/stroom` gives `regulation`; `core/stroom.RegulationLog`.
+- Tests: window and one sample per second, peaks and recovery with an airco target; chart helpers in vitest.
+
 ### 0.8.36 — Solar now from inverters the sets do not see
 - Bjorn 27-11: *Nu* showed sun 0 W at noon, because ZEPHYR only knew the PV on the Zendure set. The house was too low by the same amount.
 - New option **Zonnepanelen-vermogen** (Instellingen → Bronnen, also in the options flow): one or more power sensors (W or kW) of inverters that are not on a set, e.g. SolarEdge. They are added up and added to the sets' PV. Live, no reload. ZEPHYR's own sensors are skipped (the sets' PV is already counted).

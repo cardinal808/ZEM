@@ -464,7 +464,7 @@ export class ZephyrPanel extends LitElement {
       void this.loadSavings();
     } else if (view === "stroom") {
       void this.loadStroom();
-      this.setsTimer = window.setInterval(() => void this.loadStroom(), 60_000);
+      this.setsTimer = window.setInterval(() => void this.loadStroom(), 5_000);
     } else if (view === "diagnostics") {
       void this.loadEvents();
       this.setsTimer = window.setInterval(() => void this.loadEvents(), 15_000);

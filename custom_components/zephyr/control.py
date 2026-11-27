@@ -58,7 +58,7 @@ from .core.excluded_load import ExcludedLoad, exclusion_for_controller
 from .core.price_window import NO_PRICES, PriceDecision, decide, parse_nordpool_raw
 from .core.settings import Settings
 from .core.solar_now import CounterPower, total, watts
-from .core.stroom import ZERO_REASONS, ZeroScore
+from .core.stroom import ZERO_REASONS, RegulationLog, ZeroScore
 from .core.zensdk import power_command, standby_command
 from .writer import SetWriter
 
@@ -128,6 +128,8 @@ class ZephyrControl:
         self.solar_energy: str | None = options.get(CONF_SOLAR_ENERGY)
         self.solar_counter = CounterPower()
         self.zero = ZeroScore()
+        self.regulation = RegulationLog()
+        """The last 10 minutes of the controller (screen Stroom)."""
         """How well the meter stayed at its target today (screen Stroom)."""
         self._zero_store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.zero")
 
@@ -443,7 +445,9 @@ class ZephyrControl:
         local = dt_util.now()
         steering = not self.shadow and result.reason.code.value in ZERO_REASONS and result.grid_power is not None
         grid = result.grid_power
-        deviation = None if grid is None else grid - exclusion_for_controller(excluded, grid, result.battery_power or 0.0)
+        target = 0.0 if grid is None else exclusion_for_controller(excluded, grid, result.battery_power or 0.0)
+        deviation = None if grid is None else grid - target
+        self.regulation.add(now, grid, target, result.setpoint, result.battery_power, steering)
         seconds = local.hour * 3600 + local.minute * 60 + local.second + local.microsecond / 1e6
         self.zero.add(now, local.date(), seconds, steering, deviation)
 
