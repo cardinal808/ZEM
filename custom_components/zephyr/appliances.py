@@ -18,6 +18,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_APPLIANCE_AFTER_WASH,
     CONF_APPLIANCE_FROM,
     CONF_APPLIANCE_KIND,
     CONF_APPLIANCE_NAME,
@@ -59,6 +60,8 @@ class Appliance:
         self.power_entity: str | None = data.get(CONF_APPLIANCE_POWER) or None
         self.window_from: str = data.get(CONF_APPLIANCE_FROM) or ""
         self.window_until: str = data.get(CONF_APPLIANCE_UNTIL) or "20:00"
+        self.after_washer: bool = bool(data.get(CONF_APPLIANCE_AFTER_WASH, False))
+        """Dryer: planned along, once after the last wash, whenever the washing machine is planned."""
         self.runs: list[Run] = []
         self.samples: list[tuple[datetime, float]] = []
         self.power_w: float | None = None
@@ -242,13 +245,40 @@ class ApplianceManager:
             after = next((w for w in washers if any(p.appliance == w for p in self.planned)), None)
         added = [PlannedRun(appliance_id, start, end, fixed_start, after) for _ in range(max(runs, 1))]
         self.planned.extend(added)
+        if appliance.kind == WASHER:
+            added += self._dryers_along(appliance_id, now)
         self._save()
         self._changed()
         return added
 
+    def _dryers_along(self, washer_id: str, now: datetime) -> list[PlannedRun]:
+        """Dryers set to run after the washing: one run each, after the last wash (none if one is planned)."""
+        added: list[PlannedRun] = []
+        for dryer in self.appliances.values():
+            if dryer.kind not in DRYERS or not dryer.after_washer or any(p.appliance == dryer.id for p in self.planned):
+                continue
+            start, end = standard_window(now, dryer.window_from, dryer.window_until)
+            run = PlannedRun(dryer.id, start, end, None, washer_id)
+            self.planned.append(run)
+            added.append(run)
+        return added
+
     def clear(self, appliance_id: str | None = None) -> int:
         before = len(self.planned)
-        self.planned = [p for p in self.planned if appliance_id is not None and p.appliance != appliance_id]
+        along = {
+            a.id
+            for a in self.appliances.values()
+            if appliance_id is not None
+            and self.appliances.get(appliance_id) is not None
+            and self.appliances[appliance_id].kind == WASHER
+            and a.after_washer
+        }
+        # Clearing the washing also clears the dryer runs that were planned along with it.
+        self.planned = [
+            p
+            for p in self.planned
+            if appliance_id is not None and p.appliance != appliance_id and not (p.appliance in along and p.after == appliance_id)
+        ]
         self._save()
         self._changed()
         return before - len(self.planned)
@@ -292,6 +322,7 @@ class ApplianceManager:
                 "kwh": round(sum(profile) / 60000, 3),
                 "minutes": len(profile),
                 "window": {"from": a.window_from or None, "until": a.window_until},
+                "after_washer": a.after_washer,
             }
             if a.profile_source == "learned":
                 item["profile_w"] = [round(w) for w in profile]

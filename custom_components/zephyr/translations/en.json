@@ -87,13 +87,15 @@
             "power_entity": "Power sensor (smart plug)",
             "energy_entity": "Energy sensor (same plug)",
             "window_from": "Window from",
-            "window_until": "Done by"
+            "window_until": "Done by",
+            "after_washer": "Always after the washing"
           },
           "data_description": {
             "power_entity": "Optional. ZEPHYR learns the real profile from its history (the last 10 days at once) and later runs.",
             "energy_entity": "Optional, for later use.",
             "window_from": "When a run planned with the button may start. Empty = from now.",
-            "window_until": "The run must be done by then; earlier than the start = the next day."
+            "window_until": "The run must be done by then; earlier than the start = the next day.",
+            "after_washer": "Plan the dryer along (once, after the last wash) whenever the washing machine is planned."
           }
         },
         "reconfigure": {
@@ -102,7 +104,8 @@
             "power_entity": "Power sensor (smart plug)",
             "energy_entity": "Energy sensor (same plug)",
             "window_from": "Window from",
-            "window_until": "Done by"
+            "window_until": "Done by",
+            "after_washer": "Always after the washing"
           }
         }
       },

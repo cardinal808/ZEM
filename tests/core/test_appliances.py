@@ -145,3 +145,14 @@ def test_standard_windows() -> None:
     assert standard_window(evening, "08:00", "20:00") == (datetime(2026, 11, 29, 8, tzinfo=tz), datetime(2026, 11, 29, 20, tzinfo=tz))
     morning = datetime(2026, 11, 28, 10, 0, tzinfo=tz)
     assert standard_window(morning, "08:00", "20:00") == (morning, datetime(2026, 11, 28, 20, tzinfo=tz))
+
+
+def test_run_cost_is_its_own_share_not_the_whole_plan() -> None:
+    """The panel shows what one run costs: the plan's cost with the run minus without it."""
+    washer = PlannedRun("Wasmachine", T0, T0 + timedelta(hours=12))
+    profiles = {"Wasmachine": default_profile(WASHER)}
+    place_runs([washer], profiles, T0, lambda extra: 5.0 + _cost(dict(extra)))  # 5.0: rest of the plan
+    assert washer.best_start is not None
+    own = sum(kwh * _price(q) for q, kwh in quarter_energy(profiles["Wasmachine"], washer.best_start).items())
+    assert washer.details["cost"] == pytest.approx(own, abs=0.001)
+    assert washer.details["cost_now"] - washer.details["cost"] == pytest.approx(washer.details["saving"], abs=0.001)

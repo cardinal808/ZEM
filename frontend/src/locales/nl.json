@@ -112,7 +112,9 @@
     "tip_airco": "Airco {kwh} (niet uit de accu)",
     "legend_solar_over": "Zon over (accu kan laden)",
     "spread": "spread {value}",
-    "spread_title": "Hoeveel duurder het duurste kwartier is dan het goedkoopste. Ruwe maat voor wat laden en later leveren kan opleveren, vóór verlies (± 14 %) en slijtage. Bij prijzen rond nul of negatief: het verschil in euro."
+    "spread_title": "Hoeveel duurder het duurste kwartier is dan het goedkoopste. Ruwe maat voor wat laden en later leveren kan opleveren, vóór verlies (± 14 %) en slijtage. Bij prijzen rond nul of negatief: het verschil in euro.",
+    "tip_appliances": "Apparaten: {kwh}",
+    "runs_label": "Geplande apparaten"
   },
   "blocks": {
     "title": "Blokken",
@@ -218,7 +220,7 @@
       "zero_meter": "Nul op de meter zonder planner",
       "testing": "Testfase",
       "vacation": "Vakantie",
-      "house": "Huis in beeld"
+      "house": "Apparaten"
     },
     "modified_n": "{n} gewijzigd",
     "default": "standaard: {value}",
@@ -493,7 +495,7 @@
     "vac_start": "Vakantie aanzetten",
     "vac_stop": "Vakantie uitzetten",
     "vac_help": "Tijdens een vakantie rekent de planner met het sluimerverbruik en leert hij dat apart; het gewone verbruiksprofiel blijft schoon. Een einddatum is optioneel.",
-    "house_note": "Welke apparaten op het Stroom-scherm staan, en op welke verdieping. Apparaten met een slimme stekker voeg je toe via Apparaten en diensten → ZEPHYR → Apparaat toevoegen; de airco komt uit Correcties.",
+    "house_note": "Wanneer je je apparaten meestal laat draaien. Met één tik onder Prijzen en plan kiest ZEPHYR de goedkoopste start binnen dit venster. Een nieuw apparaat met slimme stekker voeg je toe via Apparaten en diensten → ZEPHYR → Apparaat toevoegen. Het venster wijzigen herlaadt ZEPHYR even.",
     "house_floor": "Verdieping",
     "save": "Opslaan",
     "discard": "Annuleren",
@@ -503,7 +505,15 @@
       "ground": "Begane grond",
       "shed": "Schuur",
       "outside": "Buiten"
-    }
+    },
+    "appl_learned": "geleerd uit {n} runs",
+    "appl_default": "standaardprofiel",
+    "appl_airco": "niet uit de accu (Correcties)",
+    "appl_from": "Niet vóór",
+    "appl_until": "Klaar om",
+    "appl_shown": "Tonen op Stroom",
+    "appl_after": "Altijd na de was",
+    "appl_after_help": "plan de droger mee (één keer, na de laatste was) als je de was plant"
   },
   "airco": {
     "blocked": "Airco {kw} kW · niet uit de accu",
@@ -784,5 +794,21 @@
     "kind_dryer_heat_pump": "Droger",
     "kind_dryer_condenser": "Droger",
     "kind_other": "Apparaat"
+  },
+  "appl": {
+    "title": "Apparaten plannen",
+    "running": "Draait nu",
+    "today": "vandaag",
+    "tomorrow": "morgen",
+    "calculating": "beste start wordt berekend…",
+    "tap": "Tik om te plannen",
+    "per_run": "~{euro} per keer",
+    "start": "start",
+    "and": "en",
+    "after_wash": "na de was",
+    "cheaper": "{euro} goedkoper dan nu",
+    "tap_plan": "Plannen",
+    "tap_more": "Nog een keer plannen",
+    "tap_clear": "Niet meer plannen"
   }
 }

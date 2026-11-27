@@ -112,7 +112,9 @@
     "tip_airco": "Air con {kwh} (not from the battery)",
     "legend_solar_over": "Solar to spare (battery can charge)",
     "spread": "spread {value}",
-    "spread_title": "How much more the most expensive quarter costs than the cheapest. A rough measure of what charging and delivering later can earn, before losses (about 14 %) and wear. With prices around zero or negative: the difference in euro."
+    "spread_title": "How much more the most expensive quarter costs than the cheapest. A rough measure of what charging and delivering later can earn, before losses (about 14 %) and wear. With prices around zero or negative: the difference in euro.",
+    "tip_appliances": "Appliances: {kwh}",
+    "runs_label": "Planned appliances"
   },
   "blocks": {
     "title": "Blocks",
@@ -218,7 +220,7 @@
       "zero_meter": "Zero on the meter without planner",
       "testing": "Test phase",
       "vacation": "Vacation",
-      "house": "House view"
+      "house": "Appliances"
     },
     "modified_n": "{n} changed",
     "default": "standard: {value}",
@@ -493,7 +495,7 @@
     "vac_start": "Start vacation",
     "vac_stop": "End vacation",
     "vac_help": "During a vacation the planner uses the standby use and learns it apart; the normal use profile stays clean. An end date is optional.",
-    "house_note": "Which appliances appear on the Power screen, and on which floor. Add appliances with a smart plug via Devices & services → ZEPHYR → Add appliance; the air con comes from Corrections.",
+    "house_note": "When you usually run your appliances. One tap under Prices and plan lets ZEPHYR pick the cheapest start within this window. Add a new appliance with a smart plug via Devices & services → ZEPHYR → Add appliance. Changing the window reloads ZEPHYR briefly.",
     "house_floor": "Floor",
     "save": "Save",
     "discard": "Cancel",
@@ -503,7 +505,15 @@
       "ground": "Ground floor",
       "shed": "Shed",
       "outside": "Outside"
-    }
+    },
+    "appl_learned": "learned from {n} runs",
+    "appl_default": "standard profile",
+    "appl_airco": "not from the battery (Corrections)",
+    "appl_from": "Not before",
+    "appl_until": "Done by",
+    "appl_shown": "Show on Power",
+    "appl_after": "Always after the washing",
+    "appl_after_help": "plan the dryer along (once, after the last wash) when you plan the washing"
   },
   "airco": {
     "blocked": "Air conditioner {kw} kW · not from the battery",
@@ -784,5 +794,21 @@
     "kind_dryer_heat_pump": "Dryer",
     "kind_dryer_condenser": "Dryer",
     "kind_other": "Appliance"
+  },
+  "appl": {
+    "title": "Plan appliances",
+    "running": "Running now",
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "calculating": "working out the best start…",
+    "tap": "Tap to plan",
+    "per_run": "~{euro} per run",
+    "start": "start",
+    "and": "and",
+    "after_wash": "after the washing",
+    "cheaper": "{euro} cheaper than now",
+    "tap_plan": "Plan",
+    "tap_more": "Plan one more",
+    "tap_clear": "Clear"
   }
 }

@@ -1,6 +1,15 @@
 // Screen "Instellingen" (SPEC-ui §4.4; UI-6 reading, UI-7 changing).
 // Live fields save at once; sources and corrections are collected and saved together, because ZEPHYR restarts for them.
+import type { AppliancesView } from "./appliances";
 import type { HouseDevice } from "./stroom";
+
+interface HouseDraft {
+  floor: string;
+  shown: boolean;
+  from: string;
+  until: string;
+  after: boolean;
+}
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
@@ -291,10 +300,11 @@ export class ZephyrSettings extends LitElement {
     floors: Record<string, string>,
     hidden: string[],
   ) => Promise<void>;
-  @state() private houseDraft: Record<
-    string,
-    { floor: string; shown: boolean }
-  > | null = null;
+  @state() private houseDraft: Record<string, HouseDraft> | null = null;
+  @property({ attribute: false }) appliances?: AppliancesView;
+  @property({ attribute: false }) saveAppliances?: (
+    updates: Record<string, unknown>[],
+  ) => Promise<void>;
 
   private renderHouse(
     devices: HouseDevice[],
@@ -302,62 +312,134 @@ export class ZephyrSettings extends LitElement {
   ): TemplateResult {
     if (!devices.length)
       return html`<p class="muted">${this.tr("stroom.devices_hint")}</p>`;
-    const draft =
+    const appl = new Map(
+      (this.appliances?.appliances ?? []).map((x) => [x.id, x]),
+    );
+    const hm = (v: string | null | undefined): string => (v ?? "").slice(0, 5);
+    const initial = (d: HouseDevice): HouseDraft => {
+      const x = appl.get(d.id);
+      return {
+        floor: d.floor,
+        shown: d.shown,
+        from: hm(x?.window.from),
+        until: hm(x?.window.until),
+        after: !!x?.after_washer,
+      };
+    };
+    const draft: Record<string, HouseDraft> =
       this.houseDraft ??
-      Object.fromEntries(
-        devices.map((d) => [d.id, { floor: d.floor, shown: d.shown }]),
-      );
-    const set = (
-      id: string,
-      patch: Partial<{ floor: string; shown: boolean }>,
-    ) => {
+      Object.fromEntries(devices.map((d) => [d.id, initial(d)]));
+    const set = (id: string, patch: Partial<HouseDraft>) => {
       this.houseDraft = { ...draft, [id]: { ...draft[id], ...patch } };
     };
-    const changed = devices.some(
-      (d) => draft[d.id].floor !== d.floor || draft[d.id].shown !== d.shown,
+    const diff = (d: HouseDevice, k: keyof HouseDraft) =>
+      draft[d.id][k] !== initial(d)[k];
+    const changed = devices.some((d) =>
+      (Object.keys(draft[d.id]) as (keyof HouseDraft)[]).some((k) =>
+        diff(d, k),
+      ),
     );
     const floors = ["attic", "first", "ground", "shed", "outside"];
+    const save = async () => {
+      const updates = devices
+        .filter(
+          (d) =>
+            appl.has(d.id) &&
+            (diff(d, "from") || diff(d, "until") || diff(d, "after")),
+        )
+        .map((d) => ({
+          id: d.id,
+          window_from: draft[d.id].from,
+          window_until: draft[d.id].until || "20:00",
+          ...(appl.get(d.id)?.kind.startsWith("dryer")
+            ? { after_washer: draft[d.id].after }
+            : {}),
+        }));
+      if (devices.some((d) => diff(d, "floor") || diff(d, "shown")))
+        await this.saveHouse?.(
+          Object.fromEntries(devices.map((d) => [d.id, draft[d.id].floor])),
+          devices.filter((d) => !draft[d.id].shown).map((d) => d.id),
+        );
+      if (updates.length) await this.saveAppliances?.(updates);
+      this.houseDraft = null;
+    };
     return html`<p class="muted">${this.tr("settings.house_note")}</p>
       <ul class="house">
-        ${devices.map(
-          (d) =>
-            html`<li>
-              <label class="hname"
+        ${devices.map((d) => {
+          const x = appl.get(d.id);
+          const dr = draft[d.id];
+          return html`<li>
+            <div class="hname">
+              <b>${d.name ?? this.tr(`stroom.kind_${d.kind}`)}</b>
+              <small
+                >${
+                  x
+                    ? x.profile === "learned"
+                      ? this.tr("settings.appl_learned", { n: x.runs_seen })
+                      : this.tr("settings.appl_default")
+                    : this.tr("settings.appl_airco")
+                }</small
+              >
+            </div>
+            <div class="hfields">
+              ${
+                x
+                  ? html`<label
+                        >${this.tr("settings.appl_from")}<input
+                          type="time"
+                          .value=${dr.from}
+                          ?disabled=${!canEdit}
+                          @input=${(e: Event) => set(d.id, { from: (e.target as HTMLInputElement).value })}
+                      /></label>
+                      <label
+                        >${this.tr("settings.appl_until")}<input
+                          type="time"
+                          .value=${dr.until}
+                          ?disabled=${!canEdit}
+                          @input=${(e: Event) => set(d.id, { until: (e.target as HTMLInputElement).value })}
+                      /></label>`
+                  : nothing
+              }
+              <label
+                >${this.tr("settings.house_floor")}<select
+                  .value=${dr.floor}
+                  ?disabled=${!canEdit}
+                  @change=${(e: Event) => set(d.id, { floor: (e.target as HTMLSelectElement).value })}
+                >
+                  ${floors.map((f) => html`<option value=${f} ?selected=${f === dr.floor}>${this.tr(`settings.floors.${f}`)}</option>`)}
+                </select></label
+              >
+              <label class="check"
                 ><input
                   type="checkbox"
-                  .checked=${draft[d.id].shown}
+                  .checked=${dr.shown}
                   ?disabled=${!canEdit}
                   @change=${(e: Event) => set(d.id, { shown: (e.target as HTMLInputElement).checked })}
-                />
-                ${d.name ?? this.tr(`stroom.kind_${d.kind}`)}</label
+                />${this.tr("settings.appl_shown")}</label
               >
-              <select
-                aria-label=${this.tr("settings.house_floor")}
-                .value=${draft[d.id].floor}
-                ?disabled=${!canEdit}
-                @change=${(e: Event) => set(d.id, { floor: (e.target as HTMLSelectElement).value })}
-              >
-                ${floors.map((f) => html`<option value=${f} ?selected=${f === draft[d.id].floor}>${this.tr(`settings.floors.${f}`)}</option>`)}
-              </select>
-            </li>`,
-        )}
+              ${
+                x?.kind.startsWith("dryer")
+                  ? html`<label class="check wide"
+                      ><input
+                        type="checkbox"
+                        .checked=${dr.after}
+                        ?disabled=${!canEdit}
+                        @change=${(e: Event) => set(d.id, { after: (e.target as HTMLInputElement).checked })}
+                      /><span
+                        ><b>${this.tr("settings.appl_after")}</b> —
+                        ${this.tr("settings.appl_after_help")}</span
+                      ></label
+                    >`
+                  : nothing
+              }
+            </div>
+          </li>`;
+        })}
       </ul>
       ${
-        canEdit && changed
+        changed && canEdit
           ? html`<div class="vacrow">
-              <button
-                type="button"
-                class="primary"
-                @click=${async () => {
-                  await this.saveHouse?.(
-                    Object.fromEntries(
-                      devices.map((d) => [d.id, draft[d.id].floor]),
-                    ),
-                    devices.filter((d) => !draft[d.id].shown).map((d) => d.id),
-                  );
-                  this.houseDraft = null;
-                }}
-              >
+              <button type="button" class="primary" @click=${() => void save()}>
                 ${this.tr("settings.save")}
               </button>
               <button
@@ -1152,14 +1234,41 @@ export class ZephyrSettings extends LitElement {
       padding: 0;
     }
     ul.house li {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 10px 20px;
+      padding: 14px 0;
       border-bottom: 1px solid var(--z-border);
     }
-    ul.house select {
+    .hname {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      justify-self: stretch;
+      justify-content: flex-start;
+    }
+    .hname small {
+      color: var(--z-muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+    .hfields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px 14px;
+      align-items: end;
+    }
+    .hfields label {
+      font-weight: 400;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12.5px;
+      color: var(--z-muted);
+    }
+    .hfields input[type="time"] {
       min-height: 40px;
       padding: 0 10px;
       border: 1px solid var(--z-border);
@@ -1168,7 +1277,18 @@ export class ZephyrSettings extends LitElement {
       color: var(--z-text);
       font: inherit;
     }
-    .hname input {
+    .hfields label.check {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      color: var(--z-text);
+      font-size: 13.5px;
+    }
+    .hfields label.wide {
+      grid-column: 1 / -1;
+    }
+    .hfields input[type="checkbox"] {
       width: 20px;
       height: 20px;
       min-width: 0;
@@ -1176,11 +1296,19 @@ export class ZephyrSettings extends LitElement {
       margin: 0;
       accent-color: var(--z-charge);
     }
-    .hname {
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    @media (max-width: 700px) {
+      ul.house li {
+        grid-template-columns: 1fr;
+      }
+    }
+    .hfields select {
+      min-height: 40px;
+      padding: 0 10px;
+      border: 1px solid var(--z-border);
+      border-radius: 10px;
+      background: var(--z-card);
+      color: var(--z-text);
+      font: inherit;
     }
     .entityrow {
       display: inline-flex;

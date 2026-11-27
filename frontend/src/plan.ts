@@ -13,6 +13,8 @@ export interface Quarter {
   load: number | null;
   /** kWh of the air conditioner outside the battery (B41); absent without the counter. */
   excluded?: number | null;
+  /** kWh of planned appliance runs in this quarter (B36). */
+  appliances?: number | null;
   indicative: boolean;
 }
 
@@ -39,7 +41,12 @@ export interface PlanView {
 export type Period = "today" | "tomorrow" | "both";
 
 export const dayKey = (iso: string, timeZone: string): string =>
-  new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone }).format(new Date(iso));
+  new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone,
+  }).format(new Date(iso));
 
 /** Local calendar days present in the view, in order (normally today and tomorrow). */
 export function days(quarters: Quarter[], timeZone: string): string[] {
@@ -51,15 +58,27 @@ export function days(quarters: Quarter[], timeZone: string): string[] {
   return out;
 }
 
-export function quartersOf(quarters: Quarter[], period: Period, timeZone: string): Quarter[] {
+export function quartersOf(
+  quarters: Quarter[],
+  period: Period,
+  timeZone: string,
+): Quarter[] {
   if (period === "both") return quarters;
   const wanted = days(quarters, timeZone)[period === "today" ? 0 : 1];
-  return wanted ? quarters.filter((q) => dayKey(q.start, timeZone) === wanted) : [];
+  return wanted
+    ? quarters.filter((q) => dayKey(q.start, timeZone) === wanted)
+    : [];
 }
 
-export function dayOf(quarters: Quarter[], index: number, timeZone: string): Quarter[] {
+export function dayOf(
+  quarters: Quarter[],
+  index: number,
+  timeZone: string,
+): Quarter[] {
   const wanted = days(quarters, timeZone)[index];
-  return wanted ? quarters.filter((q) => dayKey(q.start, timeZone) === wanted) : [];
+  return wanted
+    ? quarters.filter((q) => dayKey(q.start, timeZone) === wanted)
+    : [];
 }
 
 export interface PriceStats {
@@ -101,7 +120,8 @@ export function bands(quarters: Quarter[]): Band[] {
   const out: Band[] = [];
   quarters.forEach((q, i) => {
     const last = out[out.length - 1];
-    if (last && last.action === q.action && last.past === q.past) last.count += 1;
+    if (last && last.action === q.action && last.past === q.past)
+      last.count += 1;
     else out.push({ action: q.action, past: q.past, from: i, count: 1 });
   });
   return out;
@@ -114,7 +134,9 @@ export interface Scale {
 
 /** Price axis: from 0 (or the lowest negative price) to the highest price, on 5-cent steps. */
 export function scale(quarters: Quarter[]): Scale {
-  const prices = quarters.map((q) => q.buy).filter((p): p is number => p !== null);
+  const prices = quarters
+    .map((q) => q.buy)
+    .filter((p): p is number => p !== null);
   if (!prices.length) return { lo: 0, hi: 0.4 };
   const lo = Math.min(0, Math.floor(Math.min(...prices) * 20) / 20);
   const hi = Math.max(lo + 0.05, Math.ceil(Math.max(...prices) * 20) / 20);
@@ -122,16 +144,31 @@ export function scale(quarters: Quarter[]): Scale {
 }
 
 /** Bottom and height (0–100 %) of a bar from 0 to ``price``; works for negative prices. */
-export function bar(price: number, s: Scale): { bottom: number; height: number } {
+export function bar(
+  price: number,
+  s: Scale,
+): { bottom: number; height: number } {
   const span = s.hi - s.lo;
   const y0 = Math.min(price, 0);
   const y1 = Math.max(price, 0);
-  return { bottom: ((y0 - s.lo) / span) * 100, height: Math.max(((y1 - y0) / span) * 100, 0.8) };
+  return {
+    bottom: ((y0 - s.lo) / span) * 100,
+    height: Math.max(((y1 - y0) / span) * 100, 0.8),
+  };
 }
 
 /** Quarters that start on a full hour divisible by ``everyHours`` (local time): tick positions. */
-export function ticks(quarters: Quarter[], everyHours: number, timeZone: string): number[] {
-  const hour = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone });
+export function ticks(
+  quarters: Quarter[],
+  everyHours: number,
+  timeZone: string,
+): number[] {
+  const hour = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone,
+  });
   const out: number[] = [];
   quarters.forEach((q, i) => {
     const [h, m] = hour.format(new Date(q.start)).split(":").map(Number);
@@ -144,9 +181,11 @@ export function ticks(quarters: Quarter[], everyHours: number, timeZone: string)
 export function socPoints(quarters: Quarter[], socNow: number | null): string {
   const now = currentIndex(quarters);
   const pts: string[] = [];
-  if (now >= 0 && socNow !== null) pts.push(`${now},${(100 - socNow).toFixed(1)}`);
+  if (now >= 0 && socNow !== null)
+    pts.push(`${now},${(100 - socNow).toFixed(1)}`);
   quarters.forEach((q, i) => {
-    if (!q.past && q.soc !== null) pts.push(`${i + 1},${(100 - q.soc).toFixed(1)}`);
+    if (!q.past && q.soc !== null)
+      pts.push(`${i + 1},${(100 - q.soc).toFixed(1)}`);
   });
   return pts.join(" ");
 }
@@ -155,7 +194,10 @@ export function socPoints(quarters: Quarter[], socNow: number | null): string {
  * Measured SOC before now (end of each past quarter), as separate line pieces:
  * a quarter without a value (HA was off) breaks the line. The last piece runs to now.
  */
-export function pastSocLines(quarters: Quarter[], socNow: number | null): string[] {
+export function pastSocLines(
+  quarters: Quarter[],
+  socNow: number | null,
+): string[] {
   const now = currentIndex(quarters);
   const lines: string[][] = [];
   let piece: string[] = [];
@@ -169,14 +211,22 @@ export function pastSocLines(quarters: Quarter[], socNow: number | null): string
     piece.push(`${i + 1},${(100 - q.soc).toFixed(1)}`);
   });
   if (piece.length) {
-    if (now >= 0 && socNow !== null && piece[piece.length - 1].startsWith(`${now},`)) piece.push(`${now},${(100 - socNow).toFixed(1)}`);
+    if (
+      now >= 0 &&
+      socNow !== null &&
+      piece[piece.length - 1].startsWith(`${now},`)
+    )
+      piece.push(`${now},${(100 - socNow).toFixed(1)}`);
     lines.push(piece);
   }
   return lines.filter((l) => l.length > 1).map((l) => l.join(" "));
 }
 
 /** Future blocks of the plan, the running one first (it may have started before now). */
-export function upcomingBlocks(blocks: PlanBlock[], nowIso: string): PlanBlock[] {
+export function upcomingBlocks(
+  blocks: PlanBlock[],
+  nowIso: string,
+): PlanBlock[] {
   const now = new Date(nowIso).getTime();
   return blocks.filter((b) => new Date(b.end).getTime() > now);
 }
@@ -186,14 +236,23 @@ export function upcomingBlocks(blocks: PlanBlock[], nowIso: string): PlanBlock[]
  * today = still to come today (a block over midnight included), tomorrow = every block that touches tomorrow,
  * 48 uur = everything still to come.
  */
-export function blocksFor(blocks: PlanBlock[], period: Period, nowIso: string, tomorrowKey: string | null, timeZone: string): PlanBlock[] {
+export function blocksFor(
+  blocks: PlanBlock[],
+  period: Period,
+  nowIso: string,
+  tomorrowKey: string | null,
+  timeZone: string,
+): PlanBlock[] {
   const upcoming = upcomingBlocks(blocks, nowIso);
   if (period === "both") return upcoming;
   const wanted = period === "today" ? dayKey(nowIso, timeZone) : tomorrowKey;
   if (!wanted) return [];
   return upcoming.filter((b) => {
     const first = dayKey(b.start, timeZone);
-    const last = dayKey(new Date(new Date(b.end).getTime() - 1).toISOString(), timeZone);
+    const last = dayKey(
+      new Date(new Date(b.end).getTime() - 1).toISOString(),
+      timeZone,
+    );
     return first <= wanted && wanted <= last;
   });
 }
@@ -212,7 +271,7 @@ export function sunLane(quarters: Quarter[]): SunQuarter[] | null {
   const top = Math.max(0.05, ...quarters.map((q) => q.solar ?? 0));
   return quarters.map((q) => {
     const solar = q.solar ?? 0;
-    const use = (q.load ?? 0) + (q.excluded ?? 0);
+    const use = (q.load ?? 0) + (q.excluded ?? 0) + (q.appliances ?? 0);
     return {
       height: solar > 0 ? Math.round((solar / top) * 1000) / 10 : 0,
       past: q.past,
@@ -225,4 +284,49 @@ export function sunLane(quarters: Quarter[]): SunQuarter[] | null {
 export function spreadPct(low: number, high: number): number | null {
   if (low <= 0.005) return null;
   return Math.round(((high - low) / low) * 100);
+}
+
+export interface RunInput {
+  name: string;
+  start: string;
+  minutes: number;
+  fixed: boolean;
+}
+
+export interface RunBar {
+  name: string;
+  fixed: boolean;
+  /** Position in quarters from the first quarter shown (may be fractional). */
+  left: number;
+  width: number;
+  /** Row, so overlapping runs do not hide each other. */
+  row: number;
+}
+
+/** Planned runs as bars on the chart's time axis; runs outside the shown quarters are left out. */
+export function runBars(quarters: Quarter[], runs: RunInput[]): RunBar[] {
+  if (!quarters.length) return [];
+  const t0 = new Date(quarters[0].start).getTime();
+  const n = quarters.length;
+  const q = 15 * 60_000;
+  const out: RunBar[] = [];
+  const rowsEnd: number[] = [];
+  for (const r of [...runs].sort((a, b) => a.start.localeCompare(b.start))) {
+    const left = (new Date(r.start).getTime() - t0) / q;
+    const width = Math.max(0.5, r.minutes / 15);
+    if (left + width <= 0 || left >= n) continue;
+    const from = Math.max(0, left);
+    const to = Math.min(n, left + width);
+    let row = rowsEnd.findIndex((end) => end <= from);
+    if (row < 0) row = rowsEnd.length;
+    rowsEnd[row] = to;
+    out.push({
+      name: r.name,
+      fixed: r.fixed,
+      left: from,
+      width: to - from,
+      row,
+    });
+  }
+  return out;
 }
