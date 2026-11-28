@@ -23,6 +23,8 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final
 
+from .costs import quarter_status
+
 FLOWS: Final = ("import_kwh", "export_kwh", "charge_kwh", "discharge_kwh", "solar_ext_kwh")
 """Flows that can be filled. ``solar_ext_kwh``: solar from the external counter (the sets' own PV
 comes with the battery flows)."""
@@ -46,7 +48,7 @@ def neighbour_value(record: Mapping[str, Any] | None, flow: str) -> float | None
     """A flow's kWh in a stored quarter, if that quarter can serve as a neighbour."""
     if record is None:
         return None
-    if record.get("status") == STATUS_MISSING:
+    if quarter_status(record) == STATUS_MISSING:
         return None
     if flow == "solar_ext_kwh" and flow not in record:
         return None  # quarters before 0.8.79 have no external solar apart
@@ -165,3 +167,50 @@ class QuarterFill:
         if self.causes:
             out["fill_causes"] = sorted(set(self.causes))
         return out
+
+
+def fill_gap(
+    before: Mapping[str, Any] | None,
+    after: Mapping[str, float | None],
+    count: int,
+    totals: Mapping[str, float | None],
+    daylight: Sequence[bool],
+    history: Sequence[Mapping[str, float | None]] | None = None,
+) -> list[QuarterFill]:
+    """Whole quarters that were not measured at all (Home Assistant was off).
+
+    ``before``: the last stored quarter before the gap; ``after``: kWh per quarter just after it
+    (the first quarter measured again, per flow, or None). ``totals``: a counter difference over
+    the gap per flow (None = no counter); it sets the sum, the interpolation the spread.
+    ``daylight`` per quarter (solar only by day). ``history`` per quarter: the 7-day means, for
+    flows without any neighbour. Returns one ``QuarterFill`` per quarter (cause ``ha_off``).
+    """
+    out = [QuarterFill(causes=["ha_off"]) for _ in range(count)]
+    for flow in FLOWS:
+        if flow not in after and flow not in totals:
+            continue
+        base = interpolate(neighbour_value(before, flow), after.get(flow), count)
+        method = INTERPOLATED
+        if base is None:
+            hist = [(h or {}).get(flow) for h in (history or [None] * count)]  # type: ignore[list-item]
+            if all(v is not None for v in hist) and hist:
+                base, method = [float(v or 0.0) for v in hist], HISTORY
+        if flow == "solar_ext_kwh" and base is not None:
+            base = [v if day else 0.0 for v, day in zip(base, daylight, strict=True)]
+        total = totals.get(flow)
+        if total is not None:
+            weights = base if base is not None else [0.0] * count
+            if flow == "solar_ext_kwh" and sum(weights) <= 0:
+                weights = [1.0 if day else 0.0 for day in daylight]
+                if sum(weights) <= 0:
+                    weights = [1.0] * count  # the counter moved, so spread it anyway
+            base, method = scale_to(weights, total), (SCALED if base is not None else COUNTER)
+        for i, fill in enumerate(out):
+            if base is None:
+                fill.values[flow] = 0.0
+                fill.methods[flow] = NONE
+            else:
+                fill.values[flow] = max(base[i], 0.0)
+                fill.methods[flow] = method
+                fill.added[flow] = max(base[i], 0.0)
+    return out

@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.sun import is_up
 from homeassistant.util import dt as dt_util
@@ -42,12 +42,23 @@ from .core.costs import (
     add_to_day,
     counter_delta,
     evaluate,
+    quarter_status,
     summarize,
     to_csv,
 )
 from .core.energy_counters import TOTAL_KEYS as ENERGY_TOTAL_KEYS
 from .core.price_window import parse_nordpool_raw
-from .core.quarter_fill import FULL_SHARE, Part, QuarterFill, fill_part, history_mean, interpolate, neighbour_value
+from .core.quarter_fill import (
+    FULL_SHARE,
+    Part,
+    QuarterFill,
+    fill_gap,
+    fill_part,
+    history_mean,
+    interpolate,
+    neighbour_value,
+    scale_to,
+)
 from .core.solar_history import energy_kwh
 from .prices import price_state
 
@@ -59,6 +70,10 @@ STORAGE_VERSION = 1
 KEEP_MONTHS = 24
 P1_FRESH = 10.0
 """s; an older P1 value is not integrated (a gap in the quarter)."""
+FILL_VERSION = 1
+"""Version of the one-off fill of the stored history (OPDRACHT-onvolledige-kwartieren eis 5)."""
+MAX_GAP_QUARTERS = 31 * 96
+"""A longer interruption is not filled with quarters (a month of guesses helps nobody)."""
 
 
 def _number(state: State | None) -> float | None:
@@ -140,6 +155,12 @@ class CostRecorder:
         self.current_month: str | None = None
         self.open_start: datetime | None = None
         self.open_market: float | None = None
+        self.last_closed: datetime | None = None
+        """Start of the last closed quarter: quarters after it up to the next close were missed."""
+        self._gap_log: list[dict[str, Any]] = []
+        self.fill_version = FILL_VERSION
+        self.repaired: dict[str, Any] | None = None
+        self._ez_cache: dict[str, dict[datetime, float]] = {}
         self._main: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}.costs")
         self._listeners: list[Callable[[], None]] = []
         self._summaries: dict[str, Summary] = {}
@@ -166,12 +187,20 @@ class CostRecorder:
         self.months = list(data.get("months") or [])
         now = dt_util.utcnow()
         await self._load_month(_month_key(now))
+        self.last_closed = self._find_last_closed(data.get("last_closed"))
+        self.fill_version = int(data.get("fill_version") or 0)
+        if self.fill_version < FILL_VERSION:
+            self._repair_history()
+            self.fill_version = FILL_VERSION
+            await self.async_save()
         self._open(quarter_floor(now))
         unsubs: list[Callable[[], None]] = [
             async_track_time_change(self.hass, self._on_boundary, minute=[0, 15, 30, 45], second=0),
         ]
         if self.runtime.control is not None:
             unsubs.append(self.runtime.control.async_add_listener(self._sample))
+        if self.price_entity:
+            unsubs.append(async_track_state_change_event(self.hass, [self.price_entity], self._on_price))
         self._summaries.clear()
         for listener in list(self._listeners):  # the sensors were added before the history was loaded
             listener()
@@ -220,6 +249,10 @@ class CostRecorder:
         self.open_market = market_price(price_state(self.hass, self.price_entity), start) if self.price_entity else None
 
     @callback
+    def _on_price(self, _event: Any) -> None:
+        self.hass.async_create_task(self._retry_prices(), "zephyr: retry interpolated prices")
+
+    @callback
     def _on_boundary(self, now: datetime) -> None:
         self.hass.async_create_task(self.async_close(quarter_floor(now)), "zephyr: close cost quarter")
 
@@ -245,6 +278,16 @@ class CostRecorder:
         market = self.open_market if self.open_start == start else None
         if market is None and self.price_entity:
             market = market_price(price_state(self.hass, self.price_entity), start)
+        price_source = "nordpool" if market is not None else None
+        missed = self._missed(start)
+        since = missed[0] if missed else None
+        gap_totals: dict[str, float | None] = {}
+        if since is not None and self.import_counters and self.export_counters:
+            # The meter counted on while HA was off: from the last boundary before up to now.
+            gap_totals["import_kwh"] = self._counter_since(self.import_counters, boundary, since)
+            gap_totals["export_kwh"] = self._counter_since(self.export_counters, boundary, since)
+        if since is not None and self.solar_entity:
+            gap_totals["solar_ext_kwh"] = self._counter_since([self.solar_entity], boundary, since)
         imp, exp = measured.import_kwh, measured.export_kwh
         grid_share = measured.grid_seconds / QUARTER_SECONDS
         if self.import_counters and self.export_counters:
@@ -270,8 +313,35 @@ class CostRecorder:
         totals = self.runtime.totals()
         local_start = dt_util.as_local(start)
         daylight = is_up(self.hass, start + timedelta(seconds=QUARTER_SECONDS / 2))
-        # Fill what was not measured (OPDRACHT-onvolledige-kwartieren): neighbours, own rate, history.
         fill = QuarterFill()
+        if missed:
+            # HA was off: make the missed quarters and fill them (step 2); a counter total over
+            # the gap also sets this quarter's part of it.
+            rates = {
+                "import_kwh": imp / grid_share if grid_share > 0.05 else None,
+                "export_kwh": exp / grid_share if grid_share > 0.05 else None,
+                "solar_ext_kwh": None if ext is None else ext,
+            }
+            if self.runtime.energy is None:
+                rates["charge_kwh"] = charge / battery_share if battery_share > 0.05 else None
+                rates["discharge_kwh"] = discharge / battery_share if battery_share > 0.05 else None
+            here = await self._fill_missed(missed, rates, gap_totals)
+            for name, kwh in here.items():
+                if name == "import_kwh":
+                    imp, grid_share = kwh, 1.0
+                elif name == "export_kwh":
+                    exp = kwh
+                elif name == "solar_ext_kwh":
+                    ext = kwh
+                fill.methods[name] = "scaled"
+                fill.added[name] = kwh
+            if here:
+                fill.causes.append("ha_off")
+        if market is None and self.price_entity:
+            # No price yet (step 3): between the last and the next known price; replaced by a real
+            # one as soon as Nord Pool or EnergyZero has it (``_retry_prices``).
+            market, price_source = self._price_for(start)
+        # Fill what was not measured (OPDRACHT-onvolledige-kwartieren): neighbours, own rate, history.
         prev = self._record_at(start - timedelta(seconds=QUARTER_SECONDS))
         parts = {
             "import_kwh": (Part(imp, grid_share), "p1", True),
@@ -281,7 +351,11 @@ class CostRecorder:
         }
         if self.solar_entity:
             parts["solar_ext_kwh"] = (Part(ext or 0.0, 0.0 if ext is None else 1.0), "solar_counter", daylight)
-        values: dict[str, float] = {}
+        for name in list(fill.methods):
+            parts.pop(name, None)  # set from a counter total over the interruption
+        values: dict[str, float] = {"import_kwh": imp, "export_kwh": exp, "charge_kwh": charge, "discharge_kwh": discharge}
+        if self.solar_entity and ext is not None:
+            values["solar_ext_kwh"] = ext
         basis: dict[str, list[float]] = {}
         for name, (part, cause, allowed) in parts.items():
             done = fill_part(part, neighbour_value(prev, name), None, self._history(start, name), allowed)
@@ -339,6 +413,11 @@ class CostRecorder:
         )
         if self.solar_entity:
             record["solar_ext_kwh"] = None if ext is None else round(ext, 4)
+        if price_source is not None:
+            record["price_source"] = price_source
+            if price_source == "interpolated":
+                record.setdefault("fill_causes", [])
+                record["fill_causes"] = sorted({*record["fill_causes"], "price"})
         if basis:
             record["fill_basis"] = basis  # to refine the fill once the next quarter is known
         record["soc"] = None if totals.soc is None else round(totals.soc, 1)
@@ -356,22 +435,15 @@ class CostRecorder:
         self._open(boundary)
         await self._load_month(_month_key(start))
         self.current.append(record)
+        self.last_closed = start
         add_to_day(self.days.setdefault(local_start.date().isoformat(), {}), record)
         refine, updates = self._refine_previous(record)
         for quarter, extra in refine.items():
             target = corrections.setdefault(quarter, {})
             for key, kwh in extra.items():
                 target[key] = target.get(key, 0.0) + kwh
-        if corrections and self._apply_corrections(corrections):
-            for quarter, fields in updates.items():
-                stored = self._record_at(datetime.fromisoformat(quarter))
-                if stored is None:
-                    continue
-                before = dict(stored)
-                stored.update(fields)
-                stored.pop("fill_basis", None)
-                day = dt_util.as_local(datetime.fromisoformat(quarter)).date().isoformat()
-                day_delta(self.days.setdefault(day, {}), before, stored)
+        if corrections:
+            self._correct(corrections, updates)
         self._summaries.clear()
         assert self.current_month is not None
         month_store, quarters = self._month_store(self.current_month), self.current
@@ -380,9 +452,283 @@ class CostRecorder:
         LOGGER.debug("Cost quarter %s: %s", start.isoformat(), record)
         for listener in list(self._listeners):
             listener()
+        if self.price_entity:
+            self.hass.async_create_task(self._retry_prices(), "zephyr: retry interpolated prices")
         return record
 
     # --- filling (OPDRACHT-onvolledige-kwartieren) -----------------------------------------
+
+    def _repair_history(self) -> None:
+        """Once (eis 5): fill the stored quarters of this month that were incomplete, make the
+        quarters missing between them, and evaluate the month again from the first one touched."""
+        records = self.current
+        if len(records) < 2 or "pools" not in records[0]:
+            return
+        step = timedelta(seconds=QUARTER_SECONDS)
+        flows = ("import_kwh", "export_kwh", "charge_kwh", "discharge_kwh")
+        out: list[dict[str, Any]] = []
+        touched: dict[str, dict[str, float]] = {}
+        made = filled = 0
+        for index, record in enumerate(records):
+            if out:
+                prev_start = datetime.fromisoformat(out[-1]["start"])
+                here = datetime.fromisoformat(record["start"])
+                count = int((here - prev_start).total_seconds() // QUARTER_SECONDS) - 1
+                if 0 < count <= MAX_GAP_QUARTERS:
+                    missed = [prev_start + step * (i + 1) for i in range(count)]
+                    daylight = [is_up(self.hass, q + step / 2) for q in missed]
+                    after = {f: neighbour_value(record, f) for f in flows}
+                    for quarter, fill, day in zip(missed, fill_gap(out[-1], after, count, {}, daylight), daylight, strict=True):
+                        new = {
+                            "start": quarter.isoformat(),
+                            "minutes": QUARTER_SECONDS / 60,
+                            **{f: round(fill.values.get(f, 0.0), 4) for f in flows},
+                            "solar_kwh": None,
+                            "market": None,
+                            "pools": record.get("pools"),
+                            "stored_kwh": None,
+                            "daylight": day,
+                            "coverage": 1.0,
+                            "measured_share": 0.0,
+                            "battery_source": "meter",
+                            "soc": None,
+                            **fill.as_record(),
+                        }
+                        prices = interpolate(out[-1].get("market"), record.get("market"), 1)
+                        if prices:
+                            new["price_source"] = "interpolated"
+                        out.append(new)
+                        touched[new["start"]] = {"market": prices[0]} if prices else {}
+                        made += 1
+            if quarter_status(record) == "missing" and "pools" in record and "coverage" in record:
+                share = float(record.get("coverage") or 0.0)
+                nxt = records[index + 1] if index + 1 < len(records) else None
+                prev = out[-1] if out else None
+                extra: dict[str, float] = {}
+                fields: dict[str, Any] = {}
+                fill = QuarterFill(causes=["history"])
+                for flow, key in zip(flows, ("import", "export", "charged", "discharged"), strict=True):
+                    done = fill_part(Part(float(record.get(flow) or 0.0), share), neighbour_value(prev, flow), neighbour_value(nxt, flow))
+                    if done is None or not done.added:
+                        continue
+                    extra[key] = done.added
+                    fill.methods[flow] = done.method
+                    fill.added[flow] = done.added
+                if extra:
+                    fields = {**fill.as_record(), "coverage": 1.0}
+                    record = {**record, **fields}
+                    touched[record["start"]] = extra
+                    filled += 1
+            if record.get("market") is None and "pools" in record and "coverage" in record:
+                nxt_price = next((r.get("market") for r in records[index + 1 : index + 9] if r.get("market") is not None), None)
+                prev_price = next((r.get("market") for r in reversed(out[-8:]) if r.get("market") is not None), None)
+                prices = interpolate(prev_price, nxt_price, 1)
+                if prices:
+                    record = {**record, "price_source": "interpolated"}
+                    record["fill_causes"] = sorted({*(record.get("fill_causes") or []), "price"})
+                    touched.setdefault(record["start"], {})["market"] = prices[0]
+                    filled += 1
+            out.append(record)
+        if not touched:
+            return
+        tz = dt_util.get_default_time_zone()
+        result = reevaluate(out, touched, self.tariffs.tariffs_for, _days_in_month, tz, dt_util.utcnow().isoformat(timespec="seconds"))
+        if result is None:
+            LOGGER.debug("Cost log: history fill not possible (quarters from before 0.8.31)")
+            return
+        self.pools = result[0]
+        self.current[:] = out
+        days: dict[str, dict[str, Any]] = {}
+        for record in out:
+            add_to_day(days.setdefault(dt_util.as_local(datetime.fromisoformat(record["start"])).date().isoformat(), {}), record)
+        self.days.update(days)
+        self.repaired = {"made": made, "filled": filled, "from": min(touched)}
+        LOGGER.info("Cost log: history filled once: %d quarters made, %d filled", made, filled)
+
+    def _save_month(self, month: str, quarters: list[dict[str, Any]]) -> None:
+        def data() -> dict[str, Any]:
+            return {"quarters": quarters}
+
+        self._month_store(month).async_delay_save(data, 30)
+
+    def _price_for(self, start: datetime) -> tuple[float | None, str | None]:
+        """A price for a quarter Nord Pool has no price for (step 3): between the last known
+        price before and the next one after (the sensor, up to 2 h ahead), else the mean of the
+        same quarter over 7 days."""
+        before: float | None = None
+        for back in range(1, 9):
+            record = self._record_at(start - timedelta(seconds=QUARTER_SECONDS * back))
+            if record is not None and record.get("market") is not None:
+                before = float(record["market"])
+                break
+        state = price_state(self.hass, self.price_entity) if self.price_entity else None
+        after = next(
+            (p for p in (market_price(state, start + timedelta(seconds=QUARTER_SECONDS * i)) for i in range(1, 9)) if p is not None),
+            None,
+        )
+        values = interpolate(before, after, 1)
+        if values:
+            return values[0], "interpolated"
+        history = [self._record_at(start - timedelta(days=d)) for d in range(1, 8)]
+        known = [float(r["market"]) for r in history if r is not None and r.get("market") is not None]
+        if known:
+            return sum(known) / len(known), "interpolated"
+        return None, None
+
+    async def _retry_prices(self, _event: Any = None) -> None:
+        """Replace interpolated prices by real ones: Nord Pool, after an hour EnergyZero (step 3)."""
+        now = dt_util.utcnow()
+        oldest = (now - MAX_CORRECTION_AGE).isoformat()
+        waiting = [r for r in self.current if r.get("price_source") == "interpolated" and r.get("start", "") >= oldest]
+        if not waiting:
+            return
+        state = price_state(self.hass, self.price_entity) if self.price_entity else None
+        corrections: dict[str, dict[str, float]] = {}
+        updates: dict[str, dict[str, Any]] = {}
+        for record in waiting:
+            start = datetime.fromisoformat(record["start"])
+            price, source = market_price(state, start), "nordpool"
+            if price is None and now - start >= timedelta(hours=1):
+                price, source = await self._energyzero_hour(start), "energyzero"
+            if price is None:
+                continue
+            corrections[record["start"]] = {"market": price}
+            causes = [c for c in record.get("fill_causes") or [] if c != "price"]
+            updates[record["start"]] = {"price_source": source, "fill_causes": causes}
+        if corrections and self._correct(corrections, updates):
+            self._summaries.clear()
+            assert self.current_month is not None
+            self._save_month(self.current_month, self.current)
+            self._main.async_delay_save(self._main_data, 30)
+            LOGGER.debug("Cost log: %d interpolated prices replaced", len(corrections))
+            for listener in list(self._listeners):
+                listener()
+
+    async def _energyzero_hour(self, start: datetime) -> float | None:
+        """EnergyZero's price for the hour of ``start`` (one request per day and hour of the clock)."""
+        tz = dt_util.get_default_time_zone()
+        day = dt_util.as_local(start).date()
+        key = f"{day.isoformat()}@{dt_util.utcnow().strftime('%Y-%m-%dT%H')}"
+        if key not in self._ez_cache:
+            self._ez_cache = {k: v for k, v in self._ez_cache.items() if k.startswith(day.isoformat())}
+            prices, _failed = await self._energyzero(day, day + timedelta(days=1), tz)
+            self._ez_cache[key] = prices
+        hour = dt_util.as_utc(start).replace(minute=0)
+        return self._ez_cache[key].get(hour)
+
+    def _missed(self, start: datetime) -> list[datetime]:
+        """Quarter starts between the last closed quarter and ``start`` (HA was off)."""
+        if self.last_closed is None:
+            return []
+        first = self.last_closed + timedelta(seconds=QUARTER_SECONDS)
+        count = int((start - first).total_seconds() // QUARTER_SECONDS)
+        if count <= 0:
+            return []
+        if count > MAX_GAP_QUARTERS:
+            LOGGER.warning("Cost log: %d quarters missed (more than a month): not filled", count)
+            self._gap_log.append({"start": first.isoformat(), "quarters": count, "filled": False})
+            return []
+        return [first + timedelta(seconds=QUARTER_SECONDS * i) for i in range(count)]
+
+    def _counter_since(self, entities: Iterable[str], boundary: datetime, since: datetime) -> float | None:
+        """Counter difference from the boundary ``since`` (stored before HA went off) up to now."""
+        total = 0.0
+        for entity in entities:
+            stored = self.counters.get(entity)
+            reading = _counter_kwh(self.hass.states.get(entity))
+            if not stored or stored[0] != since.isoformat() or reading is None:
+                return None
+            delta = counter_delta(stored[1], reading)
+            if delta is None:
+                return None
+            total += delta
+        return total
+
+    async def _fill_missed(
+        self, missed: list[datetime], rates: Mapping[str, float | None], totals: Mapping[str, float | None]
+    ) -> dict[str, float]:
+        """Make the quarters HA missed, filled (step 2), and return this quarter's share of a counter
+        total over the interruption (which runs up to the end of this quarter)."""
+        count = len(missed)
+        before = self._record_at(missed[0] - timedelta(seconds=QUARTER_SECONDS))
+        daylight = [is_up(self.hass, q + timedelta(seconds=QUARTER_SECONDS / 2)) for q in missed]
+        here: dict[str, float] = {}
+        gap_totals: dict[str, float | None] = {}
+        for flow, total in totals.items():
+            if total is None:
+                continue
+            spread = interpolate(neighbour_value(before, flow), rates.get(flow), count) or [0.0] * count
+            last = rates.get(flow)
+            last = spread[-1] if last is None and spread else (last or 0.0)
+            if flow == "solar_ext_kwh":
+                spread = [v if day else 0.0 for v, day in zip(spread, daylight, strict=True)]
+            shares = scale_to([*spread, last], total)
+            gap_totals[flow], here[flow] = sum(shares[:-1]), shares[-1]
+        after = {flow: rates.get(flow) for flow in ("import_kwh", "export_kwh", "charge_kwh", "discharge_kwh", "solar_ext_kwh")}
+        if self.runtime.energy is not None:
+            # The own counters fill the battery over a restart (T2); their gap lands in these quarters.
+            after.pop("charge_kwh")
+            after.pop("discharge_kwh")
+        if not self.solar_entity:
+            after.pop("solar_ext_kwh")
+        history = [{f: self._history(q, f) for f in after} for q in missed]
+        fills = fill_gap(before, after, count, gap_totals, daylight, history)
+        state = price_state(self.hass, self.price_entity) if self.price_entity else None
+        for quarter, fill, day in zip(missed, fills, daylight, strict=True):
+            v = fill.values
+            if self.runtime.energy is not None:
+                fill.methods.setdefault("charge_kwh", "counter")
+                fill.methods.setdefault("discharge_kwh", "counter")
+            ext = v.get("solar_ext_kwh") if self.solar_entity else None
+            local = dt_util.as_local(quarter)
+            market = market_price(state, quarter)
+            source = "nordpool" if market is not None else None
+            if market is None and self.price_entity:
+                market, source = self._price_for(quarter)
+            pools_before = self.pools.as_dict()
+            record = evaluate(
+                QuarterInput(
+                    start=quarter,
+                    minutes=QUARTER_SECONDS / 60,
+                    import_kwh=v.get("import_kwh", 0.0),
+                    export_kwh=v.get("export_kwh", 0.0),
+                    charge_kwh=v.get("charge_kwh", 0.0),
+                    discharge_kwh=v.get("discharge_kwh", 0.0),
+                    solar_kwh=ext,
+                    market=market,
+                    coverage=0.0 if fill.status == "missing" else 1.0,
+                    stored_kwh=None,
+                    daylight=day,
+                ),
+                self.tariffs.tariffs_for(local.date()),
+                self.pools,
+                _days_in_month(local.date()),
+            )
+            record.update(
+                {
+                    "pools": pools_before,
+                    "stored_kwh": None,
+                    "daylight": day,
+                    "coverage": 0.0 if fill.status == "missing" else 1.0,
+                    "measured_share": 0.0,
+                    "battery_source": "counters" if self.runtime.energy is not None else "meter",
+                    "soc": None,
+                    **fill.as_record(),
+                }
+            )
+            if self.solar_entity:
+                record["solar_ext_kwh"] = None if ext is None else round(ext, 4)
+            if source is not None:
+                record["price_source"] = source
+            await self._load_month(_month_key(quarter))
+            self.current.append(record)
+            add_to_day(self.days.setdefault(local.date().isoformat(), {}), record)
+            self._save_month(_month_key(quarter), self.current)
+            self.last_closed = quarter
+        self._gap_log.append({"start": missed[0].isoformat(), "quarters": count, "filled": True, "counters": sorted(gap_totals)})
+        self._gap_log = self._gap_log[-20:]
+        LOGGER.info("Cost log: %d quarters missed while Home Assistant was off, filled", count)
+        return here
 
     def _record_at(self, start: datetime) -> dict[str, Any] | None:
         """The stored quarter that starts at ``start`` (current month, searched from the end)."""
@@ -496,6 +842,21 @@ class CostRecorder:
         self._corrections_log = self._corrections_log[-20:]
         return corrections, filled
 
+    def _correct(self, corrections: dict[str, dict[str, float]], updates: Mapping[str, Mapping[str, Any]]) -> bool:
+        """Evaluate again with ``corrections`` and then set ``updates`` (fields per quarter)."""
+        if not self._apply_corrections(corrections):
+            return False
+        for quarter, fields in updates.items():
+            stored = self._record_at(datetime.fromisoformat(quarter))
+            if stored is None:
+                continue
+            before = dict(stored)
+            stored.update(fields)
+            stored.pop("fill_basis", None)
+            day = dt_util.as_local(datetime.fromisoformat(quarter)).date().isoformat()
+            day_delta(self.days.setdefault(day, {}), before, stored)
+        return True
+
     def _apply_corrections(self, corrections: dict[str, dict[str, float]]) -> bool:
         """Evaluate the current month again from the first corrected quarter; update days and pools."""
         tz = dt_util.get_default_time_zone()
@@ -527,7 +888,26 @@ class CostRecorder:
         return out
 
     def _main_data(self) -> dict[str, Any]:
-        return {"days": self.days, "pools": self.pools.as_dict(), "counters": self.counters, "months": self.months}
+        return {
+            "days": self.days,
+            "pools": self.pools.as_dict(),
+            "counters": self.counters,
+            "months": self.months,
+            "last_closed": None if self.last_closed is None else self.last_closed.isoformat(),
+            "fill_version": self.fill_version,
+        }
+
+    def _find_last_closed(self, stored: Any) -> datetime | None:
+        """The last closed quarter: stored (0.8.80), else the last quarter of the month, else the
+        last counter boundary (an interruption over the turn of a month)."""
+        if isinstance(stored, str):
+            return dt_util.as_utc(datetime.fromisoformat(stored))
+        if self.current:
+            return dt_util.as_utc(datetime.fromisoformat(self.current[-1]["start"]))
+        boundaries = [v[0] for v in self.counters.values() if isinstance(v, list) and v and isinstance(v[0], str)]
+        if boundaries:
+            return dt_util.as_utc(datetime.fromisoformat(max(boundaries))) - timedelta(seconds=QUARTER_SECONDS)
+        return None
 
     # --- reading --------------------------------------------------------------------
 
@@ -728,5 +1108,8 @@ class CostRecorder:
             "last_quarters": self.current[-8:],
             "gap_corrections": self._corrections_log[-10:],
             "fill_by_day": self._fill_by_day(7),
+            "missed_quarters": self._gap_log[-10:],
+            "history_filled": self.repaired,
+            "last_closed": None if self.last_closed is None else self.last_closed.isoformat(),
             "plan_check": self.plan_check(7),
         }

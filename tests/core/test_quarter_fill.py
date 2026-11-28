@@ -68,3 +68,18 @@ def test_status_and_day_counts() -> None:
     assert day["estimated"] == 1 and day["incomplete"] == 1
     assert day["cause_p1"] == 1 and day["method_interpolated"] == 1 and day["filled_import_kwh"] == pytest.approx(0.04)
     assert quarter_status({"complete": True, "estimated": True}) == "estimated"
+
+
+def test_gap_without_counters_is_interpolated_and_solar_stops_at_sunset() -> None:
+    from zephyr_core.quarter_fill import SCALED, fill_gap
+
+    before = {"import_kwh": 0.10, "solar_ext_kwh": 0.2, "status": "measured"}
+    fills = fill_gap(before, {"import_kwh": 0.30, "solar_ext_kwh": 0.0}, 3, {}, [True, False, False])
+    assert [f.values["import_kwh"] for f in fills] == pytest.approx([0.15, 0.20, 0.25])
+    assert all(f.methods["import_kwh"] == INTERPOLATED and f.status == "estimated" for f in fills)
+    assert [f.values["solar_ext_kwh"] for f in fills][1:] == [0.0, 0.0]
+    scaled = fill_gap(before, {"import_kwh": 0.30}, 3, {"import_kwh": 0.9}, [True] * 3)
+    assert sum(f.values["import_kwh"] for f in scaled) == pytest.approx(0.9)
+    assert scaled[0].methods["import_kwh"] == SCALED and "ha_off" in scaled[0].causes
+    nothing = fill_gap(None, {"import_kwh": None}, 2, {}, [True, True])
+    assert nothing[0].status == "missing"
