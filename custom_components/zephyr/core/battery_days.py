@@ -48,6 +48,12 @@ def battery_days(
     priced_kwh = priced_cost = 0.0
     soc_first: float | None = None
     soc_last: float | None = None
+    # For the efficiency only the energy between the first and the last quarter with a SoC counts: a quarter's
+    # SoC is at its end, so energy before the first SoC (or after the last) has no start (or end) to weigh against.
+    eff_in = eff_out = 0.0
+    pending_in = pending_out = 0.0
+    first_day: date | None = None
+    last_day: date | None = None
     for record in sorted(records, key=lambda r: r["start"]):
         if record.get("source") == "hourly":
             continue  # worked out afterwards from hourly statistics: no quarters
@@ -63,12 +69,21 @@ def battery_days(
             priced_kwh += split["grid_battery"]
             priced_cost += split["grid_battery"] * buy
         soc = record.get("soc")
+        if soc_first is not None:
+            pending_in += split["solar_battery"] + split["grid_battery"]
+            pending_out += split["battery_house"] + split["battery_grid"]
         if isinstance(soc, int | float):
             day["soc_min"] = soc if day["soc_min"] is None else min(day["soc_min"], soc)
             day["soc_max"] = soc if day["soc_max"] is None else max(day["soc_max"], soc)
             if soc_first is None:
                 soc_first = float(soc)
+                first_day = _local_day(record, tz)
+            else:
+                eff_in += pending_in
+                eff_out += pending_out
+                pending_in = pending_out = 0.0
             soc_last = float(soc)
+            last_day = _local_day(record, tz)
 
     def r(value: float) -> float:
         return round(value, 2)
@@ -98,13 +113,16 @@ def battery_days(
         )
     charged = solar + grid
     efficiency: float | None = None
+    efficiency_days: int | None = None
     if capacity_kwh and soc_first is not None and soc_last is not None:
         # What went in minus what stayed in the battery came out again (or was lost).
         stored = (soc_last - soc_first) / 100 * capacity_kwh
-        used_in = charged - stored
-        if used_in >= MIN_EFFICIENCY_KWH and delivered > 0:
-            value = delivered / used_in
+        used_in = eff_in - stored
+        if used_in >= MIN_EFFICIENCY_KWH and eff_out > 0:
+            value = eff_out / used_in
             efficiency = round(value, 3) if 0.5 <= value <= 0.98 else None  # outside: a gap in the log
+            if efficiency is not None and first_day is not None and last_day is not None:
+                efficiency_days = (last_day - first_day).days + 1
     return {
         "days": out_days,
         "week": {
@@ -114,6 +132,7 @@ def battery_days(
             "delivered": r(delivered),
             "cycles": cycles(delivered),
             "efficiency": efficiency,
+            "efficiency_days": efficiency_days,
             "grid_price": None if priced_kwh < 0.01 else round(priced_cost / priced_kwh, 4),
         },
         "usable_kwh": None if usable_kwh is None else r(usable_kwh),

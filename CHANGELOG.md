@@ -2,9 +2,14 @@
 
 ## Unreleased
 
-### 0.8.84 — Diagnostics: energy balance per day and a price check against EnergyZero
+### 0.8.85 — Diagnostics: energy balance per day and a price check against EnergyZero
 - **Energy balance** (TOETS-besparing voorstel 6, `core/cost_checks.py`): per day of the last 7, charged × η_in − delivered ÷ η_out against the change of the battery's energy (ΔSOC × capacity); `suspect` when they differ by more than 0.3 kWh and 10 % of the throughput. Diagnostics `costs.energy_balance`.
 - **Price check** (voorstel 4): the quarter prices of yesterday and today against EnergyZero's hour prices; an hour is listed when its mean differs by more than € 0.03 and 25 %, or one quarter by more than € 0.05 and 50 % (as 25-11 23:45). Interpolated prices are left out. Fetched when the diagnostics are downloaded, at most once an hour. Diagnostics `costs.price_check`.
+### 0.8.84 — Battery efficiency (RTE): only from the first SoC on
+- **Bug (Bjorn 28-11, RTE 65 % instead of ~86 %):** the efficiency counted all energy in the window but took the stored energy from the first quarter that had a SoC. Bjorn's cost log charged 4,96 kWh in the night of 25/26-11 before its first SoC (92 % after that charge), so that charge was counted twice as "put in". Now only the energy between the first and the last quarter with a SoC counts (a quarter's SoC is at its end). With his export: 83,5 % over 3 days (the set's own counters give 86 % over 7 weeks).
+- **Days:** `week.efficiency_days` (from the first to the last quarter with a SoC). The card *Accu* on Plan shows *RTE 84 % · 3 dagen* while the cost log is shorter than 7 days; the screen Accu adds *(3 dagen)* to the efficiency.
+- The per-day bars and totals still show all energy.
+- Tests: charge before the first SoC and delivery after the last SoC do not count (core).
 
 ### 0.8.83 — Savings: the battery's content at the start and end of a period (day boundary)
 - **Day boundary** (TOETS-besparing bevinding 2, SPEC-kosten §5): energy charged and still in the battery at the end of a period was counted as cost, its earnings fell in the next period; days and *Today* / *This week* swung with the state of charge. Now the battery's content is valued at what it cost (grid energy at its buy price, solar at the export revenue given up) and the change over the period counts in the battery saving (solar part in *Zon bewaard*, grid part in *Prijsverschil*). Over a longer period it adds up to 0.
