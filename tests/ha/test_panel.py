@@ -119,6 +119,7 @@ async def test_subscribe_sends_now_and_updates(
     assert now["mode"] == "zero_meter"
     assert "dynamic_forecasting" in now["modes"]
     assert now["live"] is False
+    assert now["grid_measured_w"] == 300  # shadow mode: the real meter next to the computed grid_w
     assert now["action"] in ("charge", "deliver", "hold", "standby")
     assert set(now["reason"]) == {"nl", "en"}
     assert now["soc"] is not None and now["capacity_kwh"] > 0

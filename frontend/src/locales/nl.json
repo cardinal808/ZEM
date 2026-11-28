@@ -37,7 +37,10 @@
     "shadow_note": "Zo zou ZEPHYR het doen (schaduwmodus).",
     "p1_import": "P1 · afname",
     "p1_export": "P1 · teruglevering",
-    "p1_zero": "P1"
+    "p1_zero": "P1",
+    "p1_computed": "Berekend",
+    "p1_measured": "gemeten",
+    "p1_computed_hint": "Berekend: wat de meter zou tonen als ZEPHYR stuurde. Gemeten nu: {measured}."
   },
   "battery": {
     "title": "Accu",

@@ -1167,7 +1167,7 @@ export class ZephyrPanel extends LitElement {
         <div class="big">
           ${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}
         </div>
-        ${now.grid_w !== null ? this.renderP1(now.grid_w) : nothing}
+        ${now.grid_w !== null ? this.renderP1(now.grid_w, now.live ? null : (now.grid_measured_w ?? null)) : nothing}
       </div>
       ${rows.length ? this.renderNowRows(rows) : nothing}
       ${this.renderAirco(now)}
@@ -1241,11 +1241,21 @@ export class ZephyrPanel extends LitElement {
     </table>`;
   }
 
-  private renderP1(gridW: number): TemplateResult {
+  private renderP1(gridW: number, measuredW: number | null): TemplateResult {
     const p = p1Display(gridW, this.locale);
+    // Shadow mode: the value is computed (OPDRACHT-p1-profiel §7.3); the real meter next to it.
+    const measured = measuredW === null ? null : p1Display(measuredW, this.locale).text;
+    const hint = measured === null ? "" : this.tr("now.p1_computed_hint").replace("{measured}", measured);
     return html`<div class="p1 ${p.kind}">
       <strong>${p.text}</strong>
       <span>${this.tr(`now.p1_${p.kind}`)}</span>
+      ${
+        measured === null
+          ? nothing
+          : html`<span class="measured" tabindex="0" title=${hint} aria-label=${hint}
+              >${this.tr("now.p1_computed")} · ${this.tr("now.p1_measured")} ${measured}</span
+            >`
+      }
     </div>`;
   }
 
@@ -1865,6 +1875,12 @@ export class ZephyrPanel extends LitElement {
         font-family: var(--z-font-head);
         font-size: 20px;
         font-variant-numeric: tabular-nums;
+      }
+      .p1 .measured {
+        display: block;
+        font-size: 11px;
+        color: var(--z-muted);
+        cursor: help;
       }
       .p1 span {
         font-size: 12px;

@@ -42,6 +42,8 @@ class Mode(StrEnum):
 ZERO_METER_MODES = (Mode.ZERO_METER, Mode.FORECAST)
 """Modes that follow the P1 meter."""
 PLAN_RESTART_PAUSE = 120.0
+BATTERY_HISTORY_FOR = 60.0
+"""s of real battery power kept for the virtual P1 at the moment of a measurement (§7.2)."""
 """s: grid charging (L) and export (X) start only after grid charging was off this long (§7)."""
 PLAN_CHARGE_GRACE = 10.0
 """s: grid charging stops when the plan has not said L for this long (§7)."""
@@ -248,6 +250,10 @@ class ZephyrEngine:
         self._p1_measured: float | None = None
         self._twins: dict[str, TwinSet] | None = None
         self._real_battery: float | None = None
+        self._battery_history: deque[tuple[float, float]] = deque()
+        """(time, real battery power of the sets), the last BATTERY_HISTORY_FOR s (shadow mode)."""
+        self._twin_p1_at: float | None = None
+        self._twin_real_at_p1: float | None = None
         self._p1_history: deque[tuple[float, float]] = deque(maxlen=200)
         self.tally_measured = GridTally()
         self._plan: PlanAction | None = None
@@ -279,6 +285,8 @@ class ZephyrEngine:
         if live:
             self._twins = None
             self._real_battery = None
+            self._battery_history.clear()
+            self._twin_p1_at = self._twin_real_at_p1 = None
             # Live: work from the measured power of the set and wait until it has reached each
             # command (controller ``wait_for_reach``). Trusting the last command instead doubled
             # every start: a set starting from 0 W needs ~9 s before power flows, so after the
@@ -301,23 +309,46 @@ class ZephyrEngine:
     def twin_enabled(self) -> bool:
         return self._twins is not None
 
-    def _virtual_p1(self, now: float, measured: float) -> float:
-        """The grid with the twin instead of the real set, at the moment the real report shows."""
+    def _virtual_p1(self, now: float, measured: float, new_sample: bool) -> float:
+        """The grid with the twin instead of the real set, at the moment of the P1 measurement.
+
+        The P1 is taken at ``now - twin_delay`` (the moment the real report shows). A slow
+        meter (DSMR 4, every 10 s) has no measurement at that moment: the newest one before it
+        can be up to an interval older. The real battery and the twin are taken at the moment
+        of that measurement too, not now: otherwise a step of the current controller in between
+        makes the virtual P1 jump (OPDRACHT-p1-profiel §7.2). A repeat of the same value is not
+        a new measurement and keeps the moment of the one it repeats.
+        """
         assert self._twins is not None
-        self._p1_history.append((now, measured))
+        if new_sample or not self._p1_history:
+            self._p1_history.append((now, measured))
         if self._real_battery is None:
             return measured
         at = now - self.settings.twin_delay
-        p1 = self._p1_history[0][1]
+        t_p1, p1 = self._p1_history[0]
         for t, value in self._p1_history:
             if t <= at:
-                p1 = value
+                t_p1, p1 = t, value
             else:
                 break
+        # The real report that shows the moment of the measurement: received twin_delay later.
+        real = self._battery_history[0][1] if self._battery_history else self._real_battery
+        for t, value in self._battery_history:
+            if t <= t_p1 + self.settings.twin_delay:
+                real = value
+            else:
+                break
+        self._twin_p1_at, self._twin_real_at_p1 = t_p1, real
         # The controller waits this much longer after a command: the effect shows that much later.
         self.controller.extra_settle = self.settings.twin_delay
-        twin = sum(t.power_at(now, at) for t in self._twins.values())
-        return p1 - self._real_battery + twin
+        twin = sum(t.power_at(now, t_p1) for t in self._twins.values())
+        return p1 - real + twin
+
+    def twin_alignment(self, now: float) -> dict[str, float] | None:
+        """For the decision: the real battery the virtual P1 used and the age of that P1 measurement."""
+        if self._twins is None or self._twin_p1_at is None or self._twin_real_at_p1 is None:
+            return None
+        return {"battery_real_at_p1": round(self._twin_real_at_p1), "p1_age_s": round(now - self._twin_p1_at, 1)}
 
     def _twin_power(self, now: float) -> float:
         assert self._twins is not None
@@ -346,12 +377,13 @@ class ZephyrEngine:
         one (seen: every 0.4 s for a meter with a new value every 10 s).
         """
         measured = value
-        if self._twins is not None:
-            self.tally_measured.add(now, measured)
-            value = self._virtual_p1(now, measured)
-            self.tally_virtual.add(now, value)
         # The meter's interval comes from the measured value: the twin changes the virtual one.
         changed = self._p1_measured is None or measured != self._p1_measured
+        if self._twins is not None:
+            self.tally_measured.add(now, measured)
+            new_sample = changed or self._p1_interval is None or self._p1_sample_at is None or now - self._p1_sample_at >= self._p1_interval
+            value = self._virtual_p1(now, measured, new_sample)
+            self.tally_virtual.add(now, value)
         if changed:
             if self._p1_changed_at is not None:
                 gap = now - self._p1_changed_at
@@ -516,6 +548,9 @@ class ZephyrEngine:
         """The real sets with their battery swapped for the twin; remembers the real power."""
         assert self._twins is not None
         self._real_battery = sum(v.report.battery_power_ac for v in sets if v.report is not None and v.online)
+        self._battery_history.append((now, self._real_battery))
+        while self._battery_history and now - self._battery_history[0][0] > BATTERY_HISTORY_FOR:
+            self._battery_history.popleft()
         out: list[SetView] = []
         for v in sets:
             if v.report is None or not v.online:
