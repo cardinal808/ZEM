@@ -43,6 +43,22 @@ SAVE_AFTER_HOUR: Final = 6
 SOURCE: Final = {"name": "jeroen.nl", "url": "https://jeroen.nl"}
 
 
+RUN_VERSION = 2
+"""2: the band is bare like ``market`` (before 0.8.96 it was kept all-in, OPDRACHT-band-prijsverwachting)."""
+
+
+def _repair_run(run: dict[str, Any]) -> dict[str, Any]:
+    """A run kept before 0.8.96: its band was all-in and cannot be turned back (the sensor's
+    line is not kept), so ``market`` stands in for it; the error per day ahead stays right."""
+    if run.get("v", 1) >= RUN_VERSION:
+        return run
+    slots = []
+    for slot in run.get("slots", []):
+        start, market, low, high = slot
+        slots.append([start, market, low, high] if low <= market <= high else [start, market, market, market])
+    return {**run, "slots": slots, "v": RUN_VERSION}
+
+
 class PriceForecastSource:
     def __init__(self, hass: HomeAssistant, entry_id: str, options: Mapping[str, Any]) -> None:
         self.hass = hass
@@ -70,7 +86,7 @@ class PriceForecastSource:
 
     async def async_load(self) -> None:
         data = await self._store.async_load() or {}
-        self.runs = [r for r in data.get("runs", []) if isinstance(r, dict)]
+        self.runs = [_repair_run(r) for r in data.get("runs", []) if isinstance(r, dict)]
         self._loaded = True
 
     def extend(self, markets: Sequence[tuple[datetime, float, bool]], now: datetime, tz: tzinfo) -> Extension | None:
@@ -110,6 +126,7 @@ class PriceForecastSource:
             {
                 "day": day,
                 "made": made,
+                "v": RUN_VERSION,
                 "slots": [[s.start.isoformat(), round(s.market, 6), round(s.low, 6), round(s.high, 6)] for s in forecast.slots],
             }
         )
@@ -159,6 +176,7 @@ class PriceForecastSource:
             "made": None if forecast is None or forecast.made is None else forecast.made.isoformat(),
             "reason": None if ext is None else ext.reason,
             "issues": [] if forecast is None else forecast.issues,
+            "band_all_in": 0 if forecast is None else forecast.band_all_in,
             "compare": self.compare,
             "runs_stored": len(self.runs),
             "quality": self.quality(actual),

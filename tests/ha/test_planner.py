@@ -559,20 +559,25 @@ async def test_planner_memory_survives_a_restart_across_a_quarter(
 JEROEN = "sensor.jeroen_nl_stroomprijs"
 
 
+def _jeroen_all_in(market: float) -> float:
+    return round((market + 0.02 + 0.1108) * 1.21, 5)
+
+
 def _jeroen(hass: HomeAssistant, first: datetime, quarters: int, made: datetime) -> None:
     """A made-up ha-jeroen-nl sensor (the real forecast stays private, see the core tests)."""
     rows = []
     t = first
     for _ in range(quarters):
         peak = 0.45 if 7 <= dt_util.as_local(t).hour < 9 else 0.20
+        # As ha-jeroen-nl does it: market bare, price, low and high all-in with its own tariff.
         rows.append(
             {
                 "start": t.isoformat(),
                 "end": (t + timedelta(minutes=15)).isoformat(),
-                "price": 0.4,
+                "price": _jeroen_all_in(peak),
                 "market": peak,
-                "low": peak - 0.03,
-                "high": peak + 0.05,
+                "low": _jeroen_all_in(peak - 0.03),
+                "high": _jeroen_all_in(peak + 0.05),
                 "forecast": True,
             }
         )
@@ -607,6 +612,11 @@ async def test_price_forecast_indicative(hass: HomeAssistant, fake_sets: FakeSet
     assert "slots" not in forecast  # no raw series in the diagnostics
     view = planner.view()
     assert view["price_forecast"]["source"]["name"] == "jeroen.nl" and len(view["price_forecast"]["slots"]) == 96
+    # OPDRACHT-band-prijsverwachting: the band around the expected price, bare like market.
+    for slot in view["price_forecast"]["slots"]:
+        assert slot["buy_low"] <= slot["buy"] <= slot["buy_high"]
+        assert slot["low"] == pytest.approx(slot["market"] - 0.03, abs=1e-4)
+        assert slot["high"] == pytest.approx(slot["market"] + 0.05, abs=1e-4)
 
     hass.states.async_set(JEROEN, "0.36", {"unit_of_measurement": "€/kWh"})  # a value, but nothing to read
     await _tick(hass, freezer, 70)
@@ -630,3 +640,14 @@ async def test_price_forecast_taken_into_account(hass: HomeAssistant, fake_sets:
     diag = await async_get_config_entry_diagnostics(hass, entry)
     late = [q for q in diag["planner"]["timeline"] if q["start"] >= known_end.isoformat()]
     assert late and all(q["buy"] is None for q in late)  # forecast prices stay private
+
+
+def test_runs_with_an_all_in_band_are_repaired() -> None:
+    # Runs kept before 0.8.96 have the band all-in: market stands in for it, the error stays.
+    from custom_components.zephyr.price_forecast_source import RUN_VERSION, _repair_run
+
+    old = {"day": "2026-11-28", "made": "x", "slots": [["2026-11-30T07:00:00+00:00", 0.2, 0.39, 0.49], ["s", 0.2, 0.18, 0.26]]}
+    fixed = _repair_run(old)
+    assert fixed["v"] == RUN_VERSION
+    assert fixed["slots"] == [["2026-11-30T07:00:00+00:00", 0.2, 0.2, 0.2], ["s", 0.2, 0.18, 0.26]]
+    assert _repair_run(fixed) is fixed

@@ -7,6 +7,11 @@ attribute ``prices`` lists the fixed quarters from now on and then the forecast 
 
 * Only forecast quarters are used; the sensor's all-in ``price`` is not: ZEPHYR prices the bare
   ``market`` / ``low`` / ``high`` with its own tariffs, like every other slot.
+* ha-jeroen-nl gives ``market`` bare but ``low`` and ``high`` **all-in** (its own tariff on top,
+  seen 28-11: expected € 0.47, band € 0.66–0.82). Its all-in price is linear in the market price,
+  so the line through the (``market``, ``price``) pairs of the attribute turns ``low`` and
+  ``high`` back into bare prices (``_to_bare``). A band that still does not hold ``market``
+  is dropped for that quarter (``market`` as ``low`` and ``high``), with a note.
 * Units (€/kWh, €/MWh, cents) are recognised from the sensor, not assumed. Slots are kept by
   their start in UTC, so days of 92 or 100 quarters work.
 * Nord Pool always leads: a forecast quarter is used only from the end of the last known price
@@ -56,6 +61,8 @@ class Forecast:
     issues: list[str] = field(default_factory=list)
     readable: bool = True
     """False when the sensor has a value but nothing could be read (a repair issue)."""
+    band_all_in: int = 0
+    """Forecast quarters whose band came all-in and was turned back into bare prices."""
 
 
 def _scale(unit: str) -> float:
@@ -90,6 +97,40 @@ def _float(value: Any) -> float | None:
         return None
 
 
+BAND_MARGIN: Final = 0.002
+"""€/kWh (in the sensor's unit, scaled): rounding room for ``low ≤ market ≤ high``."""
+
+
+def _all_in_line(rows: Sequence[Any]) -> tuple[float, float] | None:
+    """(slope, offset) of the sensor's all-in price against the market price, from all its rows.
+
+    ``price = (market + markup + tax) × (1 + VAT)``: one line for the whole attribute. None
+    without two different market prices (nothing to fit) or with a slope that is no tariff.
+    """
+    pairs = []
+    for row in rows:
+        if isinstance(row, Mapping):
+            market, price = _float(row.get("market")), _float(row.get("price"))
+            if market is not None and price is not None:
+                pairs.append((market, price))
+    if len(pairs) < 2:
+        return None
+    n = len(pairs)
+    mx = sum(m for m, _ in pairs) / n
+    my = sum(p for _, p in pairs) / n
+    sxx = sum((m - mx) ** 2 for m, _ in pairs)
+    if sxx <= 1e-12:
+        return None
+    slope = sum((m - mx) * (p - my) for m, p in pairs) / sxx
+    if not 0.5 <= slope <= 2.0:
+        return None
+    return slope, my - slope * mx
+
+
+def _brackets(low: float, value: float, high: float, margin: float) -> bool:
+    return low - margin <= value <= high + margin
+
+
 def parse_forecast(state_value: str | None, attributes: Mapping[str, Any]) -> Forecast:
     """The forecast quarters from the sensor's attributes."""
     out = Forecast(made=_time(attributes.get("forecast_made")))
@@ -101,7 +142,9 @@ def parse_forecast(state_value: str | None, attributes: Mapping[str, Any]) -> Fo
             out.issues.append("no_prices_attribute")
         return out
     factor = _scale(str(attributes.get("unit_of_measurement") or attributes.get("unit") or "€/kWh"))
-    without_band = 0
+    margin = BAND_MARGIN / factor
+    line = _all_in_line(rows)
+    without_band = all_in_bands = dropped = 0
     for row in rows:
         if not isinstance(row, Mapping) or row.get("forecast") is not True:
             continue
@@ -110,21 +153,35 @@ def parse_forecast(state_value: str | None, attributes: Mapping[str, Any]) -> Fo
             continue
         low, high = _float(row.get("low")), _float(row.get("high"))
         band = low is not None and high is not None
-        if not band:
+        if low is not None and high is not None:
+            price = _float(row.get("price"))
+            if not _brackets(low, market, high, margin) and price is not None and _brackets(low, price, high, margin) and line is not None:
+                # All-in band around the all-in price: back to bare prices on the same line.
+                slope, offset = line
+                low, high = (low - offset) / slope, (high - offset) / slope
+                all_in_bands += 1
+            if not _brackets(low, market, high, margin):
+                band, low, high = False, None, None
+                dropped += 1
+        else:
             without_band += 1
         out.slots.append(
             ForecastSlot(
                 start=start,
                 end=end or start + QUARTER,
                 market=market * factor,
-                low=(low if low is not None else market) * factor,
-                high=(high if high is not None else market) * factor,
+                low=min(low, market) * factor if low is not None else market * factor,
+                high=max(high, market) * factor if high is not None else market * factor,
                 band=band,
             )
         )
     out.slots.sort(key=lambda s: s.start)
     if without_band:
         out.issues.append(f"{without_band} forecast quarters without low/high: market used")
+    if all_in_bands:
+        out.band_all_in = all_in_bands
+    if dropped:
+        out.issues.append(f"{dropped} forecast quarters with a band that does not hold the market price: market used")
     if has_value and not rows:
         out.readable = False
         out.issues.append("empty_prices")

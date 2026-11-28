@@ -156,3 +156,51 @@ def test_expensive_monday_morning_charges_sunday_night_only_when_taken_into_acco
 
     assert first_action(0.55) is Action.CHARGE
     assert first_action(0.22) is not Action.CHARGE
+
+
+def _real_shape(first: datetime, quarters: int, reversed_band: int | None = None) -> dict:
+    """As ha-jeroen-nl builds a row (sensor.py ``_row``): ``market`` bare, ``price``, ``low`` and
+    ``high`` all-in with its own tariff, (market + markup + tax) × (1 + VAT). Made-up values."""
+
+    def all_in(market: float) -> float:
+        return round((market + 0.02 + 0.1108) * 1.21, 5)
+
+    rows = []
+    t = first - 4 * Q
+    for i in range(4):
+        m = 0.15 + 0.01 * i
+        rows.append({"start": t.isoformat(), "end": (t + Q).isoformat(), "price": all_in(m), "market": m})
+        t += Q
+    for i in range(quarters):
+        m = 0.20 + 0.005 * i
+        low, high = m - 0.02, m + 0.06
+        if i == reversed_band:
+            low, high = m + 0.03, m + 0.05  # a band that does not hold the expected price
+        row = {"start": t.isoformat(), "end": (t + Q).isoformat(), "price": all_in(m), "market": m, "forecast": True}
+        row.update({"low": all_in(low), "high": all_in(high)})
+        rows.append(row)
+        t += Q
+    return {"prices": rows, "forecast_made": "2026-11-28T04:00:00+01:00", "unit_of_measurement": "€/kWh"}
+
+
+def test_all_in_band_is_turned_back_into_bare_prices() -> None:
+    # Seen 28-11 (meerekenen): expected € 0.47, band € 0.66–0.82: the band came all-in.
+    f = parse_forecast("0.40", _real_shape(KNOWN_END, 8))
+    assert f.band_all_in == 8 and not f.issues
+    for i, slot in enumerate(f.slots):
+        m = 0.20 + 0.005 * i
+        assert slot.band and slot.low <= slot.market <= slot.high
+        assert slot.low == pytest.approx(m - 0.02, abs=1e-4) and slot.high == pytest.approx(m + 0.06, abs=1e-4)
+
+
+def test_band_that_does_not_hold_the_market_price_is_dropped() -> None:
+    f = parse_forecast("0.40", _real_shape(KNOWN_END, 8, reversed_band=3))
+    slot = f.slots[3]
+    assert not slot.band and slot.low == slot.market == slot.high
+    assert any("does not hold the market price" in issue for issue in f.issues)
+    assert all(s.band for i, s in enumerate(f.slots) if i != 3)
+
+
+def test_bare_band_stays_as_it_is() -> None:
+    f = parse_forecast("0.36", _attrs(KNOWN_END, 4))
+    assert f.band_all_in == 0 and f.slots[0].low == pytest.approx(0.17)
