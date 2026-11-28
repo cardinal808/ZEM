@@ -212,7 +212,10 @@ class ZeroMeterController:
                 self._last_demand = demand
             return self._unchanged(inp, regulated=False, demand=demand)
 
-        if abs(error) < deadband and self._pending is Direction.NONE:
+        low = -deadband
+        if slow and target == s.target_grid_deliver:
+            low = max(low, -s.slow_export_band - target)
+        if low < error < deadband and self._pending is Direction.NONE:
             self._last_step = inp.now
             self._last_demand = demand
             if not self.trust_commands:

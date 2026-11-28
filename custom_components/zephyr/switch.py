@@ -60,6 +60,8 @@ class ZephyrControlSwitch(ZephyrControlEntity, SwitchEntity, RestoreEntity):
         wanted = stored if isinstance(stored, bool) else last is not None and last.state == STATE_ON
         if not wanted:
             return  # a new installation, or shadow mode before: stay in shadow mode
+        if not self._control.shadow:
+            return  # live already: the control was handed over at a reload (handover.py)
         self._control.wanted_live = True
         issue_id = "live_off_after_restart"
         if self._entry.options.get(CONF_LIVE_OFF_AFTER_RESTART, False):

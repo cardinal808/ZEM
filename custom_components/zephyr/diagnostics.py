@@ -122,6 +122,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
             "p1_profile": control.engine.p1_profile_view(time.monotonic())
             | {
                 "timestamps": "last_reported",
+                **control.p1_gaps_view(time.monotonic()),
                 "dsmr_version": _dsmr_version(hass, control, list(entry.options.get(CONF_COST_IMPORT_COUNTERS, []))),
             },
             "p1_filter": {
