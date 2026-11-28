@@ -19,9 +19,10 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers import translation
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_LIVE_OFF_AFTER_RESTART, CONF_PRICE_ENTITY, DOMAIN, SUBENTRY_SET
+from .const import CONF_LIVE_OFF_AFTER_RESTART, CONF_PRICE_ENTITY, DOMAIN, SUBENTRY_SET, installation_model
 from .coordinator import SetCoordinator
 from .core.totals import CostFlows, Totals, compute_totals, cost_flows
 
@@ -223,12 +224,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry[Any]) -> b
 async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bool:
     """Set up ZEPHYR: one reader per set, then the entities."""
     # The installation device must exist before set devices refer to it.
+    # Its name is translated (*ZEPHYR Applicatie*); the cache must hold the device texts first.
+    await translation.async_get_translations(hass, hass.config.language, "device", {DOMAIN})
     dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
-        name="ZEPHYR",
+        translation_key="installation",
         manufacturer="ZEPHYR",
-        model="Installation",
+        model=installation_model(hass.config.language),
     )
     runtime = ZephyrRuntime(options=dict(entry.options))
     for subentry in entry.subentries.values():

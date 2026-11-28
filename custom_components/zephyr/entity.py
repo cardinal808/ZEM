@@ -4,22 +4,47 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 
 from . import ZephyrConfigEntry, ZephyrRuntime
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import SetCoordinator
 
 if TYPE_CHECKING:
+    import asyncio
+
+    from homeassistant.helpers.entity_platform import EntityPlatform
+
     from .appliances import Appliance, ApplianceManager
     from .vacation import VacationManager
 
 
 def installation_device(entry: ZephyrConfigEntry) -> DeviceInfo:
-    return DeviceInfo(identifiers={(DOMAIN, entry.entry_id)}, name="ZEPHYR", manufacturer="ZEPHYR", model="Installation")
+    """Link to the installation device; ``async_setup_entry`` creates it with its name and type."""
+    return DeviceInfo(identifiers={(DOMAIN, entry.entry_id)})
+
+
+class InstallationIds(Entity):
+    """Keep the entity ids of the installation at ``zephyr_…``.
+
+    With ``has_entity_name`` HA puts the device name in front of a new entity id; the installation
+    device is called *ZEPHYR Applicatie* (translated), so a new installation would get
+    ``zephyr_applicatie_…``. This suggests ``zephyr_<English name>`` instead, as before 0.8.73.
+    Existing entities keep their registered id.
+    """
+
+    def add_to_platform_start(self, hass: HomeAssistant, platform: EntityPlatform, parallel_updates: asyncio.Semaphore | None) -> None:
+        super().add_to_platform_start(hass, platform, parallel_updates)
+        key = self.translation_key
+        if key is None or self.entity_id:  # an id of its own, or nothing to name it by
+            return
+        name = platform.platform_data.object_id_platform_translations.get(f"component.{DOMAIN}.entity.{platform.domain}.{key}.name")
+        if name:
+            self.entity_id = f"{platform.domain}.{slugify(f'{DOMAIN} {name}')}"
 
 
 class ZephyrSetEntity(CoordinatorEntity[SetCoordinator]):
@@ -53,7 +78,7 @@ class ZephyrSetEntity(CoordinatorEntity[SetCoordinator]):
         return super().available and data is not None and data.online and data.report is not None
 
 
-class ZephyrTotalEntity(Entity):
+class ZephyrTotalEntity(InstallationIds):
     """Entity of the installation (device "ZEPHYR"), fed by all sets."""
 
     _attr_has_entity_name = True
@@ -75,7 +100,7 @@ class ZephyrTotalEntity(Entity):
         self.async_write_ha_state()
 
 
-class ZephyrControlEntity(Entity):
+class ZephyrControlEntity(InstallationIds):
     """Entity of the installation fed by the control loop; writes state only on change."""
 
     _attr_has_entity_name = True
@@ -105,7 +130,7 @@ class ZephyrControlEntity(Entity):
             self.async_write_ha_state()
 
 
-class ZephyrVacationEntity(Entity):
+class ZephyrVacationEntity(InstallationIds):
     """Entity of the installation for the vacation (B42)."""
 
     _attr_has_entity_name = True

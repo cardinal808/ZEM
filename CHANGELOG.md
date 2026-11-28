@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.73 — Installation device: *ZEPHYR Applicatie*
+- The installation device (the one HA lists under *Apparaten die niet tot een sub-item behoren*; that heading is HA's own) is now called **ZEPHYR Applicatie** (EN *ZEPHYR Application*, a translated device name) with type **Regeling en planner** (EN *Control and planner*; was *Installation*). Display names of its entities follow (*ZEPHYR Applicatie Modus*).
+- **Entity ids do not change:** existing ones stay as registered; a new installation still gets `zephyr_…` (the installation entities suggest `zephyr_<English name>` themselves, `InstallationIds`), not `zephyr_applicatie_…`.
+- Tests: name, type and ids in English and Dutch (HA).
+
 ### 0.8.72 — Diagnose: tidier layout
 - **Top:** one wide bar with *Diagnose downloaden* and *Kostenlogboek exporteren*.
 - **Planner:** *Plan tegen werkelijkheid* and *Verbruiksprofiel* side by side and equally high; *Apparaatprofielen* below over the full width.

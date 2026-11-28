@@ -604,5 +604,10 @@
         }
       }
     }
+  },
+  "device": {
+    "installation": {
+      "name": "ZEPHYR Applicatie"
+    }
   }
 }

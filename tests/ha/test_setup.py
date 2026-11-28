@@ -237,3 +237,23 @@ async def test_unknown_pack_gives_repair_and_manual_capacity(hass: HomeAssistant
     await hass.async_block_till_done()
     assert float(hass.states.get("sensor.zephyr_set_1_capacity").state) == pytest.approx(11.04)
     assert ir.async_get(hass).async_get_issue(DOMAIN, f"unknown_pack_{subentry_id}") is None
+
+
+@pytest.mark.parametrize(
+    ("language", "name", "model"),
+    [("en", "ZEPHYR Application", "Control and planner"), ("nl", "ZEPHYR Applicatie", "Regeling en planner")],
+)
+async def test_installation_device_name_and_ids(hass: HomeAssistant, fake_sets: FakeSets, language: str, name: str, model: str) -> None:
+    """The installation device is *ZEPHYR Applicatie* (0.8.73); new entity ids stay ``zephyr_…``."""
+    from homeassistant.helpers import device_registry as dr
+    from homeassistant.helpers import entity_registry as er
+
+    hass.config.language = language
+    fake_sets.add("10.0.0.10", "deliver_760")
+    entry = await _install(hass)
+    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    assert device is not None
+    assert device.name == name and device.model == model
+    assert hass.states.get("sensor.zephyr_state_of_charge") is not None
+    ids = [e.entity_id for e in er.async_entries_for_device(er.async_get(hass), device.id)]
+    assert ids and not [i for i in ids if "applica" in i]
