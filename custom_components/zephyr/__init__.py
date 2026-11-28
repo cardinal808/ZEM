@@ -55,6 +55,8 @@ class ZephyrRuntime:
     """Runtime objects of one ZEPHYR installation."""
 
     coordinators: dict[str, SetCoordinator] = field(default_factory=dict)
+    installation_device_id: str | None = None
+    """Device id of the installation device: the parent of the set and appliance devices."""
     control: ZephyrControl | None = None
     solar: SolarRecorder | None = None
     costs: CostRecorder | None = None
@@ -226,7 +228,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
     # The installation device must exist before set devices refer to it.
     # Its name is translated (*ZEPHYR Applicatie*); the cache must hold the device texts first.
     await translation.async_get_translations(hass, hass.config.language, "device", {DOMAIN})
-    dr.async_get(hass).async_get_or_create(
+    installation = dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
         translation_key="installation",
@@ -234,6 +236,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> bo
         model=installation_model(hass.config.language),
     )
     runtime = ZephyrRuntime(options=dict(entry.options))
+    runtime.installation_device_id = installation.id
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_SET:
             continue

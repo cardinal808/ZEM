@@ -5,6 +5,8 @@
 ### 0.8.88 — Terugrekenen: pools capped by the battery's content, warning for Gielz counters
 - **Pools capped** (TOETS-besparing bevinding 5): the backfill (`zephyr/savings/backfill`) takes an optional `soc_entity`; its hourly mean × the installation's capacity caps the pools, as in the cost log, so conversion losses of stored solar land in *Zon bewaard* instead of *Prijsverschil*. The total does not change. The answer says `capped_by_soc`.
 - **Warning** (bevinding 11): when the charge or discharge counter belongs to another Zendure integration (Gielz), the answer holds `warnings: ["pv_in_battery_counters"]`: those counters include the set's own PV, so on summer days that PV counts as battery. The panel can show it (UI chat).
+### 0.8.87 — Devices: `via_device_id` instead of the deprecated `via_device`
+- HA 2026.11 warns that `via_device` stops working in 2027.8. The set and appliance devices now link to the installation device with `via_device_id` where HA supports it; older versions (down to 2026.1, `hacs.json`) keep `via_device`. Test: every set device hangs under the installation device.
 
 ### 0.8.86 — Planner: price forecast of jeroen.nl as an optional source (indicative)
 - **Optional, off by default** (OPDRACHT-prijsvoorspelling-jeroen): new settings *price forecast (entity)*, *use in the plan* (off / indicative / take into account), *forecast days* (0–2, default 1) and *value from the band* (low / middle, default low). ZEPHYR reads only the sensor of the HACS integration ha-jeroen-nl (the user's own API key) and fetches nothing from jeroen.nl.

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -21,6 +21,25 @@ if TYPE_CHECKING:
 
     from .appliances import Appliance, ApplianceManager
     from .vacation import VacationManager
+
+
+def with_parent(entry: ZephyrConfigEntry, **info: Any) -> DeviceInfo:
+    """``DeviceInfo`` with the link to the installation device (``parent_device``)."""
+    data: dict[str, Any] = {**info, **parent_device(entry)}
+    return cast(DeviceInfo, data)
+
+
+def parent_device(entry: ZephyrConfigEntry) -> dict[str, Any]:
+    """The link from a set or appliance device to the installation device.
+
+    HA 2026.11 warns about ``via_device`` (removed in 2027.8) and wants ``via_device_id``; older
+    versions (down to the 2026.1 in hacs.json) only know ``via_device``.
+    """
+    runtime = getattr(entry, "runtime_data", None)
+    device_id = getattr(runtime, "installation_device_id", None)
+    if device_id and "via_device_id" in DeviceInfo.__annotations__:
+        return {"via_device_id": device_id}
+    return {"via_device": (DOMAIN, entry.entry_id)}
 
 
 def installation_device(entry: ZephyrConfigEntry) -> DeviceInfo:
@@ -62,14 +81,14 @@ class ZephyrSetEntity(CoordinatorEntity[SetCoordinator]):
         self.entity_id = f"{platform}.zephyr_set_{coordinator.number}_{key}"
         report = coordinator.data.report if coordinator.data else None
         firmware = report.packs[0].firmware if report and report.packs else None
-        self._attr_device_info = DeviceInfo(
+        self._attr_device_info = with_parent(
+            entry,
             identifiers={(DOMAIN, coordinator.serial)},
             name=f"ZEPHYR Set {coordinator.number}",
             manufacturer=MANUFACTURER,
             model=coordinator.model_name,
             serial_number=coordinator.serial,
             sw_version=str(firmware) if firmware is not None else None,
-            via_device=(DOMAIN, entry.entry_id),
         )
 
     @property
@@ -161,12 +180,12 @@ class ZephyrApplianceEntity(Entity):
         self._attr_unique_id = f"{appliance.id}_{key}"
         self._attr_translation_key = f"appliance_{key}"
         self.entity_id = f"{platform}.zephyr_{slugify(appliance.name)}_{key}"
-        self._attr_device_info = DeviceInfo(
+        self._attr_device_info = with_parent(
+            entry,
             identifiers={(DOMAIN, appliance.id)},
             name=appliance.name,
             manufacturer=MANUFACTURER,
             model="Planned appliance",
-            via_device=(DOMAIN, entry.entry_id),
         )
 
     async def async_added_to_hass(self) -> None:
