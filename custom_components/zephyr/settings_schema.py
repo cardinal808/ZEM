@@ -104,6 +104,8 @@ class Field:
     """A select with a list value (at least one choice)."""
     show_if: tuple[str, tuple[str, ...]] | None = None
     """Only shown when another field has one of these values ("*" = filled in); hidden values are kept."""
+    section: str | None = None
+    """Subtab within a long group (panel only); sections appear in the order of their first field."""
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -122,6 +124,7 @@ class Field:
             "domain": self.domain,
             "multiple": self.multiple,
             "show_if": {"key": self.show_if[0], "values": list(self.show_if[1])} if self.show_if else None,
+            "section": self.section,
         }
 
 
@@ -138,18 +141,26 @@ _T = Tariffs()
 FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_MIN_SOC, "battery", "number", _S.min_soc, "%", 5, 50, 1),
     Field(CONF_MAX_SOC, "battery", "number", _S.max_soc, "%", 70, 100, 1),
-    Field(CONF_P1_SOURCE, "sources", "select", P1_SOURCE_SINGLE, options=(P1_SOURCE_SINGLE, P1_SOURCE_PAIR), reload=True),
-    Field(CONF_P1_ENTITY, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_SINGLE),
-    Field(CONF_P1_IMPORT, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_PAIR),
-    Field(CONF_P1_EXPORT, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_PAIR),
-    Field(CONF_PRICE_ENTITY, "sources", "entity", optional=True, reload=True),
-    Field(CONF_SOLAR_FORECAST, "sources", "entity", optional=True, reload=True),
-    Field(CONF_PRICE_FORECAST_ENTITY, "sources", "entity", optional=True, reload=True, domain="sensor"),
-    Field(CONF_PRICE_FORECAST_MODE, "sources", "select", "indicative", options=("off", "indicative", "use"), show_if=_HAS_FORECAST),
-    Field(CONF_PRICE_FORECAST_DAYS, "sources", "number", 1, "d", 0, 2, 1, show_if=_HAS_FORECAST),
-    Field(CONF_PRICE_FORECAST_VALUE, "sources", "select", "low", options=("low", "mid"), show_if=_HAS_FORECAST),
-    Field(CONF_SOLAR_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True),
-    Field(CONF_SOLAR_POWER, "sources", "entities", device_class="power", optional=True),
+    Field(CONF_P1_SOURCE, "sources", "select", P1_SOURCE_SINGLE, options=(P1_SOURCE_SINGLE, P1_SOURCE_PAIR), reload=True, section="meter"),
+    Field(CONF_P1_ENTITY, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_SINGLE, section="meter"),
+    Field(CONF_P1_IMPORT, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_PAIR, section="meter"),
+    Field(CONF_P1_EXPORT, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_PAIR, section="meter"),
+    Field(CONF_PRICE_ENTITY, "sources", "entity", optional=True, reload=True, section="prices"),
+    Field(CONF_SOLAR_FORECAST, "sources", "entity", optional=True, reload=True, section="solar"),
+    Field(CONF_PRICE_FORECAST_ENTITY, "sources", "entity", optional=True, reload=True, domain="sensor", section="prices"),
+    Field(
+        CONF_PRICE_FORECAST_MODE,
+        "sources",
+        "select",
+        "indicative",
+        options=("off", "indicative", "use"),
+        show_if=_HAS_FORECAST,
+        section="prices",
+    ),
+    Field(CONF_PRICE_FORECAST_DAYS, "sources", "number", 1, "d", 0, 2, 1, show_if=_HAS_FORECAST, section="prices"),
+    Field(CONF_PRICE_FORECAST_VALUE, "sources", "select", "low", options=("low", "mid"), show_if=_HAS_FORECAST, section="prices"),
+    Field(CONF_SOLAR_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True, section="solar"),
+    Field(CONF_SOLAR_POWER, "sources", "entities", device_class="power", optional=True, section="solar"),
     Field(CONF_EXCLUDED_ENERGY, "corrections", "entity", device_class="energy", optional=True, reload=True),
     Field(CONF_EXCLUDED_CLIMATE, "corrections", "entity", optional=True, reload=True, domain="climate", show_if=_HAS_COUNTER),
     Field(
@@ -162,8 +173,8 @@ FIELDS: Final[tuple[Field, ...]] = (
         multiple=True,
         show_if=_HAS_COUNTER,
     ),
-    Field(CONF_COST_IMPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True),
-    Field(CONF_COST_EXPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True),
+    Field(CONF_COST_IMPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True, section="counters"),
+    Field(CONF_COST_EXPORT_COUNTERS, "sources", "entities", device_class="energy", optional=True, reload=True, section="counters"),
     Field(CONF_TARIFF_SUPPLIER, "tariffs", "select", TARIFF_OWN),
     Field(CONF_TARIFF_ENERGY_TAX, "tariffs", "number", _T.energy_tax, "€/kWh", 0, 1, "any", tariff=True),
     Field(CONF_TARIFF_MARKUP_IMPORT, "tariffs", "number", _T.markup_import, "€/kWh", -1, 1, "any", tariff=True),
@@ -171,17 +182,21 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_TARIFF_VAT, "tariffs", "number", _T.vat, "%", 0, 30, 0.1, tariff=True),
     Field(CONF_TARIFF_SOLAR_BONUS, "tariffs", "number", _T.solar_bonus, "%", 0, 50, 0.1, tariff=True),
     Field(CONF_TARIFF_FIXED_MONTH, "tariffs", "number", None, "€", -200, 500, 0.01, optional=True),
-    Field(CONF_PLAN_WEAR_COST, "planner", "number", DEFAULT_PLAN_WEAR_COST, "€/kWh", 0, 0.5, 0.001),
-    Field(CONF_PLAN_GRID_CHARGE_COST, "planner", "number", DEFAULT_PLAN_GRID_CHARGE_COST, "€/kWh", 0, 0.5, 0.001),
-    Field(CONF_PLAN_ALLOW_EXPORT, "planner", "bool", False),
-    Field(CONF_PLAN_LOAD_MARGIN, "planner", "number", 0, "%", 0, 50, 1),
-    Field(CONF_PLAN_BUFFER, "planner", "number", 0, "%", 0, 50, 1),
-    Field(CONF_CALIBRATION_DAYS, "planner", "number", 21, "d", 0, 90, 1),
-    Field(CONF_WORKDAY_ENTITY, "planner", "entity", optional=True, reload=True, domain="binary_sensor"),
-    Field(CONF_CURTAIL_MODE, "planner", "select", CURTAIL_OFF, options=CURTAIL_MODES, reload=True),
-    Field(CONF_CURTAIL_SWITCH, "planner", "entity", optional=True, reload=True, domain="switch", show_if=_ZEPHYR_CURTAILS),
-    Field(CONF_CURTAIL_NUMBER, "planner", "entity", optional=True, reload=True, domain="number", show_if=_ZEPHYR_CURTAILS),
-    Field(CONF_CURTAIL_INVERTER_W, "planner", "number", 0, "W", 0, 100000, 100, reload=True, show_if=_ZEPHYR_CURTAILS),
+    Field(CONF_PLAN_WEAR_COST, "planner", "number", DEFAULT_PLAN_WEAR_COST, "€/kWh", 0, 0.5, 0.001, section="plan"),
+    Field(CONF_PLAN_GRID_CHARGE_COST, "planner", "number", DEFAULT_PLAN_GRID_CHARGE_COST, "€/kWh", 0, 0.5, 0.001, section="plan"),
+    Field(CONF_PLAN_ALLOW_EXPORT, "planner", "bool", False, section="plan"),
+    Field(CONF_PLAN_LOAD_MARGIN, "planner", "number", 0, "%", 0, 50, 1, section="plan"),
+    Field(CONF_PLAN_BUFFER, "planner", "number", 0, "%", 0, 50, 1, section="plan"),
+    Field(CONF_CALIBRATION_DAYS, "battery", "number", 21, "d", 0, 90, 1),
+    Field(CONF_WORKDAY_ENTITY, "sources", "entity", optional=True, reload=True, domain="binary_sensor", section="counters"),
+    Field(CONF_CURTAIL_MODE, "planner", "select", CURTAIL_OFF, options=CURTAIL_MODES, reload=True, section="curtail"),
+    Field(
+        CONF_CURTAIL_SWITCH, "planner", "entity", optional=True, reload=True, domain="switch", show_if=_ZEPHYR_CURTAILS, section="curtail"
+    ),
+    Field(
+        CONF_CURTAIL_NUMBER, "planner", "entity", optional=True, reload=True, domain="number", show_if=_ZEPHYR_CURTAILS, section="curtail"
+    ),
+    Field(CONF_CURTAIL_INVERTER_W, "planner", "number", 0, "W", 0, 100000, 100, reload=True, show_if=_ZEPHYR_CURTAILS, section="curtail"),
     Field(CONF_VACATION_AWAY, "vacation", "bool", False, reload=True),
     Field(CONF_EXPENSIVE_HOURS, "zero_meter", "number", DEFAULT_EXPENSIVE_HOURS, "h", 1, 12, 1),
     Field(CONF_RESERVE_SOC, "zero_meter", "number", DEFAULT_RESERVE_SOC, "%", 0, 80, 1),

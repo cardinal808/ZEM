@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.90 — Settings: subtabs in Bronnen and Planner
+- **Subtabs** (`Field.section`, in `settings/get` as `section`): *Bronnen* → *Meter · Prijzen · Zon · Tellers*; *Planner* → *Plan · Afknijpen*. Same look as *Vandaag · Morgen · 48 uur*; an orange dot on a subtab with a changed field; on a phone they scroll sideways. The chosen subtab is kept per group; saving stays per group (drafts on other subtabs are kept). An error on another subtab opens that subtab.
+- **Moved:** *Kalibratie na dagen* to *Accu en grenzen*; the workday sensor to *Bronnen → Tellers*.
+- **Menu:** a short line under each group (its subtabs, or e.g. *min, max, kalibratie*); hidden on a phone.
+- The link *afknijpen staat uit* on Plan opens *Planner → Afknijpen* (`group:section`).
+- Tests: `groupSections` (vitest); every field of a group with sections has one, every section has a name (HA).
+
 ### 0.8.89 — Cost log: the older months are filled once too
 - The one-off fill of 0.8.80 (missing quarters made, incomplete ones filled, missing prices interpolated) only touched the current month. Now every stored month before it gets the same, once; each month is evaluated again on its own (the current month's pools stay), and its days are summed anew. Days worked out from hourly statistics are left alone. Diagnostics: `costs.history_filled.older_months`.
 ### 0.8.88 — Terugrekenen: pools capped by the battery's content, warning for Gielz counters

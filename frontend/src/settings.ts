@@ -70,6 +70,8 @@ export interface SettingField {
   in_use?: number | null;
   status?: SourceStatus | null;
   show_if?: { key: string; values: string[] } | null;
+  /** Subtab within a long group (0.8.85). */
+  section?: string | null;
 }
 
 export interface SettingsGroup {
@@ -98,6 +100,13 @@ export function fieldVisible(f: SettingField, valueOf: (key: string) => unknown)
   if (f.show_if.values.includes("*"))
     return Array.isArray(v) ? v.length > 0 : v !== null && v !== undefined && v !== "";
   return typeof v === "string" && f.show_if.values.includes(v);
+}
+
+/** The subtabs of a group, in the order of their first field; empty when the group has none. */
+export function groupSections(fields: SettingField[]): string[] {
+  const out: string[] = [];
+  for (const f of fields) if (f.section && !out.includes(f.section)) out.push(f.section);
+  return out;
 }
 
 /** The changes to save: hidden fields are left out (they are not used, so they never block saving). */
@@ -168,14 +177,19 @@ export class ZephyrSettings extends LitElement {
       this.view &&
       this.openedFor !== this.openGroup
     ) {
-      const i = this.view.groups.findIndex((g) => g.key === this.openGroup);
+      // "group" or "group:section" (a link to a subtab, e.g. planner:curtail).
+      const [key, section] = this.openGroup.split(":");
+      const i = this.view.groups.findIndex((g) => g.key === key);
       if (i >= 0) {
         this.group = i;
+        if (section) this.sectionOf = { ...this.sectionOf, [key]: section };
         this.openedFor = this.openGroup;
       }
     }
   }
   @state() private tip: string | null = null;
+  /** Chosen subtab per group (kept while switching groups). */
+  @state() private sectionOf: Record<string, string> = {};
   /** Unsaved changes of fields that need a restart (value, or RESET for the standard value). */
   @state() private draft: Record<string, unknown> = {};
   @state() private errors: Record<string, string> = {};
@@ -235,6 +249,18 @@ export class ZephyrSettings extends LitElement {
     void this.send({}, [f.key], f.key);
   }
 
+  /** An error on another subtab: open that subtab, so the message is seen. */
+  private showErrorSection(keys: string[]): void {
+    for (const key of keys) {
+      const f = this.fieldByKey(key);
+      const g = this.view?.groups.find((x) => x.fields.some((y) => y.key === key));
+      if (f?.section && g) {
+        this.sectionOf = { ...this.sectionOf, [g.key]: f.section };
+        return;
+      }
+    }
+  }
+
   private localError(f: SettingField, code: string): void {
     this.errors = { ...this.errors, [f.key]: code };
     this.requestUpdate();
@@ -254,6 +280,7 @@ export class ZephyrSettings extends LitElement {
           ...this.errors,
           ...(result.errors ?? { base: "failed" }),
         };
+        this.showErrorSection(Object.keys(result.errors ?? {}));
         return false;
       }
       if (key) {
@@ -325,6 +352,7 @@ export class ZephyrSettings extends LitElement {
               }}
             >
               <span>${this.tr(`settings.groups.${g.key}`)}</span>
+              ${this.groupSub(g)}
 
             </button>`,
         )}
@@ -357,11 +385,56 @@ export class ZephyrSettings extends LitElement {
             : nothing
         }
         ${current.key === "house" ? this.renderHouse(view.house ?? [], view.can_edit) : nothing}
+        ${this.renderSections(current)}
         <ul>
-          ${current.fields.map((f) => this.renderField(f))}
+          ${this.sectionFields(current).map((f) => this.renderField(f))}
         </ul>
         ${this.renderBar()}
       </section>
+    </div>`;
+  }
+
+  private activeSection(g: SettingsGroup): string | null {
+    const all = groupSections(g.fields);
+    if (!all.length) return null;
+    const chosen = this.sectionOf[g.key];
+    return chosen && all.includes(chosen) ? chosen : all[0];
+  }
+
+  private sectionFields(g: SettingsGroup): SettingField[] {
+    const active = this.activeSection(g);
+    return active ? g.fields.filter((f) => f.section === active) : g.fields;
+  }
+
+  /** Under the group name in the menu: its subtabs, or a short line from the translations. */
+  private groupSub(g: SettingsGroup): TemplateResult | typeof nothing {
+    const sections = groupSections(g.fields);
+    const text = sections.length
+      ? sections.map((s) => this.tr(`settings.sections.${s}`).toLowerCase()).join(" · ")
+      : this.tr(`settings.group_sub.${g.key}`);
+    return text && text !== `settings.group_sub.${g.key}` ? html`<small>${text}</small>` : nothing;
+  }
+
+  private renderSections(g: SettingsGroup): TemplateResult | typeof nothing {
+    const sections = groupSections(g.fields);
+    if (sections.length < 2) return nothing;
+    const active = this.activeSection(g);
+    return html`<div class="subtabs" role="tablist" aria-label=${this.tr(`settings.groups.${g.key}`)}>
+      ${sections.map((s) => {
+        const changed = g.fields.some((f) => f.section === s && (this.isModified(f) || f.key in this.draft));
+        return html`<button
+          type="button"
+          role="tab"
+          aria-selected=${s === active ? "true" : "false"}
+          class=${s === active ? "on" : ""}
+          @click=${() => {
+            this.sectionOf = { ...this.sectionOf, [g.key]: s };
+            this.tip = null;
+          }}
+        >
+          ${this.tr(`settings.sections.${s}`)}${changed ? html`<i class="dot" aria-hidden="true"></i>` : nothing}
+        </button>`;
+      })}
     </div>`;
   }
 
@@ -1151,6 +1224,61 @@ export class ZephyrSettings extends LitElement {
       color: var(--z-on-text);
       font-weight: 600;
     }
+    .groups button {
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 1px;
+      text-align: left;
+    }
+    .groups small {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--z-muted);
+    }
+    .groups button.on small {
+      color: inherit;
+      opacity: 0.7;
+    }
+    .subtabs {
+      display: flex;
+      gap: 2px;
+      padding: 4px;
+      align-self: flex-start;
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--z-border);
+      border-radius: 999px;
+      background: var(--z-track);
+    }
+    .subtabs button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 36px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--z-text);
+      font: inherit;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .subtabs button.on {
+      background: var(--z-text);
+      color: var(--z-on-text);
+    }
+    .subtabs button:focus-visible {
+      outline: 2px solid var(--z-charge);
+      outline-offset: 2px;
+    }
+    .subtabs .dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+    }
     .groups button:focus-visible,
     .info:focus-visible {
       outline: 2px solid var(--z-charge);
@@ -1682,6 +1810,9 @@ export class ZephyrSettings extends LitElement {
         max-width: none;
         flex-direction: row;
         flex-wrap: wrap;
+      }
+      .groups small {
+        display: none;
       }
       .groups button {
         width: auto;

@@ -340,3 +340,22 @@ def test_climate_without_counter_is_kept_not_refused() -> None:
     """Hidden in the panel and not used by control.py; the options flow still asks for the counter."""
     result = apply_changes(BASE, {"excluded_climate_entity": "climate.living"}, entity_ok=lambda e: True)
     assert result.errors == {}
+
+
+def test_sections_are_complete_and_translated() -> None:
+    """Subtabs (0.8.85): a group with sections has every field in one; each section has a name in the panel."""
+    import json
+    from pathlib import Path
+
+    from custom_components.zephyr.settings_schema import FIELDS, GROUPS
+
+    root = Path(__file__).parents[2] / "frontend" / "src" / "locales"
+    names = {lang: json.loads((root / f"{lang}.json").read_text())["settings"]["sections"] for lang in ("nl", "en")}
+    for group in GROUPS:
+        fields = [f for f in FIELDS if f.group == group]
+        sectioned = [f for f in fields if f.section]
+        assert not sectioned or len(sectioned) == len(fields), group
+        for f in sectioned:
+            assert f.section in names["nl"] and f.section in names["en"], f.key
+    assert {f.section for f in FIELDS if f.group == "sources"} == {"meter", "prices", "solar", "counters"}
+    assert next(f for f in FIELDS if f.key == "calibration_days").group == "battery"
