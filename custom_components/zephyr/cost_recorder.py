@@ -47,6 +47,7 @@ from .core.costs import (
 )
 from .core.energy_counters import TOTAL_KEYS as ENERGY_TOTAL_KEYS
 from .core.price_window import parse_nordpool_raw
+from .core.quarter_fill import FULL_SHARE, Part, QuarterFill, fill_part, history_mean, interpolate, neighbour_value
 from .core.solar_history import energy_kwh
 from .prices import price_state
 
@@ -131,6 +132,7 @@ class CostRecorder:
         self.counters: dict[str, list[Any]] = {}
         """entity → [boundary (ISO UTC), kWh]: the reading at the last quarter boundary."""
         self._corrections_log: list[dict[str, Any]] = []
+        self._gap_here = False
         self._excluded_total: float | None = None
         """B41: the excluded load's energy total at the last quarter close (None until the first close)."""
         self.months: list[str] = []
@@ -244,29 +246,66 @@ class CostRecorder:
         if market is None and self.price_entity:
             market = market_price(price_state(self.hass, self.price_entity), start)
         imp, exp = measured.import_kwh, measured.export_kwh
-        coverage = measured.grid_seconds / QUARTER_SECONDS
+        grid_share = measured.grid_seconds / QUARTER_SECONDS
         if self.import_counters and self.export_counters:
             counted_imp = self._counter_sum(self.import_counters, boundary, start)
             counted_exp = self._counter_sum(self.export_counters, boundary, start)
             if counted_imp is not None and counted_exp is not None:
-                imp, exp, coverage = counted_imp, counted_exp, 1.0
+                imp, exp, grid_share = counted_imp, counted_exp, 1.0
         charge, discharge, set_solar = measured.charge_kwh, measured.discharge_kwh, measured.set_solar_kwh
         corrections, filled = self._gap_corrections(start)
         own = self._own_counters(boundary, start)
+        # The coverage follows the source: the own energy counters count the whole quarter, also
+        # when the power readings of the set had a gap (0.8.79; before, such a quarter counted
+        # as incomplete although its energy was right).
+        battery_share = 1.0 if own is not None or not self.runtime.coordinators else measured.battery_seconds / QUARTER_SECONDS
         if own is not None:
             # SPEC-tellers T3: the own energy counters, without what they filled for earlier quarters.
             charge = max(own["charged"] - filled["charged"], 0.0)
             discharge = max(own["discharged"] - filled["discharged"], 0.0)
             set_solar = max(own["solar"] - filled["solar"], 0.0)
-        solar: float | None = None
+        ext: float | None = None
         if self.solar_entity:
             ext = self._counter_sum([self.solar_entity], boundary, start)
-            solar = None if ext is None else ext + set_solar
-        if self.runtime.coordinators:
-            coverage = min(coverage, measured.battery_seconds / QUARTER_SECONDS)
         totals = self.runtime.totals()
         local_start = dt_util.as_local(start)
         daylight = is_up(self.hass, start + timedelta(seconds=QUARTER_SECONDS / 2))
+        # Fill what was not measured (OPDRACHT-onvolledige-kwartieren): neighbours, own rate, history.
+        fill = QuarterFill()
+        prev = self._record_at(start - timedelta(seconds=QUARTER_SECONDS))
+        parts = {
+            "import_kwh": (Part(imp, grid_share), "p1", True),
+            "export_kwh": (Part(exp, grid_share), "p1", True),
+            "charge_kwh": (Part(charge, battery_share), "set", True),
+            "discharge_kwh": (Part(discharge, battery_share), "set", True),
+        }
+        if self.solar_entity:
+            parts["solar_ext_kwh"] = (Part(ext or 0.0, 0.0 if ext is None else 1.0), "solar_counter", daylight)
+        values: dict[str, float] = {}
+        basis: dict[str, list[float]] = {}
+        for name, (part, cause, allowed) in parts.items():
+            done = fill_part(part, neighbour_value(prev, name), None, self._history(start, name), allowed)
+            if done is None:
+                values[name] = part.kwh
+                continue
+            values[name] = done.kwh
+            fill.methods[name] = done.method
+            fill.added[name] = done.added
+            fill.causes.append(cause)
+            basis[name] = [round(part.kwh, 5), round(part.share, 4)]
+        if own is not None and self._gap_here:
+            # The set was unreadable for a while: the own counters filled that part (SPEC-tellers T2).
+            for name in ("charge_kwh", "discharge_kwh"):
+                fill.methods.setdefault(name, "counter")
+            fill.causes.append("set")
+        imp, exp = values["import_kwh"], values["export_kwh"]
+        charge, discharge = values["charge_kwh"], values["discharge_kwh"]
+        solar: float | None = None
+        if self.solar_entity:
+            ext = values["solar_ext_kwh"]
+            solar = ext + set_solar
+        measured_share = min(grid_share, battery_share, 1.0 if ext is not None or not self.solar_entity else 0.0)
+        coverage = measured_share if fill.status == "missing" else 1.0
         pools_before = self.pools.as_dict()
         record = evaluate(
             QuarterInput(
@@ -293,9 +332,15 @@ class CostRecorder:
                 "stored_kwh": None if totals.energy_kwh is None else round(totals.energy_kwh, 4),
                 "daylight": daylight,
                 "coverage": round(coverage, 3),
+                "measured_share": round(measured_share, 3),
                 "battery_source": "counters" if own is not None else "meter",
+                **fill.as_record(),
             }
         )
+        if self.solar_entity:
+            record["solar_ext_kwh"] = None if ext is None else round(ext, 4)
+        if basis:
+            record["fill_basis"] = basis  # to refine the fill once the next quarter is known
         record["soc"] = None if totals.soc is None else round(totals.soc, 1)
         if self.runtime.vacation is not None and self.runtime.vacation.was(start):
             record["vacation"] = True  # B42: filter vacations out of overviews; the planner learns apart
@@ -312,8 +357,21 @@ class CostRecorder:
         await self._load_month(_month_key(start))
         self.current.append(record)
         add_to_day(self.days.setdefault(local_start.date().isoformat(), {}), record)
-        if corrections:
-            self._apply_corrections(corrections)
+        refine, updates = self._refine_previous(record)
+        for quarter, extra in refine.items():
+            target = corrections.setdefault(quarter, {})
+            for key, kwh in extra.items():
+                target[key] = target.get(key, 0.0) + kwh
+        if corrections and self._apply_corrections(corrections):
+            for quarter, fields in updates.items():
+                stored = self._record_at(datetime.fromisoformat(quarter))
+                if stored is None:
+                    continue
+                before = dict(stored)
+                stored.update(fields)
+                stored.pop("fill_basis", None)
+                day = dt_util.as_local(datetime.fromisoformat(quarter)).date().isoformat()
+                day_delta(self.days.setdefault(day, {}), before, stored)
         self._summaries.clear()
         assert self.current_month is not None
         month_store, quarters = self._month_store(self.current_month), self.current
@@ -323,6 +381,66 @@ class CostRecorder:
         for listener in list(self._listeners):
             listener()
         return record
+
+    # --- filling (OPDRACHT-onvolledige-kwartieren) -----------------------------------------
+
+    def _record_at(self, start: datetime) -> dict[str, Any] | None:
+        """The stored quarter that starts at ``start`` (current month, searched from the end)."""
+        key = dt_util.as_utc(start).isoformat()
+        low, high = 0, len(self.current)
+        while low < high:  # the quarters are in time order
+            mid = (low + high) // 2
+            if str(self.current[mid].get("start", "")) < key:
+                low = mid + 1
+            else:
+                high = mid
+        if low < len(self.current) and self.current[low].get("start") == key:
+            found: dict[str, Any] = self.current[low]
+            return found
+        return None
+
+    def _history(self, start: datetime, flow: str) -> float | None:
+        """Mean of a flow at the same time of day over the last 7 days (guess without neighbours)."""
+        records = [self._record_at(start - timedelta(days=d)) for d in range(1, 8)]
+        return history_mean([r for r in records if r is not None], flow)
+
+    def _refine_previous(self, record: Mapping[str, Any]) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, Any]]]:
+        """The quarter before ``record`` was filled with its own rate standing in for the next
+        quarter; now that is known: fill it again between its real neighbours. Returns the
+        corrections (kWh to add per flow) for ``reevaluate`` and the fill fields to set afterwards."""
+        start = datetime.fromisoformat(record["start"])
+        prev = self._record_at(start - timedelta(seconds=QUARTER_SECONDS))
+        if prev is None or not prev.get("fill_basis"):
+            return {}, {}
+        before = self._record_at(start - timedelta(seconds=2 * QUARTER_SECONDS))
+        keys = {"import_kwh": "import", "export_kwh": "export", "charge_kwh": "charged", "discharge_kwh": "discharged"}
+        out: dict[str, float] = {}
+        fill_kwh = dict(prev.get("fill_kwh") or {})
+        methods = dict(prev.get("fill") or {})
+        fields: dict[str, Any] = {}
+        for name, (kwh, share) in prev["fill_basis"].items():
+            if share >= FULL_SHARE or prev.get("fill", {}).get(name) not in ("interpolated", "own_rate"):
+                continue
+            rates = interpolate(neighbour_value(before, name), neighbour_value(record, name), 1)
+            if not rates:
+                continue
+            if name == "solar_ext_kwh" and not prev.get("daylight"):
+                continue
+            new_total = float(kwh) + max(rates[0], 0.0) * (1.0 - float(share))
+            old_total = float(prev.get(name) or 0.0)
+            delta = new_total - old_total
+            if abs(delta) < 1e-4:
+                continue
+            out[keys.get(name, "solar")] = delta
+            fill_kwh[name] = round(new_total - float(kwh), 4)
+            if name == "solar_ext_kwh":
+                fields["solar_ext_kwh"] = round(new_total, 4)
+            methods[name] = "interpolated"
+        prev.pop("fill_basis", None)  # refined once
+        if not out:
+            return {}, {}
+        fields.update({"fill_kwh": fill_kwh, "fill": methods})
+        return {prev["start"]: out}, {prev["start"]: fields}
 
     # --- own energy counters and corrections (SPEC-tellers T3) ---------------------------
 
@@ -351,6 +469,7 @@ class CostRecorder:
         """
         corrections: dict[str, dict[str, float]] = {}
         filled = dict.fromkeys(ENERGY_TOTAL_KEYS, 0.0)
+        self._gap_here = False
         energy = self.runtime.energy
         if energy is None:
             return corrections, filled
@@ -361,7 +480,8 @@ class CostRecorder:
             recent = start - gap_start <= MAX_CORRECTION_AGE
             for quarter, share in gap_shares(gap_start, gap_end).items():
                 if quarter >= start:
-                    continue  # this quarter: the counter delta already holds it
+                    self._gap_here = True  # this quarter: the counter delta already holds it (estimated)
+                    continue
                 for key in ENERGY_TOTAL_KEYS:
                     kwh = float(gap["kwh"].get(key, 0.0)) * share
                     if kwh <= 0:
@@ -376,7 +496,7 @@ class CostRecorder:
         self._corrections_log = self._corrections_log[-20:]
         return corrections, filled
 
-    def _apply_corrections(self, corrections: dict[str, dict[str, float]]) -> None:
+    def _apply_corrections(self, corrections: dict[str, dict[str, float]]) -> bool:
         """Evaluate the current month again from the first corrected quarter; update days and pools."""
         tz = dt_util.get_default_time_zone()
         result = reevaluate(
@@ -389,12 +509,13 @@ class CostRecorder:
         )
         if result is None:
             LOGGER.debug("Cost log: gap correction not possible (quarters missing or from before 0.8.31): %s", corrections)
-            return
+            return False
         self.pools, changes = result
         for old, new in changes:
             day = dt_util.as_local(datetime.fromisoformat(new["start"])).date().isoformat()
             day_delta(self.days.setdefault(day, {}), old, new)
         LOGGER.debug("Cost log: %d quarters evaluated again after a gap", len(changes))
+        return True
 
     def records_since(self, start: datetime) -> dict[datetime, dict[str, Any]]:
         """Stored quarters of the current month from ``start`` on, by start time (UTC); for the panel."""
@@ -571,6 +692,25 @@ class CostRecorder:
         items = plan_check.checks(self.days, today - timedelta(days=days - 1), today)
         return {"days": items, "summary": plan_check.summary([i for i in items if i["date"] < today.isoformat()])}
 
+    def _fill_by_day(self, count: int) -> dict[str, dict[str, Any]]:
+        """Per day: quarters measured, estimated and missing, by cause and method, and the kWh added."""
+        out: dict[str, dict[str, Any]] = {}
+        for key in sorted(self.days)[-count:]:
+            day = self.days[key]
+            quarters = int(day.get("quarters", 0))
+            estimated, missing = int(day.get("estimated", 0)), int(day.get("incomplete", 0))
+            out[key] = {
+                "measured": quarters - estimated - missing,
+                "estimated": estimated,
+                "missing": missing,
+                "without_price": int(day.get("no_price", 0)),
+                "price_interpolated": int(day.get("price_interpolated", 0)),
+                "causes": {k[6:]: v for k, v in day.items() if k.startswith("cause_")},
+                "methods": {k[7:]: v for k, v in day.items() if k.startswith("method_")},
+                "filled_kwh": {k[7:]: round(v, 3) for k, v in day.items() if k.startswith("filled_")},
+            }
+        return out
+
     def diagnostics(self) -> dict[str, Any]:
         return {
             "tariffs": self.tariffs.diagnostics(),
@@ -587,5 +727,6 @@ class CostRecorder:
             "month": self.summary("month").as_dict(),
             "last_quarters": self.current[-8:],
             "gap_corrections": self._corrections_log[-10:],
+            "fill_by_day": self._fill_by_day(7),
             "plan_check": self.plan_check(7),
         }

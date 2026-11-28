@@ -279,3 +279,37 @@ async def test_backfill_with_energyzero_prices(
     assert result["ok"] is True and result["days"] == 2
     assert result["priced_hours"] == 24 and result["price_failed_days"] == 1
     assert aioclient_mock.call_count == 2
+
+
+async def test_unmeasured_part_is_filled_and_refined(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # OPDRACHT-onvolledige-kwartieren: P1 away for 5 of 15 minutes, no meter counters. The
+    # missing part is filled (first with the quarter's own rate as the next neighbour, then,
+    # once the next quarter closed, between the real neighbours) and the quarter is estimated.
+    entry = await _setup(hass, fake_sets, freezer)
+    await _run(hass, freezer, 10)  # 11:45–12:00: 10 s measured, nothing to fill with
+    costs = entry.runtime_data.costs
+    assert costs.current[-1]["status"] == "missing"
+    await _run(hass, freezer, 900, 400.0)  # 12:00–12:15 at 400 W: measured
+    assert costs.current[-1]["status"] == "measured"
+    await _run(hass, freezer, 600, 400.0)  # 12:15–12:30: 10 min at 400 W ...
+    for _ in range(60):  # ... then 5 min without a P1 value
+        freezer.tick(timedelta(seconds=5))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    gap = costs.current[-1]
+    assert gap["status"] == "estimated" and gap["fill"]["import_kwh"] == "interpolated"
+    assert "p1" in gap["fill_causes"] and gap["complete"] is True
+    assert gap["import_kwh"] == pytest.approx(0.1, abs=0.004)  # 400 W on both sides
+    await _run(hass, freezer, 900, 600.0)  # 12:30–12:45 at 600 W: the gap is filled again at ~500 W
+    gap = costs.current[-2]
+    assert gap["import_kwh"] == pytest.approx(0.0667 + 0.0417, abs=0.004)
+    assert gap["estimated"] is True and "fill_basis" not in gap
+    today = hass.states.get("sensor.zephyr_costs_today")
+    assert today.attributes["estimated_quarters"] == 1
+    assert today.attributes["missing_quarters"] == 1
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    day = next(iter(diag["costs"]["fill_by_day"].values()))
+    assert day["estimated"] == 1 and day["missing"] == 1 and day["causes"]["p1"] == 1
+    assert day["filled_kwh"]["import_kwh"] == pytest.approx(0.0417, abs=0.004)
+    total = sum(r["import_kwh"] for r in costs.current)
+    assert costs.days[next(iter(costs.days))]["import_kwh"] == pytest.approx(total, abs=1e-4)

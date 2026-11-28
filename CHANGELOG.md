@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.79 — Cost log: unmeasured parts of a quarter are filled (step 1 of OPDRACHT-onvolledige-kwartieren)
+- **The coverage follows the source.** With the own energy counters (`battery_source: counters`) the battery part of a quarter is complete, also when the set's power readings had a gap; such quarters no longer count as incomplete (the bulk of the "7 of 57" on 28-11).
+- **Fill instead of leaving out** (`core/quarter_fill.py`): a flow measured over less than 95 % of the quarter (P1 away without meter counters, set readings away without own counters, no solar counter reading) gets the missing part filled: between the neighbour quarters; at closing time the quarter's own rate stands in for the next quarter, and once that closed the fill is redone between the real neighbours (`reevaluate`). No neighbours: the own rate, else the mean of the same quarter over 7 days. Solar only in daylight.
+- **Per quarter:** `status` (`measured` / `estimated` / `missing`), `fill` (method per flow: `interpolated`, `own_rate`, `history`, `counter`), `fill_kwh`, `fill_causes` (`p1`, `set`, `solar_counter`), `measured_share`, `solar_ext_kwh`. A quarter corrected after a counter gap (T3) becomes `estimated` with method `counter`. `missing` only when nothing could fill it; only then the amounts are too low.
+- **Totals:** per day `estimated`, `incomplete` (= missing), counts per cause and method and the kWh added per flow. Sensors and panel data: `estimated_quarters`, `missing_quarters`, `price_interpolated_quarters`; `incomplete_quarters` now counts only missing quarters (and those without a price). Diagnostics: `costs.fill_by_day` for the last 7 days.
+- Next steps: quarters while HA was off (step 2) and the price always filled (step 3).
+
 ### 0.8.78 — Planner: its memory survives a restart
 - **Bug (28-11):** a save of the planner scheduled before it loaded its store at the start (a plan run asked for while Home Assistant was still starting) left a pending write, and `Store.async_load` returns a pending write instead of the file. The planner so loaded its own empty start state, and every restart lost the calibration count (the 21 days began again at each start), the consumption profile (filled again from the recorder), the price reserve and the expectations for tomorrow.
 - Saves before the load are now held back and done right after it; the start of a new calibration count is saved at once.

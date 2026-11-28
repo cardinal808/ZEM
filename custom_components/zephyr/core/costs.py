@@ -233,12 +233,18 @@ RECORD_FIELDS: Final = (
     "battery_source",
     "estimated",
     "corrected_at",
+    "status",
+    "solar_ext_kwh",
+    "measured_share",
+    "price_source",
 )
 """Fields of a stored quarter (and the CSV columns). ``plan_*``: the plan at the start of the quarter.
 ``soc``: state of charge at the end of the quarter (%, 0.8.2), for the panel's past.
 ``excluded_kwh`` (B41), ``vacation`` (B42). ``ahead_*``: the day-ahead plan (plan against reality, 0.8.21).
 ``battery_source``: ``counters`` (own energy counters) or ``meter``; ``estimated`` / ``corrected_at``: energy
-of a filled counter gap was added afterwards (SPEC-tellers T3). Kept but not exported: ``pools`` (before the
+of a filled counter gap was added afterwards (SPEC-tellers T3). ``status``: ``measured`` / ``estimated`` /
+``missing`` (0.8.79); ``fill`` (method per flow), ``fill_kwh`` (kWh added per flow) and ``fill_causes``
+(``p1``, ``set``, ``solar_counter``, ``ha_off``, ``price``) say how it was filled. Kept but not exported: ``pools`` (before the
 quarter), ``stored_kwh``, ``daylight``, ``coverage``."""
 
 
@@ -339,8 +345,19 @@ SOLAR_FIELDS: Final = ("solar_kwh", "house_kwh", "solar_direct_kwh")
 def add_to_day(day: dict[str, float], record: Mapping[str, Any]) -> None:
     """Add a quarter to a day total (a plain dict, as stored)."""
     day["quarters"] = day.get("quarters", 0) + 1
-    if not record.get("complete", True):
-        day["incomplete"] = day.get("incomplete", 0) + 1
+    status = quarter_status(record)
+    if status == "missing":
+        day["incomplete"] = day.get("incomplete", 0) + 1  # nothing to fill it with: the amounts are too low
+    elif status == "estimated":
+        day["estimated"] = day.get("estimated", 0) + 1
+        for method in set((record.get("fill") or {}).values()):
+            day[f"method_{method}"] = day.get(f"method_{method}", 0) + 1
+        for cause in record.get("fill_causes") or ():
+            day[f"cause_{cause}"] = day.get(f"cause_{cause}", 0) + 1
+        for name, kwh in (record.get("fill_kwh") or {}).items():
+            day[f"filled_{name}"] = day.get(f"filled_{name}", 0.0) + float(kwh or 0.0)
+    if record.get("price_source") == "interpolated":
+        day["price_interpolated"] = day.get("price_interpolated", 0) + 1
     for name in SUM_FIELDS:
         day[name] = day.get(name, 0.0) + float(record.get(name) or 0.0)
     if record.get("cost") is None:
@@ -361,6 +378,20 @@ def add_to_day(day: dict[str, float], record: Mapping[str, Any]) -> None:
     for key in list(day):
         if isinstance(day[key], float):
             day[key] = round(day[key], 5)
+
+
+def quarter_status(record: Mapping[str, Any]) -> str:
+    """``measured``, ``estimated`` (filled, OPDRACHT-onvolledige-kwartieren) or ``missing``.
+
+    Quarters from before 0.8.79 have no status: incomplete ones count as missing, quarters with
+    energy from a filled counter gap (T3) as estimated.
+    """
+    status = record.get("status")
+    if isinstance(status, str):
+        return status
+    if not record.get("complete", True):
+        return "missing"
+    return "estimated" if record.get("estimated") else "measured"
 
 
 @dataclass(slots=True)
@@ -444,6 +475,9 @@ class Summary:
             "mean_buy_price": r(t["buy"] / priced, 4) if priced and "buy" in t else None,
             "quarters": int(t.get("quarters", 0)),
             "incomplete_quarters": int(t.get("incomplete", 0)),
+            "missing_quarters": int(t.get("incomplete", 0)),
+            "estimated_quarters": int(t.get("estimated", 0)),
+            "price_interpolated_quarters": int(t.get("price_interpolated", 0)),
             "quarters_without_price": int(t.get("no_price", 0)),
         }
 

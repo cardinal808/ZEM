@@ -57,6 +57,7 @@ async def test_quarters_from_the_counters_and_a_gap_corrected(
     await _run(hass, freezer, 300)
     corrected = next(r for r in costs.current if r["start"] == gap_quarter["start"])
     assert corrected.get("estimated") is True
+    assert corrected["status"] == "estimated" and corrected["fill"]["charge_kwh"] == "counter"
     assert corrected["charge_kwh"] > gap_quarter["charge_kwh"] + 0.1
     after = costs.current[-1]
     assert after["charge_kwh"] == pytest.approx(KW / 4, abs=0.03)  # no jump: the fill went to the gap quarter
