@@ -68,10 +68,15 @@ class Tariffs:
         """All-in import price."""
         return (market + self.markup_import + self.energy_tax) * self.vat_factor
 
+    def bonus(self, market: float, daylight: bool) -> float:
+        """Solar bonus per exported kWh (€): a share of market + export margin, by day, when positive."""
+        base = market + self.markup_export
+        return self.solar_bonus / 100 * base if daylight and base > 0 else 0.0
+
     def sell(self, market: float, start: datetime, daylight: bool = False) -> tuple[float, float]:
         """Export price and the part of it that exists only through net metering."""
         base = market + self.markup_export
-        bonus = self.solar_bonus / 100 * base if daylight and base > 0 else 0.0
+        bonus = self.bonus(market, daylight)
         if start.date() < self.saldering_until:
             price = base * self.vat_factor + self.energy_tax * self.vat_factor
             return price + bonus, price - base
@@ -217,6 +222,9 @@ RECORD_FIELDS: Final = (
     "export_no_battery_kwh",
     "solar_direct_kwh",
     "solar_via_battery",
+    "solar_direct_value",
+    "solar_export_value",
+    "solar_bonus_value",
     "fixed",
     "plan_action",
     "plan_cost",
@@ -291,6 +299,7 @@ def evaluate(q: QuarterInput, tariffs: Tariffs, pools: Pools, days_in_month: int
             pools.solar_value *= scale
 
     cost = cost_nb = cost_ns = sal = sal_nb = via = None
+    sun_direct = sun_export = sun_bonus = None
     if buy is not None and sell is not None and sal_part is not None:
         cost = imp * buy - exp * sell
         cost_nb = imp_nb * buy - exp_nb * sell
@@ -298,6 +307,11 @@ def evaluate(q: QuarterInput, tariffs: Tariffs, pools: Pools, days_in_month: int
         sal = exp * sal_part
         sal_nb = exp_nb * sal_part
         via = from_solar * buy - released - lost
+        if direct is not None and q.market is not None:
+            # OPDRACHT-besparing-zon: what the panels saved, split (Z0 − Z1 = direct + export).
+            sun_direct = direct * buy
+            sun_export = exp_nb * sell
+            sun_bonus = exp_nb * tariffs.bonus(q.market, q.daylight)
 
     return {
         "start": q.start.isoformat(),
@@ -321,6 +335,9 @@ def evaluate(q: QuarterInput, tariffs: Tariffs, pools: Pools, days_in_month: int
         "export_no_battery_kwh": _r(exp_nb),
         "solar_direct_kwh": _r(direct),
         "solar_via_battery": _r(via, 5),
+        "solar_direct_value": _r(sun_direct, 5),
+        "solar_export_value": _r(sun_export, 5),
+        "solar_bonus_value": _r(sun_bonus, 5),
         "fixed": round(tariffs.fixed_month / days_in_month * q.minutes / 1440, 5),
         "plan_action": None,
         "plan_cost": None,
@@ -340,6 +357,8 @@ SUM_FIELDS: Final = (
 )
 PRICED_FIELDS: Final = ("cost", "cost_no_battery", "saldering", "saldering_no_battery", "solar_via_battery", "buy")
 SOLAR_FIELDS: Final = ("solar_kwh", "house_kwh", "solar_direct_kwh")
+SOLAR_VALUE_FIELDS: Final = ("solar_direct_value", "solar_export_value", "solar_bonus_value")
+"""€ per priced quarter with solar (OPDRACHT-besparing-zon); direct + export = Z0 − Z1."""
 
 
 def add_to_day(day: dict[str, float], record: Mapping[str, Any]) -> None:
@@ -374,6 +393,8 @@ def add_to_day(day: dict[str, float], record: Mapping[str, Any]) -> None:
         if record.get("cost_no_solar") is not None:
             day["cost_no_solar"] = day.get("cost_no_solar", 0.0) + float(record["cost_no_solar"])
             day["solar_priced"] = day.get("solar_priced", 0) + 1
+            for name in SOLAR_VALUE_FIELDS:
+                day[name] = day.get(name, 0.0) + float(record.get(name) or 0.0)
     plan_check.add_to_day(day, record)
     for key in list(day):
         if isinstance(day[key], float):
@@ -433,6 +454,14 @@ class Summary:
         return self.totals.get("cost_no_solar", 0.0) - cost_nb
 
     @property
+    def self_consumption(self) -> float | None:
+        """Share of the solar the house used itself (directly or later from the battery)."""
+        solar = self.totals.get("solar_kwh")
+        if not solar or solar <= 0 or self.totals.get("no_solar"):
+            return None
+        return max(min((solar - self.totals.get("export_kwh", 0.0)) / solar, 1.0), 0.0)
+
+    @property
     def savings(self) -> float | None:
         """Solar + battery when solar is known; otherwise the battery alone."""
         battery = self.savings_battery
@@ -461,6 +490,12 @@ class Summary:
             "savings_battery": r(battery),
             "savings_solar_via_battery": r(via),
             "savings_trade": r(None if battery is None or via is None else battery - via),
+            "savings_total": r(self.savings if self.solar_known else None),
+            "solar_direct_value": r(t.get("solar_direct_value")) if self.solar_known else None,
+            "solar_export_value": r(t.get("solar_export_value")) if self.solar_known else None,
+            "solar_bonus_value": r(t.get("solar_bonus_value")) if self.solar_known else None,
+            "solar_direct_kwh": r(t.get("solar_direct_kwh"), 3),
+            "self_consumption": r(self.self_consumption, 3),
             "includes_solar": self.solar_known,
             "fixed": r(t.get("fixed", 0.0)),
             "cost_incl_fixed": r(None if cost is None else cost + t.get("fixed", 0.0)),
