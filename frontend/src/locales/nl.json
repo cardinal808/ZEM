@@ -684,7 +684,12 @@
     "kind_washer": "wasmachine",
     "kind_dryer": "droger",
     "kind_dishwasher": "vaatwasser",
-    "kind_other": "overig"
+    "kind_other": "overig",
+    "sec_planner": "Planner",
+    "sec_measure": "Meting en set",
+    "sec_log": "Logboek",
+    "energy_gaps_all": "Toon alle {n} gaten",
+    "energy_gaps_less": "Toon minder"
   },
   "savings": {
     "title": "Besparing door de accu",

@@ -684,7 +684,12 @@
     "kind_washer": "washing machine",
     "kind_dryer": "dryer",
     "kind_dishwasher": "dishwasher",
-    "kind_other": "other"
+    "kind_other": "other",
+    "sec_planner": "Planner",
+    "sec_measure": "Measurement and set",
+    "sec_log": "Log",
+    "energy_gaps_all": "Show all {n} gaps",
+    "energy_gaps_less": "Show fewer"
   },
   "savings": {
     "title": "Savings from the battery",
