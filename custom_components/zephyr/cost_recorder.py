@@ -71,9 +71,9 @@ STORAGE_VERSION = 1
 KEEP_MONTHS = 24
 P1_FRESH = 10.0
 """s; an older P1 value is not integrated (a gap in the quarter)."""
-FILL_VERSION = 2
+FILL_VERSION = 3
 """Version of the one-off work on the stored history: 1 fills it (OPDRACHT-onvolledige-kwartieren
-eis 5), 2 adds the solar savings split (OPDRACHT-besparing-zon)."""
+eis 5), 2 adds the solar savings split (OPDRACHT-besparing-zon), 3 fills the older months too."""
 MAX_GAP_QUARTERS = 31 * 96
 """A longer interruption is not filled with quarters (a month of guesses helps nobody)."""
 
@@ -202,6 +202,8 @@ class CostRecorder:
         if self.fill_version < FILL_VERSION:
             if self.fill_version < 1:
                 self._repair_history()
+            if self.fill_version < 3:
+                await self._repair_older_months()
             await self._add_solar_values()
             self.fill_version = FILL_VERSION
             await self.async_save()
@@ -510,12 +512,30 @@ class CostRecorder:
             self._summaries.clear()
             LOGGER.info("Cost log: solar savings split added to %d stored quarters", added)
 
-    def _repair_history(self) -> None:
-        """Once (eis 5): fill the stored quarters of this month that were incomplete, make the
-        quarters missing between them, and evaluate the month again from the first one touched."""
-        records = self.current
+    async def _repair_older_months(self) -> None:
+        """Once: the months before the current one, filled like the current month (0.8.89). Each
+        month is evaluated again on its own; the pools of the current month are not touched."""
+        done: dict[str, Any] = {}
+        for month in sorted(self.months):
+            if month == self.current_month:
+                continue
+            store = self._month_store(month)
+            quarters = list((await store.async_load() or {}).get("quarters") or [])
+            result = self._repair_history(quarters, current=False)
+            if result is not None:
+                await store.async_save({"quarters": quarters})
+                done[month] = result
+        if done:
+            self.repaired = {**(self.repaired or {}), "older_months": done}
+
+    def _repair_history(self, records: list[dict[str, Any]] | None = None, current: bool = True) -> dict[str, Any] | None:
+        """Once (eis 5): fill the stored quarters of a month that were incomplete, make the
+        quarters missing between them, and evaluate the month again from the first one touched.
+        ``records`` (changed in place) defaults to the current month."""
+        if records is None:
+            records = self.current
         if len(records) < 2 or "pools" not in records[0]:
-            return
+            return None
         step = timedelta(seconds=QUARTER_SECONDS)
         flows = ("import_kwh", "export_kwh", "charge_kwh", "discharge_kwh")
         out: list[dict[str, Any]] = []
@@ -582,20 +602,24 @@ class CostRecorder:
                     filled += 1
             out.append(record)
         if not touched:
-            return
+            return None
         tz = dt_util.get_default_time_zone()
         result = reevaluate(out, touched, self.tariffs.tariffs_for, _days_in_month, tz, dt_util.utcnow().isoformat(timespec="seconds"))
         if result is None:
             LOGGER.debug("Cost log: history fill not possible (quarters from before 0.8.31)")
-            return
-        self.pools = result[0]
-        self.current[:] = out
+            return None
+        if current:
+            self.pools = result[0]
+        records[:] = out
         days: dict[str, dict[str, Any]] = {}
         for record in out:
             add_to_day(days.setdefault(dt_util.as_local(datetime.fromisoformat(record["start"])).date().isoformat(), {}), record)
-        self.days.update(days)
-        self.repaired = {"made": made, "filled": filled, "from": min(touched)}
+        self.days.update({k: v for k, v in days.items() if self.days.get(k, {}).get("source") is None})
+        summary: dict[str, Any] = {"made": made, "filled": filled, "from": min(touched)}
+        if current:
+            self.repaired = summary
         LOGGER.info("Cost log: history filled once: %d quarters made, %d filled", made, filled)
+        return summary
 
     def _save_month(self, month: str, quarters: list[dict[str, Any]]) -> None:
         def data() -> dict[str, Any]:
@@ -1008,7 +1032,14 @@ class CostRecorder:
         return min(measured) if measured else None
 
     async def async_backfill(
-        self, first: date, charge_entity: str, discharge_entity: str, solar_entity: str | None, price_entity: str | None
+        self,
+        first: date,
+        charge_entity: str,
+        discharge_entity: str,
+        solar_entity: str | None,
+        price_entity: str | None,
+        soc_entity: str | None = None,
+        capacity_kwh: float | None = None,
     ) -> dict[str, Any]:
         """Work out the days from ``first`` up to the cost log again from hourly statistics (replaces an earlier run)."""
         from .core.backfill import PRICE_ENERGYZERO, SOURCE_HOURLY, backfill_days, series_to_hours
@@ -1024,11 +1055,13 @@ class CostRecorder:
         counters = [*self.import_counters, *self.export_counters, charge_entity, discharge_entity]
         from_sensor = price_entity if price_entity and price_entity != PRICE_ENERGYZERO else None
         ids = [*counters, *([solar_entity] if solar_entity else []), *([from_sensor] if from_sensor else [])]
+        if soc_entity and capacity_kwh:
+            ids.append(soc_entity)
         stats = await hourly_statistics(self.hass, start, end, list(dict.fromkeys(ids)))
 
         series: dict[str, dict[datetime, float]] = {}
         for entity in ids:
-            field = "mean" if entity == price_entity else "change"
+            field = "mean" if entity in (price_entity, soc_entity) else "change"
             rows: dict[datetime, float] = {}
             for row in stats.get(entity, []):
                 value, begin = row.get(field), row.get("start")
@@ -1055,6 +1088,9 @@ class CostRecorder:
             lambda moment: series[discharge_entity].get(moment),
             solar_entity,
             price_entity,
+            (lambda moment: None if (soc := series[soc_entity].get(moment)) is None else soc / 100 * capacity_kwh)
+            if soc_entity and capacity_kwh
+            else None,
         )
         result = backfill_days(hours, self.tariffs.tariffs_for, tz)
         self.days = {k: v for k, v in self.days.items() if v.get("source") != SOURCE_HOURLY}

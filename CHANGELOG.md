@@ -2,13 +2,18 @@
 
 ## Unreleased
 
-### 0.8.89 — Settings: subtabs in Bronnen and Planner
+### 0.8.90 — Settings: subtabs in Bronnen and Planner
 - **Subtabs** (`Field.section`, in `settings/get` as `section`): *Bronnen* → *Meter · Prijzen · Zon · Tellers*; *Planner* → *Plan · Afknijpen*. Same look as *Vandaag · Morgen · 48 uur*; an orange dot on a subtab with a changed field; on a phone they scroll sideways. The chosen subtab is kept per group; saving stays per group (drafts on other subtabs are kept). An error on another subtab opens that subtab.
 - **Moved:** *Kalibratie na dagen* to *Accu en grenzen*; the workday sensor to *Bronnen → Tellers*.
 - **Menu:** a short line under each group (its subtabs, or e.g. *min, max, kalibratie*); hidden on a phone.
 - The link *afknijpen staat uit* on Plan opens *Planner → Afknijpen* (`group:section`).
 - Tests: `groupSections` (vitest); every field of a group with sections has one, every section has a name (HA).
 
+### 0.8.89 — Cost log: the older months are filled once too
+- The one-off fill of 0.8.80 (missing quarters made, incomplete ones filled, missing prices interpolated) only touched the current month. Now every stored month before it gets the same, once; each month is evaluated again on its own (the current month's pools stay), and its days are summed anew. Days worked out from hourly statistics are left alone. Diagnostics: `costs.history_filled.older_months`.
+### 0.8.88 — Terugrekenen: pools capped by the battery's content, warning for Gielz counters
+- **Pools capped** (TOETS-besparing bevinding 5): the backfill (`zephyr/savings/backfill`) takes an optional `soc_entity`; its hourly mean × the installation's capacity caps the pools, as in the cost log, so conversion losses of stored solar land in *Zon bewaard* instead of *Prijsverschil*. The total does not change. The answer says `capped_by_soc`.
+- **Warning** (bevinding 11): when the charge or discharge counter belongs to another Zendure integration (Gielz), the answer holds `warnings: ["pv_in_battery_counters"]`: those counters include the set's own PV, so on summer days that PV counts as battery. The panel can show it (UI chat).
 ### 0.8.87 — Devices: `via_device_id` instead of the deprecated `via_device`
 - HA 2026.11 warns that `via_device` stops working in 2027.8. The set and appliance devices now link to the installation device with `via_device_id` where HA supports it; older versions (down to 2026.1, `hacs.json`) keep `via_device`. Test: every set device hangs under the installation device.
 

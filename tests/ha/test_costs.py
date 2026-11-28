@@ -372,7 +372,7 @@ async def test_history_filled_once_after_the_update(hass: HomeAssistant, fake_se
     await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
     costs = entry.runtime_data.costs
-    assert len(costs.current) == 6 and costs.fill_version == 2
+    assert len(costs.current) == 6 and costs.fill_version == 3
     made, filled = costs.current[3], costs.current[4]
     assert made["status"] == "estimated" and made["import_kwh"] == pytest.approx(0.1, abs=0.005)
     assert filled["status"] == "estimated" and filled["import_kwh"] == pytest.approx(0.1, abs=0.005)
@@ -488,3 +488,24 @@ async def test_solar_savings_split(hass: HomeAssistant, fake_sets: FakeSets, fre
     assert "solar" in state.attributes and "total" in state.attributes
     client_view = costs.summary("today").as_dict()
     assert "self_consumption" in client_view and "savings_total" in client_view
+
+
+async def test_older_months_filled_once(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # 0.8.89: the months before the current one are filled once too (each on its own).
+    entry = await _setup(hass, fake_sets, freezer)
+    await _run(hass, freezer, 10)
+    for _ in range(4):
+        await _run(hass, freezer, 900, 400.0)
+    costs = entry.runtime_data.costs
+    old = [dict(r) for r in costs.current]
+    del old[2]  # a quarter missing in the older month
+    await costs._month_store("2026-10").async_save({"quarters": old})
+    costs.months = sorted({*costs.months, "2026-10"})
+    costs.fill_version = 2
+    await costs.async_save()
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    costs = entry.runtime_data.costs
+    stored = (await costs._month_store("2026-10").async_load())["quarters"]
+    assert len(stored) == len(old) + 1 and stored[2]["status"] == "estimated"
+    assert costs.repaired["older_months"]["2026-10"]["made"] == 1
