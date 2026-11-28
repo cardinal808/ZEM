@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.96 — Forecast band bare like the expected price
+- **Fix** (OPDRACHT-band-prijsverwachting): ha-jeroen-nl gives `market` bare but `low` and `high` **all-in** (its `_row`: `low=all_in(p.low)`). ZEPHYR added its own tariff on top once more: expected € 0.47, band € 0.66–0.82 (28-11). The reader now turns an all-in band back into bare prices on the line through the sensor's (`market`, `price`) pairs, so `low ≤ market ≤ high` and *laag* plans with the real p10 again.
+- **Check in the reader:** a band that still does not hold `market` is dropped for that quarter (`market` as `low` and `high`), with a note in `planner.price_forecast.issues`; `band_all_in` counts the converted quarters.
+- **Kept runs** for the backtest from before this version: their all-in band is replaced by `market` (the error per day ahead stays right, *inside band* only counts from now on).
+- Tests: the real row shape (made-up values), a band that does not hold the expected price, `buy_low ≤ buy ≤ buy_high` in the view, the run repair.
+
 ### 0.8.95 — Price forecast in one small line
 - **Prijzen en plan:** the three notes of the jeroen.nl forecast are one small grey line under the price cells: *Verwacht ma 30 nov · € 0,33 – € 0,47 · gem. € 0,40 · laagst 23:45 · hoogst 08:00 · plan rekent mee · bron: jeroen.nl*. No dashes, no link; the source in a smaller font. The mode is a short phrase (`forecastMode`): *plan rekent mee*, *alleen ter info* or *zou nu laden*. The 80 % band is no longer in the text (the dashed line and band stay in the chart).
 - Tests: `forecastMode`, the texts in both languages.
