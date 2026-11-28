@@ -11,7 +11,7 @@ import asyncio
 import math
 import time
 from collections import deque
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from datetime import datetime, timedelta
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -754,6 +754,8 @@ class ZephyrControl:
 
     SETTLE_FOR_CHECK = 6.0
     NOT_APPLIED_AFTER = 20.0
+    EARLIER_COMMAND_FOR = 30.0
+    """A report equal to a command ZEPHYR sent this recently is a set catching up, not foreign."""
     """A set that still reports its old limits is starting, not controlled by someone else, until
     this long after the write (start from 0 W with the relay open: 9-17 s, seen 25-11)."""
     FOREIGN_WINDOW = 300.0
@@ -780,6 +782,10 @@ class ZephyrControl:
             still_old = before is not None and abs(report.input_limit - before[0]) <= 20 and abs(report.output_limit - before[1]) <= 20
             if mismatch and still_old and now - writer.last_at < self.NOT_APPLIED_AFTER:
                 continue  # the set has not applied the command yet (starting): check the next report
+            if mismatch and _matches_earlier(report.input_limit, report.output_limit, writer.recent, now, self.EARLIER_COMMAND_FOR):
+                # 28-11: ZEPHYR sent A and soon B; the set still shows A. That is ZEPHYR's own
+                # command, a set catching up, not a second controller: check the next report.
+                continue
             self._checked_report[key] = report.timestamp
             if sent.get("smartMode") == 1 and report.smart_mode == 0:
                 writer.stats.smartmode_reverted.append(now)
@@ -794,6 +800,7 @@ class ZephyrControl:
                     }
                 )
                 del self._foreign_seen[:-4]
+                self._log_event("foreign_report", **self._foreign_context(key, report, sent, now))
                 LOGGER.warning(
                     "Set %s reports limits ZEPHYR did not write (in %s / out %s, sent %s / %s)",
                     self.runtime.coordinators[key].number,
@@ -806,6 +813,29 @@ class ZephyrControl:
         if len(recent) >= 2:
             self._foreign.clear()
             self.hass.async_create_task(self._stop_for_second_controller())
+
+    def _foreign_context(self, key: str, report: Any, sent: Mapping[str, int], now: float) -> dict[str, Any]:
+        """All a later look needs to tell a real second controller from a false alarm."""
+        writer = self.writers[key]
+        age = None
+        if report.timestamp:
+            age = round(dt_util.utcnow().timestamp() - report.timestamp, 1)
+        return {
+            "set": self.runtime.coordinators[key].number,
+            "reported": [report.input_limit, report.output_limit],
+            "sent": [sent.get("inputLimit"), sent.get("outputLimit")],
+            "after_s": round(now - (writer.last_at or now), 1),
+            "before": list(writer.limits_before) if writer.limits_before else None,
+            "recent": [[round(now - at, 1), lim_in, lim_out] for at, lim_in, lim_out in writer.recent],
+            "report_age_s": age,
+            "smart_mode": [sent.get("smartMode"), report.smart_mode],
+            "ac_mode": None if report.ac_mode is None else int(report.ac_mode),
+            "ac_status": report.ac_status,
+            "pack_state": None if report.pack_state is None else int(report.pack_state),
+            "soc": report.soc,
+            "power": round(report.battery_power_ac),
+            "foreign_in_window": len([t for t in self._foreign if now - t <= self.FOREIGN_WINDOW]),
+        }
 
     async def _stop_for_second_controller(self) -> None:
         """Another system writes to the set: stop writing, back to shadow, tell the user (L4)."""
@@ -831,6 +861,11 @@ class ZephyrControl:
         interval = timedelta(seconds=SCAN_INTERVAL_ACTIVE if active else SCAN_INTERVAL_IDLE)
         for coordinator in self.runtime.coordinators.values():
             coordinator.update_interval = interval
+
+
+def _matches_earlier(lim_in: int, lim_out: int, recent: Iterable[tuple[float, int, int]], now: float, within: float) -> bool:
+    """True when (in, out) equals, within 20 W, a command sent in the last ``within`` seconds."""
+    return any(now - at <= within and abs(lim_in - a) <= 20 and abs(lim_out - b) <= 20 for at, a, b in recent)
 
 
 def _limits(options: Mapping[str, Any]) -> dict[str, float]:

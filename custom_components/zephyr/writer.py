@@ -59,6 +59,9 @@ class SetWriter:
         self.limits_before: tuple[int, int] | None = None
         """The limits (in, out) the set reported when the last command was written: while the set
         still shows these, it has not applied the command yet (a start from 0 W takes 9-17 s)."""
+        self.recent: deque[tuple[float, int, int]] = deque(maxlen=6)
+        """The last limits written (monotonic time, in, out): a set that reports an earlier one of
+        these is still catching up with ZEPHYR, not following another controller."""
         self._task: asyncio.Task[None] | None = None
         self._on_done = on_done
         self._pending_kinds: list[str] = []
@@ -112,6 +115,8 @@ class SetWriter:
                 self.limits_before = before
             self.last_props = props
             self.last_at = time.monotonic()
+            if "inputLimit" in props and "outputLimit" in props:
+                self.recent.append((self.last_at, props["inputLimit"], props["outputLimit"]))
             ok = True
         self.stats.last_duration = time.monotonic() - started
         if self._on_done is not None:

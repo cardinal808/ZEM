@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.76 — Second controller: no false alarm for a set catching up, every mismatch in the log
+- **False alarm (28-11):** ZEPHYR sent A and a few seconds later B; a slow set still showed A. Only "still the limits from before B" counted as not yet applied, so A counted as foreign, and twice in 5 minutes stopped live control. A report equal (within 20 W) to a command ZEPHYR itself sent in the last 30 s now counts as a set catching up. The writer keeps its last 6 limits for this.
+- **Every mismatch in the 48-hour log** as event `foreign_report`, also when it does not stop live control: set, limits sent and reported, seconds after the command, the limits before, the last commands with their age, the age of the report, smartMode sent/reported, acMode, acStatus, packState, SOC, power and the number of mismatches in the window.
+- Tests: the earlier-command check; the second-controller test checks the two log events.
+
 ### 0.8.75 — Log over 48 hours, kept over restarts
 - The control log (decisions on a change of setpoint or reason, and events such as live, shadow, calibration and a write test) covers the last 48 hours instead of the last 500 lines, and survives restarts and updates. Until now a restart emptied it, so the reason for something before the restart was gone (28-11).
 - Once a minute the new lines are appended to one file per UTC hour under `.storage/zephyr_log/<entry>/`; files older than 48 hours are removed. Appends keep the disk writes small (a Store rewrites its whole file). On a stop of Home Assistant and at an unload the rest is written; a reload reads the files only after that.
