@@ -1,5 +1,6 @@
 // Screen "Instellingen" (SPEC-ui §4.4; UI-6 reading, UI-7 changing).
 // Live fields save at once; sources and corrections are collected and saved together, because ZEPHYR restarts for them.
+import { element } from "./define";
 import type { AppliancesView } from "./appliances";
 import "./house-editor";
 import type { HouseDevice, HousePicture } from "./stroom";
@@ -12,7 +13,7 @@ interface HouseDraft {
   after: boolean;
 }
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 
 import { t, type Lang } from "./i18n";
 import {
@@ -94,18 +95,24 @@ export interface VacationView {
  * A field with a condition is only shown when the other field (as entered, before saving) has one
  * of the values; "*" means filled in. Hidden values are kept, not cleared.
  */
-export function fieldVisible(f: SettingField, valueOf: (key: string) => unknown): boolean {
+export function fieldVisible(
+  f: SettingField,
+  valueOf: (key: string) => unknown,
+): boolean {
   if (!f.show_if) return true;
   const v = valueOf(f.show_if.key);
   if (f.show_if.values.includes("*"))
-    return Array.isArray(v) ? v.length > 0 : v !== null && v !== undefined && v !== "";
+    return Array.isArray(v)
+      ? v.length > 0
+      : v !== null && v !== undefined && v !== "";
   return typeof v === "string" && f.show_if.values.includes(v);
 }
 
 /** The subtabs of a group, in the order of their first field; empty when the group has none. */
 export function groupSections(fields: SettingField[]): string[] {
   const out: string[] = [];
-  for (const f of fields) if (f.section && !out.includes(f.section)) out.push(f.section);
+  for (const f of fields)
+    if (f.section && !out.includes(f.section)) out.push(f.section);
   return out;
 }
 
@@ -150,11 +157,17 @@ export function formatNumber(
  * (greyed out), not the own value behind it (0.8.74).
  */
 export function controlValue(f: SettingField, shown: unknown): unknown {
-  if (f.tariff && f.active === false && f.in_use !== undefined && f.in_use !== null) return f.in_use;
+  if (
+    f.tariff &&
+    f.active === false &&
+    f.in_use !== undefined &&
+    f.in_use !== null
+  )
+    return f.in_use;
   return shown;
 }
 
-@customElement("zephyr-settings")
+@element("zephyr-settings")
 export class ZephyrSettings extends LitElement {
   @property({ attribute: false }) view?: SettingsView;
   @property({ attribute: false }) uiLang: Lang = "en";
@@ -253,7 +266,9 @@ export class ZephyrSettings extends LitElement {
   private showErrorSection(keys: string[]): void {
     for (const key of keys) {
       const f = this.fieldByKey(key);
-      const g = this.view?.groups.find((x) => x.fields.some((y) => y.key === key));
+      const g = this.view?.groups.find((x) =>
+        x.fields.some((y) => y.key === key),
+      );
       if (f?.section && g) {
         this.sectionOf = { ...this.sectionOf, [g.key]: f.section };
         return;
@@ -304,7 +319,9 @@ export class ZephyrSettings extends LitElement {
       const f = this.fieldByKey(key);
       return !f || this.visible(f);
     };
-    for (const [key, value] of Object.entries(draftToSave(this.draft, visible))) {
+    for (const [key, value] of Object.entries(
+      draftToSave(this.draft, visible),
+    )) {
       if (value === RESET) reset.push(key);
       else changes[key] = value;
     }
@@ -353,7 +370,6 @@ export class ZephyrSettings extends LitElement {
             >
               <span>${this.tr(`settings.groups.${g.key}`)}</span>
               ${this.groupSub(g)}
-
             </button>`,
         )}
       </nav>
@@ -410,18 +426,28 @@ export class ZephyrSettings extends LitElement {
   private groupSub(g: SettingsGroup): TemplateResult | typeof nothing {
     const sections = groupSections(g.fields);
     const text = sections.length
-      ? sections.map((s) => this.tr(`settings.sections.${s}`).toLowerCase()).join(" · ")
+      ? sections
+          .map((s) => this.tr(`settings.sections.${s}`).toLowerCase())
+          .join(" · ")
       : this.tr(`settings.group_sub.${g.key}`);
-    return text && text !== `settings.group_sub.${g.key}` ? html`<small>${text}</small>` : nothing;
+    return text && text !== `settings.group_sub.${g.key}`
+      ? html`<small>${text}</small>`
+      : nothing;
   }
 
   private renderSections(g: SettingsGroup): TemplateResult | typeof nothing {
     const sections = groupSections(g.fields);
     if (sections.length < 2) return nothing;
     const active = this.activeSection(g);
-    return html`<div class="subtabs" role="tablist" aria-label=${this.tr(`settings.groups.${g.key}`)}>
+    return html`<div
+      class="subtabs"
+      role="tablist"
+      aria-label=${this.tr(`settings.groups.${g.key}`)}
+    >
       ${sections.map((s) => {
-        const changed = g.fields.some((f) => f.section === s && (this.isModified(f) || f.key in this.draft));
+        const changed = g.fields.some(
+          (f) => f.section === s && (this.isModified(f) || f.key in this.draft),
+        );
         return html`<button
           type="button"
           role="tab"
@@ -439,7 +465,9 @@ export class ZephyrSettings extends LitElement {
   }
 
   /** For the own house picture: a websocket call, a signed URL, and loading the settings again. */
-  @property({ attribute: false }) houseCall?: (msg: Record<string, unknown>) => Promise<unknown>;
+  @property({ attribute: false }) houseCall?: (
+    msg: Record<string, unknown>,
+  ) => Promise<unknown>;
   @property({ attribute: false }) sign?: (path: string) => Promise<string>;
   @property({ attribute: false }) reload?: () => Promise<void>;
   @property({ attribute: false }) saveHouse?: (
@@ -717,7 +745,9 @@ export class ZephyrSettings extends LitElement {
   }
 
   private fieldByKey(key: string): SettingField | undefined {
-    return this.view?.groups.flatMap((g) => g.fields).find((x) => x.key === key);
+    return this.view?.groups
+      .flatMap((g) => g.fields)
+      .find((x) => x.key === key);
   }
 
   private visible(f: SettingField): boolean {
@@ -742,7 +772,9 @@ export class ZephyrSettings extends LitElement {
     if (!this.visible(f)) return html``;
     return html`${
         f.key === "curtail_switch"
-          ? html`<li class="subhead"><b>${this.tr("settings.curtail_head")}</b></li>`
+          ? html`<li class="subhead">
+              <b>${this.tr("settings.curtail_head")}</b>
+            </li>`
           : nothing
       }
       <li class=${f.active === false ? "inactive" : ""}>
@@ -765,9 +797,14 @@ export class ZephyrSettings extends LitElement {
           <span class="help">${this.tr(`settings.fields.${f.key}.help`)}</span>
           ${
             open
-              ? html`<div class="more" role="note">${this.tr(`settings.fields.${f.key}.more`, {
-                  in_use: f.in_use === undefined || f.in_use === null ? "–" : this.display(f, f.in_use),
-                })}</div>`
+              ? html`<div class="more" role="note">
+                  ${this.tr(`settings.fields.${f.key}.more`, {
+                    in_use:
+                      f.in_use === undefined || f.in_use === null
+                        ? "–"
+                        : this.display(f, f.in_use),
+                  })}
+                </div>`
               : nothing
           }
           ${this.meta(f)}
@@ -893,9 +930,7 @@ export class ZephyrSettings extends LitElement {
 
   private control(f: SettingField, id: string): TemplateResult {
     const disabled =
-      !this.editable ||
-      this.busy ||
-      (f.active === false && f.tariff);
+      !this.editable || this.busy || (f.active === false && f.tariff);
     const value = controlValue(f, this.shown(f));
     switch (f.kind) {
       case "bool":

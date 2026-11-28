@@ -1,8 +1,9 @@
 // Screen Stroom, card "Nu" (Bjorn 27-11): the house picture with live values and flow lines on top.
 // The picture is a fixed illustration (custom_components/zephyr/frontend/house.webp); the positions
 // below are in its own coordinates (1284 × 1048). A user picture with own positions comes later.
+import { element } from "./define";
 import { LitElement, css, html, nothing, svg, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 import { unsafeSVG } from "lit/directives/unsafe-svg.js";
 
 import { flows } from "./flow";
@@ -86,9 +87,27 @@ export const LAYOUT = {
     label: [730, 688] as Pt,
   },
   floors: {
-    attic: { box: [1378, 265, 316, 80] as Box, line: [[BUS, 305], [1037, 305]] as Pt[] },
-    first: { box: [1378, 460, 316, 80] as Box, line: [[BUS, 500], [1024, 500]] as Pt[] },
-    ground: { box: [1378, 675, 316, 80] as Box, line: [[BUS, 715], [1009, 715]] as Pt[] },
+    attic: {
+      box: [1378, 265, 316, 80] as Box,
+      line: [
+        [BUS, 305],
+        [1037, 305],
+      ] as Pt[],
+    },
+    first: {
+      box: [1378, 460, 316, 80] as Box,
+      line: [
+        [BUS, 500],
+        [1024, 500],
+      ] as Pt[],
+    },
+    ground: {
+      box: [1378, 675, 316, 80] as Box,
+      line: [
+        [BUS, 715],
+        [1009, 715],
+      ] as Pt[],
+    },
     shed: { box: [1378, 892, 316, 80] as Box, line: [] as Pt[] },
   },
 };
@@ -103,7 +122,11 @@ export const COLORS = {
   ev: "#a86bff",
   exp: "#ff3b3b",
 };
-Object.assign(SOURCE_COLOR, { sun: COLORS.sun, batt: COLORS.batt, grid: COLORS.grid });
+Object.assign(SOURCE_COLOR, {
+  sun: COLORS.sun,
+  batt: COLORS.batt,
+  grid: COLORS.grid,
+});
 
 const ICON: Record<string, string> = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -161,19 +184,31 @@ export function dominant(
   current: Source | null,
   margin = 50,
 ): Source | null {
-  const best = (Object.keys(supply) as Source[]).reduce((a, b) => (supply[b] > supply[a] ? b : a));
+  const best = (Object.keys(supply) as Source[]).reduce((a, b) =>
+    supply[b] > supply[a] ? b : a,
+  );
   if (supply[best] < 10) return null;
-  if (current && current !== best && supply[best] < supply[current] + margin && supply[current] >= 10)
+  if (
+    current &&
+    current !== best &&
+    supply[best] < supply[current] + margin &&
+    supply[current] >= 10
+  )
     return current;
   return best;
 }
 
 /** The flows now in words, per source: "Zon 3,2 kW → huis 0,6 kW · accu 2,4 kW". */
-export function flowParts(paths: Record<string, number>): { from: Source; total: number; to: [string, number][] }[] {
+export function flowParts(
+  paths: Record<string, number>,
+): { from: Source; total: number; to: [string, number][] }[] {
   const out: { from: Source; total: number; to: [string, number][] }[] = [];
   const add = (from: Source, keys: [string, string][]) => {
-    const to = keys.map(([k, dest]) => [dest, paths[k] ?? 0] as [string, number]).filter(([, w]) => w >= 10);
-    if (to.length) out.push({ from, total: to.reduce((t, [, w]) => t + w, 0), to });
+    const to = keys
+      .map(([k, dest]) => [dest, paths[k] ?? 0] as [string, number])
+      .filter(([, w]) => w >= 10);
+    if (to.length)
+      out.push({ from, total: to.reduce((t, [, w]) => t + w, 0), to });
   };
   add("sun", [
     ["solar_house", "house"],
@@ -207,15 +242,28 @@ interface Item {
  * The line of an item on an own picture, in picture pixels: from the middle of the box's left or
  * right edge (the side towards the spot), level to the spot's x, then straight to the spot.
  */
-export function ownLine(box: [number, number], point: [number, number], w: number, h: number): Pt[] {
+export function ownLine(
+  box: [number, number],
+  point: [number, number],
+  w: number,
+  h: number,
+): Pt[] {
   const left = Math.min(box[0], 1 - OWN_BOX_W) * w;
   const right = left + OWN_BOX_W * w;
   const y = box[1] * h + 0.035 * w;
   const px = point[0] * w;
   const py = point[1] * h;
   const x = px < left ? left : px > right ? right : px;
-  if (x === px) return [[px, y], [px, py]];
-  return [[x, y], [px, y], [px, py]];
+  if (x === px)
+    return [
+      [px, y],
+      [px, py],
+    ];
+  return [
+    [x, y],
+    [px, y],
+    [px, py],
+  ];
 }
 
 /** A flow line on an own picture from a spot to the Huis spot: level first, then straight. */
@@ -224,7 +272,7 @@ export function hubPath(from: Pt, hub: Pt): Pt[] {
   return [from, [hub[0], from[1]], hub];
 }
 
-@customElement("zephyr-house")
+@element("zephyr-house")
 export class ZephyrHouse extends LitElement {
   @property({ attribute: false }) now?: Now;
   @property({ attribute: false }) view?: StroomView;
@@ -256,7 +304,8 @@ export class ZephyrHouse extends LitElement {
     const own = this.view?.picture ?? null;
     return html`<section class="card" aria-label=${this.tr("house.title")}>
       ${own ? this.ownStage(own, items) : this.defaultStage(items)}
-      ${this.bar(f, ev)} ${this.list(devices, Math.max(0, f.house - this.known(devices)))}
+      ${this.bar(f, ev)}
+      ${this.list(devices, Math.max(0, f.house - this.known(devices)))}
     </section>`;
   }
 
@@ -308,7 +357,9 @@ export class ZephyrHouse extends LitElement {
         >`,
         lines: [
           html`${this.tr(f.battery > 10 ? "house.charging" : f.battery < -10 ? "house.delivering" : "house.idle")}
-            <b>${Math.abs(f.battery) > 10 ? this.w(Math.abs(f.battery)) : ""}</b>
+            <b
+              >${Math.abs(f.battery) > 10 ? this.w(Math.abs(f.battery)) : ""}</b
+            >
             ${now.soc !== null ? html` | SoC ${percent(now.soc, this.locale)}` : nothing}
             ${now.curtail?.export_blocked ? html` <span class="red">${this.tr("flow.export_blocked")}</span>` : nothing}`,
         ],
@@ -319,8 +370,10 @@ export class ZephyrHouse extends LitElement {
         icon: "grid",
         title: html`<b>${this.tr("house.grid")}</b>`,
         lines: [
-          html`${this.tr("house.import")} <b>${this.w(Math.max(0, f.grid))}</b>`,
-          html`${this.tr("house.export")} <b>${this.w(Math.max(0, -f.grid))}</b>`,
+          html`${this.tr("house.import")}
+            <b>${this.w(Math.max(0, f.grid))}</b>`,
+          html`${this.tr("house.export")}
+            <b>${this.w(Math.max(0, -f.grid))}</b>`,
         ],
         power: Math.abs(f.grid),
       },
@@ -354,7 +407,11 @@ export class ZephyrHouse extends LitElement {
   /** Colour of the main line: the source that supplies the most now (with a margin). */
   private mainColor(f: ReturnType<typeof flows>): string {
     const dom = dominant(
-      { sun: f.solar - f.paths.solar_battery, batt: Math.max(0, -f.battery), grid: Math.max(0, f.grid) },
+      {
+        sun: f.solar - f.paths.solar_battery,
+        batt: Math.max(0, -f.battery),
+        grid: Math.max(0, f.grid),
+      },
       this.dom,
     );
     if (dom !== this.dom) queueMicrotask(() => (this.dom = dom));
@@ -368,11 +425,15 @@ export class ZephyrHouse extends LitElement {
     const airco = now.excluded?.active ? (now.excluded.power_w ?? 0) : 0;
     const f = flows(now.solar_w, now.grid_w, now.battery_w, airco);
     const c = this.mainColor(f);
-    const rev = (pts: Pt[], yes: boolean): Pt[] => (yes ? [...pts].reverse() : pts);
+    const rev = (pts: Pt[], yes: boolean): Pt[] =>
+      yes ? [...pts].reverse() : pts;
     const bat = f.battery;
-    const busOn = f.house >= 10 || Math.abs(bat) >= 10 || Math.abs(f.grid) >= 10;
+    const busOn =
+      f.house >= 10 || Math.abs(bat) >= 10 || Math.abs(f.grid) >= 10;
     const tag = (at: Pt, text: string, color: string, on: boolean) =>
-      on ? svg`<text x=${at[0]} y=${at[1]} class="tag" fill=${color}>${text}</text>` : nothing;
+      on
+        ? svg`<text x=${at[0]} y=${at[1]} class="tag" fill=${color}>${text}</text>`
+        : nothing;
     const to = (key: string) => this.tr(`house.to_${key}`);
     return html`<div class="stage">
       <img src=${`${this.base}/house.webp`} alt="" draggable="false" />
@@ -399,16 +460,21 @@ export class ZephyrHouse extends LitElement {
       </svg>
       <div class="boxes">
         ${this.box(L.header, this.header(f.paths))}
-        ${this.box(L.roof.box, it.roof)} ${this.box(L.shedSolar.box, it.shed_solar)}
+        ${this.box(L.roof.box, it.roof)}
+        ${this.box(L.shedSolar.box, it.shed_solar)}
         ${this.box(L.battery.box, it.battery)} ${this.box(L.grid.box, it.grid)}
-        ${this.box(L.ev.box, it.ev)} ${this.box(L.home.box, { ...it.home, color: c })}
+        ${this.box(L.ev.box, it.ev)}
+        ${this.box(L.home.box, { ...it.home, color: c })}
         ${FLOOR_KEYS.map((k) => this.box(L.floors[k].box, it[k]))}
       </div>
     </div>`;
   }
 
   /** An own picture: each placed item gets its box and a line with one bend to its spot. */
-  private ownStage(own: HousePicture, it: Record<ItemKey, Item>): TemplateResult {
+  private ownStage(
+    own: HousePicture,
+    it: Record<ItemKey, Item>,
+  ): TemplateResult {
     const w = own.width || 1600;
     const h = own.height || 1200;
     const shown = ITEM_KEYS.filter(
@@ -440,7 +506,9 @@ export class ZephyrHouse extends LitElement {
         })}
         ${(["ev", "attic", "first", "ground"] as ItemKey[]).map((k) => {
           const at = px(k);
-          return at && (k !== "ev" || it.ev.active) ? this.line(hubPath(at, hub).reverse(), c, it[k].power) : nothing;
+          return at && (k !== "ev" || it.ev.active)
+            ? this.line(hubPath(at, hub).reverse(), c, it[k].power)
+            : nothing;
         })}
         ${this.dot(hub, c)}`
       : nothing;
@@ -465,7 +533,16 @@ export class ZephyrHouse extends LitElement {
           const [x, y] = own.items[k]?.box ?? [0, 0];
           const item =
             k === "home"
-              ? { ...it.home, color: c, lines: [...it.home.lines, ...(flowParts(f.paths).length ? this.header(f.paths).lines : [])] }
+              ? {
+                  ...it.home,
+                  color: c,
+                  lines: [
+                    ...it.home.lines,
+                    ...(flowParts(f.paths).length
+                      ? this.header(f.paths).lines
+                      : []),
+                  ],
+                }
               : it[k];
           return this.placed(x, y, item);
         })}
@@ -497,9 +574,10 @@ export class ZephyrHouse extends LitElement {
       lines: parts.length
         ? parts.map((p) =>
             p.to.length === 1
-              ? html`${src(p.from)} <b>${this.w(p.total)}</b> → ${dst(p.to[0][0])}`
+              ? html`${src(p.from)} <b>${this.w(p.total)}</b> →
+                  ${dst(p.to[0][0])}`
               : html`${src(p.from)} <b>${this.w(p.total)}</b> →
-                ${p.to.map(([d, w], i) => html`${i ? " · " : ""}${dst(d)} ${this.w(w)}`)}`,
+                  ${p.to.map(([d, w], i) => html`${i ? " · " : ""}${dst(d)} ${this.w(w)}`)}`,
           )
         : [this.tr("house.sub")],
       power: 0,
@@ -559,7 +637,10 @@ export class ZephyrHouse extends LitElement {
   }
 
   private boxHtml(style: string, it: Item): TemplateResult {
-    return html`<div class=${it.active === false ? "box off" : "box"} style=${style}>
+    return html`<div
+      class=${it.active === false ? "box off" : "box"}
+      style=${style}
+    >
       <span class="ic"
         ><svg viewBox="0 0 24 24">${unsafeSVG(ICON[it.icon])}</svg></span
       >

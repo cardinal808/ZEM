@@ -1,4 +1,5 @@
 // ZEPHYR panel (M6, SPEC-ui). UI-1: header, menu and the three cards of *Now* on the Plan screen.
+import { element } from "./define";
 import {
   LitElement,
   css,
@@ -8,7 +9,7 @@ import {
   type PropertyValues,
   type TemplateResult,
 } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 
 import {
   clock,
@@ -50,7 +51,13 @@ import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
 import { flows } from "./flow";
 import { flowParts } from "./house";
-import { nowNote, p1Display, versionState, zephyrUpdate, type UpdateState } from "./now";
+import {
+  nowNote,
+  p1Display,
+  versionState,
+  zephyrUpdate,
+  type UpdateState,
+} from "./now";
 import type {
   HomeAssistant,
   Now,
@@ -83,7 +90,7 @@ function loadFonts(base: string): void {
   document.head.appendChild(style);
 }
 
-@customElement("zephyr-panel")
+@element("zephyr-panel")
 export class ZephyrPanel extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
   @property({ type: Boolean }) narrow = false;
@@ -250,7 +257,9 @@ export class ZephyrPanel extends LitElement {
     if (!this.hass || Date.now() - this.batteryDaysAt < 15 * 60_000) return;
     this.batteryDaysAt = Date.now();
     try {
-      this.batteryDays = await this.hass.callWS<BatteryDaysView>({ type: "zephyr/battery_days" });
+      this.batteryDays = await this.hass.callWS<BatteryDaysView>({
+        type: "zephyr/battery_days",
+      });
       this.batteryDaysAt = Date.now();
     } catch {
       // Older backend or not loaded yet: no RTE.
@@ -354,7 +363,9 @@ export class ZephyrPanel extends LitElement {
     if (!this.hass || this.view !== "sets") return;
     try {
       this.setsView = await this.hass.callWS<SetsView>({ type: "zephyr/sets" });
-      this.batteryDays = await this.hass.callWS<BatteryDaysView>({ type: "zephyr/battery_days" });
+      this.batteryDays = await this.hass.callWS<BatteryDaysView>({
+        type: "zephyr/battery_days",
+      });
     } catch {
       // Not loaded: the banner says so.
     }
@@ -526,7 +537,9 @@ export class ZephyrPanel extends LitElement {
     return r.path;
   };
 
-  private houseCall = async (msg: Record<string, unknown>): Promise<unknown> => {
+  private houseCall = async (
+    msg: Record<string, unknown>,
+  ): Promise<unknown> => {
     if (!this.hass) throw new Error("no hass");
     return this.hass.callWS(msg as { type: string });
   };
@@ -732,7 +745,9 @@ export class ZephyrPanel extends LitElement {
     if (!running) return nothing;
     const v = versionState(
       running,
-      zephyrUpdate(this.hass?.states as Record<string, UpdateState> | undefined),
+      zephyrUpdate(
+        this.hass?.states as Record<string, UpdateState> | undefined,
+      ),
     );
     if (v.kind === "version")
       return html`<span class="version">v${v.running}</span>`;
@@ -751,7 +766,10 @@ export class ZephyrPanel extends LitElement {
               this.confirmUpdate
                 ? this.renderConfirm(
                     this.tr("version.restart_title"),
-                    this.tr("version.restart_text", { running: v.running, installed: v.installed }),
+                    this.tr("version.restart_text", {
+                      running: v.running,
+                      installed: v.installed,
+                    }),
                     this.tr("version.restart_do"),
                     () => this.callService("homeassistant", "restart", {}),
                   )
@@ -1161,7 +1179,8 @@ export class ZephyrPanel extends LitElement {
                       p.to.length === 1
                         ? dst(p.to[0][0])
                         : p.to.map(
-                            ([d, v], i) => html`${i ? " · " : ""}${dst(d)} ${w(v)}`,
+                            ([d, v], i) =>
+                              html`${i ? " · " : ""}${dst(d)} ${w(v)}`,
                           )
                     }</span
                   >`,
@@ -1284,10 +1303,15 @@ export class ZephyrPanel extends LitElement {
   private renderRte(): TemplateResult | typeof nothing {
     const week = this.batteryDays?.week;
     if (!week) return nothing;
-    const value = week.efficiency === null ? "–" : percent(week.efficiency * 100, this.locale);
+    const value =
+      week.efficiency === null
+        ? "–"
+        : percent(week.efficiency * 100, this.locale);
     return html`<span class="rte" title=${this.tr("battery.rte_title")}
       >${this.tr("battery.rte", { value })}
-      <span class="muted">· ${this.tr("sets.days_n", { n: week.efficiency_days ?? 7 })}</span></span
+      <span class="muted"
+        >· ${this.tr("sets.days_n", { n: week.efficiency_days ?? 7 })}</span
+      ></span
     >`;
   }
 

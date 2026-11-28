@@ -3,8 +3,9 @@
  * its box and a tap for the spot its line goes to. Positions are fractions of the picture, so a
  * picture of any size works; the picture itself stays in the user's Home Assistant.
  */
+import { element } from "./define";
 import { LitElement, css, html, nothing, svg, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 
 import { COLORS, ITEM_KEYS, OWN_BOX_W, ownLine, type ItemKey } from "./house";
 import { t, type Lang } from "./i18n";
@@ -29,7 +30,9 @@ const COLOR: Record<ItemKey, string> = {
 };
 
 /** Scale an image file down to at most MAX_W wide; WebP where the browser can, else JPEG. */
-export async function shrink(file: Blob): Promise<{ data: string; width: number; height: number }> {
+export async function shrink(
+  file: Blob,
+): Promise<{ data: string; width: number; height: number }> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, MAX_W / bitmap.width);
   const width = Math.round(bitmap.width * scale);
@@ -39,11 +42,16 @@ export async function shrink(file: Blob): Promise<{ data: string; width: number;
   canvas.height = height;
   canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
   const blob = await new Promise<Blob>((ok, fail) =>
-    canvas.toBlob((b) => (b ? ok(b) : fail(new Error("canvas"))), "image/webp", 0.85),
+    canvas.toBlob(
+      (b) => (b ? ok(b) : fail(new Error("canvas"))),
+      "image/webp",
+      0.85,
+    ),
   );
   const bytes = new Uint8Array(await blob.arrayBuffer());
   let bin = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return { data: btoa(bin), width, height };
 }
 
@@ -61,7 +69,7 @@ export function nextUnplaced(
   return null;
 }
 
-@customElement("zephyr-house-editor")
+@element("zephyr-house-editor")
 export class ZephyrHouseEditor extends LitElement {
   @property({ attribute: false }) picture: HousePicture | null = null;
   @property({ attribute: false }) canEdit = false;
@@ -71,14 +79,21 @@ export class ZephyrHouseEditor extends LitElement {
   /** Asks the panel to load the settings (and so this picture) again. */
   @property({ attribute: false }) changed?: () => Promise<void>;
 
-  @state() private draft: { custom: boolean; items: Partial<Record<string, Place>>; hidden: string[] } | null = null;
+  @state() private draft: {
+    custom: boolean;
+    items: Partial<Record<string, Place>>;
+    hidden: string[];
+  } | null = null;
   @state() private selected: ItemKey | null = null;
   @state() private busy = false;
   @state() private error: string | null = null;
   @state() private url: string | null = null;
   private signed = -1;
 
-  private tr(key: string, params: Record<string, string | number> = {}): string {
+  private tr(
+    key: string,
+    params: Record<string, string | number> = {},
+  ): string {
     return t(this.uiLang, key, params);
   }
 
@@ -90,7 +105,13 @@ export class ZephyrHouseEditor extends LitElement {
 
   private get current() {
     const p = this.picture;
-    return this.draft ?? { custom: !!p?.custom, items: p?.items ?? {}, hidden: p?.hidden ?? [] };
+    return (
+      this.draft ?? {
+        custom: !!p?.custom,
+        items: p?.items ?? {},
+        hidden: p?.hidden ?? [],
+      }
+    );
   }
 
   protected override willUpdate(): void {
@@ -133,18 +154,34 @@ export class ZephyrHouseEditor extends LitElement {
       <p class="muted">${this.tr("picture.note")}</p>
       ${this.busy ? html`<p class="muted" role="status">${this.tr("picture.uploading")}</p>` : nothing}
       ${this.error ? html`<p class="err" role="alert">${this.tr("picture.error", { msg: this.error })}</p>` : nothing}
-      <input type="file" accept="image/jpeg,image/png,image/webp" hidden @change=${this.onFile} />
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        @change=${this.onFile}
+      />
       ${cur.custom && p?.has_image ? this.renderPlacing(p, cur, edit) : nothing}
-      ${this.draft && this.canEdit
-        ? html`<div class="row">
-            <button type="button" class="primary" ?disabled=${this.busy} @click=${() => void this.save()}>
-              ${this.tr("settings.save")}
-            </button>
-            <button type="button" class="ghost" @click=${() => ((this.draft = null), (this.selected = null))}>
-              ${this.tr("settings.discard")}
-            </button>
-          </div>`
-        : nothing}`;
+      ${
+        this.draft && this.canEdit
+          ? html`<div class="row">
+              <button
+                type="button"
+                class="primary"
+                ?disabled=${this.busy}
+                @click=${() => void this.save()}
+              >
+                ${this.tr("settings.save")}
+              </button>
+              <button
+                type="button"
+                class="ghost"
+                @click=${() => ((this.draft = null), (this.selected = null))}
+              >
+                ${this.tr("settings.discard")}
+              </button>
+            </div>`
+          : nothing
+      }`;
   }
 
   private renderPlacing(
@@ -155,8 +192,11 @@ export class ZephyrHouseEditor extends LitElement {
     const w = p.width || 1600;
     const h = p.height || 1200;
     const sel = this.selected;
-    const step = sel && cur.items[sel]?.box && !cur.items[sel]?.point ? "point" : "box";
-    const shown = ITEM_KEYS.filter((k) => !cur.hidden.includes(k) && cur.items[k]?.box);
+    const step =
+      sel && cur.items[sel]?.box && !cur.items[sel]?.point ? "point" : "box";
+    const shown = ITEM_KEYS.filter(
+      (k) => !cur.hidden.includes(k) && cur.items[k]?.box,
+    );
     return html`<p class="hint">
         ${sel ? this.tr(`picture.step_${step}`, { item: this.label(sel) }) : this.tr("picture.pick")}
       </p>
@@ -201,24 +241,50 @@ export class ZephyrHouseEditor extends LitElement {
         })}
       </div>
       <div class="row">
-        ${sel
-          ? html`<button type="button" ?disabled=${!edit} @click=${() => this.toggleHidden(sel)}>
-                ${cur.hidden.includes(sel) ? this.tr("picture.show") : this.tr("picture.hide")}
-              </button>
-              <button type="button" ?disabled=${!edit} @click=${() => this.place(sel, {})}>
-                ${this.tr("picture.reset")}
-              </button>`
-          : nothing}
-        <button type="button" class="ghost" ?disabled=${!edit} @click=${() => this.pickFile()}>
+        ${
+          sel
+            ? html`<button
+                  type="button"
+                  ?disabled=${!edit}
+                  @click=${() => this.toggleHidden(sel)}
+                >
+                  ${cur.hidden.includes(sel) ? this.tr("picture.show") : this.tr("picture.hide")}
+                </button>
+                <button
+                  type="button"
+                  ?disabled=${!edit}
+                  @click=${() => this.place(sel, {})}
+                >
+                  ${this.tr("picture.reset")}
+                </button>`
+            : nothing
+        }
+        <button
+          type="button"
+          class="ghost"
+          ?disabled=${!edit}
+          @click=${() => this.pickFile()}
+        >
           ${this.tr("picture.replace")}
         </button>
-        <button type="button" class="ghost" ?disabled=${!edit} @click=${() => void this.removePicture()}>
+        <button
+          type="button"
+          class="ghost"
+          ?disabled=${!edit}
+          @click=${() => void this.removePicture()}
+        >
           ${this.tr("picture.delete")}
         </button>
       </div>`;
   }
 
-  private patch(p: Partial<{ custom: boolean; items: Partial<Record<string, Place>>; hidden: string[] }>): void {
+  private patch(
+    p: Partial<{
+      custom: boolean;
+      items: Partial<Record<string, Place>>;
+      hidden: string[];
+    }>,
+  ): void {
     this.draft = { ...this.current, ...p };
   }
 
@@ -228,7 +294,11 @@ export class ZephyrHouseEditor extends LitElement {
 
   private toggleHidden(k: ItemKey): void {
     const hidden = this.current.hidden;
-    this.patch({ hidden: hidden.includes(k) ? hidden.filter((x) => x !== k) : [...hidden, k] });
+    this.patch({
+      hidden: hidden.includes(k)
+        ? hidden.filter((x) => x !== k)
+        : [...hidden, k],
+    });
   }
 
   private tap(e: MouseEvent): void {
@@ -249,7 +319,9 @@ export class ZephyrHouseEditor extends LitElement {
   }
 
   private pickFile(): void {
-    this.renderRoot.querySelector<HTMLInputElement>("input[type=file]")?.click();
+    this.renderRoot
+      .querySelector<HTMLInputElement>("input[type=file]")
+      ?.click();
   }
 
   private onFile = async (e: Event): Promise<void> => {
@@ -263,7 +335,11 @@ export class ZephyrHouseEditor extends LitElement {
       const img = await shrink(file);
       await this.call({ type: "zephyr/house/picture/upload", ...img });
       this.draft = null;
-      this.selected = nextUnplaced(this.picture?.items ?? {}, this.picture?.hidden ?? [], null);
+      this.selected = nextUnplaced(
+        this.picture?.items ?? {},
+        this.picture?.hidden ?? [],
+        null,
+      );
       await this.changed?.();
     } catch (err) {
       this.error = (err as { message?: string })?.message ?? String(err);
@@ -277,7 +353,12 @@ export class ZephyrHouseEditor extends LitElement {
     if (!d || !this.call) return;
     this.busy = true;
     try {
-      await this.call({ type: "zephyr/house/picture", custom: d.custom, items: d.items, hidden: d.hidden });
+      await this.call({
+        type: "zephyr/house/picture",
+        custom: d.custom,
+        items: d.items,
+        hidden: d.hidden,
+      });
       this.draft = null;
       this.selected = null;
       await this.changed?.();

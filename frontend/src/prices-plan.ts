@@ -1,4 +1,5 @@
 // Card "Prijzen en plan" (SPEC-ui §4.2, design A, approved 26-11).
+import { element } from "./define";
 import {
   LitElement,
   css,
@@ -8,12 +9,14 @@ import {
   type PropertyValues,
   type TemplateResult,
 } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 
 import { clock, day, euro, kwh, numberFormat, percent } from "./format";
 import { t, type Lang } from "./i18n";
 import {
   bands,
+  forecastDays,
+  forecastPaths,
   bar,
   currentIndex,
   dayOf,
@@ -56,7 +59,7 @@ export function storedPeriod(): Period {
   }
 }
 
-@customElement("zephyr-prices-plan")
+@element("zephyr-prices-plan")
 export class ZephyrPricesPlan extends LitElement {
   @property({ attribute: false }) view?: PlanView;
   @property({ attribute: false }) uiLang: Lang = "en";
@@ -171,7 +174,7 @@ export class ZephyrPricesPlan extends LitElement {
         ${this.statCell(todayQs, today, "plan.today")}
         ${this.statCell(tomorrowQs, tomorrow, "plan.tomorrow", true)}
       </div>
-      ${this.notes(view, tomorrow)}
+      ${this.notes(view, tomorrow)}${this.forecastNotes(view, quarters)}
       ${quarters.length ? this.chart(quarters) : html`<p class="empty">${this.tr("plan.no_quarters")}</p>`}
       ${this.legend(quarters)}
       <slot></slot>
@@ -259,6 +262,53 @@ export class ZephyrPricesPlan extends LitElement {
     return notes.length ? html`${notes}` : nothing;
   }
 
+  /** The jeroen.nl forecast: why the plan would differ, the days past the chart, the source. */
+  private forecastNotes(
+    view: PlanView,
+    shown: Quarter[],
+  ): TemplateResult | typeof nothing {
+    const f = view.price_forecast;
+    if (!f || !f.slots.length) return nothing;
+    const lines: TemplateResult[] = [];
+    const peak = f.slots.reduce((a, x) => (x.buy > a.buy ? x : a));
+    const when = `${day(peak.start, this.locale, this.timeZone)} ${clock(peak.start, this.locale, this.timeZone)}`;
+    const peakText = this.tr("plan.fc_peak", {
+      when,
+      price: euro(peak.buy, this.locale),
+      low: euro(peak.buy_low, this.locale),
+      high: euro(peak.buy_high, this.locale),
+    });
+    const c = f.compare;
+    if (f.mode === "indicative" && c?.first_action_differs)
+      lines.push(
+        html`<p class="note">
+          ${this.tr("plan.fc_would", { action: this.tr(`plan.fc_action_${c.action_with}`) })} ${peakText}
+        </p>`,
+      );
+    if (f.mode === "use")
+      lines.push(html`<p class="note">${this.tr("plan.fc_used")} ${peakText}</p>`);
+    for (const d of forecastDays(f.slots, shown, this.timeZone))
+      lines.push(
+        html`<p class="note">
+          ${this.tr("plan.fc_day", {
+            day: day(d.max.start, this.locale, this.timeZone),
+            avg: euro(d.avg, this.locale),
+            high: euro(d.max.buy, this.locale),
+            at: clock(d.max.start, this.locale, this.timeZone),
+            low: euro(d.min.buy, this.locale),
+            lowat: clock(d.min.start, this.locale, this.timeZone),
+          })}
+        </p>`,
+      );
+    lines.push(
+      html`<p class="note source">
+        <span class="swf" aria-hidden="true"></span>${this.tr("plan.fc_source")}
+        <a href=${f.source.url} target="_blank" rel="noreferrer">${f.source.name}</a>
+      </p>`,
+    );
+    return html`${lines}`;
+  }
+
   private chart(quarters: Quarter[]): TemplateResult {
     const n = quarters.length;
     const s = scale(quarters);
@@ -339,6 +389,7 @@ export class ZephyrPricesPlan extends LitElement {
             preserveAspectRatio="none"
             aria-hidden="true"
           >
+            ${forecastPaths(quarters, this.view?.price_forecast?.slots, s).map((f) => svg`<polygon class="fband" points=${f.band}></polygon><polyline class="fline" points=${f.line}></polyline>`)}
             ${pastLines.map((p) => svg`<polyline class="halo" points=${p}></polyline><polyline class="soc measured" points=${p}></polyline>`)}
             ${pts ? svg`<polyline class="halo" points=${pts}></polyline><polyline class="soc" points=${pts}></polyline>` : nothing}
           </svg>
@@ -723,6 +774,27 @@ export class ZephyrPricesPlan extends LitElement {
       }
       .bar.past {
         opacity: 0.4;
+      }
+      .fline {
+        fill: none;
+        stroke: var(--z-text);
+        stroke-width: 1.5px;
+        stroke-dasharray: 4 3;
+        vector-effect: non-scaling-stroke;
+      }
+      .fband {
+        fill: var(--z-text);
+        opacity: 0.08;
+        stroke: none;
+      }
+      .note.source {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .swf {
+        width: 18px;
+        border-top: 2px dashed var(--z-text);
       }
       .bar.ind {
         background: repeating-linear-gradient(

@@ -1,7 +1,8 @@
 // Plan screen: three buttons under "Prijzen en plan" (B36, Bjorn 27-11): tap to plan a run, again for a second
 // wash, again to clear. The window and "after the washing" are set in Instellingen → Apparaten.
+import { element } from "./define";
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 
 import { clock, dateFormat, euro, sameDay } from "./format";
 import { t, type Lang } from "./i18n";
@@ -130,7 +131,7 @@ export function estimateCost(
   return best;
 }
 
-@customElement("zephyr-appliances")
+@element("zephyr-appliances")
 export class ZephyrAppliances extends LitElement {
   @property({ attribute: false }) view?: AppliancesView;
   @property({ attribute: false }) quarters: Quarter[] = [];
