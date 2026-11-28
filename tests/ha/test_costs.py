@@ -313,3 +313,157 @@ async def test_unmeasured_part_is_filled_and_refined(hass: HomeAssistant, fake_s
     assert day["filled_kwh"]["import_kwh"] == pytest.approx(0.0417, abs=0.004)
     total = sum(r["import_kwh"] for r in costs.current)
     assert costs.days[next(iter(costs.days))]["import_kwh"] == pytest.approx(total, abs=1e-4)
+
+
+async def test_quarters_while_ha_was_off_are_made_and_filled(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    # OPDRACHT-onvolledige-kwartieren step 2: HA off 12:22:30–13:07:30. The quarters 12:15, 12:30
+    # and 12:45 get a record; the meter counted 0.80 kWh from 12:15 to 13:15, which sets the sum;
+    # the spread rises from the quarter before (0.10) to the rate after (1200 W = 0.30).
+    for entity in (*IMPORT, *EXPORT):
+        hass.states.async_set(entity, "100.0", ENERGY)
+    entry = await _setup(hass, fake_sets, freezer, cost_import_counters=list(IMPORT), cost_export_counters=list(EXPORT))
+    await _run(hass, freezer, 10)
+    hass.states.async_set(IMPORT[0], "100.10", ENERGY)
+    await _run(hass, freezer, 900)  # 12:15 closes 12:00–12:15: 0.10 kWh from the counters
+    costs = entry.runtime_data.costs
+    assert costs.current[-1]["import_kwh"] == pytest.approx(0.10)
+    await _run(hass, freezer, 450)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=45))
+    hass.states.async_set(IMPORT[0], "100.90", ENERGY)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await _run(hass, freezer, 450, 1200.0)  # 13:15 closes 13:00–13:15
+    costs = entry.runtime_data.costs
+    starts = [r["start"][11:16] for r in costs.current]
+    assert starts[-5:] == ["11:00", "11:15", "11:30", "11:45", "12:00"]  # UTC
+    gap = costs.current[-4:-1]
+    assert all(r["status"] == "estimated" and r["fill"]["import_kwh"] == "scaled" for r in gap)
+    assert all("ha_off" in r["fill_causes"] for r in gap)
+    assert gap[0]["import_kwh"] < gap[1]["import_kwh"] < gap[2]["import_kwh"]
+    assert sum(r["import_kwh"] for r in costs.current[-4:]) == pytest.approx(0.80, abs=1e-3)
+    assert costs.current[-1]["status"] == "estimated"
+    assert all(r["cost"] is not None for r in gap)  # priced from the Nord Pool sensor of that day
+    day = costs.days["2026-11-25"]
+    assert day["import_kwh"] == pytest.approx(sum(r["import_kwh"] for r in costs.current), abs=1e-3)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["costs"]["missed_quarters"][-1]["quarters"] == 3
+
+
+async def test_history_filled_once_after_the_update(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # Eis 5: once, the stored month is filled: a quarter that was missing gets a record, an
+    # incomplete one is filled, and the month is evaluated again; day totals follow.
+    entry = await _setup(hass, fake_sets, freezer)
+    await _run(hass, freezer, 10)
+    for _ in range(5):
+        await _run(hass, freezer, 900, 400.0)
+    costs = entry.runtime_data.costs
+    records = costs.current
+    assert len(records) == 6
+    del records[3]  # a quarter HA never closed (before 0.8.80)
+    half = records[3]
+    half.update({"import_kwh": 0.05, "complete": False, "coverage": 0.5})
+    half.pop("status", None)
+    costs.fill_version = 0
+    await costs.async_save()
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    costs = entry.runtime_data.costs
+    assert len(costs.current) == 6 and costs.fill_version == 1
+    made, filled = costs.current[3], costs.current[4]
+    assert made["status"] == "estimated" and made["import_kwh"] == pytest.approx(0.1, abs=0.005)
+    assert filled["status"] == "estimated" and filled["import_kwh"] == pytest.approx(0.1, abs=0.005)
+    day = costs.days["2026-11-25"]
+    assert day["import_kwh"] == pytest.approx(sum(r["import_kwh"] for r in costs.current), abs=1e-3)
+    assert day["quarters"] == 6
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["costs"]["history_filled"]["made"] == 1 and diag["costs"]["history_filled"]["filled"] >= 1
+
+
+def _quarter_prices(hass: HomeAssistant, prices: dict[str, float], default: float = 0.10, hole: str | None = None) -> None:
+    """Quarter prices for today (local HH:MM → €/kWh); ``hole`` leaves one quarter out."""
+    start = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    raw = []
+    for q in range(96):
+        begin = start + timedelta(minutes=15 * q)
+        key = begin.strftime("%H:%M")
+        if key == hole:
+            continue
+        raw.append({"start": begin, "end": begin + timedelta(minutes=15), "value": prices.get(key, default)})
+    hass.states.async_set(PRICE, "0.1", {"raw_today": raw, "raw_tomorrow": [], "unit": "kWh"})
+
+
+async def test_missing_price_is_interpolated_then_replaced(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    # Step 3: no price for 12:15–12:30 at closing: between 0.10 (before) and 0.20 (after) → 0.15,
+    # counted at once; when Nord Pool has it (0.12) it replaces the guess and the day follows.
+    entry = await _setup(hass, fake_sets, freezer)
+    _quarter_prices(hass, {"12:30": 0.20}, hole="12:15")
+    await _run(hass, freezer, 10)
+    await _run(hass, freezer, 900)
+    await _run(hass, freezer, 900)
+    costs = entry.runtime_data.costs
+    guess = costs.current[-1]
+    assert guess["price_source"] == "interpolated" and guess["market"] == pytest.approx(0.15)
+    assert guess["cost"] is not None and "price" in guess["fill_causes"]
+    assert hass.states.get("sensor.zephyr_costs_today").attributes["price_interpolated_quarters"] == 1
+    _quarter_prices(hass, {"12:30": 0.20, "12:15": 0.12})
+    await hass.async_block_till_done()
+    real = next(r for r in costs.current if r["start"] == guess["start"])
+    assert real["price_source"] == "nordpool" and real["market"] == pytest.approx(0.12)
+    day = costs.days["2026-11-25"]
+    assert day["cost"] == pytest.approx(sum(r["cost"] for r in costs.current if r["cost"] is not None), abs=1e-4)
+    assert not day.get("price_interpolated")
+
+
+async def test_price_from_energyzero_when_nord_pool_stays_away(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory, aioclient_mock: AiohttpClientMocker
+) -> None:
+    hour = datetime(2026, 11, 25, 11, 0, tzinfo=dt_util.UTC)  # 12:00 local
+    aioclient_mock.get(
+        "https://api.energyzero.nl/v1/energyprices",
+        json={"Prices": [{"readingDate": hour.isoformat().replace("+00:00", "Z"), "price": 0.177}]},
+    )
+    entry = await _setup(hass, fake_sets, freezer)
+    _quarter_prices(hass, {}, hole="12:15")
+    await _run(hass, freezer, 10)
+    await _run(hass, freezer, 900)
+    await _run(hass, freezer, 900)  # 12:15 interpolated
+    await _run(hass, freezer, 3600)  # an hour on: EnergyZero
+    costs = entry.runtime_data.costs
+    record = next(r for r in costs.current if r["start"] == "2026-11-25T11:15:00+00:00")
+    assert record["price_source"] == "energyzero" and record["market"] == pytest.approx(0.177)
+
+
+async def test_prices_around_midnight(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # TOETS-besparing bevinding 3: the Nord Pool sensor rolls raw_today over at midnight. 23:45
+    # keeps the price it had when it opened; 00:00–00:45 get the new day's prices.
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    tz = dt_util.get_default_time_zone()
+    freezer.move_to(datetime(2026, 11, 25, 23, 29, 50, tzinfo=tz))
+    entry = await _install_with_p1(hass, fake_sets)
+    today = datetime(2026, 11, 25, tzinfo=tz)
+    tomorrow = today + timedelta(days=1)
+
+    def raw(day: datetime, value: float) -> list[dict[str, Any]]:
+        return [{"start": day + timedelta(minutes=15 * q), "end": day + timedelta(minutes=15 * (q + 1)), "value": value} for q in range(96)]
+
+    hass.states.async_set(PRICE, "0.2", {"raw_today": raw(today, 0.21), "raw_tomorrow": raw(tomorrow, 0.30), "unit": "kWh"})
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(result["flow_id"], {"p1_entity": P1, "price_entity": PRICE})
+    await hass.async_block_till_done()
+    await _run(hass, freezer, 10)  # 23:30
+    await _run(hass, freezer, 900)  # 23:45 closes 23:30
+    await _run(hass, freezer, 895)
+    hass.states.async_set(PRICE, "0.3", {"raw_today": raw(tomorrow, 0.30), "raw_tomorrow": [], "unit": "kWh"})
+    await _run(hass, freezer, 5)  # 00:00 closes 23:45 after the roll-over
+    for _ in range(3):
+        await _run(hass, freezer, 900)
+    costs = entry.runtime_data.costs
+    by_start = {dt_util.as_local(datetime.fromisoformat(r["start"])).strftime("%H:%M"): r for r in costs.current}
+    assert by_start["23:45"]["market"] == pytest.approx(0.21) and by_start["23:45"]["price_source"] == "nordpool"
+    assert [by_start[k]["market"] for k in ("00:00", "00:15", "00:30")] == pytest.approx([0.30, 0.30, 0.30])

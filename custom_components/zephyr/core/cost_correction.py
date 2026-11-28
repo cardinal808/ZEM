@@ -53,7 +53,7 @@ def _input(record: Mapping[str, Any], extra: Mapping[str, float]) -> QuarterInpu
         charge_kwh=float(record["charge_kwh"]) + extra.get("charged", 0.0),
         discharge_kwh=float(record["discharge_kwh"]) + extra.get("discharged", 0.0),
         solar_kwh=None if solar is None else float(solar) + extra.get("solar", 0.0),
-        market=record.get("market"),
+        market=extra["market"] if "market" in extra else record.get("market"),
         coverage=float(record["coverage"]),
         stored_kwh=record.get("stored_kwh"),
         daylight=bool(record["daylight"]),
@@ -71,8 +71,9 @@ def reevaluate(
     """Evaluate ``records`` again from the first corrected quarter; changes them in place.
 
     ``corrections``: extra kWh per quarter start (ISO) for ``charged``, ``discharged``,
-    ``solar``, ``import`` and ``export`` (negative: less). Returns the pools after the last quarter and the (old, new) pairs, or None
-    when nothing could be corrected (no such quarter, or inputs missing).
+    ``solar``, ``import`` and ``export`` (negative: less); ``market`` replaces the price.
+    Returns the pools after the last quarter and the (old, new) pairs, or None when nothing
+    could be corrected (no such quarter, or inputs missing).
     """
     first = next((i for i, r in enumerate(records) if r.get("start") in corrections), None)
     if first is None or "pools" not in records[first]:
@@ -89,7 +90,9 @@ def reevaluate(
         before = pools.as_dict()
         fresh = evaluate(q, tariffs_for(local), pools, days_in_month(local))
         new = {**old, **{k: v for k, v in fresh.items() if k not in KEEP_FROM_OLD}, "pools": before}
-        if extra:
+        if "market" in extra:
+            new["corrected_at"] = corrected_at  # a real price replaced an interpolated one
+        if any(k != "market" for k in extra):
             new["estimated"] = True
             new["corrected_at"] = corrected_at
             counted = {k: v for k, v in COUNTER_FLOWS.items() if extra.get(k)}
