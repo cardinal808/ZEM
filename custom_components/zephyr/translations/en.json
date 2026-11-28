@@ -463,7 +463,7 @@
           "curtail_inverter_w": "Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.",
           "calibration_days": "When the battery has not reached 100 % for this many days, the planner charges it full at the cheapest moment (the upper limit goes to 100 % for a while) and does not deliver until the set has calibrated itself (max. 2 hours). From half these days on it already charges full when that is cheap. 0 = off.",
           "price_forecast_entity": "Optional. The price sensor of the HACS integration ha-jeroen-nl (with your own jeroen.nl API key). ZEPHYR then also looks past the known Nord Pool prices. Nord Pool always leads; ZEPHYR fetches nothing from jeroen.nl itself.",
-          "price_forecast_mode": "Indicative: the plan stays as without the forecast; the diagnostics show what ZEPHYR would do with it. Taking it into account comes after a backtest.",
+          "price_forecast_mode": "Indicative: the plan stays as without the forecast; the diagnostics show what ZEPHYR would do with it. Take into account: the planner uses the forecast to plan (for example charging tonight for an expensive day after tomorrow); blocks on forecast quarters stay indicative. The forecast can be off in level; its trend is usually clear.",
           "price_forecast_days": "How many days past the last known price (0–2).",
           "price_forecast_value": "Low (p10 of the 80 % band, careful: no charging on an optimistic guess) or the middle."
         }
@@ -512,7 +512,8 @@
     "price_forecast_mode": {
       "options": {
         "off": "Off",
-        "indicative": "Indicative (show only)"
+        "indicative": "Indicative (show only)",
+        "use": "Take into account"
       }
     },
     "price_forecast_value": {

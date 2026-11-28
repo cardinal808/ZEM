@@ -488,8 +488,8 @@
       },
       "price_forecast_mode": {
         "label": "Gebruik in het plan",
-        "help": "Indicatief: het plan blijft gelijk; je ziet wat het met de voorspelling zou doen.",
-        "more": "Zolang het indicatief is, vergelijkt de diagnose het plan met en zonder voorspelling. Meerekenen komt beschikbaar na een backtest van minstens 6 weken opgeslagen voorspellingen."
+        "help": "Indicatief: het plan blijft gelijk. Meerekenen: de planner plant met de voorspelling.",
+        "more": "Indicatief: de diagnose vergelijkt het plan met en zonder voorspelling. Meerekenen: de planner kijkt ook naar de voorspelde dagen (standaard de dag na de bekende prijzen, dus na ongeveer 13:00 overmorgen). Het niveau van de voorspelling kan ernaast zitten, de tendens is meestal duidelijk; met de waarde Laag blijft de planner voorzichtig. Blokken op voorspelde kwartieren blijven indicatief en tellen niet mee in de totalen. De opgeslagen voorspellingen geven na ongeveer 6 weken een backtest."
       },
       "price_forecast_days": {
         "label": "Voorspelde dagen",

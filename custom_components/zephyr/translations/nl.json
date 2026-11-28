@@ -463,7 +463,7 @@
           "curtail_inverter_w": "Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld.",
           "calibration_days": "Haalt de accu zoveel dagen geen 100 %, dan laadt de planner hem op het goedkoopste moment vol (de bovengrens gaat tijdelijk naar 100 %) en levert hij niet tot de set zichzelf heeft gekalibreerd (max. 2 uur). Vanaf de helft van deze dagen laadt hij al vol als dat goedkoop kan. 0 = uit.",
           "price_forecast_entity": "Optioneel. De prijssensor van de HACS-integratie ha-jeroen-nl (met je eigen API-sleutel van jeroen.nl). ZEPHYR kijkt dan ook voorbij de bekende Nord Pool-prijzen. Nord Pool blijft leidend; ZEPHYR haalt zelf niets op bij jeroen.nl.",
-          "price_forecast_mode": "Indicatief: het plan blijft zoals zonder voorspelling; de diagnose laat zien wat ZEPHYR ermee zou doen. Meerekenen komt na een backtest.",
+          "price_forecast_mode": "Indicatief: het plan blijft zoals zonder voorspelling; de diagnose laat zien wat ZEPHYR ermee zou doen. Meerekenen: de planner plant met de voorspelling (bijvoorbeeld vannacht laden voor een dure overmorgen); blokken op voorspelde kwartieren blijven indicatief. Het niveau kan ernaast zitten; de tendens is meestal duidelijk.",
           "price_forecast_days": "Hoeveel dagen voorbij de laatste bekende prijs (0–2).",
           "price_forecast_value": "Laag (p10 van de band van 80 %, voorzichtig: niet laden op een optimistische verwachting) of het midden."
         }
@@ -512,7 +512,8 @@
     "price_forecast_mode": {
       "options": {
         "off": "Uit",
-        "indicative": "Indicatief (alleen tonen)"
+        "indicative": "Indicatief (alleen tonen)",
+        "use": "Meerekenen"
       }
     },
     "price_forecast_value": {

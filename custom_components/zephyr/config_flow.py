@@ -691,7 +691,7 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_PRICE_FORECAST_MODE, default=options.get(CONF_PRICE_FORECAST_MODE, "indicative")
                 ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(options=["off", "indicative"], translation_key="price_forecast_mode")
+                    selector.SelectSelectorConfig(options=["off", "indicative", "use"], translation_key="price_forecast_mode")
                 ),
                 vol.Required(CONF_PRICE_FORECAST_DAYS, default=options.get(CONF_PRICE_FORECAST_DAYS, 1)): _box(0, 2, 1, "d"),
                 vol.Required(CONF_PRICE_FORECAST_VALUE, default=options.get(CONF_PRICE_FORECAST_VALUE, "low")): selector.SelectSelector(

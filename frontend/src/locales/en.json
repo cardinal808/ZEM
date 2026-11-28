@@ -488,8 +488,8 @@
       },
       "price_forecast_mode": {
         "label": "Use in the plan",
-        "help": "Indicative: the plan stays the same; you see what it would do with the forecast.",
-        "more": "While indicative, the diagnostics compare the plan with and without the forecast. Taking it into account becomes available after a backtest of at least 6 weeks of stored forecasts."
+        "help": "Indicative: the plan stays the same. Take into account: the planner plans with the forecast.",
+        "more": "Indicative: the diagnostics compare the plan with and without the forecast. Take into account: the planner also looks at the forecast days (by default: the day after the known prices, so after about 13:00 the day after tomorrow). The level of the forecast can be off, the trend is usually clear; with the value Low the planner stays careful. Blocks on forecast quarters stay indicative and do not count in the totals. The stored forecasts give a backtest after about 6 weeks."
       },
       "price_forecast_days": {
         "label": "Forecast days",

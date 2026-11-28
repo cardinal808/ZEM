@@ -873,7 +873,7 @@ class PlanRunner:
             "inputs": self.inputs,
             "outcome": None if outcome is None else outcome.summary(),
             "blocks": [] if outcome is None else [b.as_dict() for b in outcome.blocks],
-            "timeline": [] if outcome is None else outcome.timeline(),
+            "timeline": [] if outcome is None else self._private_timeline(outcome.timeline()),
             "snapshots": list(self.snapshots),
             "profile": self.profile.as_dict(),
             "excluded_profile": None if not self.excluded_entity else self.excluded_profile.as_dict(),
@@ -884,6 +884,14 @@ class PlanRunner:
             "planned_quarters": self.by_quarter,
             "price_forecast": self.price_forecast.diagnostics(self._actual_market),
         }
+
+    def _private_timeline(self, timeline: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Forecast prices stay private (jeroen.nl terms): no prices on forecast quarters in the diagnostics."""
+        ext = self.price_forecast.last
+        if ext is None or not ext.used or self.price_forecast.mode != MODE_USE:
+            return timeline
+        first = ext.used[0].start.isoformat()
+        return [{**q, "buy": None, "sell": None} if str(q.get("start", "")) >= first else q for q in timeline]
 
     def _actual_market(self, moment: datetime) -> float | None:
         """The real (Nord Pool) market price of a past quarter, from the cost log (forecast quality)."""

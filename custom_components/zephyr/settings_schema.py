@@ -145,7 +145,7 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_PRICE_ENTITY, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_FORECAST, "sources", "entity", optional=True, reload=True),
     Field(CONF_PRICE_FORECAST_ENTITY, "sources", "entity", optional=True, reload=True, domain="sensor"),
-    Field(CONF_PRICE_FORECAST_MODE, "sources", "select", "indicative", options=("off", "indicative"), show_if=_HAS_FORECAST),
+    Field(CONF_PRICE_FORECAST_MODE, "sources", "select", "indicative", options=("off", "indicative", "use"), show_if=_HAS_FORECAST),
     Field(CONF_PRICE_FORECAST_DAYS, "sources", "number", 1, "d", 0, 2, 1, show_if=_HAS_FORECAST),
     Field(CONF_PRICE_FORECAST_VALUE, "sources", "select", "low", options=("low", "mid"), show_if=_HAS_FORECAST),
     Field(CONF_SOLAR_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True),
