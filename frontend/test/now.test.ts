@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { nowNote, versionState, zephyrUpdate, type UpdateState } from "../src/now";
+import { nowNote, p1Display, versionState, zephyrUpdate, type UpdateState } from "../src/now";
 
 const upd = (attrs: Record<string, unknown>, state = "on"): UpdateState => ({
   entity_id: "update.zephyr_update",
@@ -53,5 +53,15 @@ describe("version in the header", () => {
       running: "0.8.66",
       installed: "0.8.67",
     });
+  });
+});
+
+describe("P1 on the card Nu", () => {
+  it("is always in W with a sign, coloured by direction", () => {
+    expect(p1Display(1100, "nl")).toEqual({ text: "+1.100 W", kind: "import" });
+    expect(p1Display(-350.4, "nl")).toEqual({ text: "\u2212350 W", kind: "export" });
+    expect(p1Display(6, "nl")).toEqual({ text: "+6 W", kind: "zero" });
+    expect(p1Display(0, "en")).toEqual({ text: "0 W", kind: "zero" });
+    expect(p1Display(-50, "en").kind).toBe("zero");
   });
 });

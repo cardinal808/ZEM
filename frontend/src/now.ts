@@ -1,3 +1,5 @@
+import { number } from "./format";
+
 // Pure helpers for the header and the card *Nu* (testable without Lit).
 
 /**
@@ -73,4 +75,20 @@ export function versionState(running: string, update: UpdateState | null): Versi
       busy: update.attributes.in_progress === true || typeof update.attributes.in_progress === "number",
     };
   return { kind: "version", running: run };
+}
+
+/** Within this many watts of zero the meter counts as "at zero" (grey), as in *Nul op de meter*. */
+export const P1_ZERO_W = 50;
+
+/**
+ * The P1 value on the card *Nu*: always in W (Bjorn 28-11), with sign (+ import, − export).
+ */
+export function p1Display(
+  gridW: number,
+  locale: string,
+): { text: string; kind: "import" | "export" | "zero" } {
+  const w = Math.round(gridW);
+  const sign = w > 0 ? "+" : w < 0 ? "\u2212" : "";
+  const kind = Math.abs(w) <= P1_ZERO_W ? "zero" : w > 0 ? "import" : "export";
+  return { text: `${sign}${number(Math.abs(w), locale, 0)} W`, kind };
 }

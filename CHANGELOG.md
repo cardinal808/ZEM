@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.82 — Plan: P1 value on the card Nu, RTE on the card Accu
+- **Card *Nu*:** right of the action the P1 value, always in W with a sign (*+1.100 W · afname* in red, *−350 W · teruglevering* in green, within ±50 W grey). Same measurement as the flows below it.
+- **Card *Accu*:** *RTE 86 % · 7 dagen* between the limits and the sets: the round-trip efficiency from `zephyr/battery_days` (same figure as on the screen Accu), *RTE –* with too little energy. Refreshed at most every 15 minutes.
+- Tests: `p1Display` (vitest).
+
 ### 0.8.81 — Savings: what the solar panels saved, split (backend of OPDRACHT-besparing-zon)
 - **Per quarter** (with a solar counter and a price): `solar_direct_value` (solar the house used directly × buy price), `solar_export_value` (export without battery × export price, bonus included) and `solar_bonus_value` (the solar bonus part). Direct + export = Z0 − Z1 = `savings_solar`. `Tariffs.bonus()` gives the bonus per kWh.
 - **Day totals and summary:** the three sums, `savings_total` (solar + battery, only when every priced quarter has solar), `solar_direct_kwh`, `self_consumption` (share of the solar the house used, directly or later from the battery).

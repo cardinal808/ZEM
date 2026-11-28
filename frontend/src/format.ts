@@ -35,7 +35,7 @@ export function numberFormat(
   return f;
 }
 
-function number(value: number, locale: string, digits: number): string {
+export function number(value: number, locale: string, digits: number): string {
   return numberFormat(locale, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,

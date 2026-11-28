@@ -659,7 +659,10 @@ var $e = {
 		now: {
 			title: "Nu",
 			waiting: "Wacht op de eerste meting…",
-			shadow_note: "Zo zou ZEPHYR het doen (schaduwmodus)."
+			shadow_note: "Zo zou ZEPHYR het doen (schaduwmodus).",
+			p1_import: "P1 · afname",
+			p1_export: "P1 · teruglevering",
+			p1_zero: "P1"
 		},
 		battery: {
 			title: "Accu",
@@ -669,7 +672,10 @@ var $e = {
 			sets: "{online} van {total} sets online",
 			set: "1 set",
 			set_offline: "set offline",
-			unknown: "Nog geen gegevens van de set"
+			unknown: "Nog geen gegevens van de set",
+			rte: "RTE {value}",
+			rte_days: "7 dagen",
+			rte_title: "Round-trip efficiency: geleverd ÷ geladen over de laatste 7 dagen, met de verandering in SoC verrekend (zelfde als op het scherm Accu)."
 		},
 		next: {
 			title: "Volgende stap",
@@ -1281,7 +1287,10 @@ var $e = {
 		now: {
 			title: "Now",
 			waiting: "Waiting for the first measurement…",
-			shadow_note: "What ZEPHYR would do (shadow mode)."
+			shadow_note: "What ZEPHYR would do (shadow mode).",
+			p1_import: "P1 · import",
+			p1_export: "P1 · export",
+			p1_zero: "P1"
 		},
 		battery: {
 			title: "Battery",
@@ -1291,7 +1300,10 @@ var $e = {
 			sets: "{online} of {total} sets online",
 			set: "1 set",
 			set_offline: "set offline",
-			unknown: "No data from the set yet"
+			unknown: "No data from the set yet",
+			rte: "RTE {value}",
+			rte_days: "7 days",
+			rte_title: "Round-trip efficiency: delivered ÷ charged over the last 7 days, corrected for the change in SoC (same as on the screen Accu)."
 		},
 		next: {
 			title: "Next step",
@@ -2085,6 +2097,7 @@ var xt = o`
     --z-hold-a: #aeb8c8;
     --z-hold-b: #eef1f6;
     --z-export: #16917a;
+    --z-import: #c62828;
     --z-solar: #f2c230;
     --z-warn-bg: #fdebd5;
     --z-warn-text: #5c3300;
@@ -2110,6 +2123,7 @@ var xt = o`
     --z-hold-a: #56607a;
     --z-hold-b: #232833;
     --z-export: #3cc4a8;
+    --z-import: #ff7a7a;
     --z-solar: #e8c547;
     --z-warn-bg: #3a2a14;
     --z-warn-text: #f7d4a8;
@@ -8977,8 +8991,15 @@ function Xn(e, t) {
 		running: n
 	};
 }
+function Zn(e, t) {
+	let n = Math.round(e), r = n > 0 ? "+" : n < 0 ? "−" : "", i = Math.abs(n) <= 50 ? "zero" : n > 0 ? "import" : "export";
+	return {
+		text: `${r}${Xe(Math.abs(n), t, 0)} W`,
+		kind: i
+	};
+}
 // src/zephyr-panel.ts
-var Zn = "/zephyr_static", Qn = [
+var Qn = "/zephyr_static", $n = [
 	[
 		"Inter",
 		400,
@@ -9000,15 +9021,15 @@ var Zn = "/zephyr_static", Qn = [
 		"space-grotesk-latin-700-normal.woff2"
 	]
 ];
-function $n(e) {
+function er(e) {
 	let t = "zephyr-fonts";
 	if (document.getElementById(t)) return;
 	let n = document.createElement("style");
-	n.id = t, n.textContent = Qn.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
+	n.id = t, n.textContent = $n.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
 }
 var $ = class extends w {
 	constructor(...e) {
-		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.period = Tt(), this.openGroup = null, this.appliancesFor = null, this.confirmLive = !1, this.confirmUpdate = !1, this.controlBusy = !1, this.controlError = null, this.pendingMode = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
+		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.batteryDaysAt = 0, this.period = Tt(), this.openGroup = null, this.appliancesFor = null, this.confirmLive = !1, this.confirmUpdate = !1, this.controlBusy = !1, this.controlError = null, this.pendingMode = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
 			this.status = "loading", this.subscribe();
 		}, this.onDisconnected = () => {
 			this.unsubscribe = void 0, this.status = "disconnected";
@@ -9130,7 +9151,7 @@ var $ = class extends w {
 		};
 	}
 	get base() {
-		return this.panel?.config?.static ?? Zn;
+		return this.panel?.config?.static ?? Qn;
 	}
 	get uiLang() {
 		return et(this.hass?.locale?.language ?? this.hass?.language);
@@ -9145,7 +9166,7 @@ var $ = class extends w {
 		return F(this.uiLang, e, t);
 	}
 	connectedCallback() {
-		super.connectedCallback(), $n(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
+		super.connectedCallback(), er(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), window.clearInterval(this.clockTimer), window.clearInterval(this.planTimer), window.clearInterval(this.setsTimer), window.clearTimeout(this.retryTimer), this.watch(void 0), this.stop();
@@ -9174,6 +9195,14 @@ var $ = class extends w {
 		try {
 			await e?.();
 		} catch {}
+	}
+	async loadBatteryDays() {
+		if (!(!this.hass || Date.now() - this.batteryDaysAt < 9e5)) {
+			this.batteryDaysAt = Date.now();
+			try {
+				this.batteryDays = await this.hass.callWS({ type: "zephyr/battery_days" }), this.batteryDaysAt = Date.now();
+			} catch {}
+		}
 	}
 	async loadPlan(e = !1) {
 		let t = this.now;
@@ -9282,7 +9311,7 @@ var $ = class extends w {
 		window.clearTimeout(this.retryTimer), this.retryTimer = window.setTimeout(() => void this.subscribe(), e);
 	}
 	onEvent(e) {
-		e.type === "now" ? (this.now = e.data, this.pendingMode === e.data.mode && (this.pendingMode = null), this.status = "ok", this.clockMs = Date.now(), this.loadPlan(), this.loadAppliances()) : e.type === "unloaded" && (this.unsubscribe = void 0, this.status = "reloading", this.retry(3e3));
+		e.type === "now" ? (this.now = e.data, this.pendingMode === e.data.mode && (this.pendingMode = null), this.status = "ok", this.clockMs = Date.now(), this.loadPlan(), this.loadAppliances(), this.loadBatteryDays()) : e.type === "unloaded" && (this.unsubscribe = void 0, this.status = "reloading", this.retry(3e3));
 	}
 	render() {
 		return y`
@@ -9647,8 +9676,11 @@ var $ = class extends w {
         <span class="dot" style="background:${L(t)}"></span
         >${this.tr("now.title")}
       </div>
-      <div class="big">
-        ${e.action ? this.tr(`action.${t}`) + n : this.tr("now.waiting")}
+      <div class="now-top">
+        <div class="big">
+          ${e.action ? this.tr(`action.${t}`) + n : this.tr("now.waiting")}
+        </div>
+        ${e.grid_w === null ? S : this.renderP1(e.grid_w)}
       </div>
       ${r.length ? y`<p class="flows">
               ${r.map((e) => y`<span
@@ -9679,6 +9711,13 @@ var $ = class extends w {
               >` : S}</span
       >
     </p>`;
+	}
+	renderP1(e) {
+		let t = Zn(e, this.locale);
+		return y`<div class="p1 ${t.kind}">
+      <strong>${t.text}</strong>
+      <span>${this.tr(`now.p1_${t.kind}`)}</span>
+    </div>`;
 	}
 	renderBattery(e) {
 		if (e.soc === null) return y`<article class="card">
@@ -9723,9 +9762,18 @@ var $ = class extends w {
 			max: Math.round(e.max_soc)
 		})}${n > 0 ? ` · ${this.tr("battery.buffer", { value: Math.round(n) })}` : ""}</span
         >
+        ${this.renderRte()}
         <span>${r}</span>
       </div>
     </article>`;
+	}
+	renderRte() {
+		let e = this.batteryDays?.week;
+		if (!e) return S;
+		let t = e.efficiency === null ? "–" : j(e.efficiency * 100, this.locale);
+		return y`<span class="rte" title=${this.tr("battery.rte_title")}
+      >${this.tr("battery.rte", { value: t })} <span class="muted">· ${this.tr("battery.rte_days")}</span></span
+    >`;
 	}
 	renderNext(e) {
 		let t = e.plan, n = (e = "") => y`<div class="label">
@@ -10186,6 +10234,37 @@ var $ = class extends w {
         font-size: 26px;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
+      }
+      .now-top {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .p1 {
+        text-align: right;
+        line-height: 1.15;
+        white-space: nowrap;
+      }
+      .p1 strong {
+        display: block;
+        font-family: var(--z-font-head);
+        font-size: 20px;
+        font-variant-numeric: tabular-nums;
+      }
+      .p1 span {
+        font-size: 12px;
+        color: var(--z-muted);
+      }
+      .p1.import strong {
+        color: var(--z-import);
+      }
+      .p1.export strong {
+        color: var(--z-export);
+      }
+      .rte {
+        color: var(--z-text);
       }
       .big-row {
         display: flex;
