@@ -97,3 +97,26 @@ def test_energyzero_answer_and_query() -> None:
         "usageType": "1",
         "inclBtw": "false",
     }
+
+
+def test_stored_energy_caps_the_pools() -> None:
+    # TOETS-besparing bevinding 5: solar charged at noon, the battery empty again by evening with
+    # less delivered (conversion losses). With the SOC statistic the loss lands in Zon bewaard.
+    tz = ZoneInfo("Europe/Amsterdam")
+    noon = datetime(2026, 6, 10, 12, tzinfo=tz)
+
+    def hours(stored: list[float | None]) -> list[HourInput]:
+        rows = [
+            (0.0, 2.0, 2.0, 0.0, 4.0),  # 12:00 solar 4, 2 to the battery, 2 exported
+            (0.0, 0.0, 0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0, 1.6, 0.0),  # evening: 1.6 delivered (2 × 0.93 × 0.93 ≈ 1.73 at most)
+        ]
+        return [
+            HourInput(noon + timedelta(hours=i * 4), imp, exp, chg, dis, sol, 0.10, stored_kwh=s)
+            for i, ((imp, exp, chg, dis, sol), s) in enumerate(zip(rows, stored, strict=True))
+        ]
+
+    plain = backfill_days(hours([None, None, None]), lambda d: Tariffs(), tz).days["2026-06-10"]
+    capped = backfill_days(hours([1.9, 1.9, 0.0]), lambda d: Tariffs(), tz).days["2026-06-10"]
+    assert capped["solar_via_battery"] < plain["solar_via_battery"]
+    assert capped["cost"] == pytest.approx(plain["cost"])  # the money is the same, only its split moves

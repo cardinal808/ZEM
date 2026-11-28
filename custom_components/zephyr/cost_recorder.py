@@ -1008,7 +1008,14 @@ class CostRecorder:
         return min(measured) if measured else None
 
     async def async_backfill(
-        self, first: date, charge_entity: str, discharge_entity: str, solar_entity: str | None, price_entity: str | None
+        self,
+        first: date,
+        charge_entity: str,
+        discharge_entity: str,
+        solar_entity: str | None,
+        price_entity: str | None,
+        soc_entity: str | None = None,
+        capacity_kwh: float | None = None,
     ) -> dict[str, Any]:
         """Work out the days from ``first`` up to the cost log again from hourly statistics (replaces an earlier run)."""
         from .core.backfill import PRICE_ENERGYZERO, SOURCE_HOURLY, backfill_days, series_to_hours
@@ -1024,11 +1031,13 @@ class CostRecorder:
         counters = [*self.import_counters, *self.export_counters, charge_entity, discharge_entity]
         from_sensor = price_entity if price_entity and price_entity != PRICE_ENERGYZERO else None
         ids = [*counters, *([solar_entity] if solar_entity else []), *([from_sensor] if from_sensor else [])]
+        if soc_entity and capacity_kwh:
+            ids.append(soc_entity)
         stats = await hourly_statistics(self.hass, start, end, list(dict.fromkeys(ids)))
 
         series: dict[str, dict[datetime, float]] = {}
         for entity in ids:
-            field = "mean" if entity == price_entity else "change"
+            field = "mean" if entity in (price_entity, soc_entity) else "change"
             rows: dict[datetime, float] = {}
             for row in stats.get(entity, []):
                 value, begin = row.get(field), row.get("start")
@@ -1055,6 +1064,9 @@ class CostRecorder:
             lambda moment: series[discharge_entity].get(moment),
             solar_entity,
             price_entity,
+            (lambda moment: None if (soc := series[soc_entity].get(moment)) is None else soc / 100 * capacity_kwh)
+            if soc_entity and capacity_kwh
+            else None,
         )
         result = backfill_days(hours, self.tariffs.tariffs_for, tz)
         self.days = {k: v for k, v in self.days.items() if v.get("source") != SOURCE_HOURLY}
