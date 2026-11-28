@@ -864,7 +864,7 @@ var $e = {
 			days_explain: "Cycli = geleverd ÷ bruikbare capaciteit ({usable} kWh tussen de grenzen). Rendement = geleverd ÷ geladen over de week, met de verandering in SoC verrekend. Uit het kostenlogboek, per afgesloten kwartier.",
 			days_n: "{n} dagen"
 		},
-		settings: /* @__PURE__ */ JSON.parse("{\"title\":\"Instellingen\",\"groups\":{\"battery\":\"Accu en grenzen\",\"sources\":\"Bronnen\",\"tariffs\":\"Tarieven\",\"planner\":\"Planner\",\"corrections\":\"Correcties\",\"zero_meter\":\"Nul op de meter zonder planner\",\"testing\":\"Testfase\",\"vacation\":\"Vakantie\",\"house\":\"Apparaten\"},\"default\":\"standaard: {value}\",\"none\":\"leeg\",\"yes\":\"aan\",\"no\":\"uit\",\"more\":\"Meer uitleg over {label}\",\"readonly\":\"Alleen een beheerder kan instellingen wijzigen.\",\"reload_note\":\"Wijzigingen in deze groep bewaar je samen; ZEPHYR start daarna kort opnieuw.\",\"supplier_note\":\"Met een leverancier gelden de bedragen uit de tarieventabel ({source}). De grijze vakken tonen die bedragen; alleen bij eigen tarieven zijn ze aan te passen.\",\"status\":{\"unset\":\"niet ingesteld\",\"missing\":\"niet gevonden: {entities}\",\"ok\":\"werkt\",\"interval\":\"meldt elke {s} s\",\"slots\":\"{n} prijzen in de sensor\",\"unavailable\":\"niet beschikbaar\",\"climate\":\"{mode} · {action}\",\"no_step\":\"nog geen meting\",\"steps\":\"elke {every} een stap van {kwh} kWh\"},\"own\":\"Eigen tarieven\",\"options\":{\"single\":\"Eén sensor (afname − teruglevering)\",\"import_export\":\"Twee sensoren (afname en teruglevering)\",\"heat\":\"Verwarmen\",\"cool\":\"Koelen\",\"dry\":\"Drogen\",\"fan_only\":\"Ventileren\",\"heat_cool\":\"Verwarmen/koelen\",\"auto\":\"Automatisch\",\"off\":\"Uit\",\"curtail_off\":\"Uit (gaat het net op, kost geld)\",\"curtail_external\":\"Ander systeem knijpt af\",\"curtail_zephyr\":\"ZEPHYR knijpt af\",\"indicative\":\"Indicatief (alleen tonen)\",\"use\":\"Meerekenen\",\"low\":\"Laag (voorzichtig)\",\"mid\":\"Midden\"},\"fields\":{\"min_soc\":{\"label\":\"Minimaal laadpercentage\",\"help\":\"Hieronder levert de accu niet meer.\",\"more\":\"Standaard 10 %; gangbaar 5–15 %. Lager = meer bruikbare energie, maar de accu staat vaker bijna leeg. ZEPHYR zet dit ook in de set, zodat die stopt als ZEPHYR niet draait. Voorbeeld: 11 kWh en 10 % → 1,1 kWh blijft altijd over.\"},\"max_soc\":{\"label\":\"Maximaal laadpercentage\",\"help\":\"Hierboven laadt de accu niet verder.\",\"more\":\"Standaard 95 %; 90–95 % scheelt een beetje slijtage, 100 % geeft ± 5 % meer bruikbare energie. De set moet af en toe 100 % halen om de SOC-meting gelijk te zetten en de cellen te balanceren; zie Kalibratie na dagen.\"},\"p1_source\":{\"label\":\"P1-meting\",\"help\":\"Eén sensor met het netto vermogen, of afname en teruglevering apart.\",\"more\":\"Kies Eén sensor als je meter één vermogen geeft dat negatief wordt bij teruglevering (meestal bij een P1-dongle zoals HomeWizard). Kies Afname en teruglevering bij twee aparte sensoren (DSMR-integratie). Hoe vaker de meter meldt, hoe beter: DSMR 5 meldt elke seconde, DSMR 4 elke 10 s. Meldt de meter langer dan 10 s niets, dan stopt ZEPHYR veilig.\"},\"p1_entity\":{\"label\":\"P1-sensor (netto)\",\"help\":\"Vermogen van het net: + = afname, − = teruglevering.\",\"more\":\"Een vermogenssensor in W of kW, positief bij afname. Bijvoorbeeld Active power van een HomeWizard P1-meter. Niet de kWh-teller.\"},\"p1_import_entity\":{\"label\":\"P1 afname\",\"help\":\"Vermogen dat uit het net komt.\",\"more\":\"Bijvoorbeeld Power consumption van de DSMR-integratie (in kW of W). ZEPHYR rekent afname − teruglevering.\"},\"p1_export_entity\":{\"label\":\"P1 teruglevering\",\"help\":\"Vermogen dat naar het net gaat.\",\"more\":\"Bijvoorbeeld Power production van de DSMR-integratie. Hoort bij dezelfde meter als de afname-sensor.\"},\"price_entity\":{\"label\":\"Prijssensor\",\"help\":\"Nord Pool: de integratie van HACS, of de huidige prijs van de Nord Pool-integratie van HA zelf.\",\"more\":\"Bijvoorbeeld de Nord Pool-integratie (HACS) of de Nord Pool-integratie van HA, gebied NL, prijzen per kwartier zonder belasting (ZEPHYR telt opslag, belasting en btw zelf op). De prijzen van morgen komen rond 13:00. Zonder prijssensor maakt ZEPHYR geen plan en regelt het alleen nul op de meter.\"},\"solar_forecast_entity\":{\"label\":\"Zonverwachting\",\"help\":\"Solcast (morgen) met detail per half uur. Leeg: de zonverwachting uit het Energie-dashboard van HA.\",\"more\":\"Aanrader: Solcast (gratis voor thuis), het meest precies per half uur. Leeg laten werkt met elke bron in het Energie-dashboard (Forecast.Solar, Open-Meteo …), per uur. Zonder verwachting neemt de planner de opbrengst van gisteren.\"},\"solar_energy_entity\":{\"label\":\"Zonnepanelen-teller\",\"help\":\"Opbrengst in kWh (oplopend).\",\"more\":\"De oplopende kWh-teller van je omvormer, bijv. Lifetime energy van SolarEdge. Dezelfde als in het Energie-dashboard bij Zonnepanelen. Gebruikt voor het huisverbruik, het kostenlogboek en het bijstellen van de zonverwachting.\"},\"excluded_energy_entity\":{\"label\":\"Airco: energieteller\",\"help\":\"kWh-teller van een verbruiker die niet uit de accu mag.\",\"more\":\"Een kWh-teller van alleen de airco, bijv. van een slimme stekker of tussenmeter, of de energiesensor van de airco-integratie. ZEPHYR levert niet voor de airco zolang die in een geblokkeerde stand draait; de rest van het huis komt wel uit de accu.\"},\"excluded_climate_entity\":{\"label\":\"Airco: klimaat-entiteit\",\"help\":\"Zegt direct of hij draait en in welke stand.\",\"more\":\"De climate-entiteit van de airco. Daarmee ziet ZEPHYR direct of hij aan staat en of hij verwarmt of koelt. Zonder: de airco komt nooit uit de accu en een stop merkt ZEPHYR pas aan de teller.\"},\"excluded_hvac_modes\":{\"label\":\"Airco: niet uit de accu bij\",\"help\":\"Standen waarin de accu de airco niet voedt.\",\"more\":\"Standaard verwarmen: in de winter verbruikt de airco veel, en stroom uit het net is dan vaak goedkoper dan uit de accu. Kies ook koelen als de airco nooit uit de accu mag.\"},\"cost_import_counters\":{\"label\":\"Tellers afname\",\"help\":\"De kWh-tellers van je slimme meter (tarief 1 en 2).\",\"more\":\"Kies beide kWh-tellers van je slimme meter: Energy consumption (tarif 1) en (tarif 2). Preciezer dan het vermogen optellen; voor het kostenlogboek en de besparing.\"},\"cost_export_counters\":{\"label\":\"Tellers teruglevering\",\"help\":\"De kWh-tellers voor teruglevering (tarief 1 en 2).\",\"more\":\"Kies beide terugleveringstellers: Energy production (tarif 1) en (tarif 2). Voor het kostenlogboek.\"},\"tariff_supplier\":{\"label\":\"Energieleverancier\",\"help\":\"Bedragen uit de tarieventabel van ZEPHYR, of eigen tarieven.\",\"more\":\"Staat je leverancier in de lijst, kies die: belasting, opslagen en zonnebonus komen dan uit de tabel en lopen mee met nieuwe tarieven. Staat hij er niet in, kies Eigen tarieven en vul de bedragen van je contract in.\"},\"tariff_energy_tax\":{\"label\":\"Energiebelasting\",\"help\":\"Per kWh, zonder btw.\",\"more\":\"Wettelijk bedrag per kWh, zonder btw; nu {in_use}. Verandert elk jaar op 1 januari; met een leverancier uit de tabel gaat dat vanzelf.\"},\"tariff_markup_import\":{\"label\":\"Opslag inkoop\",\"help\":\"Wat de leverancier bovenop de marktprijs rekent, zonder btw.\",\"more\":\"Wat de leverancier per kWh bovenop de marktprijs rekent, zonder btw. Gangbaar € 0,01–0,03; Zonneplan € 0,01653. Staat op je contract of in de tariefkaart, soms als inkoopvergoeding.\"},\"tariff_markup_export\":{\"label\":\"Opslag teruglevering\",\"help\":\"Bij de marktprijs opgeteld (negatief = kosten), zonder btw.\",\"more\":\"Wat je per teruggeleverde kWh bovenop de marktprijs krijgt, zonder btw. Trekt je leverancier er iets af (terugleverkosten), vul het negatief in, bijv. −0,02. Bij Zonneplan + € 0,01653.\"},\"tariff_vat\":{\"label\":\"Btw\",\"help\":\"Over marktprijs, opslag en energiebelasting.\",\"more\":\"Wettelijk tarief, 21 % in Nederland. Telt over marktprijs, opslag en energiebelasting.\"},\"tariff_solar_bonus\":{\"label\":\"Zonnebonus\",\"help\":\"Extra op de terugleverprijs overdag.\",\"more\":\"Extra percentage op de terugleverprijs zolang de zon op is, bijv. 10 % bij Zonneplan. Geen zonnebonus: 0.\"},\"tariff_fixed_month\":{\"label\":\"Vaste kosten per maand\",\"help\":\"Leveringskosten en netbeheer min heffingskorting.\",\"more\":\"Vaste leveringskosten + netbeheerkosten − vermindering energiebelasting, per maand en inclusief btw. Staat op je jaarafrekening of tariefkaart. Alleen voor het kostenlogboek; verandert het plan niet.\"},\"plan_wear_cost\":{\"label\":\"Slijtagekosten\",\"help\":\"Per kWh door de accu.\",\"more\":\"Standaard € 0,03 per kWh: ongeveer de aanschafprijs gedeeld door wat de accu in zijn leven levert (bijv. € 3.000 / 6.000 cycli / 10 kWh ≈ € 0,05). Hoger = de accu werkt alleen bij grotere prijsverschillen.\"},\"plan_grid_charge_cost\":{\"label\":\"Drempel laden uit het net\",\"help\":\"Minimale winst per kWh om uit het net te laden.\",\"more\":\"Standaard € 0,01. Laden uit het net gebeurt alleen als het per kWh minstens zoveel oplevert, na verlies en slijtage. Hoger = minder vaak laden uit het net voor een klein voordeel.\"},\"plan_allow_export\":{\"label\":\"Terugleveren uit de accu\",\"help\":\"Mag de accu naar het net leveren als dat loont?\",\"more\":\"Standaard uit. Aan is alleen zinvol als de terugleverprijs soms hoger is dan wat bijladen later kost, inclusief ± 15 % verlies en slijtage. Met saldering (tot 2027) levert het zelden iets op.\"},\"plan_load_margin\":{\"label\":\"Laadmarge\",\"help\":\"Rekenen met meer verbruik dan geleerd.\",\"more\":\"Standaard 0 %; 5–15 % als de accu op drukke avonden te vroeg leeg is. De planner rekent dan met zoveel meer verbruik dan geleerd.\"},\"plan_buffer\":{\"label\":\"Buffer\",\"help\":\"Deel van de accu dat de planner niet inplant.\",\"more\":\"Standaard 0 %; bijv. 10 % als je een reserve wilt voor onverwacht verbruik. De planner plant dit deel niet in; de regelaar mag het wel gebruiken als het verbruik hoger uitvalt. Daarna vult de planner het bij als dat goedkoop kan.\"},\"expensive_hours\":{\"label\":\"Dure uren\",\"help\":\"Zonder planner: alleen in de N duurste uren leveren.\",\"more\":\"Standaard 4: de accu levert alleen in de 4 duurste uren van de dag en houdt de lading verder vast. Alleen in de modus Nul op de meter met een prijssensor; Dynamische Forecasting kiest zelf.\"},\"reserve_soc\":{\"label\":\"Reserve\",\"help\":\"Zonder planner: bijladen tot dit percentage vóór de dure uren.\",\"more\":\"Standaard 20 %: vóór de dure uren laadt ZEPHYR bij tot dit percentage. Alleen zonder planner; met Dynamische Forecasting telt het als buffer.\"},\"min_price\":{\"label\":\"Minimumprijs\",\"help\":\"Zonder planner: niet leveren onder deze prijs.\",\"more\":\"Bijv. € 0,25: onder deze prijs (all-in, per kWh) levert de accu niet. Leeg = geen minimum.\"},\"live_off_after_restart\":{\"label\":\"Live sturen uit na een herstart (testfase)\",\"help\":\"Uit (standaard): na een herstart komt live sturen vanzelf terug zodra de P1 meldt en de sets online zijn (als het aan stond). Aan: het blijft uit en je zet het zelf weer aan.\",\"more\":\"Standaard uit: na een herstart komt live sturen vanzelf terug. Aan alleen tijdens het testen, als je na elke herstart eerst wilt kijken voordat ZEPHYR de accu weer stuurt.\"},\"vacation_when_away\":{\"label\":\"Vakantie als niemand thuis is\",\"help\":\"Vanzelf aan na 24 uur zonder iemand thuis.\",\"more\":\"Na 24 uur zonder iemand thuis (zone.home = 0) gaat vakantie vanzelf aan: de planner rekent dan met weinig verbruik. Uit zodra er iemand terug is. Werkt alleen als telefoons met de HA-app hun locatie delen.\"},\"workday_entity\":{\"label\":\"Werkdag-sensor\",\"help\":\"Feestdagen tellen als weekenddag.\",\"more\":\"Installeer de integratie Workday (land NL) en kies de sensor. Dan tellen feestdagen als weekenddag in het verbruiksprofiel. Zonder sensor zijn maandag t/m vrijdag werkdagen.\"},\"curtail_negative\":{\"label\":\"Zonoverschot bij negatieve prijs\",\"help\":\"Wat er met zonoverschot gebeurt als de terugleverprijs onder nul is. Uit: het gaat het net op en kost geld, de planner maakt eerst ruimte in de accu. Ander systeem: een omvormerbegrenzer knijpt zelf af. ZEPHYR: ZEPHYR blokkeert teruglevering van de eigen panelen van de sets en knijpt de omvormer af: met de schakelaar of met de vermogensbegrenzing hieronder (één van beide).\",\"more\":\"Met saldering (tot 2027) is de terugleverprijs zelden negatief. Zonder saldering gebeurt het op zonnige middagen in voorjaar en zomer. Kies ZEPHYR als je omvormer via HA te begrenzen is (bijv. SolarEdge via Modbus), Ander systeem als iets anders dat al doet.\"},\"curtail_switch\":{\"label\":\"Schakelaar omvormer afknijpen\",\"help\":\"Aan zolang de terugleverprijs negatief is. Alternatief voor de vermogensbegrenzing.\",\"more\":\"Een schakelaar die je omvormer laat stoppen met terugleveren, bijv. een sjabloon-schakelaar die de exportbegrenzing van je omvormer zet. ZEPHYR zet hem aan bij een negatieve terugleverprijs en daarna weer uit. Kies dit óf de vermogensbegrenzing.\"},\"solar_power_entities\":{\"label\":\"Zonnepanelen-vermogen\",\"help\":\"Vermogenssensoren (W) van omvormers, worden opgeteld.\",\"more\":\"Vermogen in W van omvormers die niet aan een Zendure-set hangen, bijv. AC power van SolarEdge; meerdere worden opgeteld. Niet de PV van de Zendure-set zelf: die leest ZEPHYR al. Leeg: ZEPHYR schat het uit de zonnepanelen-teller (grover, loopt achter).\"},\"curtail_number\":{\"label\":\"Vermogensbegrenzing omvormer\",\"help\":\"Getal-entiteit die het vermogen van de omvormer begrenst in % (bijv. SolarEdge Modbus active power limit). Alleen met ZEPHYR knijpt af.\",\"more\":\"Bijv. Active power limit van de SolarEdge Modbus-integratie (getal in %). ZEPHYR zet die elke 10 s zo dat de omvormer alleen levert wat huis en accu afnemen, en daarna terug op 100 %. Nodig: het nominaal vermogen hieronder en het zonnepanelen-vermogen (Bronnen).\"},\"curtail_inverter_w\":{\"label\":\"Nominaal vermogen omvormer\",\"help\":\"Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld.\",\"more\":\"Het AC-vermogen op het typeplaatje, bijv. 5000 W voor een SolarEdge SE5K, 3680 W voor een SE3680H.\"},\"calibration_days\":{\"label\":\"Kalibratie na dagen\",\"help\":\"Na zoveel dagen zonder 100 % laadt de planner de accu vol en laat hij de set kalibreren.\",\"more\":\"Standaard 21 dagen; 0 = uit. Hoe langer de accu niet vol was, hoe verder de packs uit elkaar lopen. Vanaf de helft van deze dagen zoekt de planner een goedkoop moment of zon om vol te laden; op de laatste dag moet het. Daarna levert ZEPHYR niet tot de set klaar is met kalibreren (max. 2 uur).\"},\"price_forecast_entity\":{\"label\":\"Prijsvoorspelling (jeroen.nl)\",\"help\":\"Optioneel: de sensor van ha-jeroen-nl, om voorbij de bekende prijzen te kijken.\",\"more\":\"Installeer de HACS-integratie ha-jeroen-nl met je eigen API-sleutel van jeroen.nl en kies hier de prijssensor. ZEPHYR leest alleen die sensor en haalt zelf nooit iets op bij jeroen.nl. Alleen voorspelde kwartieren na de laatste bekende Nord Pool-prijs worden gebruikt; Nord Pool blijft leidend. Bron: jeroen.nl.\"},\"price_forecast_mode\":{\"label\":\"Gebruik in het plan\",\"help\":\"Indicatief: het plan blijft gelijk. Meerekenen: de planner plant met de voorspelling.\",\"more\":\"Indicatief: de diagnose vergelijkt het plan met en zonder voorspelling. Meerekenen: de planner kijkt ook naar de voorspelde dagen (standaard de dag na de bekende prijzen, dus na ongeveer 13:00 overmorgen). Het niveau van de voorspelling kan ernaast zitten, de tendens is meestal duidelijk; met de waarde Laag blijft de planner voorzichtig. Blokken op voorspelde kwartieren blijven indicatief en tellen niet mee in de totalen. De opgeslagen voorspellingen geven na ongeveer 6 weken een backtest.\"},\"price_forecast_days\":{\"label\":\"Voorspelde dagen\",\"help\":\"Hoeveel dagen voorbij de laatste bekende prijs.\",\"more\":\"Standaard 1: vóór ongeveer 13:00 staat de voorspelling in voor morgen; daarna komt overmorgen erbij. 0 = de voorspelling alleen bewaren voor de kwaliteitscijfers.\"},\"price_forecast_value\":{\"label\":\"Waarde uit de band\",\"help\":\"Laag is voorzichtig: niet laden op een optimistische verwachting.\",\"more\":\"jeroen.nl geeft een band van 80 % (p10–p90). Laag gebruikt p10 voor inkoop en teruglevering, zodat de planner niet laadt voor, of energie vasthoudt voor, een piek die misschien niet komt. Midden gebruikt de verwachte waarde.\"}},\"restarting\":\"ZEPHYR start opnieuw met de nieuwe instellingen…\",\"pending\":\"{n} wijzigingen nog niet bewaard · ZEPHYR start kort opnieuw\",\"pending_one\":\"1 wijziging nog niet bewaard · ZEPHYR start kort opnieuw\",\"cancel\":\"Annuleren\",\"save_restart\":\"Bewaren en herstarten\",\"saving\":\"Bezig…\",\"saved\":\"bewaard\",\"not_saved\":\"niet bewaard\",\"reset\":\"Standaard terugzetten\",\"clear\":\"Leegmaken\",\"remove\":\"Weghalen\",\"choose_entity\":\"Kies of typ een entiteit\",\"actions\":{\"heating\":\"draait\",\"cooling\":\"draait\",\"drying\":\"draait\",\"fan\":\"draait\",\"preheating\":\"draait\",\"defrosting\":\"ontdooit\",\"idle\":\"staat stil\",\"off\":\"uit\"},\"errors\":{\"out_of_range\":\"Buiten de grenzen.\",\"off_step\":\"Past niet bij de stapgrootte.\",\"not_a_number\":\"Geen getal.\",\"not_a_bool\":\"Ongeldige waarde.\",\"required\":\"Mag niet leeg zijn.\",\"unknown_choice\":\"Onbekende keuze.\",\"choose_one\":\"Kies minstens één stand. Uitzetten: maak de teller leeg.\",\"not_an_entity\":\"Dit soort entiteit past hier niet.\",\"entity_missing\":\"Entiteit niet gevonden.\",\"unknown_key\":\"Onbekende instelling.\",\"p1_missing\":\"Kies een P1-sensor.\",\"p1_pair_incomplete\":\"Kies zowel de afname- als de terugleversensor.\",\"p1_pair_same\":\"Afname en teruglevering moeten twee verschillende sensoren zijn.\",\"excluded_needs_counter\":\"De klimaat-entiteit werkt alleen samen met de energieteller van de airco. Kies de teller of maak de klimaat-entiteit leeg.\",\"failed\":\"Bewaren lukte niet. Probeer het opnieuw.\",\"range\":\"Kies een waarde van {min} tot en met {max}{unit}.\",\"entity_domain\":\"Dit veld verwacht een {domain}-entiteit\"},\"vac_active\":\"Op vakantie\",\"vac_home\":\"Thuis\",\"vac_off\":\"De planner rekent met het gewone verbruik.\",\"vac_until\":\"Tot {until}. De planner rekent tot dan met het verbruik bij afwezigheid en laadt op tijd voor de terugkomst.\",\"vac_open\":\"Zonder einddatum; zet het uit als je terug bent.\",\"vac_auto\":\"Vanzelf aan sinds {since}: niemand is 24 uur thuis geweest (optie hieronder). Gaat uit zodra iemand thuiskomt.\",\"vac_until_label\":\"Terug op\",\"vac_start\":\"Vakantie aanzetten\",\"vac_stop\":\"Vakantie uitzetten\",\"vac_help\":\"Tijdens een vakantie rekent de planner met het sluimerverbruik en leert hij dat apart; het gewone verbruiksprofiel blijft schoon. Een einddatum is optioneel.\",\"house_note\":\"Wanneer je je apparaten meestal laat draaien. Met één tik onder Prijzen en plan kiest ZEPHYR de goedkoopste start binnen dit venster. Een nieuw apparaat met slimme stekker voeg je toe via Apparaten en diensten → ZEPHYR → Apparaat toevoegen. Het venster wijzigen herlaadt ZEPHYR even.\",\"house_floor\":\"Verdieping\",\"save\":\"Opslaan\",\"discard\":\"Annuleren\",\"floors\":{\"attic\":\"Zolder\",\"first\":\"1e verdieping\",\"ground\":\"Begane grond\",\"shed\":\"Schuur\",\"outside\":\"Buiten\"},\"appl_learned\":\"geleerd uit {n} runs\",\"appl_default\":\"standaardprofiel\",\"appl_airco\":\"niet uit de accu (Correcties)\",\"appl_from\":\"Niet vóór\",\"appl_until\":\"Klaar om\",\"appl_shown\":\"Tonen op Stroom\",\"appl_after\":\"Altijd na de was\",\"appl_after_help\":\"plan de droger mee (één keer, na de laatste was) als je de was plant\",\"curtail_head\":\"Omvormer buiten de sets (kies één)\",\"curtail_rated_missing\":\"Vul het nominale vermogen in, anders begrenst ZEPHYR niet.\"}"),
+		settings: /* @__PURE__ */ JSON.parse("{\"title\":\"Instellingen\",\"groups\":{\"battery\":\"Accu en grenzen\",\"sources\":\"Bronnen\",\"tariffs\":\"Tarieven\",\"planner\":\"Planner\",\"corrections\":\"Correcties\",\"zero_meter\":\"Nul op de meter zonder planner\",\"testing\":\"Testfase\",\"vacation\":\"Vakantie\",\"house\":\"Apparaten\"},\"default\":\"standaard: {value}\",\"none\":\"leeg\",\"yes\":\"aan\",\"no\":\"uit\",\"more\":\"Meer uitleg over {label}\",\"readonly\":\"Alleen een beheerder kan instellingen wijzigen.\",\"reload_note\":\"Wijzigingen in deze groep bewaar je samen; ZEPHYR start daarna kort opnieuw.\",\"supplier_note\":\"Met een leverancier gelden de bedragen uit de tarieventabel ({source}). De grijze vakken tonen die bedragen; alleen bij eigen tarieven zijn ze aan te passen.\",\"status\":{\"unset\":\"niet ingesteld\",\"missing\":\"niet gevonden: {entities}\",\"ok\":\"werkt\",\"interval\":\"meldt elke {s} s\",\"slots\":\"{n} prijzen in de sensor\",\"unavailable\":\"niet beschikbaar\",\"climate\":\"{mode} · {action}\",\"no_step\":\"nog geen meting\",\"steps\":\"elke {every} een stap van {kwh} kWh\"},\"own\":\"Eigen tarieven\",\"options\":{\"single\":\"Eén sensor (afname − teruglevering)\",\"import_export\":\"Twee sensoren (afname en teruglevering)\",\"heat\":\"Verwarmen\",\"cool\":\"Koelen\",\"dry\":\"Drogen\",\"fan_only\":\"Ventileren\",\"heat_cool\":\"Verwarmen/koelen\",\"auto\":\"Automatisch\",\"off\":\"Uit\",\"curtail_off\":\"Uit (gaat het net op, kost geld)\",\"curtail_external\":\"Ander systeem knijpt af\",\"curtail_zephyr\":\"ZEPHYR knijpt af\",\"indicative\":\"Indicatief (alleen tonen)\",\"use\":\"Meerekenen\",\"low\":\"Laag (voorzichtig)\",\"mid\":\"Midden\"},\"fields\":{\"min_soc\":{\"label\":\"Minimaal laadpercentage\",\"help\":\"Hieronder levert de accu niet meer.\",\"more\":\"Standaard 10 %; gangbaar 5–15 %. Lager = meer bruikbare energie, maar de accu staat vaker bijna leeg. ZEPHYR zet dit ook in de set, zodat die stopt als ZEPHYR niet draait. Voorbeeld: 11 kWh en 10 % → 1,1 kWh blijft altijd over.\"},\"max_soc\":{\"label\":\"Maximaal laadpercentage\",\"help\":\"Hierboven laadt de accu niet verder.\",\"more\":\"Standaard 95 %; 90–95 % scheelt een beetje slijtage, 100 % geeft ± 5 % meer bruikbare energie. De set moet af en toe 100 % halen om de SOC-meting gelijk te zetten en de cellen te balanceren; zie Kalibratie na dagen.\"},\"p1_source\":{\"label\":\"P1-meting\",\"help\":\"Eén sensor met het netto vermogen, of afname en teruglevering apart.\",\"more\":\"Kies Eén sensor als je meter één vermogen geeft dat negatief wordt bij teruglevering (meestal bij een P1-dongle zoals HomeWizard). Kies Afname en teruglevering bij twee aparte sensoren (DSMR-integratie). Hoe vaker de meter meldt, hoe beter: DSMR 5 meldt elke seconde, DSMR 4 elke 10 s. Meldt de meter langer dan 10 s niets, dan stopt ZEPHYR veilig.\"},\"p1_entity\":{\"label\":\"P1-sensor (netto)\",\"help\":\"Vermogen van het net: + = afname, − = teruglevering.\",\"more\":\"Een vermogenssensor in W of kW, positief bij afname. Bijvoorbeeld Active power van een HomeWizard P1-meter. Niet de kWh-teller.\"},\"p1_import_entity\":{\"label\":\"P1 afname\",\"help\":\"Vermogen dat uit het net komt.\",\"more\":\"Bijvoorbeeld Power consumption van de DSMR-integratie (in kW of W). ZEPHYR rekent afname − teruglevering.\"},\"p1_export_entity\":{\"label\":\"P1 teruglevering\",\"help\":\"Vermogen dat naar het net gaat.\",\"more\":\"Bijvoorbeeld Power production van de DSMR-integratie. Hoort bij dezelfde meter als de afname-sensor.\"},\"price_entity\":{\"label\":\"Prijssensor\",\"help\":\"Nord Pool: de integratie van HACS, of de huidige prijs van de Nord Pool-integratie van HA zelf.\",\"more\":\"Bijvoorbeeld de Nord Pool-integratie (HACS) of de Nord Pool-integratie van HA, gebied NL, prijzen per kwartier zonder belasting (ZEPHYR telt opslag, belasting en btw zelf op). De prijzen van morgen komen rond 13:00. Zonder prijssensor maakt ZEPHYR geen plan en regelt het alleen nul op de meter.\"},\"solar_forecast_entity\":{\"label\":\"Zonverwachting\",\"help\":\"Solcast (morgen) met detail per half uur. Leeg: de zonverwachting uit het Energie-dashboard van HA.\",\"more\":\"Aanrader: Solcast (gratis voor thuis), het meest precies per half uur. Leeg laten werkt met elke bron in het Energie-dashboard (Forecast.Solar, Open-Meteo …), per uur. Zonder verwachting neemt de planner de opbrengst van gisteren.\"},\"solar_energy_entity\":{\"label\":\"Zonnepanelen-teller\",\"help\":\"Opbrengst in kWh (oplopend).\",\"more\":\"De oplopende kWh-teller van je omvormer, bijv. Lifetime energy van SolarEdge. Dezelfde als in het Energie-dashboard bij Zonnepanelen. Gebruikt voor het huisverbruik, het kostenlogboek en het bijstellen van de zonverwachting.\"},\"excluded_energy_entity\":{\"label\":\"Airco: energieteller\",\"help\":\"kWh-teller van een verbruiker die niet uit de accu mag.\",\"more\":\"Een kWh-teller van alleen de airco, bijv. van een slimme stekker of tussenmeter, of de energiesensor van de airco-integratie. ZEPHYR levert niet voor de airco zolang die in een geblokkeerde stand draait; de rest van het huis komt wel uit de accu.\"},\"excluded_climate_entity\":{\"label\":\"Airco: klimaat-entiteit\",\"help\":\"Zegt direct of hij draait en in welke stand.\",\"more\":\"De climate-entiteit van de airco. Daarmee ziet ZEPHYR direct of hij aan staat en of hij verwarmt of koelt. Zonder: de airco komt nooit uit de accu en een stop merkt ZEPHYR pas aan de teller.\"},\"excluded_hvac_modes\":{\"label\":\"Airco: niet uit de accu bij\",\"help\":\"Standen waarin de accu de airco niet voedt.\",\"more\":\"Standaard verwarmen: in de winter verbruikt de airco veel, en stroom uit het net is dan vaak goedkoper dan uit de accu. Kies ook koelen als de airco nooit uit de accu mag.\"},\"cost_import_counters\":{\"label\":\"Tellers afname\",\"help\":\"De kWh-tellers van je slimme meter (tarief 1 en 2).\",\"more\":\"Kies beide kWh-tellers van je slimme meter: Energy consumption (tarif 1) en (tarif 2). Preciezer dan het vermogen optellen; voor het kostenlogboek en de besparing.\"},\"cost_export_counters\":{\"label\":\"Tellers teruglevering\",\"help\":\"De kWh-tellers voor teruglevering (tarief 1 en 2).\",\"more\":\"Kies beide terugleveringstellers: Energy production (tarif 1) en (tarif 2). Voor het kostenlogboek.\"},\"tariff_supplier\":{\"label\":\"Energieleverancier\",\"help\":\"Bedragen uit de tarieventabel van ZEPHYR, of eigen tarieven.\",\"more\":\"Staat je leverancier in de lijst, kies die: belasting, opslagen en zonnebonus komen dan uit de tabel en lopen mee met nieuwe tarieven. Staat hij er niet in, kies Eigen tarieven en vul de bedragen van je contract in.\"},\"tariff_energy_tax\":{\"label\":\"Energiebelasting\",\"help\":\"Per kWh, zonder btw.\",\"more\":\"Wettelijk bedrag per kWh, zonder btw; nu {in_use}. Verandert elk jaar op 1 januari; met een leverancier uit de tabel gaat dat vanzelf.\"},\"tariff_markup_import\":{\"label\":\"Opslag inkoop\",\"help\":\"Wat de leverancier bovenop de marktprijs rekent, zonder btw.\",\"more\":\"Wat de leverancier per kWh bovenop de marktprijs rekent, zonder btw. Gangbaar € 0,01–0,03; Zonneplan € 0,01653. Staat op je contract of in de tariefkaart, soms als inkoopvergoeding.\"},\"tariff_markup_export\":{\"label\":\"Opslag teruglevering\",\"help\":\"Bij de marktprijs opgeteld (negatief = kosten), zonder btw.\",\"more\":\"Wat je per teruggeleverde kWh bovenop de marktprijs krijgt, zonder btw. Trekt je leverancier er iets af (terugleverkosten), vul het negatief in, bijv. −0,02. Bij Zonneplan + € 0,01653.\"},\"tariff_vat\":{\"label\":\"Btw\",\"help\":\"Over marktprijs, opslag en energiebelasting.\",\"more\":\"Wettelijk tarief, 21 % in Nederland. Telt over marktprijs, opslag en energiebelasting.\"},\"tariff_solar_bonus\":{\"label\":\"Zonnebonus\",\"help\":\"Extra op de terugleverprijs overdag.\",\"more\":\"Extra percentage op de terugleverprijs zolang de zon op is, bijv. 10 % bij Zonneplan. Geen zonnebonus: 0.\"},\"tariff_fixed_month\":{\"label\":\"Vaste kosten per maand\",\"help\":\"Leveringskosten en netbeheer min heffingskorting.\",\"more\":\"Vaste leveringskosten + netbeheerkosten − vermindering energiebelasting, per maand en inclusief btw. Staat op je jaarafrekening of tariefkaart. Alleen voor het kostenlogboek; verandert het plan niet.\"},\"plan_wear_cost\":{\"label\":\"Slijtagekosten\",\"help\":\"Per kWh door de accu.\",\"more\":\"Standaard € 0,03 per kWh: ongeveer de aanschafprijs gedeeld door wat de accu in zijn leven levert (bijv. € 3.000 / 6.000 cycli / 10 kWh ≈ € 0,05). Hoger = de accu werkt alleen bij grotere prijsverschillen.\"},\"plan_grid_charge_cost\":{\"label\":\"Drempel laden uit het net\",\"help\":\"Minimale winst per kWh om uit het net te laden.\",\"more\":\"Standaard € 0,01. Laden uit het net gebeurt alleen als het per kWh minstens zoveel oplevert, na verlies en slijtage. Hoger = minder vaak laden uit het net voor een klein voordeel.\"},\"plan_allow_export\":{\"label\":\"Terugleveren uit de accu\",\"help\":\"Mag de accu naar het net leveren als dat loont?\",\"more\":\"Standaard uit. Aan is alleen zinvol als de terugleverprijs soms hoger is dan wat bijladen later kost, inclusief ± 15 % verlies en slijtage. Met saldering (tot 2027) levert het zelden iets op.\"},\"plan_load_margin\":{\"label\":\"Laadmarge\",\"help\":\"Rekenen met meer verbruik dan geleerd.\",\"more\":\"Standaard 0 %; 5–15 % als de accu op drukke avonden te vroeg leeg is. De planner rekent dan met zoveel meer verbruik dan geleerd.\"},\"plan_buffer\":{\"label\":\"Buffer\",\"help\":\"Deel van de accu dat de planner niet inplant.\",\"more\":\"Standaard 0 %; bijv. 10 % als je een reserve wilt voor onverwacht verbruik. De planner plant dit deel niet in; de regelaar mag het wel gebruiken als het verbruik hoger uitvalt. Daarna vult de planner het bij als dat goedkoop kan.\"},\"expensive_hours\":{\"label\":\"Dure uren\",\"help\":\"Zonder planner: alleen in de N duurste uren leveren.\",\"more\":\"Standaard 4: de accu levert alleen in de 4 duurste uren van de dag en houdt de lading verder vast. Alleen in de modus Nul op de meter met een prijssensor; Dynamische Forecasting kiest zelf.\"},\"reserve_soc\":{\"label\":\"Reserve\",\"help\":\"Zonder planner: bijladen tot dit percentage vóór de dure uren.\",\"more\":\"Standaard 20 %: vóór de dure uren laadt ZEPHYR bij tot dit percentage. Alleen zonder planner; met Dynamische Forecasting telt het als buffer.\"},\"min_price\":{\"label\":\"Minimumprijs\",\"help\":\"Zonder planner: niet leveren onder deze prijs.\",\"more\":\"Bijv. € 0,25: onder deze prijs (all-in, per kWh) levert de accu niet. Leeg = geen minimum.\"},\"live_off_after_restart\":{\"label\":\"Live sturen uit na een herstart (testfase)\",\"help\":\"Uit (standaard): na een herstart komt live sturen vanzelf terug zodra de P1 meldt en de sets online zijn (als het aan stond). Aan: het blijft uit en je zet het zelf weer aan.\",\"more\":\"Standaard uit: na een herstart komt live sturen vanzelf terug. Aan alleen tijdens het testen, als je na elke herstart eerst wilt kijken voordat ZEPHYR de accu weer stuurt.\"},\"vacation_when_away\":{\"label\":\"Vakantie als niemand thuis is\",\"help\":\"Vanzelf aan na 24 uur zonder iemand thuis.\",\"more\":\"Na 24 uur zonder iemand thuis (zone.home = 0) gaat vakantie vanzelf aan: de planner rekent dan met weinig verbruik. Uit zodra er iemand terug is. Werkt alleen als telefoons met de HA-app hun locatie delen.\"},\"workday_entity\":{\"label\":\"Werkdag-sensor\",\"help\":\"Feestdagen tellen als weekenddag.\",\"more\":\"Installeer de integratie Workday (land NL) en kies de sensor. Dan tellen feestdagen als weekenddag in het verbruiksprofiel. Zonder sensor zijn maandag t/m vrijdag werkdagen.\"},\"curtail_negative\":{\"label\":\"Zonoverschot bij negatieve prijs\",\"help\":\"Wat er met zonoverschot gebeurt als de terugleverprijs onder nul is. Uit: het gaat het net op en kost geld, de planner maakt eerst ruimte in de accu. Ander systeem: een omvormerbegrenzer knijpt zelf af. ZEPHYR: ZEPHYR blokkeert teruglevering van de eigen panelen van de sets en knijpt de omvormer af: met de schakelaar of met de vermogensbegrenzing hieronder (één van beide).\",\"more\":\"Met saldering (tot 2027) is de terugleverprijs zelden negatief. Zonder saldering gebeurt het op zonnige middagen in voorjaar en zomer. Kies ZEPHYR als je omvormer via HA te begrenzen is (bijv. SolarEdge via Modbus), Ander systeem als iets anders dat al doet.\"},\"curtail_switch\":{\"label\":\"Schakelaar omvormer afknijpen\",\"help\":\"Aan zolang de terugleverprijs negatief is. Alternatief voor de vermogensbegrenzing.\",\"more\":\"Een schakelaar die je omvormer laat stoppen met terugleveren, bijv. een sjabloon-schakelaar die de exportbegrenzing van je omvormer zet. ZEPHYR zet hem aan bij een negatieve terugleverprijs en daarna weer uit. Kies dit óf de vermogensbegrenzing.\"},\"solar_power_entities\":{\"label\":\"Zonnepanelen-vermogen\",\"help\":\"Vermogenssensoren (W) van omvormers, worden opgeteld.\",\"more\":\"Vermogen in W van omvormers die niet aan een Zendure-set hangen, bijv. AC power van SolarEdge; meerdere worden opgeteld. Niet de PV van de Zendure-set zelf: die leest ZEPHYR al. Leeg: ZEPHYR schat het uit de zonnepanelen-teller (grover, loopt achter).\"},\"curtail_number\":{\"label\":\"Vermogensbegrenzing omvormer\",\"help\":\"Getal-entiteit die het vermogen van de omvormer begrenst in % (bijv. SolarEdge Modbus active power limit). Alleen met ZEPHYR knijpt af.\",\"more\":\"Bijv. Active power limit van de SolarEdge Modbus-integratie (getal in %). ZEPHYR zet die elke 10 s zo dat de omvormer alleen levert wat huis en accu afnemen, en daarna terug op 100 %. Nodig: het nominaal vermogen hieronder en het zonnepanelen-vermogen (Bronnen).\"},\"curtail_inverter_w\":{\"label\":\"Nominaal vermogen omvormer\",\"help\":\"Nominaal AC-vermogen van die omvormer (W), om de gewenste productie om te zetten in %. 0 = niet ingesteld.\",\"more\":\"Het AC-vermogen op het typeplaatje, bijv. 5000 W voor een SolarEdge SE5K, 3680 W voor een SE3680H.\"},\"calibration_days\":{\"label\":\"Kalibratie na dagen\",\"help\":\"Na zoveel dagen zonder 100 % laadt de planner de accu vol en laat hij de set kalibreren.\",\"more\":\"Standaard 21 dagen; 0 = uit. Hoe langer de accu niet vol was, hoe verder de packs uit elkaar lopen. Vanaf de helft van deze dagen zoekt de planner een goedkoop moment of zon om vol te laden; op de laatste dag moet het. Daarna levert ZEPHYR niet tot de set klaar is met kalibreren (max. 2 uur).\"},\"price_forecast_entity\":{\"label\":\"Prijsvoorspelling (jeroen.nl)\",\"help\":\"Optioneel: de sensor van ha-jeroen-nl, om voorbij de bekende prijzen te kijken.\",\"more\":\"Installeer de HACS-integratie ha-jeroen-nl met je eigen API-sleutel van jeroen.nl en kies hier de prijssensor. ZEPHYR leest alleen die sensor en haalt zelf nooit iets op bij jeroen.nl. Alleen voorspelde kwartieren na de laatste bekende Nord Pool-prijs worden gebruikt; Nord Pool blijft leidend. Bron: jeroen.nl.\"},\"price_forecast_mode\":{\"label\":\"Gebruik in het plan\",\"help\":\"Indicatief: het plan blijft gelijk. Meerekenen: de planner plant met de voorspelling.\",\"more\":\"Indicatief: de diagnose vergelijkt het plan met en zonder voorspelling. Meerekenen: de planner kijkt ook naar de voorspelde dagen (standaard de dag na de bekende prijzen, dus na ongeveer 13:00 overmorgen). Het niveau van de voorspelling kan ernaast zitten, de tendens is meestal duidelijk; met de waarde Laag blijft de planner voorzichtig. Blokken op voorspelde kwartieren blijven indicatief en tellen niet mee in de totalen. De opgeslagen voorspellingen geven na ongeveer 6 weken een backtest.\"},\"price_forecast_days\":{\"label\":\"Voorspelde dagen\",\"help\":\"Hoeveel dagen voorbij de laatste bekende prijs.\",\"more\":\"Standaard 1: vóór ongeveer 13:00 staat de voorspelling in voor morgen; daarna komt overmorgen erbij. 0 = de voorspelling alleen bewaren voor de kwaliteitscijfers.\"},\"price_forecast_value\":{\"label\":\"Waarde uit de band\",\"help\":\"Laag is voorzichtig: niet laden op een optimistische verwachting.\",\"more\":\"jeroen.nl geeft een band van 80 % (p10–p90). Laag gebruikt p10 voor inkoop en teruglevering, zodat de planner niet laadt voor, of energie vasthoudt voor, een piek die misschien niet komt. Midden gebruikt de verwachte waarde.\"}},\"restarting\":\"ZEPHYR start opnieuw met de nieuwe instellingen…\",\"pending\":\"{n} wijzigingen nog niet bewaard · ZEPHYR start kort opnieuw\",\"pending_one\":\"1 wijziging nog niet bewaard · ZEPHYR start kort opnieuw\",\"cancel\":\"Annuleren\",\"save_restart\":\"Bewaren en herstarten\",\"saving\":\"Bezig…\",\"saved\":\"bewaard\",\"not_saved\":\"niet bewaard\",\"reset\":\"Standaard terugzetten\",\"clear\":\"Leegmaken\",\"remove\":\"Weghalen\",\"choose_entity\":\"Kies of typ een entiteit\",\"actions\":{\"heating\":\"draait\",\"cooling\":\"draait\",\"drying\":\"draait\",\"fan\":\"draait\",\"preheating\":\"draait\",\"defrosting\":\"ontdooit\",\"idle\":\"staat stil\",\"off\":\"uit\"},\"errors\":{\"out_of_range\":\"Buiten de grenzen.\",\"off_step\":\"Past niet bij de stapgrootte.\",\"not_a_number\":\"Geen getal.\",\"not_a_bool\":\"Ongeldige waarde.\",\"required\":\"Mag niet leeg zijn.\",\"unknown_choice\":\"Onbekende keuze.\",\"choose_one\":\"Kies minstens één stand. Uitzetten: maak de teller leeg.\",\"not_an_entity\":\"Dit soort entiteit past hier niet.\",\"entity_missing\":\"Entiteit niet gevonden.\",\"unknown_key\":\"Onbekende instelling.\",\"p1_missing\":\"Kies een P1-sensor.\",\"p1_pair_incomplete\":\"Kies zowel de afname- als de terugleversensor.\",\"p1_pair_same\":\"Afname en teruglevering moeten twee verschillende sensoren zijn.\",\"excluded_needs_counter\":\"De klimaat-entiteit werkt alleen samen met de energieteller van de airco. Kies de teller of maak de klimaat-entiteit leeg.\",\"failed\":\"Bewaren lukte niet. Probeer het opnieuw.\",\"range\":\"Kies een waarde van {min} tot en met {max}{unit}.\",\"entity_domain\":\"Dit veld verwacht een {domain}-entiteit\"},\"vac_active\":\"Op vakantie\",\"vac_home\":\"Thuis\",\"vac_off\":\"De planner rekent met het gewone verbruik.\",\"vac_until\":\"Tot {until}. De planner rekent tot dan met het verbruik bij afwezigheid en laadt op tijd voor de terugkomst.\",\"vac_open\":\"Zonder einddatum; zet het uit als je terug bent.\",\"vac_auto\":\"Vanzelf aan sinds {since}: niemand is 24 uur thuis geweest (optie hieronder). Gaat uit zodra iemand thuiskomt.\",\"vac_until_label\":\"Terug op\",\"vac_start\":\"Vakantie aanzetten\",\"vac_stop\":\"Vakantie uitzetten\",\"vac_help\":\"Tijdens een vakantie rekent de planner met het sluimerverbruik en leert hij dat apart; het gewone verbruiksprofiel blijft schoon. Een einddatum is optioneel.\",\"house_note\":\"Wanneer je je apparaten meestal laat draaien. Met één tik onder Prijzen en plan kiest ZEPHYR de goedkoopste start binnen dit venster. Een nieuw apparaat met slimme stekker voeg je toe via Apparaten en diensten → ZEPHYR → Apparaat toevoegen. Het venster wijzigen herlaadt ZEPHYR even.\",\"house_floor\":\"Verdieping\",\"save\":\"Opslaan\",\"discard\":\"Annuleren\",\"floors\":{\"attic\":\"Zolder\",\"first\":\"1e verdieping\",\"ground\":\"Begane grond\",\"shed\":\"Schuur\",\"outside\":\"Buiten\"},\"appl_learned\":\"geleerd uit {n} runs\",\"appl_default\":\"standaardprofiel\",\"appl_airco\":\"niet uit de accu (Correcties)\",\"appl_from\":\"Niet vóór\",\"appl_until\":\"Klaar om\",\"appl_shown\":\"Tonen op Stroom\",\"appl_after\":\"Altijd na de was\",\"appl_after_help\":\"plan de droger mee (één keer, na de laatste was) als je de was plant\",\"curtail_head\":\"Omvormer buiten de sets (kies één)\",\"curtail_rated_missing\":\"Vul het nominale vermogen in, anders begrenst ZEPHYR niet.\",\"sections\":{\"meter\":\"Meter\",\"prices\":\"Prijzen\",\"solar\":\"Zon\",\"counters\":\"Tellers\",\"plan\":\"Plan\",\"curtail\":\"Afknijpen\"},\"group_sub\":{\"battery\":\"min, max, kalibratie\",\"tariffs\":\"leverancier, belasting, btw\",\"corrections\":\"airco\",\"vacation\":\"niemand thuis\",\"house\":\"plaatje, verdiepingen, apparaten\",\"zero_meter\":\"dure uren, reserve\",\"testing\":\"live na herstart\"}}"),
 		airco: {
 			blocked: "Airco {kw} kW · niet uit de accu",
 			blocked_unknown: "Airco · niet uit de accu",
@@ -1492,7 +1492,7 @@ var $e = {
 			days_explain: "Cycles = delivered ÷ usable capacity ({usable} kWh between the limits). Efficiency = delivered ÷ charged over the week, corrected for the change in SoC. From the cost log, per closed quarter.",
 			days_n: "{n} days"
 		},
-		settings: /* @__PURE__ */ JSON.parse("{\"title\":\"Settings\",\"groups\":{\"battery\":\"Battery and limits\",\"sources\":\"Sources\",\"tariffs\":\"Tariffs\",\"planner\":\"Planner\",\"corrections\":\"Corrections\",\"zero_meter\":\"Zero on the meter without planner\",\"testing\":\"Test phase\",\"vacation\":\"Vacation\",\"house\":\"Appliances\"},\"default\":\"standard: {value}\",\"none\":\"empty\",\"yes\":\"on\",\"no\":\"off\",\"more\":\"More about {label}\",\"readonly\":\"Only an administrator can change settings.\",\"reload_note\":\"Changes in this group are saved together; ZEPHYR then restarts briefly.\",\"supplier_note\":\"With a supplier the amounts from the tariff table apply ({source}). The greyed-out fields show those amounts; they can only be changed with own tariffs.\",\"status\":{\"unset\":\"not set\",\"missing\":\"not found: {entities}\",\"ok\":\"working\",\"interval\":\"reports every {s} s\",\"slots\":\"{n} prices in the sensor\",\"unavailable\":\"unavailable\",\"climate\":\"{mode} · {action}\",\"no_step\":\"no measurement yet\",\"steps\":\"a step of {kwh} kWh every {every}\"},\"own\":\"Own tariffs\",\"options\":{\"single\":\"One sensor (import − export)\",\"import_export\":\"Two sensors (import and export)\",\"heat\":\"Heating\",\"cool\":\"Cooling\",\"dry\":\"Drying\",\"fan_only\":\"Fan\",\"heat_cool\":\"Heating/cooling\",\"auto\":\"Auto\",\"off\":\"Off\",\"curtail_off\":\"Off (exported, costs money)\",\"curtail_external\":\"Another system curtails\",\"curtail_zephyr\":\"ZEPHYR curtails\",\"indicative\":\"Indicative (show only)\",\"use\":\"Take into account\",\"low\":\"Low (careful)\",\"mid\":\"Middle\"},\"fields\":{\"min_soc\":{\"label\":\"Minimum state of charge\",\"help\":\"Below this the battery stops delivering.\",\"more\":\"Default 10 %; common 5–15 %. Lower = more usable energy, but the battery is more often nearly empty. ZEPHYR also sets this in the set, so it stops when ZEPHYR is not running. Example: 11 kWh and 10 % → 1.1 kWh always stays.\"},\"max_soc\":{\"label\":\"Maximum state of charge\",\"help\":\"Above this the battery stops charging.\",\"more\":\"Default 95 %; 90–95 % saves a little wear, 100 % gives about 5 % more usable energy. Now and then the set needs 100 % to reset its SOC reading and balance the cells; see Calibration after days.\"},\"p1_source\":{\"label\":\"P1 measurement\",\"help\":\"One sensor with net power, or import and export separately.\",\"more\":\"Choose One sensor if your meter gives one power that goes negative when exporting (usually a P1 dongle such as HomeWizard). Choose Import and export with two separate sensors (DSMR integration). The more often the meter reports, the better: DSMR 5 reports every second, DSMR 4 every 10 s. If the meter is silent for more than 10 s, ZEPHYR stops safely.\"},\"p1_entity\":{\"label\":\"P1 sensor (net)\",\"help\":\"Grid power: + = import, − = export.\",\"more\":\"A power sensor in W or kW, positive when importing. For example Active power of a HomeWizard P1 meter. Not the kWh counter.\"},\"p1_import_entity\":{\"label\":\"P1 import\",\"help\":\"Power from the grid.\",\"more\":\"For example Power consumption of the DSMR integration (in kW or W). ZEPHYR uses import − export.\"},\"p1_export_entity\":{\"label\":\"P1 export\",\"help\":\"Power to the grid.\",\"more\":\"For example Power production of the DSMR integration. Must belong to the same meter as the import sensor.\"},\"price_entity\":{\"label\":\"Price sensor\",\"help\":\"Nord Pool: the HACS integration, or the current price of Home Assistant's own Nord Pool integration.\",\"more\":\"For example the Nord Pool integration (HACS) or HA's own Nord Pool integration, area NL, prices per quarter without taxes (ZEPHYR adds markup, tax and VAT itself). Tomorrow's prices arrive around 13:00. Without a price sensor ZEPHYR makes no plan and only keeps the meter at zero.\"},\"solar_forecast_entity\":{\"label\":\"Solar forecast\",\"help\":\"Solcast (tomorrow) with half-hour detail. Empty: the solar forecast of HA's Energy dashboard.\",\"more\":\"Recommended: Solcast (free for home use), most precise per half hour. Leaving it empty works with any source in HA's Energy dashboard (Forecast.Solar, Open-Meteo …), per hour. Without a forecast the planner uses yesterday's yield.\"},\"solar_energy_entity\":{\"label\":\"Solar counter\",\"help\":\"Production in kWh (increasing).\",\"more\":\"Your inverter's increasing kWh counter, e.g. Lifetime energy of SolarEdge. The same as Solar panels in the Energy dashboard. Used for house consumption, the cost log and tuning the solar forecast.\"},\"excluded_energy_entity\":{\"label\":\"Air conditioner: energy counter\",\"help\":\"kWh counter of a load the battery may not feed.\",\"more\":\"A kWh counter of the air conditioner only, e.g. from a smart plug or sub-meter, or the energy sensor of the air conditioner integration. ZEPHYR does not deliver for it while it runs in a blocked mode; the rest of the house still comes from the battery.\"},\"excluded_climate_entity\":{\"label\":\"Air conditioner: climate entity\",\"help\":\"Says at once whether it runs and in which mode.\",\"more\":\"The air conditioner's climate entity. With it ZEPHYR sees right away whether it is on and whether it heats or cools. Without: it never comes from the battery and ZEPHYR only notices a stop from the counter.\"},\"excluded_hvac_modes\":{\"label\":\"Air conditioner: not from the battery when\",\"help\":\"Modes in which the battery does not feed it.\",\"more\":\"Default heating: in winter the air conditioner uses a lot, and grid power is then often cheaper than battery power. Also choose cooling if it must never come from the battery.\"},\"cost_import_counters\":{\"label\":\"Import counters\",\"help\":\"The kWh counters of your smart meter (tariff 1 and 2).\",\"more\":\"Choose both kWh counters of your smart meter: Energy consumption (tarif 1) and (tarif 2). More precise than adding up power; for the cost log and savings.\"},\"cost_export_counters\":{\"label\":\"Export counters\",\"help\":\"The kWh counters for export (tariff 1 and 2).\",\"more\":\"Choose both export counters: Energy production (tarif 1) and (tarif 2). For the cost log.\"},\"tariff_supplier\":{\"label\":\"Energy supplier\",\"help\":\"Amounts from ZEPHYR's tariff table, or own tariffs.\",\"more\":\"If your supplier is in the list, choose it: tax, markups and solar bonus then come from the table and follow new tariffs. If not, choose Own tariffs and enter the amounts from your contract.\"},\"tariff_energy_tax\":{\"label\":\"Energy tax\",\"help\":\"Per kWh, excluding VAT.\",\"more\":\"Statutory amount per kWh, without VAT; now {in_use}. Changes every year on 1 January; with a supplier from the table that happens automatically.\"},\"tariff_markup_import\":{\"label\":\"Import margin\",\"help\":\"What the supplier adds to the market price, excluding VAT.\",\"more\":\"What the supplier charges per kWh on top of the market price, without VAT. Common € 0.01–0.03; Zonneplan € 0.01653. On your contract or tariff sheet, sometimes as purchase fee.\"},\"tariff_markup_export\":{\"label\":\"Export margin\",\"help\":\"Added to the market price (negative = a fee), excluding VAT.\",\"more\":\"What you get per exported kWh on top of the market price, without VAT. If your supplier deducts something (export fee), enter it negative, e.g. −0.02. Zonneplan + € 0.01653.\"},\"tariff_vat\":{\"label\":\"VAT\",\"help\":\"On market price, margin and energy tax.\",\"more\":\"Statutory rate, 21 % in the Netherlands. Applies to market price, markup and energy tax.\"},\"tariff_solar_bonus\":{\"label\":\"Solar bonus\",\"help\":\"Extra on the export price during the day.\",\"more\":\"Extra percentage on the export price while the sun is up, e.g. 10 % at Zonneplan. No solar bonus: 0.\"},\"tariff_fixed_month\":{\"label\":\"Fixed costs per month\",\"help\":\"Supply and network costs minus tax credit.\",\"more\":\"Fixed supply charge + grid operator charge − energy tax reduction, per month including VAT. On your annual bill or tariff sheet. Only for the cost log; does not change the plan.\"},\"plan_wear_cost\":{\"label\":\"Wear cost\",\"help\":\"Per kWh through the battery.\",\"more\":\"Default € 0.03 per kWh: roughly the purchase price divided by what the battery delivers in its life (e.g. € 3,000 / 6,000 cycles / 10 kWh ≈ € 0.05). Higher = the battery only works at larger price differences.\"},\"plan_grid_charge_cost\":{\"label\":\"Grid charging threshold\",\"help\":\"Minimum gain per kWh to charge from the grid.\",\"more\":\"Default € 0.01. Charging from the grid only happens when it earns at least this much per kWh, after losses and wear. Higher = less often charging from the grid for a small gain.\"},\"plan_allow_export\":{\"label\":\"Export from the battery\",\"help\":\"May the battery deliver to the grid when that pays?\",\"more\":\"Default off. On only makes sense if the export price is sometimes higher than what recharging costs later, including about 15 % loss and wear. With net metering (until 2027) it rarely pays.\"},\"plan_load_margin\":{\"label\":\"Consumption margin\",\"help\":\"Plan with more consumption than learned.\",\"more\":\"Default 0 %; 5–15 % if the battery runs empty too early on busy evenings. The planner then counts on that much more consumption than learned.\"},\"plan_buffer\":{\"label\":\"Buffer\",\"help\":\"Part of the battery the planner keeps free.\",\"more\":\"Default 0 %; e.g. 10 % if you want a reserve for unexpected consumption. The planner does not plan this part; the controller may use it when consumption turns out higher. The planner then refills it when that is cheap.\"},\"expensive_hours\":{\"label\":\"Expensive hours\",\"help\":\"Without planner: only deliver in the N most expensive hours.\",\"more\":\"Default 4: the battery only delivers in the 4 most expensive hours of the day and holds its charge otherwise. Only in the mode Zero on the meter with a price sensor; Dynamic Forecasting chooses itself.\"},\"reserve_soc\":{\"label\":\"Reserve\",\"help\":\"Without planner: charge to this level before the expensive hours.\",\"more\":\"Default 20 %: before the expensive hours ZEPHYR charges up to this percentage. Only without the planner; with Dynamic Forecasting it counts as buffer.\"},\"min_price\":{\"label\":\"Minimum price\",\"help\":\"Without planner: do not deliver below this price.\",\"more\":\"E.g. € 0.25: below this price (all-in, per kWh) the battery does not deliver. Empty = no minimum.\"},\"live_off_after_restart\":{\"label\":\"Live control off after a restart (test phase)\",\"help\":\"Off (default): after a restart live control comes back on its own as soon as the P1 reports and the sets are online (if it was on). On: it stays off and you switch it on yourself.\",\"more\":\"Default off: after a restart live control comes back by itself. On only while testing, if you want to check after every restart before ZEPHYR controls the battery again.\"},\"vacation_when_away\":{\"label\":\"Vacation when nobody is home\",\"help\":\"On by itself after 24 hours with nobody home.\",\"more\":\"After 24 hours with nobody home (zone.home = 0) vacation turns on by itself: the planner then counts on low consumption. Off as soon as someone is back. Only works if phones with the HA app share their location.\"},\"workday_entity\":{\"label\":\"Workday sensor\",\"help\":\"Holidays count as weekend days.\",\"more\":\"Install the Workday integration (your country) and choose its sensor. Public holidays then count as weekend days in the consumption profile. Without a sensor Monday to Friday are workdays.\"},\"curtail_negative\":{\"label\":\"Surplus solar at a negative price\",\"help\":\"What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and curtails the inverter: with the switch or with the power limit below (one of the two).\",\"more\":\"With net metering (until 2027) the export price is rarely negative. Without it, it happens on sunny afternoons in spring and summer. Choose ZEPHYR if your inverter can be limited via HA (e.g. SolarEdge via Modbus), Other system if something else already does it.\"},\"curtail_switch\":{\"label\":\"Inverter curtail switch\",\"help\":\"On while the export price is negative. Alternative to the power limit.\",\"more\":\"A switch that makes your inverter stop exporting, e.g. a template switch that sets your inverter's export limit. ZEPHYR turns it on at a negative export price and off again afterwards. Choose this or the power limit.\"},\"solar_power_entities\":{\"label\":\"Solar panel power\",\"help\":\"Power sensors (W) of inverters, added up.\",\"more\":\"Power in W of inverters not connected to a Zendure set, e.g. AC power of SolarEdge; several are added up. Not the PV of the Zendure set itself: ZEPHYR already reads that. Empty: ZEPHYR estimates it from the solar counter (coarser, lags behind).\"},\"curtail_number\":{\"label\":\"Inverter power limit\",\"help\":\"Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.\",\"more\":\"E.g. Active power limit of the SolarEdge Modbus integration (a number in %). ZEPHYR sets it every 10 s so the inverter only produces what house and battery take, and back to 100 % afterwards. Needs: the rated power below and the solar power (Sources).\"},\"curtail_inverter_w\":{\"label\":\"Inverter rated power\",\"help\":\"Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.\",\"more\":\"The AC power on the rating plate, e.g. 5000 W for a SolarEdge SE5K, 3680 W for an SE3680H.\"},\"calibration_days\":{\"label\":\"Calibration after days\",\"help\":\"After this many days without 100 % the planner charges the battery full and lets the set calibrate.\",\"more\":\"Default 21 days; 0 = off. The longer the battery has not been full, the further the packs drift apart. From half of these days the planner looks for a cheap moment or sun to charge to full; on the last day it must. ZEPHYR then does not deliver until the set has finished calibrating (max. 2 hours).\"},\"price_forecast_entity\":{\"label\":\"Price forecast (jeroen.nl)\",\"help\":\"Optional: the sensor of ha-jeroen-nl, to look past the known prices.\",\"more\":\"Install the HACS integration ha-jeroen-nl with your own jeroen.nl API key and choose its price sensor here. ZEPHYR reads only that sensor and never fetches anything from jeroen.nl itself. Only forecast quarters after the last known Nord Pool price are used; Nord Pool always leads. Source: jeroen.nl.\"},\"price_forecast_mode\":{\"label\":\"Use in the plan\",\"help\":\"Indicative: the plan stays the same. Take into account: the planner plans with the forecast.\",\"more\":\"Indicative: the diagnostics compare the plan with and without the forecast. Take into account: the planner also looks at the forecast days (by default: the day after the known prices, so after about 13:00 the day after tomorrow). The level of the forecast can be off, the trend is usually clear; with the value Low the planner stays careful. Blocks on forecast quarters stay indicative and do not count in the totals. The stored forecasts give a backtest after about 6 weeks.\"},\"price_forecast_days\":{\"label\":\"Forecast days\",\"help\":\"How many days past the last known price.\",\"more\":\"Default 1: before about 13:00 the forecast stands in for tomorrow; after that it adds the day after tomorrow. 0 = only store the forecast for the quality figures.\"},\"price_forecast_value\":{\"label\":\"Value from the band\",\"help\":\"Low is careful: no charging on an optimistic guess.\",\"more\":\"jeroen.nl gives an 80 % band (p10–p90). Low uses p10 for buying and selling, so the planner does not charge for, or hold energy for, a peak that may not come. Middle uses the expected value.\"}},\"restarting\":\"ZEPHYR is restarting with the new settings…\",\"pending\":\"{n} changes not saved yet · ZEPHYR restarts briefly\",\"pending_one\":\"1 change not saved yet · ZEPHYR restarts briefly\",\"cancel\":\"Cancel\",\"save_restart\":\"Save and restart\",\"saving\":\"Saving…\",\"saved\":\"saved\",\"not_saved\":\"not saved\",\"reset\":\"Restore standard\",\"clear\":\"Clear\",\"remove\":\"Remove\",\"choose_entity\":\"Choose or type an entity\",\"actions\":{\"heating\":\"running\",\"cooling\":\"running\",\"drying\":\"running\",\"fan\":\"running\",\"preheating\":\"running\",\"defrosting\":\"defrosting\",\"idle\":\"idle\",\"off\":\"off\"},\"errors\":{\"out_of_range\":\"Outside the limits.\",\"off_step\":\"Does not fit the step size.\",\"not_a_number\":\"Not a number.\",\"not_a_bool\":\"Invalid value.\",\"required\":\"May not be empty.\",\"unknown_choice\":\"Unknown choice.\",\"choose_one\":\"Choose at least one mode. To switch off: clear the counter.\",\"not_an_entity\":\"This kind of entity does not fit here.\",\"entity_missing\":\"Entity not found.\",\"unknown_key\":\"Unknown setting.\",\"p1_missing\":\"Choose a P1 sensor.\",\"p1_pair_incomplete\":\"Choose both the import and the export sensor.\",\"p1_pair_same\":\"Import and export must be two different sensors.\",\"excluded_needs_counter\":\"The climate entity only works together with the air conditioner's energy counter. Choose the counter or clear the climate entity.\",\"failed\":\"Saving failed. Please try again.\",\"range\":\"Choose a value from {min} to {max}{unit}.\",\"entity_domain\":\"This field expects a {domain} entity\"},\"vac_active\":\"On vacation\",\"vac_home\":\"At home\",\"vac_off\":\"The planner uses the normal use.\",\"vac_until\":\"Until {until}. Until then the planner uses the use while away and charges in time for the return.\",\"vac_open\":\"Without an end date; switch it off when you are back.\",\"vac_auto\":\"On by itself since {since}: nobody has been home for 24 hours (option below). Goes off as soon as someone comes home.\",\"vac_until_label\":\"Back on\",\"vac_start\":\"Start vacation\",\"vac_stop\":\"End vacation\",\"vac_help\":\"During a vacation the planner uses the standby use and learns it apart; the normal use profile stays clean. An end date is optional.\",\"house_note\":\"When you usually run your appliances. One tap under Prices and plan lets ZEPHYR pick the cheapest start within this window. Add a new appliance with a smart plug via Devices & services → ZEPHYR → Add appliance. Changing the window reloads ZEPHYR briefly.\",\"house_floor\":\"Floor\",\"save\":\"Save\",\"discard\":\"Cancel\",\"floors\":{\"attic\":\"Attic\",\"first\":\"First floor\",\"ground\":\"Ground floor\",\"shed\":\"Shed\",\"outside\":\"Outside\"},\"appl_learned\":\"learned from {n} runs\",\"appl_default\":\"standard profile\",\"appl_airco\":\"not from the battery (Corrections)\",\"appl_from\":\"Not before\",\"appl_until\":\"Done by\",\"appl_shown\":\"Show on Power\",\"appl_after\":\"Always after the washing\",\"appl_after_help\":\"plan the dryer along (once, after the last wash) when you plan the washing\",\"curtail_head\":\"Inverter outside the sets (choose one)\",\"curtail_rated_missing\":\"Fill in the rated power, or ZEPHYR does not limit.\"}"),
+		settings: /* @__PURE__ */ JSON.parse("{\"title\":\"Settings\",\"groups\":{\"battery\":\"Battery and limits\",\"sources\":\"Sources\",\"tariffs\":\"Tariffs\",\"planner\":\"Planner\",\"corrections\":\"Corrections\",\"zero_meter\":\"Zero on the meter without planner\",\"testing\":\"Test phase\",\"vacation\":\"Vacation\",\"house\":\"Appliances\"},\"default\":\"standard: {value}\",\"none\":\"empty\",\"yes\":\"on\",\"no\":\"off\",\"more\":\"More about {label}\",\"readonly\":\"Only an administrator can change settings.\",\"reload_note\":\"Changes in this group are saved together; ZEPHYR then restarts briefly.\",\"supplier_note\":\"With a supplier the amounts from the tariff table apply ({source}). The greyed-out fields show those amounts; they can only be changed with own tariffs.\",\"status\":{\"unset\":\"not set\",\"missing\":\"not found: {entities}\",\"ok\":\"working\",\"interval\":\"reports every {s} s\",\"slots\":\"{n} prices in the sensor\",\"unavailable\":\"unavailable\",\"climate\":\"{mode} · {action}\",\"no_step\":\"no measurement yet\",\"steps\":\"a step of {kwh} kWh every {every}\"},\"own\":\"Own tariffs\",\"options\":{\"single\":\"One sensor (import − export)\",\"import_export\":\"Two sensors (import and export)\",\"heat\":\"Heating\",\"cool\":\"Cooling\",\"dry\":\"Drying\",\"fan_only\":\"Fan\",\"heat_cool\":\"Heating/cooling\",\"auto\":\"Auto\",\"off\":\"Off\",\"curtail_off\":\"Off (exported, costs money)\",\"curtail_external\":\"Another system curtails\",\"curtail_zephyr\":\"ZEPHYR curtails\",\"indicative\":\"Indicative (show only)\",\"use\":\"Take into account\",\"low\":\"Low (careful)\",\"mid\":\"Middle\"},\"fields\":{\"min_soc\":{\"label\":\"Minimum state of charge\",\"help\":\"Below this the battery stops delivering.\",\"more\":\"Default 10 %; common 5–15 %. Lower = more usable energy, but the battery is more often nearly empty. ZEPHYR also sets this in the set, so it stops when ZEPHYR is not running. Example: 11 kWh and 10 % → 1.1 kWh always stays.\"},\"max_soc\":{\"label\":\"Maximum state of charge\",\"help\":\"Above this the battery stops charging.\",\"more\":\"Default 95 %; 90–95 % saves a little wear, 100 % gives about 5 % more usable energy. Now and then the set needs 100 % to reset its SOC reading and balance the cells; see Calibration after days.\"},\"p1_source\":{\"label\":\"P1 measurement\",\"help\":\"One sensor with net power, or import and export separately.\",\"more\":\"Choose One sensor if your meter gives one power that goes negative when exporting (usually a P1 dongle such as HomeWizard). Choose Import and export with two separate sensors (DSMR integration). The more often the meter reports, the better: DSMR 5 reports every second, DSMR 4 every 10 s. If the meter is silent for more than 10 s, ZEPHYR stops safely.\"},\"p1_entity\":{\"label\":\"P1 sensor (net)\",\"help\":\"Grid power: + = import, − = export.\",\"more\":\"A power sensor in W or kW, positive when importing. For example Active power of a HomeWizard P1 meter. Not the kWh counter.\"},\"p1_import_entity\":{\"label\":\"P1 import\",\"help\":\"Power from the grid.\",\"more\":\"For example Power consumption of the DSMR integration (in kW or W). ZEPHYR uses import − export.\"},\"p1_export_entity\":{\"label\":\"P1 export\",\"help\":\"Power to the grid.\",\"more\":\"For example Power production of the DSMR integration. Must belong to the same meter as the import sensor.\"},\"price_entity\":{\"label\":\"Price sensor\",\"help\":\"Nord Pool: the HACS integration, or the current price of Home Assistant's own Nord Pool integration.\",\"more\":\"For example the Nord Pool integration (HACS) or HA's own Nord Pool integration, area NL, prices per quarter without taxes (ZEPHYR adds markup, tax and VAT itself). Tomorrow's prices arrive around 13:00. Without a price sensor ZEPHYR makes no plan and only keeps the meter at zero.\"},\"solar_forecast_entity\":{\"label\":\"Solar forecast\",\"help\":\"Solcast (tomorrow) with half-hour detail. Empty: the solar forecast of HA's Energy dashboard.\",\"more\":\"Recommended: Solcast (free for home use), most precise per half hour. Leaving it empty works with any source in HA's Energy dashboard (Forecast.Solar, Open-Meteo …), per hour. Without a forecast the planner uses yesterday's yield.\"},\"solar_energy_entity\":{\"label\":\"Solar counter\",\"help\":\"Production in kWh (increasing).\",\"more\":\"Your inverter's increasing kWh counter, e.g. Lifetime energy of SolarEdge. The same as Solar panels in the Energy dashboard. Used for house consumption, the cost log and tuning the solar forecast.\"},\"excluded_energy_entity\":{\"label\":\"Air conditioner: energy counter\",\"help\":\"kWh counter of a load the battery may not feed.\",\"more\":\"A kWh counter of the air conditioner only, e.g. from a smart plug or sub-meter, or the energy sensor of the air conditioner integration. ZEPHYR does not deliver for it while it runs in a blocked mode; the rest of the house still comes from the battery.\"},\"excluded_climate_entity\":{\"label\":\"Air conditioner: climate entity\",\"help\":\"Says at once whether it runs and in which mode.\",\"more\":\"The air conditioner's climate entity. With it ZEPHYR sees right away whether it is on and whether it heats or cools. Without: it never comes from the battery and ZEPHYR only notices a stop from the counter.\"},\"excluded_hvac_modes\":{\"label\":\"Air conditioner: not from the battery when\",\"help\":\"Modes in which the battery does not feed it.\",\"more\":\"Default heating: in winter the air conditioner uses a lot, and grid power is then often cheaper than battery power. Also choose cooling if it must never come from the battery.\"},\"cost_import_counters\":{\"label\":\"Import counters\",\"help\":\"The kWh counters of your smart meter (tariff 1 and 2).\",\"more\":\"Choose both kWh counters of your smart meter: Energy consumption (tarif 1) and (tarif 2). More precise than adding up power; for the cost log and savings.\"},\"cost_export_counters\":{\"label\":\"Export counters\",\"help\":\"The kWh counters for export (tariff 1 and 2).\",\"more\":\"Choose both export counters: Energy production (tarif 1) and (tarif 2). For the cost log.\"},\"tariff_supplier\":{\"label\":\"Energy supplier\",\"help\":\"Amounts from ZEPHYR's tariff table, or own tariffs.\",\"more\":\"If your supplier is in the list, choose it: tax, markups and solar bonus then come from the table and follow new tariffs. If not, choose Own tariffs and enter the amounts from your contract.\"},\"tariff_energy_tax\":{\"label\":\"Energy tax\",\"help\":\"Per kWh, excluding VAT.\",\"more\":\"Statutory amount per kWh, without VAT; now {in_use}. Changes every year on 1 January; with a supplier from the table that happens automatically.\"},\"tariff_markup_import\":{\"label\":\"Import margin\",\"help\":\"What the supplier adds to the market price, excluding VAT.\",\"more\":\"What the supplier charges per kWh on top of the market price, without VAT. Common € 0.01–0.03; Zonneplan € 0.01653. On your contract or tariff sheet, sometimes as purchase fee.\"},\"tariff_markup_export\":{\"label\":\"Export margin\",\"help\":\"Added to the market price (negative = a fee), excluding VAT.\",\"more\":\"What you get per exported kWh on top of the market price, without VAT. If your supplier deducts something (export fee), enter it negative, e.g. −0.02. Zonneplan + € 0.01653.\"},\"tariff_vat\":{\"label\":\"VAT\",\"help\":\"On market price, margin and energy tax.\",\"more\":\"Statutory rate, 21 % in the Netherlands. Applies to market price, markup and energy tax.\"},\"tariff_solar_bonus\":{\"label\":\"Solar bonus\",\"help\":\"Extra on the export price during the day.\",\"more\":\"Extra percentage on the export price while the sun is up, e.g. 10 % at Zonneplan. No solar bonus: 0.\"},\"tariff_fixed_month\":{\"label\":\"Fixed costs per month\",\"help\":\"Supply and network costs minus tax credit.\",\"more\":\"Fixed supply charge + grid operator charge − energy tax reduction, per month including VAT. On your annual bill or tariff sheet. Only for the cost log; does not change the plan.\"},\"plan_wear_cost\":{\"label\":\"Wear cost\",\"help\":\"Per kWh through the battery.\",\"more\":\"Default € 0.03 per kWh: roughly the purchase price divided by what the battery delivers in its life (e.g. € 3,000 / 6,000 cycles / 10 kWh ≈ € 0.05). Higher = the battery only works at larger price differences.\"},\"plan_grid_charge_cost\":{\"label\":\"Grid charging threshold\",\"help\":\"Minimum gain per kWh to charge from the grid.\",\"more\":\"Default € 0.01. Charging from the grid only happens when it earns at least this much per kWh, after losses and wear. Higher = less often charging from the grid for a small gain.\"},\"plan_allow_export\":{\"label\":\"Export from the battery\",\"help\":\"May the battery deliver to the grid when that pays?\",\"more\":\"Default off. On only makes sense if the export price is sometimes higher than what recharging costs later, including about 15 % loss and wear. With net metering (until 2027) it rarely pays.\"},\"plan_load_margin\":{\"label\":\"Consumption margin\",\"help\":\"Plan with more consumption than learned.\",\"more\":\"Default 0 %; 5–15 % if the battery runs empty too early on busy evenings. The planner then counts on that much more consumption than learned.\"},\"plan_buffer\":{\"label\":\"Buffer\",\"help\":\"Part of the battery the planner keeps free.\",\"more\":\"Default 0 %; e.g. 10 % if you want a reserve for unexpected consumption. The planner does not plan this part; the controller may use it when consumption turns out higher. The planner then refills it when that is cheap.\"},\"expensive_hours\":{\"label\":\"Expensive hours\",\"help\":\"Without planner: only deliver in the N most expensive hours.\",\"more\":\"Default 4: the battery only delivers in the 4 most expensive hours of the day and holds its charge otherwise. Only in the mode Zero on the meter with a price sensor; Dynamic Forecasting chooses itself.\"},\"reserve_soc\":{\"label\":\"Reserve\",\"help\":\"Without planner: charge to this level before the expensive hours.\",\"more\":\"Default 20 %: before the expensive hours ZEPHYR charges up to this percentage. Only without the planner; with Dynamic Forecasting it counts as buffer.\"},\"min_price\":{\"label\":\"Minimum price\",\"help\":\"Without planner: do not deliver below this price.\",\"more\":\"E.g. € 0.25: below this price (all-in, per kWh) the battery does not deliver. Empty = no minimum.\"},\"live_off_after_restart\":{\"label\":\"Live control off after a restart (test phase)\",\"help\":\"Off (default): after a restart live control comes back on its own as soon as the P1 reports and the sets are online (if it was on). On: it stays off and you switch it on yourself.\",\"more\":\"Default off: after a restart live control comes back by itself. On only while testing, if you want to check after every restart before ZEPHYR controls the battery again.\"},\"vacation_when_away\":{\"label\":\"Vacation when nobody is home\",\"help\":\"On by itself after 24 hours with nobody home.\",\"more\":\"After 24 hours with nobody home (zone.home = 0) vacation turns on by itself: the planner then counts on low consumption. Off as soon as someone is back. Only works if phones with the HA app share their location.\"},\"workday_entity\":{\"label\":\"Workday sensor\",\"help\":\"Holidays count as weekend days.\",\"more\":\"Install the Workday integration (your country) and choose its sensor. Public holidays then count as weekend days in the consumption profile. Without a sensor Monday to Friday are workdays.\"},\"curtail_negative\":{\"label\":\"Surplus solar at a negative price\",\"help\":\"What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and curtails the inverter: with the switch or with the power limit below (one of the two).\",\"more\":\"With net metering (until 2027) the export price is rarely negative. Without it, it happens on sunny afternoons in spring and summer. Choose ZEPHYR if your inverter can be limited via HA (e.g. SolarEdge via Modbus), Other system if something else already does it.\"},\"curtail_switch\":{\"label\":\"Inverter curtail switch\",\"help\":\"On while the export price is negative. Alternative to the power limit.\",\"more\":\"A switch that makes your inverter stop exporting, e.g. a template switch that sets your inverter's export limit. ZEPHYR turns it on at a negative export price and off again afterwards. Choose this or the power limit.\"},\"solar_power_entities\":{\"label\":\"Solar panel power\",\"help\":\"Power sensors (W) of inverters, added up.\",\"more\":\"Power in W of inverters not connected to a Zendure set, e.g. AC power of SolarEdge; several are added up. Not the PV of the Zendure set itself: ZEPHYR already reads that. Empty: ZEPHYR estimates it from the solar counter (coarser, lags behind).\"},\"curtail_number\":{\"label\":\"Inverter power limit\",\"help\":\"Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.\",\"more\":\"E.g. Active power limit of the SolarEdge Modbus integration (a number in %). ZEPHYR sets it every 10 s so the inverter only produces what house and battery take, and back to 100 % afterwards. Needs: the rated power below and the solar power (Sources).\"},\"curtail_inverter_w\":{\"label\":\"Inverter rated power\",\"help\":\"Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.\",\"more\":\"The AC power on the rating plate, e.g. 5000 W for a SolarEdge SE5K, 3680 W for an SE3680H.\"},\"calibration_days\":{\"label\":\"Calibration after days\",\"help\":\"After this many days without 100 % the planner charges the battery full and lets the set calibrate.\",\"more\":\"Default 21 days; 0 = off. The longer the battery has not been full, the further the packs drift apart. From half of these days the planner looks for a cheap moment or sun to charge to full; on the last day it must. ZEPHYR then does not deliver until the set has finished calibrating (max. 2 hours).\"},\"price_forecast_entity\":{\"label\":\"Price forecast (jeroen.nl)\",\"help\":\"Optional: the sensor of ha-jeroen-nl, to look past the known prices.\",\"more\":\"Install the HACS integration ha-jeroen-nl with your own jeroen.nl API key and choose its price sensor here. ZEPHYR reads only that sensor and never fetches anything from jeroen.nl itself. Only forecast quarters after the last known Nord Pool price are used; Nord Pool always leads. Source: jeroen.nl.\"},\"price_forecast_mode\":{\"label\":\"Use in the plan\",\"help\":\"Indicative: the plan stays the same. Take into account: the planner plans with the forecast.\",\"more\":\"Indicative: the diagnostics compare the plan with and without the forecast. Take into account: the planner also looks at the forecast days (by default: the day after the known prices, so after about 13:00 the day after tomorrow). The level of the forecast can be off, the trend is usually clear; with the value Low the planner stays careful. Blocks on forecast quarters stay indicative and do not count in the totals. The stored forecasts give a backtest after about 6 weeks.\"},\"price_forecast_days\":{\"label\":\"Forecast days\",\"help\":\"How many days past the last known price.\",\"more\":\"Default 1: before about 13:00 the forecast stands in for tomorrow; after that it adds the day after tomorrow. 0 = only store the forecast for the quality figures.\"},\"price_forecast_value\":{\"label\":\"Value from the band\",\"help\":\"Low is careful: no charging on an optimistic guess.\",\"more\":\"jeroen.nl gives an 80 % band (p10–p90). Low uses p10 for buying and selling, so the planner does not charge for, or hold energy for, a peak that may not come. Middle uses the expected value.\"}},\"restarting\":\"ZEPHYR is restarting with the new settings…\",\"pending\":\"{n} changes not saved yet · ZEPHYR restarts briefly\",\"pending_one\":\"1 change not saved yet · ZEPHYR restarts briefly\",\"cancel\":\"Cancel\",\"save_restart\":\"Save and restart\",\"saving\":\"Saving…\",\"saved\":\"saved\",\"not_saved\":\"not saved\",\"reset\":\"Restore standard\",\"clear\":\"Clear\",\"remove\":\"Remove\",\"choose_entity\":\"Choose or type an entity\",\"actions\":{\"heating\":\"running\",\"cooling\":\"running\",\"drying\":\"running\",\"fan\":\"running\",\"preheating\":\"running\",\"defrosting\":\"defrosting\",\"idle\":\"idle\",\"off\":\"off\"},\"errors\":{\"out_of_range\":\"Outside the limits.\",\"off_step\":\"Does not fit the step size.\",\"not_a_number\":\"Not a number.\",\"not_a_bool\":\"Invalid value.\",\"required\":\"May not be empty.\",\"unknown_choice\":\"Unknown choice.\",\"choose_one\":\"Choose at least one mode. To switch off: clear the counter.\",\"not_an_entity\":\"This kind of entity does not fit here.\",\"entity_missing\":\"Entity not found.\",\"unknown_key\":\"Unknown setting.\",\"p1_missing\":\"Choose a P1 sensor.\",\"p1_pair_incomplete\":\"Choose both the import and the export sensor.\",\"p1_pair_same\":\"Import and export must be two different sensors.\",\"excluded_needs_counter\":\"The climate entity only works together with the air conditioner's energy counter. Choose the counter or clear the climate entity.\",\"failed\":\"Saving failed. Please try again.\",\"range\":\"Choose a value from {min} to {max}{unit}.\",\"entity_domain\":\"This field expects a {domain} entity\"},\"vac_active\":\"On vacation\",\"vac_home\":\"At home\",\"vac_off\":\"The planner uses the normal use.\",\"vac_until\":\"Until {until}. Until then the planner uses the use while away and charges in time for the return.\",\"vac_open\":\"Without an end date; switch it off when you are back.\",\"vac_auto\":\"On by itself since {since}: nobody has been home for 24 hours (option below). Goes off as soon as someone comes home.\",\"vac_until_label\":\"Back on\",\"vac_start\":\"Start vacation\",\"vac_stop\":\"End vacation\",\"vac_help\":\"During a vacation the planner uses the standby use and learns it apart; the normal use profile stays clean. An end date is optional.\",\"house_note\":\"When you usually run your appliances. One tap under Prices and plan lets ZEPHYR pick the cheapest start within this window. Add a new appliance with a smart plug via Devices & services → ZEPHYR → Add appliance. Changing the window reloads ZEPHYR briefly.\",\"house_floor\":\"Floor\",\"save\":\"Save\",\"discard\":\"Cancel\",\"floors\":{\"attic\":\"Attic\",\"first\":\"First floor\",\"ground\":\"Ground floor\",\"shed\":\"Shed\",\"outside\":\"Outside\"},\"appl_learned\":\"learned from {n} runs\",\"appl_default\":\"standard profile\",\"appl_airco\":\"not from the battery (Corrections)\",\"appl_from\":\"Not before\",\"appl_until\":\"Done by\",\"appl_shown\":\"Show on Power\",\"appl_after\":\"Always after the washing\",\"appl_after_help\":\"plan the dryer along (once, after the last wash) when you plan the washing\",\"curtail_head\":\"Inverter outside the sets (choose one)\",\"curtail_rated_missing\":\"Fill in the rated power, or ZEPHYR does not limit.\",\"sections\":{\"meter\":\"Meter\",\"prices\":\"Prices\",\"solar\":\"Solar\",\"counters\":\"Counters\",\"plan\":\"Plan\",\"curtail\":\"Curtail\"},\"group_sub\":{\"battery\":\"min, max, calibration\",\"tariffs\":\"supplier, tax, VAT\",\"corrections\":\"air conditioner\",\"vacation\":\"nobody home\",\"house\":\"picture, floors, appliances\",\"zero_meter\":\"expensive hours, reserve\",\"testing\":\"live after restart\"}}"),
 		airco: {
 			blocked: "Air conditioner {kw} kW · not from the battery",
 			blocked_unknown: "Air conditioner · not from the battery",
@@ -2275,7 +2275,7 @@ var z = class extends w {
             type="button"
             class="link"
             @click=${() => this.dispatchEvent(new CustomEvent("zephyr-open-settings", {
-			detail: "planner",
+			detail: "planner:curtail",
 			bubbles: !0,
 			composed: !0
 		}))}
@@ -5170,27 +5170,35 @@ function mn(e, t) {
 	let n = t(e.show_if.key);
 	return e.show_if.values.includes("*") ? Array.isArray(n) ? n.length > 0 : n != null && n !== "" : typeof n == "string" && e.show_if.values.includes(n);
 }
-function hn(e, t) {
+function hn(e) {
+	let t = [];
+	for (let n of e) n.section && !t.includes(n.section) && t.push(n.section);
+	return t;
+}
+function gn(e, t) {
 	return Object.fromEntries(Object.entries(e).filter(([e]) => t(e)));
 }
-function gn(e, t, n) {
+function _n(e, t, n) {
 	let r = typeof t == "number" && t < 1 ? Math.min(5, Math.max(0, Math.ceil(-Math.log10(t) - 1e-9))) : t === "any" ? 5 : 0;
 	return new Intl.NumberFormat(n, {
 		minimumFractionDigits: 0,
 		maximumFractionDigits: r
 	}).format(e);
 }
-function _n(e, t) {
+function vn(e, t) {
 	return e.tariff && e.active === !1 && e.in_use !== void 0 && e.in_use !== null ? e.in_use : t;
 }
 var J = class extends w {
 	constructor(...e) {
-		super(...e), this.uiLang = "en", this.locale = "en", this.friendlyName = () => void 0, this.group = 0, this.openGroup = null, this.openedFor = null, this.tip = null, this.draft = {}, this.errors = {}, this.busy = !1, this.saved = null, this.restarting = !1, this.houseDraft = null, this.vacUntil = null, this.domainErrors = {}, this.pickFor = null, this.pickQuery = "", this.pickIndex = 0;
+		super(...e), this.uiLang = "en", this.locale = "en", this.friendlyName = () => void 0, this.group = 0, this.openGroup = null, this.openedFor = null, this.tip = null, this.sectionOf = {}, this.draft = {}, this.errors = {}, this.busy = !1, this.saved = null, this.restarting = !1, this.houseDraft = null, this.vacUntil = null, this.domainErrors = {}, this.pickFor = null, this.pickQuery = "", this.pickIndex = 0;
 	}
 	applyOpenGroup(e) {
 		if ((e.has("openGroup") || e.has("view")) && this.openGroup && this.view && this.openedFor !== this.openGroup) {
-			let e = this.view.groups.findIndex((e) => e.key === this.openGroup);
-			e >= 0 && (this.group = e, this.openedFor = this.openGroup);
+			let [e, t] = this.openGroup.split(":"), n = this.view.groups.findIndex((t) => t.key === e);
+			n >= 0 && (this.group = n, t && (this.sectionOf = {
+				...this.sectionOf,
+				[e]: t
+			}), this.openedFor = this.openGroup);
 		}
 	}
 	willUpdate(e) {
@@ -5226,6 +5234,18 @@ var J = class extends w {
 			[e.key]: pn
 		} : this.send({}, [e.key], e.key);
 	}
+	showErrorSection(e) {
+		for (let t of e) {
+			let e = this.fieldByKey(t), n = this.view?.groups.find((e) => e.fields.some((e) => e.key === t));
+			if (e?.section && n) {
+				this.sectionOf = {
+					...this.sectionOf,
+					[n.key]: e.section
+				};
+				return;
+			}
+		}
+	}
 	localError(e, t) {
 		this.errors = {
 			...this.errors,
@@ -5240,7 +5260,7 @@ var J = class extends w {
 			return r.ok ? (n && (this.saved = n, window.clearTimeout(this.savedTimer), this.savedTimer = window.setTimeout(() => this.saved = null, 2500)), !0) : (this.errors = {
 				...this.errors,
 				...r.errors ?? { base: "failed" }
-			}, !1);
+			}, this.showErrorSection(Object.keys(r.errors ?? {})), !1);
 		} catch {
 			return this.errors = {
 				...this.errors,
@@ -5255,7 +5275,7 @@ var J = class extends w {
 			let t = this.fieldByKey(e);
 			return !t || this.visible(t);
 		};
-		for (let [r, i] of Object.entries(hn(this.draft, n))) i === pn ? t.push(r) : e[r] = i;
+		for (let [r, i] of Object.entries(gn(this.draft, n))) i === pn ? t.push(r) : e[r] = i;
 		let { base: r, ...i } = this.errors;
 		this.errors = i, await this.send(e, t, null) && (this.draft = {}, this.restarting = !0);
 	}
@@ -5283,6 +5303,7 @@ var J = class extends w {
 		}}
             >
               <span>${this.tr(`settings.groups.${e.key}`)}</span>
+              ${this.groupSub(e)}
 
             </button>`)}
       </nav>
@@ -5306,11 +5327,50 @@ var J = class extends w {
                 .changed=${this.reload}
               ></zephyr-house-editor>` : S}
         ${n.key === "house" ? this.renderHouse(e.house ?? [], e.can_edit) : S}
+        ${this.renderSections(n)}
         <ul>
-          ${n.fields.map((e) => this.renderField(e))}
+          ${this.sectionFields(n).map((e) => this.renderField(e))}
         </ul>
         ${this.renderBar()}
       </section>
+    </div>`;
+	}
+	activeSection(e) {
+		let t = hn(e.fields);
+		if (!t.length) return null;
+		let n = this.sectionOf[e.key];
+		return n && t.includes(n) ? n : t[0];
+	}
+	sectionFields(e) {
+		let t = this.activeSection(e);
+		return t ? e.fields.filter((e) => e.section === t) : e.fields;
+	}
+	groupSub(e) {
+		let t = hn(e.fields), n = t.length ? t.map((e) => this.tr(`settings.sections.${e}`).toLowerCase()).join(" · ") : this.tr(`settings.group_sub.${e.key}`);
+		return n && n !== `settings.group_sub.${e.key}` ? y`<small>${n}</small>` : S;
+	}
+	renderSections(e) {
+		let t = hn(e.fields);
+		if (t.length < 2) return S;
+		let n = this.activeSection(e);
+		return y`<div class="subtabs" role="tablist" aria-label=${this.tr(`settings.groups.${e.key}`)}>
+      ${t.map((t) => {
+			let r = e.fields.some((e) => e.section === t && (this.isModified(e) || e.key in this.draft));
+			return y`<button
+          type="button"
+          role="tab"
+          aria-selected=${t === n ? "true" : "false"}
+          class=${t === n ? "on" : ""}
+          @click=${() => {
+				this.sectionOf = {
+					...this.sectionOf,
+					[e.key]: t
+				}, this.tip = null;
+			}}
+        >
+          ${this.tr(`settings.sections.${t}`)}${r ? y`<i class="dot" aria-hidden="true"></i>` : S}
+        </button>`;
+		})}
     </div>`;
 	}
 	renderHouse(e, t) {
@@ -5464,7 +5524,7 @@ var J = class extends w {
     </div>`;
 	}
 	renderBar() {
-		let e = Object.keys(hn(this.draft, (e) => {
+		let e = Object.keys(gn(this.draft, (e) => {
 			let t = this.fieldByKey(e);
 			return !t || this.visible(t);
 		})).length, t = this.errors.base;
@@ -5544,8 +5604,8 @@ var J = class extends w {
 	}
 	errorText(e, t) {
 		return t === "entity_domain" ? this.tr("settings.errors.entity_domain", { domain: this.domainErrors[e.key] ?? e.domain }) : t === "out_of_range" && e.min !== null && e.max !== null ? this.tr("settings.errors.range", {
-			min: gn(e.min, e.step, this.locale),
-			max: gn(e.max, e.step, this.locale),
+			min: _n(e.min, e.step, this.locale),
+			max: _n(e.max, e.step, this.locale),
 			unit: e.unit ? ` ${e.unit}` : ""
 		}) : this.tr(`settings.errors.${t}`);
 	}
@@ -5553,7 +5613,7 @@ var J = class extends w {
 		return this.tr("settings.default", { value: this.display(e, e.default) });
 	}
 	display(e, t) {
-		return t == null || t === "" || Array.isArray(t) && !t.length ? this.tr("settings.none") : e.kind === "bool" ? this.tr(t ? "settings.yes" : "settings.no") : e.kind === "number" ? `${gn(Number(t), e.step, this.locale)}${e.unit ? ` ${e.unit}` : ""}` : e.kind === "select" ? e.key === "tariff_supplier" ? e.choices?.find((e) => e.value === t)?.label ?? this.tr("settings.own") : Array.isArray(t) ? t.map((e) => this.tr(`settings.options.${e}`)).join(", ") : this.tr(`settings.options.${String(t)}`) : (Array.isArray(t) ? t : [String(t)]).map((e) => this.friendlyName(e) ?? e).join(", ");
+		return t == null || t === "" || Array.isArray(t) && !t.length ? this.tr("settings.none") : e.kind === "bool" ? this.tr(t ? "settings.yes" : "settings.no") : e.kind === "number" ? `${_n(Number(t), e.step, this.locale)}${e.unit ? ` ${e.unit}` : ""}` : e.kind === "select" ? e.key === "tariff_supplier" ? e.choices?.find((e) => e.value === t)?.label ?? this.tr("settings.own") : Array.isArray(t) ? t.map((e) => this.tr(`settings.options.${e}`)).join(", ") : this.tr(`settings.options.${String(t)}`) : (Array.isArray(t) ? t : [String(t)]).map((e) => this.friendlyName(e) ?? e).join(", ");
 	}
 	meta(e) {
 		let t = [], n = this.isModified(e);
@@ -5561,8 +5621,8 @@ var J = class extends w {
 		let r = e.status;
 		r && (r.state === "unset" ? t.push(this.tr("settings.status.unset")) : r.state === "missing" ? t.push(this.tr("settings.status.missing", { entities: (r.entities ?? []).join(", ") })) : r.state === "unavailable" ? t.push(this.tr("settings.status.unavailable")) : r.mode === void 0 ? r.no_step ? t.push(this.tr("settings.status.no_step")) : r.step_interval_s != null && r.step_kwh != null ? t.push(this.tr("settings.status.steps", {
 			every: un(r.step_interval_s, this.locale),
-			kwh: gn(r.step_kwh, .01, this.locale)
-		})) : r.interval_s == null ? r.price_slots == null ? t.push(this.tr("settings.status.ok")) : t.push(this.tr("settings.status.slots", { n: r.price_slots })) : t.push(this.tr("settings.status.interval", { s: gn(r.interval_s, .1, this.locale) })) : t.push(r.action ? this.tr("settings.status.climate", {
+			kwh: _n(r.step_kwh, .01, this.locale)
+		})) : r.interval_s == null ? r.price_slots == null ? t.push(this.tr("settings.status.ok")) : t.push(this.tr("settings.status.slots", { n: r.price_slots })) : t.push(this.tr("settings.status.interval", { s: _n(r.interval_s, .1, this.locale) })) : t.push(r.action ? this.tr("settings.status.climate", {
 			mode: this.tr(`settings.options.${r.mode}`),
 			action: this.tr(`settings.actions.${r.action}`)
 		}) : this.tr(`settings.options.${r.mode}`)));
@@ -5579,7 +5639,7 @@ var J = class extends w {
     >`;
 	}
 	control(e, t) {
-		let n = !this.editable || this.busy || e.active === !1 && e.tariff, r = _n(e, this.shown(e));
+		let n = !this.editable || this.busy || e.active === !1 && e.tariff, r = vn(e, this.shown(e));
 		switch (e.kind) {
 			case "bool": return y`<button
           id=${t}
@@ -5597,7 +5657,7 @@ var J = class extends w {
             id=${t}
             type="text"
             inputmode="decimal"
-            .value=${r == null ? "" : gn(Number(r), e.step, this.locale)}
+            .value=${r == null ? "" : _n(Number(r), e.step, this.locale)}
             ?disabled=${n}
             aria-invalid=${this.errors[e.key] ? "true" : "false"}
             @change=${(t) => this.numberChanged(e, t.target)}
@@ -5802,6 +5862,61 @@ var J = class extends w {
       background: var(--z-text);
       color: var(--z-on-text);
       font-weight: 600;
+    }
+    .groups button {
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 1px;
+      text-align: left;
+    }
+    .groups small {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--z-muted);
+    }
+    .groups button.on small {
+      color: inherit;
+      opacity: 0.7;
+    }
+    .subtabs {
+      display: flex;
+      gap: 2px;
+      padding: 4px;
+      align-self: flex-start;
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--z-border);
+      border-radius: 999px;
+      background: var(--z-track);
+    }
+    .subtabs button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 36px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--z-text);
+      font: inherit;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .subtabs button.on {
+      background: var(--z-text);
+      color: var(--z-on-text);
+    }
+    .subtabs button:focus-visible {
+      outline: 2px solid var(--z-charge);
+      outline-offset: 2px;
+    }
+    .subtabs .dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
     }
     .groups button:focus-visible,
     .info:focus-visible {
@@ -6335,6 +6450,9 @@ var J = class extends w {
         flex-direction: row;
         flex-wrap: wrap;
       }
+      .groups small {
+        display: none;
+      }
       .groups button {
         width: auto;
       }
@@ -6345,35 +6463,35 @@ var J = class extends w {
   `;
 	}
 };
-R([E({ attribute: !1 })], J.prototype, "view", void 0), R([E({ attribute: !1 })], J.prototype, "uiLang", void 0), R([E()], J.prototype, "locale", void 0), R([E({ attribute: !1 })], J.prototype, "friendlyName", void 0), R([E({ attribute: !1 })], J.prototype, "states", void 0), R([E({ attribute: !1 })], J.prototype, "save", void 0), R([D()], J.prototype, "group", void 0), R([E({ attribute: !1 })], J.prototype, "openGroup", void 0), R([D()], J.prototype, "tip", void 0), R([D()], J.prototype, "draft", void 0), R([D()], J.prototype, "errors", void 0), R([D()], J.prototype, "busy", void 0), R([D()], J.prototype, "saved", void 0), R([D()], J.prototype, "restarting", void 0), R([E({ attribute: !1 })], J.prototype, "houseCall", void 0), R([E({ attribute: !1 })], J.prototype, "sign", void 0), R([E({ attribute: !1 })], J.prototype, "reload", void 0), R([E({ attribute: !1 })], J.prototype, "saveHouse", void 0), R([D()], J.prototype, "houseDraft", void 0), R([E({ attribute: !1 })], J.prototype, "appliances", void 0), R([E({ attribute: !1 })], J.prototype, "saveAppliances", void 0), R([E({ attribute: !1 })], J.prototype, "setVacation", void 0), R([D()], J.prototype, "vacUntil", void 0), R([D()], J.prototype, "domainErrors", void 0), R([D()], J.prototype, "pickFor", void 0), R([D()], J.prototype, "pickQuery", void 0), R([D()], J.prototype, "pickIndex", void 0), J = R([T("zephyr-settings")], J);
+R([E({ attribute: !1 })], J.prototype, "view", void 0), R([E({ attribute: !1 })], J.prototype, "uiLang", void 0), R([E()], J.prototype, "locale", void 0), R([E({ attribute: !1 })], J.prototype, "friendlyName", void 0), R([E({ attribute: !1 })], J.prototype, "states", void 0), R([E({ attribute: !1 })], J.prototype, "save", void 0), R([D()], J.prototype, "group", void 0), R([E({ attribute: !1 })], J.prototype, "openGroup", void 0), R([D()], J.prototype, "tip", void 0), R([D()], J.prototype, "sectionOf", void 0), R([D()], J.prototype, "draft", void 0), R([D()], J.prototype, "errors", void 0), R([D()], J.prototype, "busy", void 0), R([D()], J.prototype, "saved", void 0), R([D()], J.prototype, "restarting", void 0), R([E({ attribute: !1 })], J.prototype, "houseCall", void 0), R([E({ attribute: !1 })], J.prototype, "sign", void 0), R([E({ attribute: !1 })], J.prototype, "reload", void 0), R([E({ attribute: !1 })], J.prototype, "saveHouse", void 0), R([D()], J.prototype, "houseDraft", void 0), R([E({ attribute: !1 })], J.prototype, "appliances", void 0), R([E({ attribute: !1 })], J.prototype, "saveAppliances", void 0), R([E({ attribute: !1 })], J.prototype, "setVacation", void 0), R([D()], J.prototype, "vacUntil", void 0), R([D()], J.prototype, "domainErrors", void 0), R([D()], J.prototype, "pickFor", void 0), R([D()], J.prototype, "pickQuery", void 0), R([D()], J.prototype, "pickIndex", void 0), J = R([T("zephyr-settings")], J);
 // src/diag.ts
-var vn = [
+var yn = [
 	"charged",
 	"discharged",
 	"solar"
 ];
-function yn(e) {
+function bn(e) {
 	let t = 0, n = 0;
-	for (let r of vn) t += e.estimated[r] ?? 0, n += e.kwh[r] ?? 0;
+	for (let r of yn) t += e.estimated[r] ?? 0, n += e.kwh[r] ?? 0;
 	return {
 		kwh: t,
 		share: n > 0 ? t / n : null
 	};
 }
-function bn(e) {
+function xn(e) {
 	return e.sets.flatMap((e, t) => e.gaps.map((n) => ({
 		...n,
 		set: e.set ?? t + 1
 	}))).sort((e, t) => t.end.localeCompare(e.end));
 }
-function xn(e, t) {
+function Sn(e, t) {
 	let n = e.find((e) => e.day === t) ?? null, r = e.filter((e) => e.day !== t), i = r.length ? r : e;
 	return {
 		today: n,
 		mean: i.length ? i.reduce((e, t) => e + t.kwh, 0) / i.length : null
 	};
 }
-function Sn(e, t, n) {
+function Cn(e, t, n) {
 	let r = (e) => new Intl.NumberFormat(n, {
 		minimumFractionDigits: 1,
 		maximumFractionDigits: 1
@@ -6390,10 +6508,10 @@ function Sn(e, t, n) {
 		default: return F(t, `diag.event.${e.kind}`);
 	}
 }
-function Cn(e) {
+function wn(e) {
 	return e.kind === "mode" ? "mode" : e.kind === "live" || e.kind === "shadow" || e.kind === "test" || e.kind === "test_end" ? "live" : e.kind === "excluded_on" || e.kind === "excluded_off" ? "airco" : e.kind === "flash" ? "write" : e.kind === "second_controller" ? "warning" : "control";
 }
-var wn = [
+var Tn = [
 	[/^no P1 sensor chosen$/, "no_p1"],
 	[/^P1 is not reporting$/, "p1_silent"],
 	[/^no sets$/, "no_sets"],
@@ -6402,14 +6520,14 @@ var wn = [
 	[/^set (\d+) reports an error$/, "fault"],
 	[/^a write test is running$/, "test"]
 ];
-function Tn(e, t) {
-	for (let [n, r] of wn) {
+function En(e, t) {
+	for (let [n, r] of Tn) {
 		let i = n.exec(e);
 		if (i) return F(t, `control.blocker.${r}`, { set: i[1] ?? "" });
 	}
 	return e;
 }
-function En(e) {
+function Dn(e) {
 	let t = e.house.reduce((e, t) => e + t, 0), n = e.airco.reduce((e, t) => e + t, 0), r = Math.max(0, ...e.house.map((t, n) => t + (e.airco[n] ?? 0)));
 	return {
 		total: t,
@@ -6418,20 +6536,20 @@ function En(e) {
 		learned: e.counts.filter((t) => t >= e.min_count).length
 	};
 }
-function Dn(e) {
+function On(e) {
 	return Math.abs(e.expected) < .05 ? null : (e.actual - e.expected) / Math.abs(e.expected);
 }
-function On(e, t) {
+function kn(e, t) {
 	return e.planned.filter((e) => e.appliance === t).sort((e, t) => (e.best_start ?? "9999").localeCompare(t.best_start ?? "9999") || e.index - t.index);
 }
-function kn(e, t) {
+function An(e, t) {
 	return t >= (e === "washer" ? 2 : 1) ? "clear" : "plan";
 }
-var An = (e) => {
+var jn = (e) => {
 	let [t, n] = e.split(":").map(Number);
 	return t * 60 + n;
 };
-function jn(e, t, n, r) {
+function Mn(e, t, n, r) {
 	let i = Je("en-GB", {
 		timeZone: r,
 		hour: "2-digit",
@@ -6439,11 +6557,11 @@ function jn(e, t, n, r) {
 		hourCycle: "h23"
 	}), a = Math.max(1, t.minutes), o = t.profile_w && t.profile_w.length ? t.profile_w.map((e) => e / 6e4) : Array(a).fill(t.kwh / a), s = o.length, c = /* @__PURE__ */ new Map();
 	for (let t of e) t.buy !== null && c.set(new Date(t.start).getTime(), t.buy);
-	let l = t.window.from ? An(t.window.from) : null, u = An(t.window.until), d = (e) => l === null ? !0 : l <= u ? e >= l && e <= u : e >= l || e <= u, f = null;
+	let l = t.window.from ? jn(t.window.from) : null, u = jn(t.window.until), d = (e) => l === null ? !0 : l <= u ? e >= l && e <= u : e >= l || e <= u, f = null;
 	for (let t of e) {
 		let e = new Date(t.start).getTime();
 		if (e + 9e5 <= n || t.buy === null || l === null && e - n > 864e5) continue;
-		let r = An(i.format(new Date(e)));
+		let r = jn(i.format(new Date(e)));
 		if (!d(r) || !d((r + s) % 1440)) continue;
 		let a = 0, u = !0;
 		for (let t = 0; t < s; t++) {
@@ -6473,7 +6591,7 @@ var Y = class extends w {
 		if (!this.busy) {
 			this.busy = e.id;
 			try {
-				kn(e.kind, t) === "clear" ? await this.clear?.(e.id) : await this.plan?.(e.id, {});
+				An(e.kind, t) === "clear" ? await this.clear?.(e.id) : await this.plan?.(e.id, {});
 			} finally {
 				this.busy = null;
 			}
@@ -6486,20 +6604,20 @@ var Y = class extends w {
       role="group"
       aria-label=${this.tr("appl.title")}
     >
-      ${e.appliances.map((t) => this.button(t, On(e, t.id)))}
+      ${e.appliances.map((t) => this.button(t, kn(e, t.id)))}
     </div>`;
 	}
 	button(e, t) {
 		let n = t.length > 0, r = t.map((e) => e.fixed_start ?? e.best_start).filter((e) => !!e), i = t.reduce((e, t) => e + (t.cost ?? 0), 0), a = t.reduce((e, t) => e + (t.saving ?? 0), 0), o = t.find((e) => e.after)?.after ?? null, s, c = null;
 		if (!n) {
-			let t = jn(this.quarters, e, this.clockMs, this.timeZone);
+			let t = Mn(this.quarters, e, this.clockMs, this.timeZone);
 			s = t === null ? this.tr("appl.tap") : this.tr("appl.per_run", { euro: O(t, this.locale) });
 		} else if (!r.length) s = this.tr("appl.calculating");
 		else {
 			let e = r.map((e, t) => t === 0 ? this.when(e) : M(e, this.locale, this.timeZone));
 			s = `${this.tr("appl.start")} ${e.join(` ${this.tr("appl.and")} `)} · ${O(i, this.locale)}`, c = o ? this.tr("appl.after_wash") : a >= .01 ? this.tr("appl.cheaper", { euro: O(a, this.locale) }) : null;
 		}
-		let l = n ? `${e.name} ${t.length}×` : e.name, u = kn(e.kind, t.length) === "clear" ? "appl.tap_clear" : n ? "appl.tap_more" : "appl.tap_plan";
+		let l = n ? `${e.name} ${t.length}×` : e.name, u = An(e.kind, t.length) === "clear" ? "appl.tap_clear" : n ? "appl.tap_more" : "appl.tap_plan";
 		return y`<button
       type="button"
       class=${`b${n ? " on" : ""}`}
@@ -6597,11 +6715,11 @@ var Y = class extends w {
 	}
 };
 R([E({ attribute: !1 })], Y.prototype, "view", void 0), R([E({ attribute: !1 })], Y.prototype, "quarters", void 0), R([E({ attribute: !1 })], Y.prototype, "uiLang", void 0), R([E()], Y.prototype, "locale", void 0), R([E()], Y.prototype, "timeZone", void 0), R([E({ type: Number })], Y.prototype, "clockMs", void 0), R([E({ attribute: !1 })], Y.prototype, "plan", void 0), R([E({ attribute: !1 })], Y.prototype, "clear", void 0), R([D()], Y.prototype, "busy", void 0), Y = R([T("zephyr-appliances")], Y);
-function Mn(e) {
+function Nn(e) {
 	return e.startsWith("dryer") ? "dryer" : ["washer", "dishwasher"].includes(e) ? e : "other";
 }
 // src/diagnostics.ts
-var Nn = 5, X = class extends w {
+var Pn = 5, X = class extends w {
 	constructor(...e) {
 		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.peakInfo = !1, this.allGapsOpen = !1, this.admin = !1, this.busy = null, this.note = null, this.dayKind = "workday", this.metric = "load";
 	}
@@ -6729,7 +6847,7 @@ var Nn = 5, X = class extends w {
       <p class="muted small">${this.tr("diag.counters_note")}</p>`;
 	}
 	renderPeaks(e) {
-		let t = new Intl.DateTimeFormat("en-CA", { timeZone: this.timeZone }).format(/* @__PURE__ */ new Date()), n = xn(e, t), r = Math.max(.05, ...e.map((e) => e.kwh)), i = (e) => A(e, this.locale, 2);
+		let t = new Intl.DateTimeFormat("en-CA", { timeZone: this.timeZone }).format(/* @__PURE__ */ new Date()), n = Sn(e, t), r = Math.max(.05, ...e.map((e) => e.kwh)), i = (e) => A(e, this.locale, 2);
 		return y`<section class="card" aria-labelledby="pk-title">
       <div class="head">
         <h2 id="pk-title">${this.tr("diag.peaks_title")}</h2>
@@ -6795,7 +6913,7 @@ var Nn = 5, X = class extends w {
       <div class="ahead">
         <b>${e.name}</b>
         <span class="muted small"
-          >${this.tr(`diag.kind_${Mn(e.kind)}`)}</span
+          >${this.tr(`diag.kind_${Nn(e.kind)}`)}</span
         >
         ${e.running ? y`<span class="chip on">${this.tr("diag.appl_running")}</span>` : S}
       </div>
@@ -6831,7 +6949,7 @@ var Nn = 5, X = class extends w {
 			hour: "2-digit",
 			minute: "2-digit",
 			timeZone: this.timeZone
-		}), r = (e) => e < 120 ? `${Math.round(e)} s` : e < 7200 ? `${Math.round(e / 60)} min` : `${(e / 3600).toLocaleString(this.locale, { maximumFractionDigits: 1 })} h`, i = bn(e), a = this.allGapsOpen ? i : i.slice(0, Nn), o = e.sets.length > 1;
+		}), r = (e) => e < 120 ? `${Math.round(e)} s` : e < 7200 ? `${Math.round(e / 60)} min` : `${(e / 3600).toLocaleString(this.locale, { maximumFractionDigits: 1 })} h`, i = xn(e), a = this.allGapsOpen ? i : i.slice(0, Pn), o = e.sets.length > 1;
 		return y`<section class="card" aria-labelledby="en-title">
       <div>
         <h2 id="en-title">${this.tr("diag.energy_title")}</h2>
@@ -6841,17 +6959,17 @@ var Nn = 5, X = class extends w {
         <thead>
           <tr>
             <th scope="col">${this.tr("diag.set")}</th>
-            ${vn.map((e) => y`<th scope="col">${this.tr(`diag.energy_${e}`)}</th>`)}
+            ${yn.map((e) => y`<th scope="col">${this.tr(`diag.energy_${e}`)}</th>`)}
             <th scope="col">${this.tr("diag.energy_estimated")}</th>
             <th scope="col">${this.tr("diag.energy_failed")}</th>
           </tr>
         </thead>
         <tbody>
           ${e.sets.map((e, r) => {
-			let i = yn(e);
+			let i = bn(e);
 			return y`<tr>
                 <th scope="row">${e.set ?? r + 1}</th>
-                ${vn.map((n) => y`<td>${t(e.kwh[n])}</td>`)}
+                ${yn.map((n) => y`<td>${t(e.kwh[n])}</td>`)}
                 <td>
                   ${t(i.kwh)}${i.share !== null && i.kwh > 0 ? y` <span class="muted">(${j(i.share * 100, this.locale)})</span>` : S}
                 </td>
@@ -6865,7 +6983,7 @@ var Nn = 5, X = class extends w {
 		})}
           ${o ? y`<tr class="total">
                   <th scope="row">${this.tr("diag.energy_total")}</th>
-                  ${vn.map((n) => y`<td>${t(e.totals[n])}</td>`)}
+                  ${yn.map((n) => y`<td>${t(e.totals[n])}</td>`)}
                   <td></td>
                   <td></td>
                 </tr>` : S}
@@ -6886,11 +7004,11 @@ var Nn = 5, X = class extends w {
 		].includes(e.method) ? e.method : "none"}`)}${e.restart ? ` · ${this.tr("diag.energy_restart")}` : ""}</span
                     >
                     <span class="muted"
-                      >${Object.entries(e.kwh).filter(([e]) => vn.includes(e)).map(([e, n]) => `${this.tr(`diag.energy_${e}`).toLowerCase()} ${t(n)} kWh`).join(" · ") || this.tr("diag.energy_nothing")}</span
+                      >${Object.entries(e.kwh).filter(([e]) => yn.includes(e)).map(([e, n]) => `${this.tr(`diag.energy_${e}`).toLowerCase()} ${t(n)} kWh`).join(" · ") || this.tr("diag.energy_nothing")}</span
                     >
                   </li>`)}
             </ul>
-            ${i.length > Nn ? y`<button
+            ${i.length > Pn ? y`<button
                     type="button"
                     class="linkish"
                     aria-expanded=${this.allGapsOpen ? "true" : "false"}
@@ -6941,7 +7059,7 @@ var Nn = 5, X = class extends w {
                   ${t.map((t) => {
 			let r = e.summary[t];
 			if (!r) return S;
-			let i = Dn(r);
+			let i = On(r);
 			return y`<tr
                       class=${t === this.metric ? "on" : ""}
                       @click=${() => this.metric = t}
@@ -7011,7 +7129,7 @@ var Nn = 5, X = class extends w {
     </section>`;
 	}
 	renderProfile(e) {
-		let t = e[this.dayKind], n = En(t), r = (e, t = 1) => new Intl.NumberFormat(this.locale, {
+		let t = e[this.dayKind], n = Dn(t), r = (e, t = 1) => new Intl.NumberFormat(this.locale, {
 			minimumFractionDigits: t,
 			maximumFractionDigits: t
 		}).format(e), i = t.airco.some((e) => e > 0) || e.workday.airco.some((e) => e > 0);
@@ -7099,11 +7217,11 @@ var Nn = 5, X = class extends w {
 		let t = (/* @__PURE__ */ new Date()).toISOString();
 		return y`<ol>
       ${e.events.map((e) => {
-			let n = Cn(e), r = P(e.time, t, this.timeZone) ? M(e.time, this.locale, this.timeZone) : `${N(e.time, this.locale, this.timeZone)} ${M(e.time, this.locale, this.timeZone)}`;
+			let n = wn(e), r = P(e.time, t, this.timeZone) ? M(e.time, this.locale, this.timeZone) : `${N(e.time, this.locale, this.timeZone)} ${M(e.time, this.locale, this.timeZone)}`;
 			return y`<li>
           <time datetime=${e.time}>${r}</time>
           <span class="kind k-${n}">${this.tr(`diag.kind.${n}`)}</span>
-          <span class="text">${Sn(e, this.uiLang, this.locale)}</span>
+          <span class="text">${Cn(e, this.uiLang, this.locale)}</span>
         </li>`;
 		})}
     </ol>`;
@@ -7657,20 +7775,20 @@ var Nn = 5, X = class extends w {
 };
 R([E({ attribute: !1 })], X.prototype, "view", void 0), R([E({ attribute: !1 })], X.prototype, "uiLang", void 0), R([E()], X.prototype, "locale", void 0), R([E()], X.prototype, "timeZone", void 0), R([E({ attribute: !1 })], X.prototype, "appliances", void 0), R([D()], X.prototype, "peakInfo", void 0), R([D()], X.prototype, "allGapsOpen", void 0), R([E({ type: Boolean })], X.prototype, "admin", void 0), R([E({ attribute: !1 })], X.prototype, "download", void 0), R([E({ attribute: !1 })], X.prototype, "exportCosts", void 0), R([E({ attribute: !1 })], X.prototype, "refresh", void 0), R([E({ attribute: !1 })], X.prototype, "planCheck", void 0), R([D()], X.prototype, "busy", void 0), R([D()], X.prototype, "note", void 0), R([D()], X.prototype, "dayKind", void 0), R([D()], X.prototype, "metric", void 0), X = R([T("zephyr-diagnostics")], X);
 // src/savings.ts
-var Pn, Fn = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
-function In(e) {
+var Fn, In = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
+function Ln(e) {
 	let t = e.map((e) => e.savings_battery ?? 0), n = t.map(Math.abs).filter((e) => e > 0).sort((e, t) => e - t), r = n.length ? n[Math.floor(n.length * .75)] : .5, i = Math.max(.5, r * 2), a = Math.min(i, Math.max(0, ...t)), o = Math.max(-i, Math.min(0, ...t));
 	return {
-		top: Math.max(.5, Fn(a)),
-		bottom: -Fn(-o)
+		top: Math.max(.5, In(a)),
+		bottom: -In(-o)
 	};
 }
 var Z = class extends w {
 	static {
-		Pn = this;
+		Fn = this;
 	}
 	constructor(...e) {
-		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = Pn.storedForm(), this.busy = !1, this.result = null;
+		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = Fn.storedForm(), this.busy = !1, this.result = null;
 	}
 	tr(e, t = {}) {
 		return F(this.uiLang, e, t);
@@ -7879,7 +7997,7 @@ var Z = class extends w {
 	}
 	renderDays(e) {
 		if (!e.length) return y`<p class="muted">${this.tr("savings.no_data")}</p>`;
-		let { top: t, bottom: n } = In(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
+		let { top: t, bottom: n } = Ln(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
 			weekday: "short",
 			day: "numeric",
 			month: "short",
@@ -8369,12 +8487,12 @@ var Z = class extends w {
   `;
 	}
 };
-R([E({ attribute: !1 })], Z.prototype, "view", void 0), R([E({ attribute: !1 })], Z.prototype, "uiLang", void 0), R([E()], Z.prototype, "locale", void 0), R([E()], Z.prototype, "timeZone", void 0), R([E({ type: Boolean })], Z.prototype, "admin", void 0), R([E({ attribute: !1 })], Z.prototype, "states", void 0), R([E({ attribute: !1 })], Z.prototype, "backfill", void 0), R([D()], Z.prototype, "period", void 0), R([D()], Z.prototype, "form", void 0), R([D()], Z.prototype, "busy", void 0), R([D()], Z.prototype, "result", void 0), Z = Pn = R([T("zephyr-savings")], Z);
+R([E({ attribute: !1 })], Z.prototype, "view", void 0), R([E({ attribute: !1 })], Z.prototype, "uiLang", void 0), R([E()], Z.prototype, "locale", void 0), R([E()], Z.prototype, "timeZone", void 0), R([E({ type: Boolean })], Z.prototype, "admin", void 0), R([E({ attribute: !1 })], Z.prototype, "states", void 0), R([E({ attribute: !1 })], Z.prototype, "backfill", void 0), R([D()], Z.prototype, "period", void 0), R([D()], Z.prototype, "form", void 0), R([D()], Z.prototype, "busy", void 0), R([D()], Z.prototype, "result", void 0), Z = Fn = R([T("zephyr-savings")], Z);
 // src/stroom.ts
-function Ln(e, t) {
+function Rn(e, t) {
 	return e.name ?? t(`stroom.kind_${e.kind}`);
 }
-function Rn(e, t) {
+function zn(e, t) {
 	let n = e.filter((e) => e.shown).map((e) => ({
 		id: e.id,
 		device: e,
@@ -8386,27 +8504,27 @@ function Rn(e, t) {
 		kwh: t
 	}), n;
 }
-function zn(e, t, n) {
+function Bn(e, t, n) {
 	let r = "", i = !1;
 	for (let [a, o] of e) o === null ? i = !1 : (r += `${i ? "L" : "M"}${t(a).toFixed(1)},${n(o).toFixed(1)}`, i = !0);
 	return r;
 }
-function Bn(e, t) {
+function Vn(e, t) {
 	let n = Math.round(e);
 	return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toLocaleString(t)} W`;
 }
-function Vn(e) {
+function Hn(e) {
 	let t = 200;
 	for (let [, n, r] of e) n !== null && (t = Math.max(t, Math.abs(n - r)));
 	return Math.ceil(t / 100) * 100;
 }
-var Hn = .8;
-function Un(e) {
+var Un = .8;
+function Wn(e) {
 	if (!e) return "none";
 	let [t, n, r, i] = e;
 	return t < 30 ? "idle" : n / t >= .8 ? "good" : r >= i ? "import" : "export";
 }
-var Wn = [
+var Gn = [
 	["solar", [
 		["solar_house", "house"],
 		["solar_battery", "battery"],
@@ -8452,7 +8570,7 @@ var Wn = [
             </p>` : y`<div class="row">
               <span class="big">${j(n * 100, this.locale)}</span>
               <span class=${r ? "pill good" : "pill warn"}
-                >${this.tr(r ? "stroom.zero_good" : "stroom.zero_low", { goal: j(Hn * 100, this.locale) })}</span
+                >${this.tr(r ? "stroom.zero_good" : "stroom.zero_low", { goal: j(Un * 100, this.locale) })}</span
               >
             </div>`}
       ${t ? this.strip(t) : S}
@@ -8483,7 +8601,7 @@ var Wn = [
 	}
 	strip(e) {
 		let t = 360 / (e.buckets.length || 288), n = e.buckets.map((e, n) => {
-			let r = Un(e);
+			let r = Wn(e);
 			return r === "none" ? S : b`<rect x=${(n * t).toFixed(2)} y="2" width=${(t + .3).toFixed(2)} height="22" class=${`c ${r}`}></rect>`;
 		});
 		return y`<svg
@@ -8517,7 +8635,7 @@ var Wn = [
           ${n ? this.tr("stroom.routes_sub", { until: n }) : this.tr("stroom.routes_none")}
         </p>
       </div>
-      ${Wn.map(([n, r]) => y`<div class="grp">${this.tr(`stroom.src_${n}`)}</div>
+      ${Gn.map(([n, r]) => y`<div class="grp">${this.tr(`stroom.src_${n}`)}</div>
             ${r.map(([r, i]) => y`<div class="route">
                   <span>→ ${this.tr(`stroom.to_${i}`)}</span>
                   <div class="bar">
@@ -8545,9 +8663,9 @@ var Wn = [
     </section>`;
 	}
 	renderRegulation(e, t) {
-		let n = typeof window < "u" && window.matchMedia?.("(max-width: 600px)").matches, r = n ? 360 : 760, i = n ? 50 : 52, a = r - 8, o = e.window_s, s = (e) => i + (e + o) / o * (a - i), c = Vn(e.samples), l = (e) => 69 - Math.max(-c, Math.min(c, e)) / c * 55, u = 0, d = 0;
+		let n = typeof window < "u" && window.matchMedia?.("(max-width: 600px)").matches, r = n ? 360 : 760, i = n ? 50 : 52, a = r - 8, o = e.window_s, s = (e) => i + (e + o) / o * (a - i), c = Hn(e.samples), l = (e) => 69 - Math.max(-c, Math.min(c, e)) / c * 55, u = 0, d = 0;
 		for (let [, , , t, n] of e.samples) u = Math.min(u, t, n ?? 0), d = Math.max(d, t, n ?? 0);
-		let f = Math.max(500, Math.ceil((d - u) / 250) * 250), p = Math.floor(u / 250) * 250, m = (e) => 248 - (e - p) / f * 90, ee = zn(e.samples.map(([e, t, n]) => [e, t === null ? null : t - n]), s, l), te = zn(e.samples.map(([e, , , t]) => [e, t]), s, m), ne = zn(e.samples.map(([e, , , , t]) => [e, t]), s, m), re = [], h = null;
+		let f = Math.max(500, Math.ceil((d - u) / 250) * 250), p = Math.floor(u / 250) * 250, m = (e) => 248 - (e - p) / f * 90, ee = Bn(e.samples.map(([e, t, n]) => [e, t === null ? null : t - n]), s, l), te = Bn(e.samples.map(([e, , , t]) => [e, t]), s, m), ne = Bn(e.samples.map(([e, , , , t]) => [e, t]), s, m), re = [], h = null;
 		e.samples.forEach(([t, , , , , n], r) => {
 			let i = r === e.samples.length - 1;
 			!n && h === null && (h = t), (n || i) && h !== null && (re.push(b`<rect x=${s(h)} y=${14} width=${Math.max(1, s(t) - s(h))} height=${234} class="idle"></rect>`), h = null);
@@ -8587,13 +8705,13 @@ var Wn = [
 			c,
 			0,
 			-c
-		].map((e) => b`<text x=${i - 6} y=${l(e) + 3} text-anchor="end">${Bn(e, this.locale)}</text>`)}
+		].map((e) => b`<text x=${i - 6} y=${l(e) + 3} text-anchor="end">${Vn(e, this.locale)}</text>`)}
                 <text x=${i} y=${11} class="cap">
                   ${this.tr("stroom.reg_p1")}
                 </text>
                 <path d=${ee} class="dev"></path>
                 ${ie.map((e) => b`<line x1=${i} x2=${a} y1=${m(e)} y2=${m(e)} class="grid"></line>
-                  <text x=${i - 6} y=${m(e) + 3} text-anchor="end">${Bn(e, this.locale)}</text>`)}
+                  <text x=${i - 6} y=${m(e) + 3} text-anchor="end">${Vn(e, this.locale)}</text>`)}
                 <text x=${i} y=${153} class="cap">
                   ${this.tr("stroom.reg_battery")}
                 </text>
@@ -8636,7 +8754,7 @@ var Wn = [
     </section>`;
 	}
 	renderDevices(e) {
-		let t = (e) => this.tr(e), n = Rn(e.devices ?? [], e.rest_today_kwh ?? null), r = Math.max(.5, ...n.map((e) => e.kwh ?? 0)), i = e.today.airco;
+		let t = (e) => this.tr(e), n = zn(e.devices ?? [], e.rest_today_kwh ?? null), r = Math.max(.5, ...n.map((e) => e.kwh ?? 0)), i = e.today.airco;
 		return y`<section class="card" aria-labelledby="dv-title">
       <div>
         <h2 id="dv-title">${this.tr("stroom.devices_title")}</h2>
@@ -8644,7 +8762,7 @@ var Wn = [
       </div>
       ${n.map((e) => y`<div class="route dev">
             <span
-              >${e.device ? Ln(e.device, t) : this.tr("stroom.rest")}${e.device && e.device.power_w !== null && e.device.power_w >= 10 ? y` <span class="live"
+              >${e.device ? Rn(e.device, t) : this.tr("stroom.rest")}${e.device && e.device.power_w !== null && e.device.power_w >= 10 ? y` <span class="live"
                       >${k(e.device.power_w, this.locale)}</span
                     >` : S}</span
             >
@@ -8944,13 +9062,13 @@ var Wn = [
 };
 R([E({ attribute: !1 })], Q.prototype, "now", void 0), R([E({ attribute: !1 })], Q.prototype, "view", void 0), R([E({ attribute: !1 })], Q.prototype, "uiLang", void 0), R([E()], Q.prototype, "locale", void 0), R([E()], Q.prototype, "timeZone", void 0), R([E()], Q.prototype, "base", void 0), R([E({ attribute: !1 })], Q.prototype, "sign", void 0), Q = R([T("zephyr-stroom")], Q);
 // src/now.ts
-var Gn = /* @__PURE__ */ new Set([
+var Kn = /* @__PURE__ */ new Set([
 	"delivering",
 	"charging_solar",
 	"plan_charge",
 	"plan_hold",
 	"plan_export"
-]), Kn = /* @__PURE__ */ new Set([
+]), qn = /* @__PURE__ */ new Set([
 	"p1_missing",
 	"p1_lost",
 	"p1_stale",
@@ -8959,22 +9077,22 @@ var Gn = /* @__PURE__ */ new Set([
 	"blocked",
 	"temperature"
 ]);
-function qn(e) {
-	return !e || Gn.has(e) ? "hide" : Kn.has(e) ? "warn" : "note";
-}
 function Jn(e) {
+	return !e || Kn.has(e) ? "hide" : qn.has(e) ? "warn" : "note";
+}
+function Yn(e) {
 	if (!e) return null;
 	for (let [t, n] of Object.entries(e)) if (t.startsWith("update.") && String(n.attributes?.release_url ?? "").toLowerCase().includes("github.com/cardinal808/zephyr/")) return n;
 	return null;
 }
-var Yn = (e) => String(e ?? "").replace(/^v/i, "");
-function Xn(e, t) {
-	let n = Yn(e);
+var Xn = (e) => String(e ?? "").replace(/^v/i, "");
+function Zn(e, t) {
+	let n = Xn(e);
 	if (!t) return {
 		kind: "version",
 		running: n
 	};
-	let r = Yn(t.attributes.installed_version), i = Yn(t.attributes.latest_version);
+	let r = Xn(t.attributes.installed_version), i = Xn(t.attributes.latest_version);
 	return r && n && r !== n ? {
 		kind: "restart",
 		running: n,
@@ -8991,7 +9109,7 @@ function Xn(e, t) {
 		running: n
 	};
 }
-function Zn(e, t) {
+function Qn(e, t) {
 	let n = Math.round(e), r = n > 0 ? "+" : n < 0 ? "−" : "", i = Math.abs(n) <= 50 ? "zero" : n > 0 ? "import" : "export";
 	return {
 		text: `${r}${Xe(Math.abs(n), t, 0)} W`,
@@ -8999,7 +9117,7 @@ function Zn(e, t) {
 	};
 }
 // src/zephyr-panel.ts
-var Qn = "/zephyr_static", $n = [
+var $n = "/zephyr_static", er = [
 	[
 		"Inter",
 		400,
@@ -9021,11 +9139,11 @@ var Qn = "/zephyr_static", $n = [
 		"space-grotesk-latin-700-normal.woff2"
 	]
 ];
-function er(e) {
+function tr(e) {
 	let t = "zephyr-fonts";
 	if (document.getElementById(t)) return;
 	let n = document.createElement("style");
-	n.id = t, n.textContent = $n.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
+	n.id = t, n.textContent = er.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
 }
 var $ = class extends w {
 	constructor(...e) {
@@ -9151,7 +9269,7 @@ var $ = class extends w {
 		};
 	}
 	get base() {
-		return this.panel?.config?.static ?? Qn;
+		return this.panel?.config?.static ?? $n;
 	}
 	get uiLang() {
 		return et(this.hass?.locale?.language ?? this.hass?.language);
@@ -9166,7 +9284,7 @@ var $ = class extends w {
 		return F(this.uiLang, e, t);
 	}
 	connectedCallback() {
-		super.connectedCallback(), er(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
+		super.connectedCallback(), tr(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), window.clearInterval(this.clockTimer), window.clearInterval(this.planTimer), window.clearInterval(this.setsTimer), window.clearTimeout(this.retryTimer), this.watch(void 0), this.stop();
@@ -9384,7 +9502,7 @@ var $ = class extends w {
 	renderVersion() {
 		let e = this.panel?.config?.version;
 		if (!e) return S;
-		let t = Xn(e, Jn(this.hass?.states));
+		let t = Zn(e, Yn(this.hass?.states));
 		return t.kind === "version" ? y`<span class="version">v${t.running}</span>` : t.kind === "restart" ? this.admin ? y`<span class="livewrap verwrap">
             <button
               type="button"
@@ -9458,7 +9576,7 @@ var $ = class extends w {
       <strong>${this.tr("control.live_title")}</strong>
       <p>${this.tr(t ? "control.live_blocked" : "control.live_text")}</p>
       ${t ? y`<ul>
-              ${e.blockers.map((e) => y`<li>${Tn(e, this.uiLang)}</li>`)}
+              ${e.blockers.map((e) => y`<li>${En(e, this.uiLang)}</li>`)}
             </ul>` : S}
       <div class="row">
         <button
@@ -9670,7 +9788,7 @@ var $ = class extends w {
     </article>`;
 	}
 	renderNow(e) {
-		let t = e.action ?? "standby", n = e.battery_w !== null && Math.abs(e.battery_w) >= 10 ? ` · ${k(e.battery_w, this.locale)}` : "", r = e.grid_w === null ? [] : Jt(It(e.solar_w, e.grid_w, e.battery_w).paths), i = (e) => this.tr(`house.src_${e}`), a = (e) => this.tr(`house.dst_${e}`), o = (e) => k(e, this.locale), s = qn(e.reason_code);
+		let t = e.action ?? "standby", n = e.battery_w !== null && Math.abs(e.battery_w) >= 10 ? ` · ${k(e.battery_w, this.locale)}` : "", r = e.grid_w === null ? [] : Jt(It(e.solar_w, e.grid_w, e.battery_w).paths), i = (e) => this.tr(`house.src_${e}`), a = (e) => this.tr(`house.dst_${e}`), o = (e) => k(e, this.locale), s = Jn(e.reason_code);
 		return y`<article class="card">
       <div class="label">
         <span class="dot" style="background:${L(t)}"></span
@@ -9713,7 +9831,7 @@ var $ = class extends w {
     </p>`;
 	}
 	renderP1(e) {
-		let t = Zn(e, this.locale);
+		let t = Qn(e, this.locale);
 		return y`<div class="p1 ${t.kind}">
       <strong>${t.text}</strong>
       <span>${this.tr(`now.p1_${t.kind}`)}</span>

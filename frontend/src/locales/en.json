@@ -573,7 +573,24 @@
     "appl_after": "Always after the washing",
     "appl_after_help": "plan the dryer along (once, after the last wash) when you plan the washing",
     "curtail_head": "Inverter outside the sets (choose one)",
-    "curtail_rated_missing": "Fill in the rated power, or ZEPHYR does not limit."
+    "curtail_rated_missing": "Fill in the rated power, or ZEPHYR does not limit.",
+    "sections": {
+      "meter": "Meter",
+      "prices": "Prices",
+      "solar": "Solar",
+      "counters": "Counters",
+      "plan": "Plan",
+      "curtail": "Curtail"
+    },
+    "group_sub": {
+      "battery": "min, max, calibration",
+      "tariffs": "supplier, tax, VAT",
+      "corrections": "air conditioner",
+      "vacation": "nobody home",
+      "house": "picture, floors, appliances",
+      "zero_meter": "expensive hours, reserve",
+      "testing": "live after restart"
+    }
   },
   "airco": {
     "blocked": "Air conditioner {kw} kW · not from the battery",

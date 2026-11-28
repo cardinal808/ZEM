@@ -250,7 +250,7 @@ export class ZephyrPricesPlan extends LitElement {
           <button
             type="button"
             class="link"
-            @click=${() => this.dispatchEvent(new CustomEvent("zephyr-open-settings", { detail: "planner", bubbles: true, composed: true }))}
+            @click=${() => this.dispatchEvent(new CustomEvent("zephyr-open-settings", { detail: "planner:curtail", bubbles: true, composed: true }))}
           >
             ${this.tr("plan.neg_link")}
           </button>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { controlValue, formatNumber, type SettingField } from "../src/settings";
+import { controlValue, formatNumber, groupSections, type SettingField } from "../src/settings";
 import { t } from "../src/i18n";
 import en from "../src/locales/en.json";
 import nl from "../src/locales/nl.json";
@@ -43,5 +43,28 @@ describe("tariff fields from the table", () => {
   it("puts the energy tax in use into the info text", () => {
     expect(t("nl", "settings.fields.tariff_energy_tax.more", { in_use: "0,09161 €/kWh" })).toContain("nu 0,09161 €/kWh");
     expect(t("en", "settings.fields.tariff_vat.more")).toContain("21 %");
+  });
+});
+
+describe("subtabs", () => {
+  const f = (key: string, section: string | null): SettingField => ({ key, section }) as SettingField;
+
+  it("lists the sections in the order of their first field", () => {
+    expect(groupSections([f("p1", "meter"), f("price", "prices"), f("fc", "solar"), f("p1b", "meter")])).toEqual([
+      "meter",
+      "prices",
+      "solar",
+    ]);
+  });
+
+  it("has none for a group without sections", () => {
+    expect(groupSections([f("min_soc", null), f("max_soc", null)])).toEqual([]);
+  });
+
+  it("has a name for every section in both languages", () => {
+    for (const s of ["meter", "prices", "solar", "counters", "plan", "curtail"]) {
+      expect(t("nl", `settings.sections.${s}`)).not.toBe(`settings.sections.${s}`);
+      expect(t("en", `settings.sections.${s}`)).not.toBe(`settings.sections.${s}`);
+    }
   });
 });
