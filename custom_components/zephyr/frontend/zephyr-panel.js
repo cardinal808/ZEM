@@ -662,7 +662,10 @@ var Qe = {
 			shadow_note: "Zo zou ZEPHYR het doen (schaduwmodus).",
 			p1_import: "P1 · afname",
 			p1_export: "P1 · teruglevering",
-			p1_zero: "P1"
+			p1_zero: "P1",
+			p1_computed: "Berekend",
+			p1_measured: "gemeten",
+			p1_computed_hint: "Berekend: wat de meter zou tonen als ZEPHYR stuurde. Gemeten nu: {measured}."
 		},
 		battery: {
 			title: "Accu",
@@ -1321,7 +1324,10 @@ var Qe = {
 			shadow_note: "What ZEPHYR would do (shadow mode).",
 			p1_import: "P1 · import",
 			p1_export: "P1 · export",
-			p1_zero: "P1"
+			p1_zero: "P1",
+			p1_computed: "Computed",
+			p1_measured: "measured",
+			p1_computed_hint: "Computed: what the meter would show if ZEPHYR were in control. Measured now: {measured}."
 		},
 		battery: {
 			title: "Battery",
@@ -10318,7 +10324,7 @@ var $ = class extends E {
         <div class="big">
           ${e.action ? this.tr(`action.${t}`) + n : this.tr("now.waiting")}
         </div>
-        ${e.grid_w === null ? w : this.renderP1(e.grid_w)}
+        ${e.grid_w === null ? w : this.renderP1(e.grid_w, e.live ? null : e.grid_measured_w ?? null)}
       </div>
       ${r.length ? this.renderNowRows(r) : w}
       ${this.renderAirco(e)}
@@ -10368,11 +10374,14 @@ var $ = class extends E {
       </tbody>
     </table>`;
 	}
-	renderP1(e) {
-		let t = tr(e, this.locale);
-		return x`<div class="p1 ${t.kind}">
-      <strong>${t.text}</strong>
-      <span>${this.tr(`now.p1_${t.kind}`)}</span>
+	renderP1(e, t) {
+		let n = tr(e, this.locale), r = t === null ? null : tr(t, this.locale).text, i = r === null ? "" : this.tr("now.p1_computed_hint").replace("{measured}", r);
+		return x`<div class="p1 ${n.kind}">
+      <strong>${n.text}</strong>
+      <span>${this.tr(`now.p1_${n.kind}`)}</span>
+      ${r === null ? w : x`<span class="measured" tabindex="0" title=${i} aria-label=${i}
+              >${this.tr("now.p1_computed")} · ${this.tr("now.p1_measured")} ${r}</span
+            >`}
     </div>`;
 	}
 	renderBattery(e) {
@@ -10948,6 +10957,12 @@ var $ = class extends E {
         font-family: var(--z-font-head);
         font-size: 20px;
         font-variant-numeric: tabular-nums;
+      }
+      .p1 .measured {
+        display: block;
+        font-size: 11px;
+        color: var(--z-muted);
+        cursor: help;
       }
       .p1 span {
         font-size: 12px;

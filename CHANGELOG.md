@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.94 — Twin P1 at the moment of the measurement, measured P1 in shadow mode
+- **Twin without jumps on a slow meter** (OPDRACHT-p1-profiel §7.2): the virtual P1 pairs the P1 measurement with the real battery power and the twin **at the moment of that measurement** (last 60 s kept), not with the power now. On a DSMR 4 (every 10 s) a step of the current controller between two measurements no longer makes the virtual P1 jump (seen at Peter: −43 W measured, virtual −158 W). A repeat of the same value by the integration keeps the moment of the measurement it repeats. Fast meters: unchanged.
+- Decisions in shadow mode also carry `battery_real_at_p1` and `p1_age_s`.
+- **Card *Nu* in shadow mode** (§7.3): under the P1 value *Berekend · gemeten +42 W*, with the explanation as a tooltip (*what the meter would show if ZEPHYR were in control*). `now.grid_measured_w` in the websocket. The direction (*afname*/*teruglevering*) and exact W were already there since 0.8.92.
+- Tests: virtual P1 with a step of the other controller between two DSMR 4 measurements, a repeated value, `grid_measured_w`.
+
 ### 0.8.93 — Reload without 0 W, no 0 W when HA stops, slow band without export
 - **Reload hands over** (`handover.py`): a reload (a setting that needs one, a set added) no longer leaves the sets at 0 W. The unload parks the running engine (setpoint, P1, `acMode`, twin, counters, live state); the new setup takes it over and goes on live at once: no 0 W, no relay switch, no wait for the P1, no `p1_missing`. Nobody takes over within 120 s (a failed setup): 0 W then. Different sets than before: fresh start, the old sets to 0 W.
 - **0 W only where it belongs:** switching *ZEPHYR stuurt de accu* off, a second controller, disabling or removing the integration. **Not** when Home Assistant stops, restart or not (nobody shuts HA down; at a power cut there is no time to send it).

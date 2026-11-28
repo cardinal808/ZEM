@@ -436,3 +436,46 @@ def test_short_peak_left_to_the_grid_is_counted() -> None:
         t += 1.0
     assert e.grid_filter.holds == 1
     assert e.peak_kwh == pytest.approx(2.0 * 6 / 3600, rel=0.2)
+
+
+def _virtual_after_step_of_other_controller(stepped: bool) -> tuple[float, dict[str, float] | None]:
+    """DSMR 4: a P1 measurement every 10 s; the other controller steps 650 -> 570 W in between."""
+    import dataclasses
+
+    base = _view()
+    e = ZephyrEngine()
+    e.enable_twin()
+
+    def view(watts: float) -> SetView:
+        return dataclasses.replace(base, report=dataclasses.replace(base.report, battery_power_ac=watts))
+
+    for t in range(0, 11):
+        battery = -570.0 if stepped and t >= 4 else -650.0
+        if t in (0, 10):
+            e.p1_reported(float(t), -43.0 if t == 0 else 37.0)
+        e.step(float(t), [view(battery)])
+    assert e._p1_value is not None
+    return e._p1_value, e.twin_alignment(10.5)
+
+
+def test_virtual_p1_uses_the_battery_at_the_moment_of_the_measurement() -> None:
+    # OPDRACHT-p1-profiel §7.2: seen 15:45:18 at Peter, measured -43 W, real battery 652 -> 569 W,
+    # virtual P1 -158 W. The measurement that is used is 10 s old: pair it with the battery then.
+    steady, _ = _virtual_after_step_of_other_controller(stepped=False)
+    stepped, alignment = _virtual_after_step_of_other_controller(stepped=True)
+    assert stepped == steady  # no jump from the other controller's step
+    assert alignment == {"battery_real_at_p1": -650, "p1_age_s": 10.5}
+
+
+def test_repeated_p1_value_keeps_the_moment_of_its_measurement() -> None:
+    e = ZephyrEngine()
+    e.enable_twin()
+    e.p1_reported(0.0, 50.0)
+    e.step(0.0, [_view()])
+    e.p1_reported(5.0, 80.0)  # a new value: the meter interval becomes 5 s
+    e.step(5.0, [_view()])
+    e.p1_reported(6.0, 80.0)  # a repeat by the integration, not a new measurement
+    e.step(7.0, [_view()])
+    e.p1_reported(8.0, 80.0)
+    alignment = e.twin_alignment(8.0)
+    assert alignment is not None and alignment["p1_age_s"] == 3.0  # the measurement of t=5
