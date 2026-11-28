@@ -89,7 +89,9 @@ export function forecastPaths(
   s: Scale,
 ): { line: string; band: string }[] {
   if (!forecast?.length) return [];
-  const byStart = new Map(forecast.map((f) => [new Date(f.start).getTime(), f]));
+  const byStart = new Map(
+    forecast.map((f) => [new Date(f.start).getTime(), f]),
+  );
   const out: { line: string; band: string }[] = [];
   let run: { i: number; f: ForecastSlot }[] = [];
   const flush = () => {
@@ -97,7 +99,9 @@ export function forecastPaths(
       const y = (v: number) => (100 - level(v, s)).toFixed(2);
       const line = run.map(({ i, f }) => `${i + 0.5},${y(f.buy)}`).join(" ");
       const top = run.map(({ i, f }) => `${i + 0.5},${y(f.buy_high)}`);
-      const bottom = run.map(({ i, f }) => `${i + 0.5},${y(f.buy_low)}`).reverse();
+      const bottom = run
+        .map(({ i, f }) => `${i + 0.5},${y(f.buy_low)}`)
+        .reverse();
       out.push({ line, band: [...top, ...bottom].join(" ") });
     }
     run = [];
@@ -109,6 +113,14 @@ export function forecastPaths(
   });
   flush();
   return out;
+}
+
+/** What the forecast does for the plan, as a text key under `plan.` (one short phrase). */
+export function forecastMode(
+  f: PriceForecast,
+): "fc_used" | "fc_would" | "fc_info" {
+  if (f.mode === "use") return "fc_used";
+  return f.compare?.first_action_differs ? "fc_would" : "fc_info";
 }
 
 /** Per local day of the forecast that the chart does not show: mean and the dearest quarter. */

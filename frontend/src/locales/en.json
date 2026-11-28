@@ -127,15 +127,16 @@
     "neg_both": "Today and tomorrow {hours} h of negative export price. Curtailing is off; that is expected to cost {euro}.",
     "neg_link": "Change the setting →",
     "legend_negative": "Negative export price",
-    "fc_peak": "(expected {when}: {price}, 80 % chance {low}–{high})",
-    "fc_would": "With the forecast ZEPHYR would {action} now.",
-    "fc_used": "The plan takes the price forecast into account.",
-    "fc_day": "Forecast {day}: on average {avg}, dearest {high} at {at}, cheapest {low} at {lowat}.",
-    "fc_source": "Forecast: Source:",
+    "fc_would": "would {action} now",
+    "fc_used": "plan uses it",
+    "fc_source": "source: {name}",
     "fc_action_L": "charge",
     "fc_action_H": "hold",
     "fc_action_N": "deliver",
-    "fc_action_X": "export"
+    "fc_action_X": "export",
+    "fc_label": "Forecast",
+    "fc_stats": "avg. {avg} · lowest {lowat} · highest {at}",
+    "fc_info": "for information only"
   },
   "blocks": {
     "title": "Blocks",

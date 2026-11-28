@@ -16,6 +16,7 @@ import { t, type Lang } from "./i18n";
 import {
   bands,
   forecastDays,
+  forecastMode,
   forecastPaths,
   bar,
   currentIndex,
@@ -262,62 +263,57 @@ export class ZephyrPricesPlan extends LitElement {
     return notes.length ? html`${notes}` : nothing;
   }
 
-  /** The jeroen.nl forecast: why the plan would differ, the days past the chart, the source. */
+  /** The jeroen.nl forecast: one small line per day past the chart, with what it does and the source. */
   private forecastNotes(
     view: PlanView,
     shown: Quarter[],
   ): TemplateResult | typeof nothing {
     const f = view.price_forecast;
     if (!f || !f.slots.length) return nothing;
-    const lines: TemplateResult[] = [];
-    const peak = f.slots.reduce((a, x) => (x.buy > a.buy ? x : a));
-    const when = `${day(peak.start, this.locale, this.timeZone)} ${clock(peak.start, this.locale, this.timeZone)}`;
-    const peakText = this.tr("plan.fc_peak", {
-      when,
-      price: euro(peak.buy, this.locale),
-      low: euro(peak.buy_low, this.locale),
-      high: euro(peak.buy_high, this.locale),
+    const modeKey = forecastMode(f);
+    const mode = this.tr(`plan.${modeKey}`, {
+      action: this.tr(`plan.fc_action_${f.compare?.action_with ?? "H"}`),
     });
-    const c = f.compare;
-    if (f.mode === "indicative" && c?.first_action_differs)
-      lines.push(
-        html`<p class="note">
-          ${this.tr("plan.fc_would", { action: this.tr(`plan.fc_action_${c.action_with}`) })} ${peakText}
-        </p>`,
-      );
-    if (f.mode === "use")
-      lines.push(html`<p class="note">${this.tr("plan.fc_used")} ${peakText}</p>`);
-    for (const d of forecastDays(f.slots, shown, this.timeZone))
-      lines.push(
-        html`<p class="note">
-          ${this.tr("plan.fc_day", {
-            day: day(d.max.start, this.locale, this.timeZone),
+    const tail = html` · ${mode} ·
+      <span class="src"
+        >${this.tr("plan.fc_source", { name: f.source.name })}</span
+      >`;
+    const days = forecastDays(f.slots, shown, this.timeZone);
+    if (!days.length)
+      return html`<p class="fcline">
+        <b>${this.tr("plan.fc_label")}</b>${tail}
+      </p>`;
+    return html`${days.map(
+      (d, i) =>
+        html`<p class="fcline">
+          <b
+            >${this.tr("plan.fc_label")}
+            ${day(d.max.start, this.locale, this.timeZone)}</b
+          >
+          · ${euro(d.min.buy, this.locale)} – ${euro(d.max.buy, this.locale)} ·
+          ${this.tr("plan.fc_stats", {
             avg: euro(d.avg, this.locale),
-            high: euro(d.max.buy, this.locale),
-            at: clock(d.max.start, this.locale, this.timeZone),
-            low: euro(d.min.buy, this.locale),
             lowat: clock(d.min.start, this.locale, this.timeZone),
-          })}
+            at: clock(d.max.start, this.locale, this.timeZone),
+          })}${i === days.length - 1 ? tail : nothing}
         </p>`,
-      );
-    lines.push(
-      html`<p class="note source">
-        <span class="swf" aria-hidden="true"></span>${this.tr("plan.fc_source")}
-        <a href=${f.source.url} target="_blank" rel="noreferrer">${f.source.name}</a>
-      </p>`,
-    );
-    return html`<div class="fcnotes">${lines}</div>`;
+    )}`;
   }
 
   private chart(quarters: Quarter[]): TemplateResult {
     const n = quarters.length;
     const s = scale(quarters);
     // The forecast band must fit too (it can run above the pattern of today).
-    const shownFrom = quarters.length ? new Date(quarters[0].start).getTime() : 0;
-    const shownTo = quarters.length ? new Date(quarters[n - 1].start).getTime() : 0;
+    const shownFrom = quarters.length
+      ? new Date(quarters[0].start).getTime()
+      : 0;
+    const shownTo = quarters.length
+      ? new Date(quarters[n - 1].start).getTime()
+      : 0;
     for (const f of this.view?.price_forecast?.slots ?? []) {
       const t = new Date(f.start).getTime();
-      if (t >= shownFrom && t <= shownTo) s.hi = Math.max(s.hi, Math.ceil(f.buy_high * 20) / 20);
+      if (t >= shownFrom && t <= shownTo)
+        s.hi = Math.max(s.hi, Math.ceil(f.buy_high * 20) / 20);
     }
     const now = currentIndex(quarters);
     const pct = (i: number): string => `${((i / n) * 100).toFixed(3)}%`;
@@ -794,23 +790,20 @@ export class ZephyrPricesPlan extends LitElement {
         opacity: 0.08;
         stroke: none;
       }
-      .fcnotes {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        margin: 4px 0 8px;
+      .fcline {
+        margin: -4px 2px 0;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--z-muted);
+        font-variant-numeric: tabular-nums;
       }
-      .fcnotes .note {
-        margin: 0;
+      .fcline b {
+        color: var(--z-text);
+        font-weight: 600;
       }
-      .note.source {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .swf {
-        width: 18px;
-        border-top: 2px dashed var(--z-text);
+      .fcline .src {
+        font-size: 9px;
+        opacity: 0.8;
       }
       .bar.ind {
         background: repeating-linear-gradient(

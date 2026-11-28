@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.94 — Price forecast in one small line
+- **Prijzen en plan:** the three notes of the jeroen.nl forecast are one small grey line under the price cells: *Verwacht ma 30 nov · € 0,33 – € 0,47 · gem. € 0,40 · laagst 23:45 · hoogst 08:00 · plan rekent mee · bron: jeroen.nl*. No dashes, no link; the source in a smaller font. The mode is a short phrase (`forecastMode`): *plan rekent mee*, *alleen ter info* or *zou nu laden*. The 80 % band is no longer in the text (the dashed line and band stay in the chart).
+- Tests: `forecastMode`, the texts in both languages.
+
 ### 0.8.93 — Reload without 0 W, no 0 W when HA stops, slow band without export
 - **Reload hands over** (`handover.py`): a reload (a setting that needs one, a set added) no longer leaves the sets at 0 W. The unload parks the running engine (setpoint, P1, `acMode`, twin, counters, live state); the new setup takes it over and goes on live at once: no 0 W, no relay switch, no wait for the P1, no `p1_missing`. Nobody takes over within 120 s (a failed setup): 0 W then. Different sets than before: fresh start, the old sets to 0 W.
 - **0 W only where it belongs:** switching *ZEPHYR stuurt de accu* off, a second controller, disabling or removing the integration. **Not** when Home Assistant stops, restart or not (nobody shuts HA down; at a power cut there is no time to send it).
