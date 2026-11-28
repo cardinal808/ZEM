@@ -10,7 +10,7 @@
     "stroom": "Power"
   },
   "header": {
-    "live": "In control",
+    "live": "Active",
     "shadow": "Shadow",
     "live_title": "ZEPHYR controls the battery",
     "shadow_title": "Shadow mode: ZEPHYR calculates but does not control"
@@ -34,7 +34,6 @@
   "now": {
     "title": "Now",
     "waiting": "Waiting for the first measurement…",
-    "grid": "Grid {value}",
     "shadow_note": "What ZEPHYR would do (shadow mode)."
   },
   "battery": {
@@ -112,7 +111,7 @@
     "tip_airco": "Air con {kwh} (not from the battery)",
     "legend_solar_over": "Solar to spare (battery can charge)",
     "spread": "spread {value}",
-    "spread_title": "How much more the most expensive quarter costs than the cheapest. A rough measure of what charging and delivering later can earn, before losses (about 14 %) and wear. With prices around zero or negative: the difference in euro.",
+    "spread_title": "How much more the most expensive quarter costs than the day's mean. A rough measure of what delivering at the most expensive moments earns, before losses (about 14 %) and wear. With a mean around zero or negative: the difference in euro.",
     "tip_appliances": "Appliances: {kwh}",
     "runs_label": "Planned appliances",
     "curtail_mark": "Solar surplus is curtailed",
@@ -541,12 +540,6 @@
   },
   "control": {
     "mode": "Mode",
-    "fast": "Fast charge or discharge",
-    "fast_charge": "Fast charge",
-    "fast_discharge": "Fast discharge",
-    "running_fast_charge": "Fast charging runs up to the upper limit.",
-    "running_fast_discharge": "Fast discharging runs down to the lower limit.",
-    "shadow_note": "Shadow mode: ZEPHYR computes but does not control.",
     "live_title": "Turn on live control",
     "live_text": "ZEPHYR will really control the battery. You can always turn it off with the same button.",
     "live_blocked": "Live control is not possible now:",
@@ -562,9 +555,7 @@
       "serial": "Set {set} reports a different serial number.",
       "fault": "Set {set} reports an error.",
       "test": "A write test is running."
-    },
-    "stop_fast": "Stop {mode}",
-    "back_to": "Then back to {mode}."
+    }
   },
   "diag": {
     "title": "Diagnostics",
@@ -904,5 +895,19 @@
     "error": "Upload failed: {msg}",
     "unplaced": "Not placed yet",
     "hidden": "Hidden"
+  },
+  "version": {
+    "update": "Update {latest}",
+    "busy": "Updating…",
+    "update_title": "Update ZEPHYR to {latest}?",
+    "update_text": "Now: {running}. HACS installs the new version. Home Assistant must restart afterwards; until then {running} keeps running.",
+    "update_do": "Update",
+    "notes": "What's new",
+    "update_other": "v{running} · update {latest}",
+    "restart": "Restart needed",
+    "restart_title": "Restart Home Assistant?",
+    "restart_text": "Version {installed} is installed, but {running} is still running. After a restart of Home Assistant, {installed} runs.",
+    "restart_do": "Restart",
+    "restart_other": "v{running} · restart needed"
   }
 }

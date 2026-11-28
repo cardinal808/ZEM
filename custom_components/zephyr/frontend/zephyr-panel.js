@@ -29,11 +29,11 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: p, getPrototypeOf: m } = Object, h = globalThis, ee = h.trustedTypes, te = ee ? ee.emptyScript : "", ne = h.reactiveElementPolyfillSupport, g = (e, t) => e, re = {
+})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: p, getPrototypeOf: m } = Object, ee = globalThis, te = ee.trustedTypes, ne = te ? te.emptyScript : "", re = ee.reactiveElementPolyfillSupport, h = (e, t) => e, ie = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
-				e = e ? te : null;
+				e = e ? ne : null;
 				break;
 			case Object:
 			case Array: e = e == null ? e : JSON.stringify(e);
@@ -58,23 +58,23 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, ie = (e, t) => !l(e, t), ae = {
+}, ae = (e, t) => !l(e, t), oe = {
 	attribute: !0,
 	type: String,
-	converter: re,
+	converter: ie,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: ie
+	hasChanged: ae
 };
-Symbol.metadata ??= Symbol("metadata"), h.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var oe = class extends HTMLElement {
+Symbol.metadata ??= Symbol("metadata"), ee.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+var g = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = ae) {
+	static createProperty(e, t = oe) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && u(this.prototype, e, r);
@@ -100,16 +100,16 @@ var oe = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? ae;
+		return this.elementProperties.get(e) ?? oe;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(g("elementProperties"))) return;
+		if (this.hasOwnProperty(h("elementProperties"))) return;
 		let e = m(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(g("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(g("properties"))) {
+		if (this.hasOwnProperty(h("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(h("properties"))) {
 			let e = this.properties, t = [...f(e), ...p(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
@@ -171,14 +171,14 @@ var oe = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? re : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? ie : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? re : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? ie : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -187,7 +187,7 @@ var oe = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ie)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ae)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -251,7 +251,7 @@ var oe = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-oe.elementStyles = [], oe.shadowRootOptions = { mode: "open" }, oe[g("elementProperties")] = /* @__PURE__ */ new Map(), oe[g("finalized")] = /* @__PURE__ */ new Map(), ne?.({ ReactiveElement: oe }), (h.reactiveElementVersions ??= []).push("2.1.2");
+g.elementStyles = [], g.shadowRootOptions = { mode: "open" }, g[h("elementProperties")] = /* @__PURE__ */ new Map(), g[h("finalized")] = /* @__PURE__ */ new Map(), re?.({ ReactiveElement: g }), (ee.reactiveElementVersions ??= []).push("2.1.2");
 // node_modules/lit-html/lit-html.js
 var se = globalThis, ce = (e) => e, le = se.trustedTypes, ue = le ? le.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, de = "$lit$", _ = `lit$${Math.random().toFixed(9).slice(2)}$`, fe = "?" + _, pe = `<${fe}>`, v = document, me = () => v.createComment(""), he = (e) => e === null || typeof e != "object" && typeof e != "function", ge = Array.isArray, _e = (e) => ge(e) || typeof e?.[Symbol.iterator] == "function", ve = "[ 	\n\f\r]", ye = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, be = /-->/g, xe = />/g, y = RegExp(`>|${ve}(?:([^\\s"'>=/]+)(${ve}*=${ve}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), Se = /'/g, Ce = /"/g, we = /^(?:script|style|textarea|title)$/i, Te = (e) => (t, ...n) => ({
 	_$litType$: e,
@@ -482,7 +482,7 @@ var ze = (e, t, n) => {
 		r._$litPart$ = i = new Me(t.insertBefore(me(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, Be = globalThis, T = class extends oe {
+}, Be = globalThis, T = class extends g {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -515,9 +515,9 @@ var E = (e) => (t, n) => {
 }, He = {
 	attribute: !0,
 	type: String,
-	converter: re,
+	converter: ie,
 	reflect: !1,
-	hasChanged: ie
+	hasChanged: ae
 }, Ue = (e = He, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
@@ -635,7 +635,7 @@ var Qe = {
 			stroom: "Stroom"
 		},
 		header: {
-			live: "Stuurt",
+			live: "Actief",
 			shadow: "Rekent mee",
 			live_title: "ZEPHYR stuurt de accu",
 			shadow_title: "Schaduwmodus: ZEPHYR rekent mee maar stuurt niets"
@@ -659,7 +659,6 @@ var Qe = {
 		now: {
 			title: "Nu",
 			waiting: "Wacht op de eerste meting…",
-			grid: "Net {value}",
 			shadow_note: "Zo zou ZEPHYR het doen (schaduwmodus)."
 		},
 		battery: {
@@ -737,7 +736,7 @@ var Qe = {
 			tip_airco: "Airco {kwh} (niet uit de accu)",
 			legend_solar_over: "Zon over (accu kan laden)",
 			spread: "spread {value}",
-			spread_title: "Hoeveel duurder het duurste kwartier is dan het goedkoopste. Ruwe maat voor wat laden en later leveren kan opleveren, vóór verlies (± 14 %) en slijtage. Bij prijzen rond nul of negatief: het verschil in euro.",
+			spread_title: "Hoeveel duurder het duurste kwartier is dan het gemiddelde van de dag. Ruwe maat voor wat leveren op de duurste momenten oplevert, vóór verlies (± 14 %) en slijtage. Bij een gemiddelde rond nul of negatief: het verschil in euro.",
 			tip_appliances: "Apparaten: {kwh}",
 			runs_label: "Geplande apparaten",
 			curtail_mark: "Zonoverschot wordt afgeknepen",
@@ -853,12 +852,6 @@ var Qe = {
 		},
 		control: {
 			mode: "Modus",
-			fast: "Snel laden of ontladen",
-			fast_charge: "Snel laden",
-			fast_discharge: "Snel ontladen",
-			running_fast_charge: "Snel laden loopt tot de bovengrens.",
-			running_fast_discharge: "Snel ontladen loopt tot de ondergrens.",
-			shadow_note: "Schaduwmodus: ZEPHYR rekent mee maar stuurt niets.",
 			live_title: "Live sturen aanzetten",
 			live_text: "ZEPHYR gaat de accu echt sturen. Uitzetten kan altijd met dezelfde knop.",
 			live_blocked: "Live sturen kan nu niet:",
@@ -874,9 +867,7 @@ var Qe = {
 				serial: "Set {set} meldt een ander serienummer.",
 				fault: "Set {set} meldt een fout.",
 				test: "Er loopt een schrijftest."
-			},
-			stop_fast: "{mode} stoppen",
-			back_to: "Daarna terug naar {mode}."
+			}
 		},
 		diag: {
 			title: "Diagnose",
@@ -1216,6 +1207,20 @@ var Qe = {
 			error: "Uploaden mislukt: {msg}",
 			unplaced: "Nog niet geplaatst",
 			hidden: "Verborgen"
+		},
+		version: {
+			update: "Update {latest}",
+			busy: "Bezig met bijwerken…",
+			update_title: "ZEPHYR bijwerken naar {latest}?",
+			update_text: "Nu: {running}. HACS installeert de nieuwe versie. Daarna moet Home Assistant opnieuw starten; tot dan draait {running} door.",
+			update_do: "Bijwerken",
+			notes: "Wat is er nieuw",
+			update_other: "v{running} · update {latest}",
+			restart: "Herstart nodig",
+			restart_title: "Home Assistant herstarten?",
+			restart_text: "Versie {installed} is geïnstalleerd, maar {running} draait nog. Na een herstart van Home Assistant draait {installed}.",
+			restart_do: "Herstarten",
+			restart_other: "v{running} · herstart nodig"
 		}
 	},
 	en: {
@@ -1230,7 +1235,7 @@ var Qe = {
 			stroom: "Power"
 		},
 		header: {
-			live: "In control",
+			live: "Active",
 			shadow: "Shadow",
 			live_title: "ZEPHYR controls the battery",
 			shadow_title: "Shadow mode: ZEPHYR calculates but does not control"
@@ -1254,7 +1259,6 @@ var Qe = {
 		now: {
 			title: "Now",
 			waiting: "Waiting for the first measurement…",
-			grid: "Grid {value}",
 			shadow_note: "What ZEPHYR would do (shadow mode)."
 		},
 		battery: {
@@ -1332,7 +1336,7 @@ var Qe = {
 			tip_airco: "Air con {kwh} (not from the battery)",
 			legend_solar_over: "Solar to spare (battery can charge)",
 			spread: "spread {value}",
-			spread_title: "How much more the most expensive quarter costs than the cheapest. A rough measure of what charging and delivering later can earn, before losses (about 14 %) and wear. With prices around zero or negative: the difference in euro.",
+			spread_title: "How much more the most expensive quarter costs than the day's mean. A rough measure of what delivering at the most expensive moments earns, before losses (about 14 %) and wear. With a mean around zero or negative: the difference in euro.",
 			tip_appliances: "Appliances: {kwh}",
 			runs_label: "Planned appliances",
 			curtail_mark: "Solar surplus is curtailed",
@@ -1448,12 +1452,6 @@ var Qe = {
 		},
 		control: {
 			mode: "Mode",
-			fast: "Fast charge or discharge",
-			fast_charge: "Fast charge",
-			fast_discharge: "Fast discharge",
-			running_fast_charge: "Fast charging runs up to the upper limit.",
-			running_fast_discharge: "Fast discharging runs down to the lower limit.",
-			shadow_note: "Shadow mode: ZEPHYR computes but does not control.",
 			live_title: "Turn on live control",
 			live_text: "ZEPHYR will really control the battery. You can always turn it off with the same button.",
 			live_blocked: "Live control is not possible now:",
@@ -1469,9 +1467,7 @@ var Qe = {
 				serial: "Set {set} reports a different serial number.",
 				fault: "Set {set} reports an error.",
 				test: "A write test is running."
-			},
-			stop_fast: "Stop {mode}",
-			back_to: "Then back to {mode}."
+			}
 		},
 		diag: {
 			title: "Diagnostics",
@@ -1811,6 +1807,20 @@ var Qe = {
 			error: "Upload failed: {msg}",
 			unplaced: "Not placed yet",
 			hidden: "Hidden"
+		},
+		version: {
+			update: "Update {latest}",
+			busy: "Updating…",
+			update_title: "Update ZEPHYR to {latest}?",
+			update_text: "Now: {running}. HACS installs the new version. Home Assistant must restart afterwards; until then {running} keeps running.",
+			update_do: "Update",
+			notes: "What's new",
+			update_other: "v{running} · update {latest}",
+			restart: "Restart needed",
+			restart_title: "Restart Home Assistant?",
+			restart_text: "Version {installed} is installed, but {running} is still running. After a restart of Home Assistant, {installed} runs.",
+			restart_do: "Restart",
+			restart_other: "v{running} · restart needed"
 		}
 	}
 };
@@ -2164,8 +2174,8 @@ var B = class extends T {
     </section>`;
 	}
 	spreadText(e) {
-		let t = e.min.buy, n = e.max.buy, r = _t(t, n);
-		return r === null ? this.tr("plan.spread", { value: k(n - t, this.locale) }) : this.tr("plan.spread", { value: `${r} %` });
+		let t = e.max.buy, n = _t(e.avg, t);
+		return n === null ? this.tr("plan.spread", { value: k(t - e.avg, this.locale) }) : this.tr("plan.spread", { value: `${n} %` });
 	}
 	statCell(e, t, n, r = !1) {
 		let i = e.length ? P(e[0].start, this.locale, this.timeZone) : "";
@@ -3491,7 +3501,7 @@ Nt.directiveName = "unsafeSVG", Nt.resultType = 2;
 var Pt = At(Nt);
 // src/flow.ts
 function Ft(e, t, n, r = 0) {
-	let i = Math.max(0, e ?? 0), a = t ?? 0, o = n ?? 0, s = Math.max(0, a + i - o), c = Math.max(0, o), l = Math.max(0, -o), u = Math.min(i, s), d = Math.min(i - u, c), f = Math.max(0, i - u - d), p = Math.min(l, s - u), m = Math.max(0, l - p), h = Math.max(0, s - u - p), ee = Math.max(0, c - d);
+	let i = Math.max(0, e ?? 0), a = t ?? 0, o = n ?? 0, s = Math.max(0, a + i - o), c = Math.max(0, o), l = Math.max(0, -o), u = Math.min(i, s), d = Math.min(i - u, c), f = Math.max(0, i - u - d), p = Math.min(l, s - u), m = Math.max(0, l - p), ee = Math.max(0, s - u - p), te = Math.max(0, c - d);
 	return {
 		solar: i,
 		grid: a,
@@ -3502,8 +3512,8 @@ function Ft(e, t, n, r = 0) {
 			solar_house: u,
 			solar_battery: d,
 			solar_grid: f,
-			grid_house: h,
-			grid_battery: ee,
+			grid_house: ee,
+			grid_battery: te,
 			battery_house: p,
 			battery_grid: m
 		}
@@ -6206,15 +6216,7 @@ function bn(e, t, n) {
 function xn(e) {
 	return e.kind === "mode" ? "mode" : e.kind === "live" || e.kind === "shadow" || e.kind === "test" || e.kind === "test_end" ? "live" : e.kind === "excluded_on" || e.kind === "excluded_off" ? "airco" : e.kind === "flash" ? "write" : e.kind === "second_controller" ? "warning" : "control";
 }
-function Sn(e, t, n) {
-	let r = n === "fast_charge" || n === "fast_discharge" ? "zero_meter" : n;
-	return ["fast_charge", "fast_discharge"].filter((e) => t.includes(e)).map((t) => ({
-		mode: t,
-		active: e === t,
-		target: e === t ? r : t
-	}));
-}
-var Cn = [
+var Sn = [
 	[/^no P1 sensor chosen$/, "no_p1"],
 	[/^P1 is not reporting$/, "p1_silent"],
 	[/^no sets$/, "no_sets"],
@@ -6223,14 +6225,14 @@ var Cn = [
 	[/^set (\d+) reports an error$/, "fault"],
 	[/^a write test is running$/, "test"]
 ];
-function wn(e, t) {
-	for (let [n, r] of Cn) {
+function Cn(e, t) {
+	for (let [n, r] of Sn) {
 		let i = n.exec(e);
 		if (i) return I(t, `control.blocker.${r}`, { set: i[1] ?? "" });
 	}
 	return e;
 }
-function Tn(e) {
+function wn(e) {
 	let t = e.house.reduce((e, t) => e + t, 0), n = e.airco.reduce((e, t) => e + t, 0), r = Math.max(0, ...e.house.map((t, n) => t + (e.airco[n] ?? 0)));
 	return {
 		total: t,
@@ -6239,20 +6241,20 @@ function Tn(e) {
 		learned: e.counts.filter((t) => t >= e.min_count).length
 	};
 }
-function En(e) {
+function Tn(e) {
 	return Math.abs(e.expected) < .05 ? null : (e.actual - e.expected) / Math.abs(e.expected);
 }
-function Dn(e, t) {
+function En(e, t) {
 	return e.planned.filter((e) => e.appliance === t).sort((e, t) => (e.best_start ?? "9999").localeCompare(t.best_start ?? "9999") || e.index - t.index);
 }
-function On(e, t) {
+function Dn(e, t) {
 	return t >= (e === "washer" ? 2 : 1) ? "clear" : "plan";
 }
-var kn = (e) => {
+var On = (e) => {
 	let [t, n] = e.split(":").map(Number);
 	return t * 60 + n;
 };
-function An(e, t, n, r) {
+function kn(e, t, n, r) {
 	let i = qe("en-GB", {
 		timeZone: r,
 		hour: "2-digit",
@@ -6260,11 +6262,11 @@ function An(e, t, n, r) {
 		hourCycle: "h23"
 	}), a = Math.max(1, t.minutes), o = t.profile_w && t.profile_w.length ? t.profile_w.map((e) => e / 6e4) : Array(a).fill(t.kwh / a), s = o.length, c = /* @__PURE__ */ new Map();
 	for (let t of e) t.buy !== null && c.set(new Date(t.start).getTime(), t.buy);
-	let l = t.window.from ? kn(t.window.from) : null, u = kn(t.window.until), d = (e) => l === null ? !0 : l <= u ? e >= l && e <= u : e >= l || e <= u, f = null;
+	let l = t.window.from ? On(t.window.from) : null, u = On(t.window.until), d = (e) => l === null ? !0 : l <= u ? e >= l && e <= u : e >= l || e <= u, f = null;
 	for (let t of e) {
 		let e = new Date(t.start).getTime();
 		if (e + 9e5 <= n || t.buy === null || l === null && e - n > 864e5) continue;
-		let r = kn(i.format(new Date(e)));
+		let r = On(i.format(new Date(e)));
 		if (!d(r) || !d((r + s) % 1440)) continue;
 		let a = 0, u = !0;
 		for (let t = 0; t < s; t++) {
@@ -6294,7 +6296,7 @@ var Y = class extends T {
 		if (!this.busy) {
 			this.busy = e.id;
 			try {
-				On(e.kind, t) === "clear" ? await this.clear?.(e.id) : await this.plan?.(e.id, {});
+				Dn(e.kind, t) === "clear" ? await this.clear?.(e.id) : await this.plan?.(e.id, {});
 			} finally {
 				this.busy = null;
 			}
@@ -6307,20 +6309,20 @@ var Y = class extends T {
       role="group"
       aria-label=${this.tr("appl.title")}
     >
-      ${e.appliances.map((t) => this.button(t, Dn(e, t.id)))}
+      ${e.appliances.map((t) => this.button(t, En(e, t.id)))}
     </div>`;
 	}
 	button(e, t) {
 		let n = t.length > 0, r = t.map((e) => e.fixed_start ?? e.best_start).filter((e) => !!e), i = t.reduce((e, t) => e + (t.cost ?? 0), 0), a = t.reduce((e, t) => e + (t.saving ?? 0), 0), o = t.find((e) => e.after)?.after ?? null, s, c = null;
 		if (!n) {
-			let t = An(this.quarters, e, this.clockMs, this.timeZone);
+			let t = kn(this.quarters, e, this.clockMs, this.timeZone);
 			s = t === null ? this.tr("appl.tap") : this.tr("appl.per_run", { euro: k(t, this.locale) });
 		} else if (!r.length) s = this.tr("appl.calculating");
 		else {
 			let e = r.map((e, t) => t === 0 ? this.when(e) : N(e, this.locale, this.timeZone));
 			s = `${this.tr("appl.start")} ${e.join(` ${this.tr("appl.and")} `)} · ${k(i, this.locale)}`, c = o ? this.tr("appl.after_wash") : a >= .01 ? this.tr("appl.cheaper", { euro: k(a, this.locale) }) : null;
 		}
-		let l = n ? `${e.name} ${t.length}×` : e.name, u = On(e.kind, t.length) === "clear" ? "appl.tap_clear" : n ? "appl.tap_more" : "appl.tap_plan";
+		let l = n ? `${e.name} ${t.length}×` : e.name, u = Dn(e.kind, t.length) === "clear" ? "appl.tap_clear" : n ? "appl.tap_more" : "appl.tap_plan";
 		return b`<button
       type="button"
       class=${`b${n ? " on" : ""}`}
@@ -6418,7 +6420,7 @@ var Y = class extends T {
 	}
 };
 z([D({ attribute: !1 })], Y.prototype, "view", void 0), z([D({ attribute: !1 })], Y.prototype, "quarters", void 0), z([D({ attribute: !1 })], Y.prototype, "uiLang", void 0), z([D()], Y.prototype, "locale", void 0), z([D()], Y.prototype, "timeZone", void 0), z([D({ type: Number })], Y.prototype, "clockMs", void 0), z([D({ attribute: !1 })], Y.prototype, "plan", void 0), z([D({ attribute: !1 })], Y.prototype, "clear", void 0), z([O()], Y.prototype, "busy", void 0), Y = z([E("zephyr-appliances")], Y);
-function jn(e) {
+function An(e) {
 	return e.startsWith("dryer") ? "dryer" : ["washer", "dishwasher"].includes(e) ? e : "other";
 }
 // src/diagnostics.ts
@@ -6602,7 +6604,7 @@ var X = class extends T {
       <div class="ahead">
         <b>${e.name}</b>
         <span class="muted small"
-          >${this.tr(`diag.kind_${jn(e.kind)}`)}</span
+          >${this.tr(`diag.kind_${An(e.kind)}`)}</span
         >
         ${e.running ? b`<span class="chip on">${this.tr("diag.appl_running")}</span>` : C}
       </div>
@@ -6740,7 +6742,7 @@ var X = class extends T {
                   ${t.map((t) => {
 			let r = e.summary[t];
 			if (!r) return C;
-			let i = En(r);
+			let i = Tn(r);
 			return b`<tr
                       class=${t === this.metric ? "on" : ""}
                       @click=${() => this.metric = t}
@@ -6810,7 +6812,7 @@ var X = class extends T {
     </section>`;
 	}
 	renderProfile(e) {
-		let t = e[this.dayKind], n = Tn(t), r = (e, t = 1) => new Intl.NumberFormat(this.locale, {
+		let t = e[this.dayKind], n = wn(t), r = (e, t = 1) => new Intl.NumberFormat(this.locale, {
 			minimumFractionDigits: t,
 			maximumFractionDigits: t
 		}).format(e), i = t.airco.some((e) => e > 0) || e.workday.airco.some((e) => e > 0);
@@ -7421,20 +7423,20 @@ var X = class extends T {
 };
 z([D({ attribute: !1 })], X.prototype, "view", void 0), z([D({ attribute: !1 })], X.prototype, "uiLang", void 0), z([D()], X.prototype, "locale", void 0), z([D()], X.prototype, "timeZone", void 0), z([D({ attribute: !1 })], X.prototype, "appliances", void 0), z([O()], X.prototype, "peakInfo", void 0), z([D({ type: Boolean })], X.prototype, "admin", void 0), z([D({ attribute: !1 })], X.prototype, "download", void 0), z([D({ attribute: !1 })], X.prototype, "exportCosts", void 0), z([D({ attribute: !1 })], X.prototype, "refresh", void 0), z([D({ attribute: !1 })], X.prototype, "planCheck", void 0), z([O()], X.prototype, "busy", void 0), z([O()], X.prototype, "note", void 0), z([O()], X.prototype, "dayKind", void 0), z([O()], X.prototype, "metric", void 0), X = z([E("zephyr-diagnostics")], X);
 // src/savings.ts
-var Mn, Nn = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
-function Pn(e) {
+var jn, Mn = (e) => e <= 0 ? 0 : Math.ceil(e * 2) / 2;
+function Nn(e) {
 	let t = e.map((e) => e.savings_battery ?? 0), n = t.map(Math.abs).filter((e) => e > 0).sort((e, t) => e - t), r = n.length ? n[Math.floor(n.length * .75)] : .5, i = Math.max(.5, r * 2), a = Math.min(i, Math.max(0, ...t)), o = Math.max(-i, Math.min(0, ...t));
 	return {
-		top: Math.max(.5, Nn(a)),
-		bottom: -Nn(-o)
+		top: Math.max(.5, Mn(a)),
+		bottom: -Mn(-o)
 	};
 }
 var Z = class extends T {
 	static {
-		Mn = this;
+		jn = this;
 	}
 	constructor(...e) {
-		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = Mn.storedForm(), this.busy = !1, this.result = null;
+		super(...e), this.uiLang = "en", this.locale = "en", this.timeZone = "UTC", this.admin = !1, this.period = "month", this.form = jn.storedForm(), this.busy = !1, this.result = null;
 	}
 	tr(e, t = {}) {
 		return I(this.uiLang, e, t);
@@ -7643,7 +7645,7 @@ var Z = class extends T {
 	}
 	renderDays(e) {
 		if (!e.length) return b`<p class="muted">${this.tr("savings.no_data")}</p>`;
-		let { top: t, bottom: n } = Pn(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
+		let { top: t, bottom: n } = Nn(e), r = t - n, i = t / r * 100, a = (e) => new Intl.DateTimeFormat(this.locale, {
 			weekday: "short",
 			day: "numeric",
 			month: "short",
@@ -8133,12 +8135,12 @@ var Z = class extends T {
   `;
 	}
 };
-z([D({ attribute: !1 })], Z.prototype, "view", void 0), z([D({ attribute: !1 })], Z.prototype, "uiLang", void 0), z([D()], Z.prototype, "locale", void 0), z([D()], Z.prototype, "timeZone", void 0), z([D({ type: Boolean })], Z.prototype, "admin", void 0), z([D({ attribute: !1 })], Z.prototype, "states", void 0), z([D({ attribute: !1 })], Z.prototype, "backfill", void 0), z([O()], Z.prototype, "period", void 0), z([O()], Z.prototype, "form", void 0), z([O()], Z.prototype, "busy", void 0), z([O()], Z.prototype, "result", void 0), Z = Mn = z([E("zephyr-savings")], Z);
+z([D({ attribute: !1 })], Z.prototype, "view", void 0), z([D({ attribute: !1 })], Z.prototype, "uiLang", void 0), z([D()], Z.prototype, "locale", void 0), z([D()], Z.prototype, "timeZone", void 0), z([D({ type: Boolean })], Z.prototype, "admin", void 0), z([D({ attribute: !1 })], Z.prototype, "states", void 0), z([D({ attribute: !1 })], Z.prototype, "backfill", void 0), z([O()], Z.prototype, "period", void 0), z([O()], Z.prototype, "form", void 0), z([O()], Z.prototype, "busy", void 0), z([O()], Z.prototype, "result", void 0), Z = jn = z([E("zephyr-savings")], Z);
 // src/stroom.ts
-function Fn(e, t) {
+function Pn(e, t) {
 	return e.name ?? t(`stroom.kind_${e.kind}`);
 }
-function In(e, t) {
+function Fn(e, t) {
 	let n = e.filter((e) => e.shown).map((e) => ({
 		id: e.id,
 		device: e,
@@ -8150,27 +8152,27 @@ function In(e, t) {
 		kwh: t
 	}), n;
 }
-function Ln(e, t, n) {
+function In(e, t, n) {
 	let r = "", i = !1;
 	for (let [a, o] of e) o === null ? i = !1 : (r += `${i ? "L" : "M"}${t(a).toFixed(1)},${n(o).toFixed(1)}`, i = !0);
 	return r;
 }
-function Rn(e, t) {
+function Ln(e, t) {
 	let n = Math.round(e);
 	return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toLocaleString(t)} W`;
 }
-function zn(e) {
+function Rn(e) {
 	let t = 200;
 	for (let [, n, r] of e) n !== null && (t = Math.max(t, Math.abs(n - r)));
 	return Math.ceil(t / 100) * 100;
 }
-var Bn = .8;
-function Vn(e) {
+var zn = .8;
+function Bn(e) {
 	if (!e) return "none";
 	let [t, n, r, i] = e;
 	return t < 30 ? "idle" : n / t >= .8 ? "good" : r >= i ? "import" : "export";
 }
-var Hn = [
+var Vn = [
 	["solar", [
 		["solar_house", "house"],
 		["solar_battery", "battery"],
@@ -8216,7 +8218,7 @@ var Hn = [
             </p>` : b`<div class="row">
               <span class="big">${M(n * 100, this.locale)}</span>
               <span class=${r ? "pill good" : "pill warn"}
-                >${this.tr(r ? "stroom.zero_good" : "stroom.zero_low", { goal: M(Bn * 100, this.locale) })}</span
+                >${this.tr(r ? "stroom.zero_good" : "stroom.zero_low", { goal: M(zn * 100, this.locale) })}</span
               >
             </div>`}
       ${t ? this.strip(t) : C}
@@ -8247,7 +8249,7 @@ var Hn = [
 	}
 	strip(e) {
 		let t = 360 / (e.buckets.length || 288), n = e.buckets.map((e, n) => {
-			let r = Vn(e);
+			let r = Bn(e);
 			return r === "none" ? C : x`<rect x=${(n * t).toFixed(2)} y="2" width=${(t + .3).toFixed(2)} height="22" class=${`c ${r}`}></rect>`;
 		});
 		return b`<svg
@@ -8281,7 +8283,7 @@ var Hn = [
           ${n ? this.tr("stroom.routes_sub", { until: n }) : this.tr("stroom.routes_none")}
         </p>
       </div>
-      ${Hn.map(([n, r]) => b`<div class="grp">${this.tr(`stroom.src_${n}`)}</div>
+      ${Vn.map(([n, r]) => b`<div class="grp">${this.tr(`stroom.src_${n}`)}</div>
             ${r.map(([r, i]) => b`<div class="route">
                   <span>→ ${this.tr(`stroom.to_${i}`)}</span>
                   <div class="bar">
@@ -8309,30 +8311,30 @@ var Hn = [
     </section>`;
 	}
 	renderRegulation(e, t) {
-		let n = typeof window < "u" && window.matchMedia?.("(max-width: 600px)").matches, r = n ? 360 : 760, i = n ? 50 : 52, a = r - 8, o = e.window_s, s = (e) => i + (e + o) / o * (a - i), c = zn(e.samples), l = (e) => 69 - Math.max(-c, Math.min(c, e)) / c * 55, u = 0, d = 0;
+		let n = typeof window < "u" && window.matchMedia?.("(max-width: 600px)").matches, r = n ? 360 : 760, i = n ? 50 : 52, a = r - 8, o = e.window_s, s = (e) => i + (e + o) / o * (a - i), c = Rn(e.samples), l = (e) => 69 - Math.max(-c, Math.min(c, e)) / c * 55, u = 0, d = 0;
 		for (let [, , , t, n] of e.samples) u = Math.min(u, t, n ?? 0), d = Math.max(d, t, n ?? 0);
-		let f = Math.max(500, Math.ceil((d - u) / 250) * 250), p = Math.floor(u / 250) * 250, m = (e) => 248 - (e - p) / f * 90, h = Ln(e.samples.map(([e, t, n]) => [e, t === null ? null : t - n]), s, l), ee = Ln(e.samples.map(([e, , , t]) => [e, t]), s, m), te = Ln(e.samples.map(([e, , , , t]) => [e, t]), s, m), ne = [], g = null;
+		let f = Math.max(500, Math.ceil((d - u) / 250) * 250), p = Math.floor(u / 250) * 250, m = (e) => 248 - (e - p) / f * 90, ee = In(e.samples.map(([e, t, n]) => [e, t === null ? null : t - n]), s, l), te = In(e.samples.map(([e, , , t]) => [e, t]), s, m), ne = In(e.samples.map(([e, , , , t]) => [e, t]), s, m), re = [], h = null;
 		e.samples.forEach(([t, , , , , n], r) => {
 			let i = r === e.samples.length - 1;
-			!n && g === null && (g = t), (n || i) && g !== null && (ne.push(x`<rect x=${s(g)} y=${14} width=${Math.max(1, s(t) - s(g))} height=${234} class="idle"></rect>`), g = null);
+			!n && h === null && (h = t), (n || i) && h !== null && (re.push(x`<rect x=${s(h)} y=${14} width=${Math.max(1, s(t) - s(h))} height=${234} class="idle"></rect>`), h = null);
 		});
-		let re = [
+		let ie = [
 			p,
 			p + f / 2,
 			p + f
-		], ie = this.tr("stroom.reg_title");
+		], ae = this.tr("stroom.reg_title");
 		return b`<section class="card" aria-labelledby="rg-title">
       <div>
-        <h2 id="rg-title">${ie}</h2>
+        <h2 id="rg-title">${ae}</h2>
         <p class="sub">${this.tr("stroom.reg_sub")}</p>
       </div>
       ${e.samples.length < 2 ? b`<p class="empty">${this.tr("stroom.reg_empty")}</p>` : b`<svg
                 class="reg"
                 viewBox="0 0 ${r} ${270}"
                 role="img"
-                aria-label=${ie}
+                aria-label=${ae}
               >
-                ${ne}
+                ${re}
                 <rect
                   x=${i}
                   y=${l(e.band_w)}
@@ -8351,18 +8353,18 @@ var Hn = [
 			c,
 			0,
 			-c
-		].map((e) => x`<text x=${i - 6} y=${l(e) + 3} text-anchor="end">${Rn(e, this.locale)}</text>`)}
+		].map((e) => x`<text x=${i - 6} y=${l(e) + 3} text-anchor="end">${Ln(e, this.locale)}</text>`)}
                 <text x=${i} y=${11} class="cap">
                   ${this.tr("stroom.reg_p1")}
                 </text>
-                <path d=${h} class="dev"></path>
-                ${re.map((e) => x`<line x1=${i} x2=${a} y1=${m(e)} y2=${m(e)} class="grid"></line>
-                  <text x=${i - 6} y=${m(e) + 3} text-anchor="end">${Rn(e, this.locale)}</text>`)}
+                <path d=${ee} class="dev"></path>
+                ${ie.map((e) => x`<line x1=${i} x2=${a} y1=${m(e)} y2=${m(e)} class="grid"></line>
+                  <text x=${i - 6} y=${m(e) + 3} text-anchor="end">${Ln(e, this.locale)}</text>`)}
                 <text x=${i} y=${153} class="cap">
                   ${this.tr("stroom.reg_battery")}
                 </text>
-                <path d=${ee} class="sp"></path>
-                <path d=${te} class="bat"></path>
+                <path d=${te} class="sp"></path>
+                <path d=${ne} class="bat"></path>
                 ${[
 			[-o, this.tr("stroom.reg_ago", { m: Math.round(o / 60) })],
 			[-o / 2, this.tr("stroom.reg_ago", { m: Math.round(o / 120) })],
@@ -8400,7 +8402,7 @@ var Hn = [
     </section>`;
 	}
 	renderDevices(e) {
-		let t = (e) => this.tr(e), n = In(e.devices ?? [], e.rest_today_kwh ?? null), r = Math.max(.5, ...n.map((e) => e.kwh ?? 0)), i = e.today.airco;
+		let t = (e) => this.tr(e), n = Fn(e.devices ?? [], e.rest_today_kwh ?? null), r = Math.max(.5, ...n.map((e) => e.kwh ?? 0)), i = e.today.airco;
 		return b`<section class="card" aria-labelledby="dv-title">
       <div>
         <h2 id="dv-title">${this.tr("stroom.devices_title")}</h2>
@@ -8408,7 +8410,7 @@ var Hn = [
       </div>
       ${n.map((e) => b`<div class="route dev">
             <span
-              >${e.device ? Fn(e.device, t) : this.tr("stroom.rest")}${e.device && e.device.power_w !== null && e.device.power_w >= 10 ? b` <span class="live"
+              >${e.device ? Pn(e.device, t) : this.tr("stroom.rest")}${e.device && e.device.power_w !== null && e.device.power_w >= 10 ? b` <span class="live"
                       >${A(e.device.power_w, this.locale)}</span
                     >` : C}</span
             >
@@ -8707,8 +8709,56 @@ var Hn = [
 	}
 };
 z([D({ attribute: !1 })], Q.prototype, "now", void 0), z([D({ attribute: !1 })], Q.prototype, "view", void 0), z([D({ attribute: !1 })], Q.prototype, "uiLang", void 0), z([D()], Q.prototype, "locale", void 0), z([D()], Q.prototype, "timeZone", void 0), z([D()], Q.prototype, "base", void 0), z([D({ attribute: !1 })], Q.prototype, "sign", void 0), Q = z([E("zephyr-stroom")], Q);
+// src/now.ts
+var Hn = /* @__PURE__ */ new Set([
+	"delivering",
+	"charging_solar",
+	"plan_charge",
+	"plan_hold",
+	"plan_export"
+]), Un = /* @__PURE__ */ new Set([
+	"p1_missing",
+	"p1_lost",
+	"p1_stale",
+	"p1_too_slow",
+	"no_set",
+	"blocked",
+	"temperature"
+]);
+function Wn(e) {
+	return !e || Hn.has(e) ? "hide" : Un.has(e) ? "warn" : "note";
+}
+function Gn(e) {
+	if (!e) return null;
+	for (let [t, n] of Object.entries(e)) if (t.startsWith("update.") && String(n.attributes?.release_url ?? "").toLowerCase().includes("github.com/cardinal808/zephyr/")) return n;
+	return null;
+}
+var Kn = (e) => String(e ?? "").replace(/^v/i, "");
+function qn(e, t) {
+	let n = Kn(e);
+	if (!t) return {
+		kind: "version",
+		running: n
+	};
+	let r = Kn(t.attributes.installed_version), i = Kn(t.attributes.latest_version);
+	return r && n && r !== n ? {
+		kind: "restart",
+		running: n,
+		installed: r
+	} : t.state === "on" && i && i !== n ? {
+		kind: "update",
+		running: n,
+		latest: i,
+		entity: t.entity_id,
+		url: typeof t.attributes.release_url == "string" ? t.attributes.release_url : null,
+		busy: t.attributes.in_progress === !0 || typeof t.attributes.in_progress == "number"
+	} : {
+		kind: "version",
+		running: n
+	};
+}
 // src/zephyr-panel.ts
-var Un = "/zephyr_static", Wn = [
+var Jn = "/zephyr_static", Yn = [
 	[
 		"Inter",
 		400,
@@ -8730,15 +8780,15 @@ var Un = "/zephyr_static", Wn = [
 		"space-grotesk-latin-700-normal.woff2"
 	]
 ];
-function Gn(e) {
+function Xn(e) {
 	let t = "zephyr-fonts";
 	if (document.getElementById(t)) return;
 	let n = document.createElement("style");
-	n.id = t, n.textContent = Wn.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
+	n.id = t, n.textContent = Yn.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
 }
 var $ = class extends T {
 	constructor(...e) {
-		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.period = wt(), this.openGroup = null, this.appliancesFor = null, this.confirmLive = !1, this.controlBusy = !1, this.controlError = null, this.pendingMode = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
+		super(...e), this.narrow = !1, this.status = "loading", this.view = "plan", this.clockMs = Date.now(), this.period = wt(), this.openGroup = null, this.appliancesFor = null, this.confirmLive = !1, this.confirmUpdate = !1, this.controlBusy = !1, this.controlError = null, this.pendingMode = null, this.planFor = "", this.planBusy = !1, this.subscribing = !1, this.onReady = () => {
 			this.status = "loading", this.subscribe();
 		}, this.onDisconnected = () => {
 			this.unsubscribe = void 0, this.status = "disconnected";
@@ -8860,7 +8910,7 @@ var $ = class extends T {
 		};
 	}
 	get base() {
-		return this.panel?.config?.static ?? Un;
+		return this.panel?.config?.static ?? Jn;
 	}
 	get uiLang() {
 		return $e(this.hass?.locale?.language ?? this.hass?.language);
@@ -8875,7 +8925,7 @@ var $ = class extends T {
 		return I(this.uiLang, e, t);
 	}
 	connectedCallback() {
-		super.connectedCallback(), Gn(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
+		super.connectedCallback(), Xn(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), window.clearInterval(this.clockTimer), window.clearInterval(this.planTimer), window.clearInterval(this.setsTimer), window.clearTimeout(this.retryTimer), this.watch(void 0), this.stop();
@@ -9048,10 +9098,7 @@ var $ = class extends T {
               </button>`)}
         </nav>
         <div class="meta">
-          ${e ? this.renderControls(e) : C}
-          <span class="time"
-            >${N(new Date(this.clockMs).toISOString(), this.locale, this.timeZone)}</span
-          >
+          ${e ? this.renderControls(e) : C} ${this.renderVersion()}
         </div>
       </header>
     `;
@@ -9085,6 +9132,73 @@ var $ = class extends T {
             >${r}</span
           >`}`;
 	}
+	renderVersion() {
+		let e = this.panel?.config?.version;
+		if (!e) return C;
+		let t = qn(e, Gn(this.hass?.states));
+		return t.kind === "version" ? b`<span class="version">v${t.running}</span>` : t.kind === "restart" ? this.admin ? b`<span class="livewrap verwrap">
+            <button
+              type="button"
+              class="chip warn"
+              aria-expanded=${this.confirmUpdate ? "true" : "false"}
+              @click=${() => this.confirmUpdate = !this.confirmUpdate}
+            >
+              ${this.tr("version.restart")}
+            </button>
+            ${this.confirmUpdate ? this.renderConfirm(this.tr("version.restart_title"), this.tr("version.restart_text", {
+			running: t.running,
+			installed: t.installed
+		}), this.tr("version.restart_do"), () => this.callService("homeassistant", "restart", {})) : C}
+          </span>` : b`<span class="version"
+            >${this.tr("version.restart_other", { running: t.running })}</span
+          >` : this.admin ? b`<span class="livewrap verwrap">
+      <button
+        type="button"
+        class="chip update"
+        aria-expanded=${this.confirmUpdate ? "true" : "false"}
+        ?disabled=${t.busy}
+        @click=${() => this.confirmUpdate = !this.confirmUpdate}
+      >
+        ${t.busy ? this.tr("version.busy") : this.tr("version.update", { latest: t.latest })}
+      </button>
+      ${this.confirmUpdate && !t.busy ? this.renderConfirm(this.tr("version.update_title", { latest: t.latest }), this.tr("version.update_text", { running: t.running }), this.tr("version.update_do"), () => this.callService("update", "install", { entity_id: t.entity }), t.url) : C}
+    </span>` : b`<span class="version"
+        >${this.tr("version.update_other", {
+			running: t.running,
+			latest: t.latest
+		})}</span
+      >`;
+	}
+	renderConfirm(e, t, n, r, i = null) {
+		return b`<div class="popover" role="dialog" aria-label=${e}>
+      <strong>${e}</strong>
+      <p>${t}</p>
+      ${i ? b`<p>
+              <a href=${i} target="_blank" rel="noreferrer"
+                >${this.tr("version.notes")}</a
+              >
+            </p>` : C}
+      <div class="row">
+        <button
+          type="button"
+          class="ghost"
+          @click=${() => this.confirmUpdate = !1}
+        >
+          ${this.tr("control.cancel")}
+        </button>
+        <button
+          type="button"
+          class="primary"
+          ?disabled=${this.controlBusy}
+          @click=${async () => {
+			await r(), this.confirmUpdate = !1;
+		}}
+        >
+          ${n}
+        </button>
+      </div>
+    </div>`;
+	}
 	renderConfirmLive(e) {
 		let t = e.blockers.length > 0;
 		return b`<div
@@ -9095,7 +9209,7 @@ var $ = class extends T {
       <strong>${this.tr("control.live_title")}</strong>
       <p>${this.tr(t ? "control.live_blocked" : "control.live_text")}</p>
       ${t ? b`<ul>
-              ${e.blockers.map((e) => b`<li>${wn(e, this.uiLang)}</li>`)}
+              ${e.blockers.map((e) => b`<li>${Cn(e, this.uiLang)}</li>`)}
             </ul>` : C}
       <div class="row">
         <button
@@ -9114,30 +9228,6 @@ var $ = class extends T {
           ${this.tr("control.live_start")}
         </button>
       </div>
-    </div>`;
-	}
-	renderFast(e) {
-		if (!this.admin || !e.entities?.mode) return C;
-		let t = Sn(e.mode, e.modes, e.previous_mode), n = this.pendingMode !== null && this.pendingMode !== e.mode, r = t.find((e) => e.active);
-		return b`<div
-      class="fast"
-      role="group"
-      aria-label=${this.tr("control.fast")}
-    >
-      ${t.map((e) => b`<button
-            type="button"
-            class=${e.active ? "primary" : "ghost"}
-            aria-pressed=${e.active ? "true" : "false"}
-            ?disabled=${this.controlBusy || n}
-            @click=${() => this.setMode(e.target)}
-          >
-            ${e.active ? this.tr("control.stop_fast", { mode: this.tr(`control.${e.mode}`) }) : this.tr(`control.${e.mode}`)}
-          </button>`)}
-      ${r ? b`<span class="fastnote"
-              >${this.tr(`control.running_${r.mode}`)}
-              ${this.tr("control.back_to", { mode: this.tr(`mode.${r.target}`) })}</span
-            >` : C}
-      ${e.live ? C : b`<span class="fastnote">${this.tr("control.shadow_note")}</span>`}
     </div>`;
 	}
 	renderBanner() {
@@ -9241,7 +9331,6 @@ var $ = class extends T {
         ${this.renderNow(e)} ${this.renderBattery(e)}
         ${this.renderNext(e)}
       </section>
-      ${this.renderFast(e)}
       ${e.price_entity ? this.renderPlanParts(e, t) : C}`;
 	}
 	renderPlanParts(e, t) {
@@ -9331,7 +9420,7 @@ var $ = class extends T {
     </article>`;
 	}
 	renderNow(e) {
-		let t = e.action ?? "standby", n = e.battery_w !== null && Math.abs(e.battery_w) >= 10 ? ` · ${A(e.battery_w, this.locale)}` : "";
+		let t = e.action ?? "standby", n = e.battery_w !== null && Math.abs(e.battery_w) >= 10 ? ` · ${A(e.battery_w, this.locale)}` : "", r = e.grid_w === null ? [] : qt(Ft(e.solar_w, e.grid_w, e.battery_w).paths), i = (e) => this.tr(`house.src_${e}`), a = (e) => this.tr(`house.dst_${e}`), o = (e) => A(e, this.locale), s = Wn(e.reason_code);
 		return b`<article class="card">
       <div class="label">
         <span class="dot" style="background:${R(t)}"></span
@@ -9340,12 +9429,17 @@ var $ = class extends T {
       <div class="big">
         ${e.action ? this.tr(`action.${t}`) + n : this.tr("now.waiting")}
       </div>
-      ${e.reason ? b`<p class="text">${e.reason[this.uiLang]}</p>` : C}
+      ${r.length ? b`<p class="flows">
+              ${r.map((e) => b`<span
+                    >${i(e.from)} ${o(e.total)} →
+                    ${e.to.length === 1 ? a(e.to[0][0]) : e.to.map(([e, t], n) => b`${n ? " · " : ""}${a(e)} ${o(t)}`)}</span
+                  >`)}
+            </p>` : C}
       ${this.renderAirco(e)}
-      <div class="foot">
-        ${e.grid_w === null ? C : b`<span>${this.tr("now.grid", { value: Xe(e.grid_w, this.locale) })}</span>`}
-        ${e.live ? C : b`<span>${this.tr("now.shadow_note")}</span>`}
-      </div>
+      ${s !== "hide" && e.reason ? b`<p class=${s === "warn" ? "nownote warn" : "nownote"}>
+              ${e.reason[this.uiLang]}
+            </p>` : C}
+      ${e.live ? C : b`<div class="foot"><span>${this.tr("now.shadow_note")}</span></div>`}
     </article>`;
 	}
 	renderAirco(e) {
@@ -9609,8 +9703,7 @@ var $ = class extends T {
         padding-left: 18px;
         color: var(--z-warn-text);
       }
-      .popover .row,
-      .fast {
+      .popover .row {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
@@ -9620,8 +9713,7 @@ var $ = class extends T {
         justify-content: flex-end;
         margin-top: 8px;
       }
-      .popover button,
-      .fast button {
+      .popover button {
         min-height: 44px;
         padding: 0 16px;
         border-radius: 10px;
@@ -9640,10 +9732,6 @@ var $ = class extends T {
         background: var(--z-text);
         color: var(--z-on-text);
       }
-      .fastnote {
-        font-size: 13px;
-        color: var(--z-muted);
-      }
       .banner .link {
         margin-left: 8px;
         border: 0;
@@ -9658,8 +9746,46 @@ var $ = class extends T {
         opacity: 0.6;
         cursor: not-allowed;
       }
-      .time {
+      .version {
+        color: var(--z-muted);
+        font-size: 13px;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .chip.update {
+        background: var(--z-charge);
+        border-color: var(--z-charge);
+        color: #fff;
+      }
+      .chip.warn {
+        background: var(--z-warn-bg);
+        border-color: var(--z-warn-bg);
+        color: var(--z-warn-text);
+      }
+      .popover a {
+        color: inherit;
+      }
+      @media (max-width: 900px) {
+        /* The header wraps: the version button can be at the left edge. */
+        .verwrap .popover {
+          right: auto;
+          left: 0;
+        }
+      }
+      .flows {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        line-height: 1.5;
+      }
+      .nownote {
+        margin: 10px 0 0;
+        font-size: 13px;
+        color: var(--z-muted);
+      }
+      .nownote.warn {
+        color: var(--z-warn-text);
       }
       main {
         flex: 1;
@@ -9946,5 +10072,5 @@ var $ = class extends T {
     `];
 	}
 };
-z([D({ attribute: !1 })], $.prototype, "hass", void 0), z([D({ type: Boolean })], $.prototype, "narrow", void 0), z([D({ attribute: !1 })], $.prototype, "panel", void 0), z([O()], $.prototype, "now", void 0), z([O()], $.prototype, "status", void 0), z([O()], $.prototype, "view", void 0), z([O()], $.prototype, "clockMs", void 0), z([O()], $.prototype, "planView", void 0), z([O()], $.prototype, "setsView", void 0), z([O()], $.prototype, "settingsView", void 0), z([O()], $.prototype, "period", void 0), z([O()], $.prototype, "eventsView", void 0), z([O()], $.prototype, "savingsView", void 0), z([O()], $.prototype, "stroomView", void 0), z([O()], $.prototype, "appliancesView", void 0), z([O()], $.prototype, "openGroup", void 0), z([O()], $.prototype, "planCheck", void 0), z([O()], $.prototype, "confirmLive", void 0), z([O()], $.prototype, "controlBusy", void 0), z([O()], $.prototype, "controlError", void 0), z([O()], $.prototype, "pendingMode", void 0), $ = z([E("zephyr-panel")], $);
+z([D({ attribute: !1 })], $.prototype, "hass", void 0), z([D({ type: Boolean })], $.prototype, "narrow", void 0), z([D({ attribute: !1 })], $.prototype, "panel", void 0), z([O()], $.prototype, "now", void 0), z([O()], $.prototype, "status", void 0), z([O()], $.prototype, "view", void 0), z([O()], $.prototype, "clockMs", void 0), z([O()], $.prototype, "planView", void 0), z([O()], $.prototype, "setsView", void 0), z([O()], $.prototype, "settingsView", void 0), z([O()], $.prototype, "period", void 0), z([O()], $.prototype, "eventsView", void 0), z([O()], $.prototype, "savingsView", void 0), z([O()], $.prototype, "stroomView", void 0), z([O()], $.prototype, "appliancesView", void 0), z([O()], $.prototype, "openGroup", void 0), z([O()], $.prototype, "planCheck", void 0), z([O()], $.prototype, "confirmLive", void 0), z([O()], $.prototype, "confirmUpdate", void 0), z([O()], $.prototype, "controlBusy", void 0), z([O()], $.prototype, "controlError", void 0), z([O()], $.prototype, "pendingMode", void 0), $ = z([E("zephyr-panel")], $);
 export { $ as ZephyrPanel };

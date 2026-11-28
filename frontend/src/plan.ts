@@ -301,10 +301,10 @@ export function sunLane(quarters: Quarter[]): SunQuarter[] | null {
   });
 }
 
-/** Spread as a percentage of the lowest price; null when the lowest price is not above zero (then % means nothing). */
-export function spreadPct(low: number, high: number): number | null {
-  if (low <= 0.005) return null;
-  return Math.round(((high - low) / low) * 100);
+/** Spread: how much the highest price is above the day's mean, in %; null when the mean is not above zero (then % means nothing). */
+export function spreadPct(avg: number, high: number): number | null {
+  if (avg <= 0.005) return null;
+  return Math.round(((high - avg) / avg) * 100);
 }
 
 export interface RunInput {

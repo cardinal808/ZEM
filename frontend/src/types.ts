@@ -24,7 +24,7 @@ export interface HomeAssistant {
 }
 
 export interface PanelInfo {
-  config?: { static?: string };
+  config?: { static?: string; version?: string };
 }
 
 export interface Localized {

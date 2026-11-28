@@ -50,7 +50,7 @@ async def async_register_panel(hass: HomeAssistant, entry_id: str) -> bool:
             sidebar_icon=SIDEBAR_ICON,
             module_url=f"{STATIC_URL}/{WEBCOMPONENT}.js?v={version}",
             require_admin=False,
-            config={"static": STATIC_URL},
+            config={"static": STATIC_URL, "version": version},
         )
         data["registered"] = True
     entries.add(entry_id)

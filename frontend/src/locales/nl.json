@@ -10,7 +10,7 @@
     "stroom": "Stroom"
   },
   "header": {
-    "live": "Stuurt",
+    "live": "Actief",
     "shadow": "Rekent mee",
     "live_title": "ZEPHYR stuurt de accu",
     "shadow_title": "Schaduwmodus: ZEPHYR rekent mee maar stuurt niets"
@@ -34,7 +34,6 @@
   "now": {
     "title": "Nu",
     "waiting": "Wacht op de eerste meting…",
-    "grid": "Net {value}",
     "shadow_note": "Zo zou ZEPHYR het doen (schaduwmodus)."
   },
   "battery": {
@@ -112,7 +111,7 @@
     "tip_airco": "Airco {kwh} (niet uit de accu)",
     "legend_solar_over": "Zon over (accu kan laden)",
     "spread": "spread {value}",
-    "spread_title": "Hoeveel duurder het duurste kwartier is dan het goedkoopste. Ruwe maat voor wat laden en later leveren kan opleveren, vóór verlies (± 14 %) en slijtage. Bij prijzen rond nul of negatief: het verschil in euro.",
+    "spread_title": "Hoeveel duurder het duurste kwartier is dan het gemiddelde van de dag. Ruwe maat voor wat leveren op de duurste momenten oplevert, vóór verlies (± 14 %) en slijtage. Bij een gemiddelde rond nul of negatief: het verschil in euro.",
     "tip_appliances": "Apparaten: {kwh}",
     "runs_label": "Geplande apparaten",
     "curtail_mark": "Zonoverschot wordt afgeknepen",
@@ -541,12 +540,6 @@
   },
   "control": {
     "mode": "Modus",
-    "fast": "Snel laden of ontladen",
-    "fast_charge": "Snel laden",
-    "fast_discharge": "Snel ontladen",
-    "running_fast_charge": "Snel laden loopt tot de bovengrens.",
-    "running_fast_discharge": "Snel ontladen loopt tot de ondergrens.",
-    "shadow_note": "Schaduwmodus: ZEPHYR rekent mee maar stuurt niets.",
     "live_title": "Live sturen aanzetten",
     "live_text": "ZEPHYR gaat de accu echt sturen. Uitzetten kan altijd met dezelfde knop.",
     "live_blocked": "Live sturen kan nu niet:",
@@ -562,9 +555,7 @@
       "serial": "Set {set} meldt een ander serienummer.",
       "fault": "Set {set} meldt een fout.",
       "test": "Er loopt een schrijftest."
-    },
-    "stop_fast": "{mode} stoppen",
-    "back_to": "Daarna terug naar {mode}."
+    }
   },
   "diag": {
     "title": "Diagnose",
@@ -904,5 +895,19 @@
     "error": "Uploaden mislukt: {msg}",
     "unplaced": "Nog niet geplaatst",
     "hidden": "Verborgen"
+  },
+  "version": {
+    "update": "Update {latest}",
+    "busy": "Bezig met bijwerken…",
+    "update_title": "ZEPHYR bijwerken naar {latest}?",
+    "update_text": "Nu: {running}. HACS installeert de nieuwe versie. Daarna moet Home Assistant opnieuw starten; tot dan draait {running} door.",
+    "update_do": "Bijwerken",
+    "notes": "Wat is er nieuw",
+    "update_other": "v{running} · update {latest}",
+    "restart": "Herstart nodig",
+    "restart_title": "Home Assistant herstarten?",
+    "restart_text": "Versie {installed} is geïnstalleerd, maar {running} draait nog. Na een herstart van Home Assistant draait {installed}.",
+    "restart_do": "Herstarten",
+    "restart_other": "v{running} · herstart nodig"
   }
 }

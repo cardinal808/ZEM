@@ -179,12 +179,11 @@ export class ZephyrPricesPlan extends LitElement {
   }
 
   private spreadText(s: PriceStats): string {
-    const low = s.min.buy as number;
     const high = s.max.buy as number;
-    const pct = spreadPct(low, high);
+    const pct = spreadPct(s.avg, high);
     // Around zero or below a percentage says nothing: then the difference in euro.
     return pct === null
-      ? this.tr("plan.spread", { value: euro(high - low, this.locale) })
+      ? this.tr("plan.spread", { value: euro(high - s.avg, this.locale) })
       : this.tr("plan.spread", { value: `${pct} %` });
   }
 

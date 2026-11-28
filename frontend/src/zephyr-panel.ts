@@ -17,7 +17,6 @@ import {
   minutesUntil,
   percent,
   sameDay,
-  signedWatts,
   watts,
 } from "./format";
 import { language, t, type Lang } from "./i18n";
@@ -38,7 +37,7 @@ import type { SetsView } from "./sets";
 import "./settings";
 import type { SettingsView } from "./settings";
 import type { SetResult } from "./settings-edit";
-import { blockerText, fastButtons, type EventsView } from "./diag";
+import { blockerText, type EventsView } from "./diag";
 import "./diagnostics";
 import "./savings";
 import "./appliances";
@@ -49,6 +48,9 @@ import type { PlanCheckView } from "./diag";
 import type { BackfillRequest, BackfillResult, SavingsView } from "./savings";
 import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
+import { flows } from "./flow";
+import { flowParts } from "./house";
+import { nowNote, versionState, zephyrUpdate, type UpdateState } from "./now";
 import type {
   HomeAssistant,
   Now,
@@ -104,6 +106,7 @@ export class ZephyrPanel extends LitElement {
   private appliancesFor: number | null = null;
   @state() private planCheck?: PlanCheckView;
   @state() private confirmLive = false;
+  @state() private confirmUpdate = false;
   @state() private controlBusy = false;
   @state() private controlError: string | null = null;
   @state() private pendingMode: string | null = null;
@@ -658,10 +661,7 @@ export class ZephyrPanel extends LitElement {
           )}
         </nav>
         <div class="meta">
-          ${now ? this.renderControls(now) : nothing}
-          <span class="time"
-            >${clock(new Date(this.clockMs).toISOString(), this.locale, this.timeZone)}</span
-          >
+          ${now ? this.renderControls(now) : nothing} ${this.renderVersion()}
         </div>
       </header>
     `;
@@ -710,6 +710,112 @@ export class ZephyrPanel extends LitElement {
     }`;
   }
 
+  /** Running version, an update (admins can install it) or *Herstart nodig* (SPEC-ui §4.1). */
+  private renderVersion(): TemplateResult | typeof nothing {
+    const running = this.panel?.config?.version;
+    if (!running) return nothing;
+    const v = versionState(
+      running,
+      zephyrUpdate(this.hass?.states as Record<string, UpdateState> | undefined),
+    );
+    if (v.kind === "version")
+      return html`<span class="version">v${v.running}</span>`;
+    if (v.kind === "restart")
+      return this.admin
+        ? html`<span class="livewrap verwrap">
+            <button
+              type="button"
+              class="chip warn"
+              aria-expanded=${this.confirmUpdate ? "true" : "false"}
+              @click=${() => (this.confirmUpdate = !this.confirmUpdate)}
+            >
+              ${this.tr("version.restart")}
+            </button>
+            ${
+              this.confirmUpdate
+                ? this.renderConfirm(
+                    this.tr("version.restart_title"),
+                    this.tr("version.restart_text", { running: v.running, installed: v.installed }),
+                    this.tr("version.restart_do"),
+                    () => this.callService("homeassistant", "restart", {}),
+                  )
+                : nothing
+            }
+          </span>`
+        : html`<span class="version"
+            >${this.tr("version.restart_other", { running: v.running })}</span
+          >`;
+    if (!this.admin)
+      return html`<span class="version"
+        >${this.tr("version.update_other", { running: v.running, latest: v.latest })}</span
+      >`;
+    return html`<span class="livewrap verwrap">
+      <button
+        type="button"
+        class="chip update"
+        aria-expanded=${this.confirmUpdate ? "true" : "false"}
+        ?disabled=${v.busy}
+        @click=${() => (this.confirmUpdate = !this.confirmUpdate)}
+      >
+        ${v.busy ? this.tr("version.busy") : this.tr("version.update", { latest: v.latest })}
+      </button>
+      ${
+        this.confirmUpdate && !v.busy
+          ? this.renderConfirm(
+              this.tr("version.update_title", { latest: v.latest }),
+              this.tr("version.update_text", { running: v.running }),
+              this.tr("version.update_do"),
+              () =>
+                this.callService("update", "install", { entity_id: v.entity }),
+              v.url,
+            )
+          : nothing
+      }
+    </span>`;
+  }
+
+  private renderConfirm(
+    title: string,
+    text: string,
+    action: string,
+    run: () => Promise<void>,
+    url: string | null = null,
+  ): TemplateResult {
+    return html`<div class="popover" role="dialog" aria-label=${title}>
+      <strong>${title}</strong>
+      <p>${text}</p>
+      ${
+        url
+          ? html`<p>
+              <a href=${url} target="_blank" rel="noreferrer"
+                >${this.tr("version.notes")}</a
+              >
+            </p>`
+          : nothing
+      }
+      <div class="row">
+        <button
+          type="button"
+          class="ghost"
+          @click=${() => (this.confirmUpdate = false)}
+        >
+          ${this.tr("control.cancel")}
+        </button>
+        <button
+          type="button"
+          class="primary"
+          ?disabled=${this.controlBusy}
+          @click=${async () => {
+            await run();
+            this.confirmUpdate = false;
+          }}
+        >
+          ${action}
+        </button>
+      </div>
+    </div>`;
+  }
+
   private renderConfirmLive(now: Now): TemplateResult {
     const blocked = now.blockers.length > 0;
     return html`<div
@@ -743,42 +849,6 @@ export class ZephyrPanel extends LitElement {
           ${this.tr("control.live_start")}
         </button>
       </div>
-    </div>`;
-  }
-
-  private renderFast(now: Now): TemplateResult | typeof nothing {
-    if (!this.admin || !now.entities?.mode) return nothing;
-    const buttons = fastButtons(now.mode, now.modes, now.previous_mode);
-    const waiting = this.pendingMode !== null && this.pendingMode !== now.mode;
-    const running = buttons.find((b) => b.active);
-    return html`<div
-      class="fast"
-      role="group"
-      aria-label=${this.tr("control.fast")}
-    >
-      ${buttons.map(
-        (b) =>
-          html`<button
-            type="button"
-            class=${b.active ? "primary" : "ghost"}
-            aria-pressed=${b.active ? "true" : "false"}
-            ?disabled=${this.controlBusy || waiting}
-            @click=${() => this.setMode(b.target)}
-          >
-            ${b.active ? this.tr("control.stop_fast", { mode: this.tr(`control.${b.mode}`) }) : this.tr(`control.${b.mode}`)}
-          </button>`,
-      )}
-      ${
-        running
-          ? html`<span class="fastnote"
-              >${this.tr(`control.running_${running.mode}`)}
-              ${this.tr("control.back_to", {
-                mode: this.tr(`mode.${running.target}`),
-              })}</span
-            >`
-          : nothing
-      }
-      ${now.live ? nothing : html`<span class="fastnote">${this.tr("control.shadow_note")}</span>`}
     </div>`;
   }
 
@@ -905,7 +975,6 @@ export class ZephyrPanel extends LitElement {
         ${this.renderNow(now)} ${this.renderBattery(now)}
         ${this.renderNext(now)}
       </section>
-      ${this.renderFast(now)}
       ${now.price_entity ? this.renderPlanParts(now, stale) : nothing}`;
   }
 
@@ -1044,6 +1113,15 @@ export class ZephyrPanel extends LitElement {
       now.battery_w !== null && Math.abs(now.battery_w) >= 10
         ? ` · ${watts(now.battery_w, this.locale)}`
         : "";
+    // One measurement for all flows (same words as on Stroom), so no second grid figure.
+    const parts =
+      now.grid_w !== null
+        ? flowParts(flows(now.solar_w, now.grid_w, now.battery_w).paths)
+        : [];
+    const src = (k: string) => this.tr(`house.src_${k}`);
+    const dst = (k: string) => this.tr(`house.dst_${k}`);
+    const w = (v: number) => watts(v, this.locale);
+    const note = nowNote(now.reason_code);
     return html`<article class="card">
       <div class="label">
         <span class="dot" style="background:${actionFill(action)}"></span
@@ -1052,12 +1130,34 @@ export class ZephyrPanel extends LitElement {
       <div class="big">
         ${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}
       </div>
-      ${now.reason ? html`<p class="text">${now.reason[this.uiLang]}</p>` : nothing}
+      ${
+        parts.length
+          ? html`<p class="flows">
+              ${parts.map(
+                (p) =>
+                  html`<span
+                    >${src(p.from)} ${w(p.total)} →
+                    ${
+                      p.to.length === 1
+                        ? dst(p.to[0][0])
+                        : p.to.map(
+                            ([d, v], i) => html`${i ? " · " : ""}${dst(d)} ${w(v)}`,
+                          )
+                    }</span
+                  >`,
+              )}
+            </p>`
+          : nothing
+      }
       ${this.renderAirco(now)}
-      <div class="foot">
-        ${now.grid_w !== null ? html`<span>${this.tr("now.grid", { value: signedWatts(now.grid_w, this.locale) })}</span>` : nothing}
-        ${now.live ? nothing : html`<span>${this.tr("now.shadow_note")}</span>`}
-      </div>
+      ${
+        note !== "hide" && now.reason
+          ? html`<p class=${note === "warn" ? "nownote warn" : "nownote"}>
+              ${now.reason[this.uiLang]}
+            </p>`
+          : nothing
+      }
+      ${now.live ? nothing : html`<div class="foot"><span>${this.tr("now.shadow_note")}</span></div>`}
     </article>`;
   }
 
@@ -1370,8 +1470,7 @@ export class ZephyrPanel extends LitElement {
         padding-left: 18px;
         color: var(--z-warn-text);
       }
-      .popover .row,
-      .fast {
+      .popover .row {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
@@ -1381,8 +1480,7 @@ export class ZephyrPanel extends LitElement {
         justify-content: flex-end;
         margin-top: 8px;
       }
-      .popover button,
-      .fast button {
+      .popover button {
         min-height: 44px;
         padding: 0 16px;
         border-radius: 10px;
@@ -1401,10 +1499,6 @@ export class ZephyrPanel extends LitElement {
         background: var(--z-text);
         color: var(--z-on-text);
       }
-      .fastnote {
-        font-size: 13px;
-        color: var(--z-muted);
-      }
       .banner .link {
         margin-left: 8px;
         border: 0;
@@ -1419,8 +1513,46 @@ export class ZephyrPanel extends LitElement {
         opacity: 0.6;
         cursor: not-allowed;
       }
-      .time {
+      .version {
+        color: var(--z-muted);
+        font-size: 13px;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .chip.update {
+        background: var(--z-charge);
+        border-color: var(--z-charge);
+        color: #fff;
+      }
+      .chip.warn {
+        background: var(--z-warn-bg);
+        border-color: var(--z-warn-bg);
+        color: var(--z-warn-text);
+      }
+      .popover a {
+        color: inherit;
+      }
+      @media (max-width: 900px) {
+        /* The header wraps: the version button can be at the left edge. */
+        .verwrap .popover {
+          right: auto;
+          left: 0;
+        }
+      }
+      .flows {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        line-height: 1.5;
+      }
+      .nownote {
+        margin: 10px 0 0;
+        font-size: 13px;
+        color: var(--z-muted);
+      }
+      .nownote.warn {
+        color: var(--z-warn-text);
       }
       main {
         flex: 1;
