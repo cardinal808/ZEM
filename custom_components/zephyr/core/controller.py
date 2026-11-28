@@ -196,6 +196,12 @@ class ZeroMeterController:
             elif inp.now - self._reached_at < s.after_reach:
                 settling = True
         battery = self._effective_battery(inp, settling)
+        if self.setpoint == 0 and self.wait_for_reach:
+            # Live and idle by our own command: start from the P1 alone. The report can lag
+            # well behind (seen 28-11: 169 W for up to 37 s after 0 W, while P1 had already
+            # dropped 165 W); with that value a surplus of 50 W became a start at 170 W, an
+            # import, a stop and a new start, 15 times in an hour.
+            battery = 0.0
 
         # Target on the grid depends on whether we would charge or deliver.
         target = s.target_grid_deliver

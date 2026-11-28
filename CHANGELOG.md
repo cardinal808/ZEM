@@ -10,6 +10,11 @@
 - Own picture (0.8.58) unchanged; removing it keeps the chosen built-in house.
 - Tests: `busSegments` (the mock, sun only, battery + grid, export, below 10 W), floor boxes on their branches, `shownFloor`, texts; HA: `house_style` default/alt and an unknown style refused.
 
+### 0.8.98 — Start from idle on the P1 alone, report age in the log
+- **Fix: on/off cycles at a small solar surplus** (diagnosis 28-11, 11:44–12:52): after a command to 0 W the set kept reporting 169 W for up to 37 s while P1 had already moved 165 W. From that lagging value a surplus of 50 W became a start at 170 W, an import, a stop and a new start: 15 times in an hour. Live and idle by its own command, the controller now starts from the P1 alone. A start then needs a surplus of at least the minimum power plus the charging target (≈ 130 W export); at 40–50 W the battery stays idle.
+- **Log:** every decision carries what the sets report on the AC side (`ac`: grid input, home output), `report_age_s` (since the last good read) and `content_age_s` (since the report's content last changed). For 30 s after a command each new report is logged too (`report_only`), so it shows how fast the set follows.
+- Tests: no start at 50 W surplus with a lagging report, a start with the surplus (not surplus + report), delivering from the P1 alone, the new log fields.
+
 ### 0.8.97 — Built-in battery named after its set
 - **Accu:** the built-in battery is called after the set's model without *SolarFlow* (*2400 Pro*, *AIO 2400*) instead of *Ingebouwd*, in the pack cards and *In het kort*. Unknown model: *Ingebouwd* as before (`builtInName`).
 - Tests: `packName` with the set model, `builtInName`.

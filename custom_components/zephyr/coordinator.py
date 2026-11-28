@@ -64,6 +64,9 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
         self.client = ZendureClient(self.host, async_get_clientsession(hass))
         self.health = SetHealth()
         self._last_report: SetReport | None = None
+        self.report_changed_at: float | None = None
+        """Monotonic time the set's own report changed last (its ``timestamp`` or AC power):
+        a read can bring the same values again, so this is how old the content is."""
         self._last_raw: Mapping[str, Any] | None = None
         self._unknown_issue_shown: bool | None = None  # None: not checked since start
         super().__init__(
@@ -130,6 +133,13 @@ class SetCoordinator(DataUpdateCoordinator[SetData]):
             else:
                 ir.async_delete_issue(self.hass, DOMAIN, self.mismatch_issue_id)
                 self.health.record_success(now)
+                old = self._last_report
+                if old is None or (old.timestamp, old.grid_input_power, old.output_home_power) != (
+                    report.timestamp,
+                    report.grid_input_power,
+                    report.output_home_power,
+                ):
+                    self.report_changed_at = now
                 self._last_report = report
                 self._last_raw = raw
                 if not self.product:
