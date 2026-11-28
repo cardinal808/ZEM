@@ -93,6 +93,8 @@ export interface BatteryDaysView {
     delivered: number;
     cycles: number | null;
     efficiency: number | null;
+    /** Days the efficiency covers (from the first to the last quarter with a SoC); null without efficiency. */
+    efficiency_days?: number | null;
     grid_price: number | null;
   };
   usable_kwh: number | null;
@@ -360,7 +362,10 @@ export class ZephyrSets extends LitElement {
       this.tr("sets.days_week_charged", { kwh: k(w.charged), solar: k(w.solar_battery), grid: k(w.grid_battery) }),
       this.tr("sets.days_week_delivered", { kwh: k(w.delivered) }),
       w.cycles === null ? null : this.tr("sets.days_week_cycles", { n: this.num(w.cycles, 1) }),
-      w.efficiency === null ? null : this.tr("sets.days_week_efficiency", { pct: percent(w.efficiency * 100, this.locale) }),
+      w.efficiency === null
+        ? null
+        : this.tr("sets.days_week_efficiency", { pct: percent(w.efficiency * 100, this.locale) }) +
+          (w.efficiency_days && w.efficiency_days < 7 ? ` (${this.tr("sets.days_n", { n: w.efficiency_days })})` : ""),
       w.grid_price === null ? null : this.tr("sets.days_week_price", { price: euro(w.grid_price, this.locale) }),
     ].filter((x): x is string => x !== null);
     return html`<section class="card" aria-label=${this.tr("sets.days_title")}>

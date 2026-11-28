@@ -1286,7 +1286,8 @@ export class ZephyrPanel extends LitElement {
     if (!week) return nothing;
     const value = week.efficiency === null ? "–" : percent(week.efficiency * 100, this.locale);
     return html`<span class="rte" title=${this.tr("battery.rte_title")}
-      >${this.tr("battery.rte", { value })} <span class="muted">· ${this.tr("battery.rte_days")}</span></span
+      >${this.tr("battery.rte", { value })}
+      <span class="muted">· ${this.tr("sets.days_n", { n: week.efficiency_days ?? 7 })}</span></span
     >`;
   }
 

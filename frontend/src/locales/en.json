@@ -49,8 +49,7 @@
     "set_offline": "set offline",
     "unknown": "No data from the set yet",
     "rte": "RTE {value}",
-    "rte_days": "7 days",
-    "rte_title": "Round-trip efficiency: delivered ÷ charged over the last 7 days, corrected for the change in SoC (same as on the screen Accu)."
+    "rte_title": "Round-trip efficiency: delivered ÷ charged, corrected for the change in SoC, over the last 7 days (or fewer if the cost log is shorter). Same as on the screen Accu."
   },
   "next": {
     "title": "Next step",
@@ -237,7 +236,8 @@
     "days_week_cycles": "{n} cycles",
     "days_week_efficiency": "efficiency {pct}",
     "days_week_price": "from grid avg. {price}/kWh",
-    "days_explain": "Cycles = delivered ÷ usable capacity ({usable} kWh between the limits). Efficiency = delivered ÷ charged over the week, corrected for the change in SoC. From the cost log, per closed quarter."
+    "days_explain": "Cycles = delivered ÷ usable capacity ({usable} kWh between the limits). Efficiency = delivered ÷ charged over the week, corrected for the change in SoC. From the cost log, per closed quarter.",
+    "days_n": "{n} days"
   },
   "settings": {
     "title": "Settings",
