@@ -306,12 +306,19 @@ export class ZephyrPricesPlan extends LitElement {
         <a href=${f.source.url} target="_blank" rel="noreferrer">${f.source.name}</a>
       </p>`,
     );
-    return html`${lines}`;
+    return html`<div class="fcnotes">${lines}</div>`;
   }
 
   private chart(quarters: Quarter[]): TemplateResult {
     const n = quarters.length;
     const s = scale(quarters);
+    // The forecast band must fit too (it can run above the pattern of today).
+    const shownFrom = quarters.length ? new Date(quarters[0].start).getTime() : 0;
+    const shownTo = quarters.length ? new Date(quarters[n - 1].start).getTime() : 0;
+    for (const f of this.view?.price_forecast?.slots ?? []) {
+      const t = new Date(f.start).getTime();
+      if (t >= shownFrom && t <= shownTo) s.hi = Math.max(s.hi, Math.ceil(f.buy_high * 20) / 20);
+    }
     const now = currentIndex(quarters);
     const pct = (i: number): string => `${((i / n) * 100).toFixed(3)}%`;
     const dayIdx = days(quarters, this.timeZone);
@@ -786,6 +793,15 @@ export class ZephyrPricesPlan extends LitElement {
         fill: var(--z-text);
         opacity: 0.08;
         stroke: none;
+      }
+      .fcnotes {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 4px 0 8px;
+      }
+      .fcnotes .note {
+        margin: 0;
       }
       .note.source {
         display: flex;

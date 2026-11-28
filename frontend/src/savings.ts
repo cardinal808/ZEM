@@ -114,9 +114,14 @@ export function dayScale(
   days: SavingsDay[],
   withSolar = false,
 ): { top: number; bottom: number } {
-  const values = days.map(
-    (d) => (d.savings_battery ?? 0) + (withSolar ? (d.savings_solar ?? 0) : 0),
+  // Stacked (with solar): solar and a positive battery part go up, a negative battery part down.
+  const ups = days.map((d) =>
+    withSolar
+      ? Math.max(d.savings_solar ?? 0, 0) + Math.max(d.savings_battery ?? 0, 0)
+      : (d.savings_battery ?? 0),
   );
+  const downs = days.map((d) => (withSolar ? Math.min(d.savings_battery ?? 0, 0) : (d.savings_battery ?? 0)));
+  const values = [...ups, ...downs];
   const sizes = values
     .map(Math.abs)
     .filter((v) => v > 0)
@@ -642,8 +647,12 @@ export class ZephyrSavings extends LitElement {
               </p>
             </div>
           </dl>
-          <h3 class="subhead"><i class="sw win"></i>${this.tr("savings.battery_group")}
-            <span>${s.savings_battery === null ? "–" : euro(s.savings_battery, this.locale)}</span></h3>`
+          <dl class="group">
+            <div class="grouphead">
+              <dt><i class="sw win"></i>${this.tr("savings.battery_group")}</dt>
+              <dd>${s.savings_battery === null ? "–" : euro(s.savings_battery, this.locale)}</dd>
+            </div>
+          </dl>`
         : nothing
     }<dl>
         <div>
