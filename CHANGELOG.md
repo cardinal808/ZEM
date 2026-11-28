@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.72 — Diagnose: tidier layout
+- **Top:** one wide bar with *Diagnose downloaden* and *Kostenlogboek exporteren*.
+- **Planner:** *Plan tegen werkelijkheid* and *Verbruiksprofiel* side by side and equally high; *Apparaatprofielen* below over the full width.
+- **Meting en set:** *Energietellers* on the left; *Korte pieken* with *Schrijfacties* (now its own card, was inside the download card) on the right. The gaps list shows the last 5, with *Toon alle n gaten*.
+- **Logboek:** *Gebeurtenissen* over the full width. Two columns from 900 px, one below.
+
 ### 0.8.71 — Accu: the inverter in the summary, what the battery did per day
 - **Summary:** *Warmste accu* is replaced by *Omvormer* (the set's enclosure temperature; with more sets the warmest).
 - **What the battery did per day · last 7 days** replaces *Celverschil per dag* (at full the cells always differ a lot, so the grid was red every day and said little). Per local day from the cost log's closed quarters: a bar with charged up (solar / grid) and delivered down (house / grid) on one scale, and rows *Geladen*, *Geleverd*, *Cycli* (delivered ÷ usable capacity between the limits) and the lowest–highest SoC. Below: the week with charged (solar · grid), delivered, cycles, round-trip efficiency (delivered ÷ charged, corrected for the change in SoC; shown only from 2 kWh and between 50 and 98 %) and the mean price of what went from the grid into the battery.

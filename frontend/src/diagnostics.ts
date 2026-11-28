@@ -25,6 +25,9 @@ import { t, type Lang } from "./i18n";
 
 export type ExportResult = { path: string; rows: number };
 
+/** Gaps shown before *Toon alle* (the energy counters). */
+const GAPS_SHOWN = 5;
+
 @customElement("zephyr-diagnostics")
 export class ZephyrDiagnostics extends LitElement {
   @property({ attribute: false }) view?: EventsView;
@@ -33,6 +36,7 @@ export class ZephyrDiagnostics extends LitElement {
   @property() timeZone = "UTC";
   @property({ attribute: false }) appliances?: AppliancesView;
   @state() private peakInfo = false;
+  @state() private allGapsOpen = false;
   @property({ type: Boolean }) admin = false;
   @property({ attribute: false }) download?: () => Promise<void>;
   @property({ attribute: false }) exportCosts?: () => Promise<ExportResult>;
@@ -79,10 +83,13 @@ export class ZephyrDiagnostics extends LitElement {
 
   protected override render(): TemplateResult {
     const view = this.view;
+    const planner = this.planCheck || view?.profile || this.appliances;
     return html`<div class="layout">
       <section class="card tools">
-        <h2>${this.tr("diag.title")}</h2>
-        <p class="muted">${this.tr("diag.intro")}</p>
+        <div class="intro">
+          <h2>${this.tr("diag.title")}</h2>
+          <p class="muted">${this.tr("diag.intro")}</p>
+        </div>
         <div class="buttons">
           <button
             type="button"
@@ -106,13 +113,32 @@ export class ZephyrDiagnostics extends LitElement {
           }
         </div>
         ${this.note ? html`<p class=${this.note.error ? "note error" : "note"} role="status">${this.note.text}</p>` : nothing}
-        ${view ? this.renderCounters(view) : html`<div class="skeleton"></div>`}
       </section>
-      ${view?.peaks ? this.renderPeaks(view.peaks) : nothing}
-      ${this.appliances ? this.renderAppliances(this.appliances) : nothing}
-      ${view?.energy ? this.renderEnergy(view.energy) : nothing}
-      ${this.planCheck ? this.renderCheck(this.planCheck) : nothing}
-      ${view?.profile ? this.renderProfile(view.profile) : nothing}
+      ${
+        planner
+          ? html`<h2 class="sec">${this.tr("diag.sec_planner")}</h2>
+              ${
+                this.planCheck || view?.profile
+                  ? html`<div class="g2">
+                      ${this.planCheck ? this.renderCheck(this.planCheck) : nothing}
+                      ${view?.profile ? this.renderProfile(view.profile) : nothing}
+                    </div>`
+                  : nothing
+              }
+              ${this.appliances ? this.renderAppliances(this.appliances) : nothing}`
+          : nothing
+      }
+      <h2 class="sec">${this.tr("diag.sec_measure")}</h2>
+      <div class="g2">
+        ${view?.energy ? this.renderEnergy(view.energy) : nothing}
+        <div class="col">
+          ${view?.peaks ? this.renderPeaks(view.peaks) : nothing}
+          <section class="card" aria-labelledby="wr-title">
+            ${view ? this.renderCounters(view) : html`<div class="skeleton"></div>`}
+          </section>
+        </div>
+      </div>
+      <h2 class="sec">${this.tr("diag.sec_log")}</h2>
       <section class="card events" aria-labelledby="events-title">
         <div class="head">
           <h2 id="events-title">${this.tr("diag.events")}</h2>
@@ -131,12 +157,13 @@ export class ZephyrDiagnostics extends LitElement {
 
   private renderCounters(view: EventsView): TemplateResult {
     if (!view.sets.length)
-      return html`<p class="muted">${this.tr("diag.no_sets")}</p>`;
+      return html`<h2 id="wr-title">${this.tr("diag.counters")}</h2>
+        <p class="muted">${this.tr("diag.no_sets")}</p>`;
     const n = (v: number | null) =>
       v === null ? "–" : new Intl.NumberFormat(this.locale).format(v);
-    return html`<h3>
+    return html`<h2 id="wr-title">
         ${this.tr(view.shadow ? "diag.counters_shadow" : "diag.counters")}
-      </h3>
+      </h2>
       ${view.shadow ? html`<p class="note">${this.tr("diag.shadow_counts")}</p>` : nothing}
       <table>
         <thead>
@@ -319,7 +346,8 @@ export class ZephyrDiagnostics extends LitElement {
         : s < 7200
           ? `${Math.round(s / 60)} min`
           : `${(s / 3600).toLocaleString(this.locale, { maximumFractionDigits: 1 })} h`;
-    const gaps = allGaps(e).slice(0, 8);
+    const every = allGaps(e);
+    const gaps = this.allGapsOpen ? every : every.slice(0, GAPS_SHOWN);
     const multi = e.sets.length > 1;
     return html`<section class="card" aria-labelledby="en-title">
       <div>
@@ -397,7 +425,19 @@ export class ZephyrDiagnostics extends LitElement {
                     >
                   </li>`,
               )}
-            </ul>`
+            </ul>
+            ${
+              every.length > GAPS_SHOWN
+                ? html`<button
+                    type="button"
+                    class="linkish"
+                    aria-expanded=${this.allGapsOpen ? "true" : "false"}
+                    @click=${() => (this.allGapsOpen = !this.allGapsOpen)}
+                  >
+                    ${this.allGapsOpen ? this.tr("diag.energy_gaps_less") : this.tr("diag.energy_gaps_all", { n: every.length })}
+                  </button>`
+                : nothing
+            }`
           : html`<p class="muted">${this.tr("diag.energy_no_gaps")}</p>`
       }
       <p class="muted small">${this.tr("diag.energy_note")}</p>
@@ -636,9 +676,42 @@ export class ZephyrDiagnostics extends LitElement {
     }
     .layout {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 16px;
-      align-items: flex-start;
+    }
+    .g2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+    h2.sec {
+      margin: 10px 0 -6px;
+      font-family: var(--z-font);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--z-muted);
+    }
+    .linkish {
+      align-self: flex-start;
+      background: none;
+      border: 0;
+      padding: 6px 0;
+      min-height: 0;
+      color: var(--z-text);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
     }
     .card {
       background: var(--z-card);
@@ -649,17 +722,18 @@ export class ZephyrDiagnostics extends LitElement {
       box-sizing: border-box;
     }
     .tools {
-      flex: 1 1 320px;
-      max-width: 440px;
       display: flex;
-      flex-direction: column;
-      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 24px;
     }
-    .events {
-      flex: 999 1 480px;
+    .tools .intro {
+      flex: 1 1 360px;
+    }
+    .tools .note {
+      flex-basis: 100%;
     }
     .check {
-      flex: 999 1 480px;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -738,7 +812,6 @@ export class ZephyrDiagnostics extends LitElement {
       opacity: 0.45;
     }
     .profile {
-      flex: 999 1 480px;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -1122,12 +1195,14 @@ export class ZephyrDiagnostics extends LitElement {
       border-radius: 10px;
       background: var(--z-info-bg);
     }
+    @media (max-width: 900px) {
+      .g2 {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
     @media (max-width: 700px) {
       .card {
         padding: 16px;
-      }
-      .tools {
-        max-width: none;
       }
       li {
         grid-template-columns: auto 1fr;
