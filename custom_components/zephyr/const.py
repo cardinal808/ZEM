@@ -108,3 +108,11 @@ CONF_APPLIANCE_UNTIL: Final = "window_until"
 """Time of day the run must be done (HH:MM); before the opening time = the next day."""
 CONF_APPLIANCE_AFTER_WASH: Final = "after_washer"
 """Dryer: plan one run after the washing whenever the washing machine is planned."""
+
+
+INSTALLATION_MODEL: Final = {"nl": "Regeling en planner"}
+"""Type of the installation device per language; HA translates device names, not models (0.8.73)."""
+
+
+def installation_model(language: str) -> str:
+    return INSTALLATION_MODEL.get(language.split("-")[0], "Control and planner")
