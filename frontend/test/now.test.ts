@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { nowNote, p1Display, versionState, zephyrUpdate, type UpdateState } from "../src/now";
+import { nowNote, nowRows, p1Display, versionState, zephyrUpdate, type UpdateState } from "../src/now";
+import { flows } from "../src/flow";
 
 const upd = (attrs: Record<string, unknown>, state = "on"): UpdateState => ({
   entity_id: "update.zephyr_update",
@@ -63,5 +64,31 @@ describe("P1 on the card Nu", () => {
     expect(p1Display(6, "nl")).toEqual({ text: "+6 W", kind: "zero" });
     expect(p1Display(0, "en")).toEqual({ text: "0 W", kind: "zero" });
     expect(p1Display(-50, "en").kind).toBe("zero");
+  });
+});
+
+describe("fixed rows on the card Nu", () => {
+  const rows = (solar: number, grid: number, battery: number) =>
+    nowRows(flows(solar, grid, battery).paths).map((r) => `${r.from}>${r.to} ${r.w}`);
+
+  it("always has the same five rows, at least 0 W", () => {
+    expect(rows(0, 6, -440)).toEqual(["sun>house 0", "batt>house 440", "grid>house 6", "sun>battery 0", "sun>grid 0"]);
+  });
+
+  it("names the source of what goes into the battery and the grid", () => {
+    // Noon: sun 2100 W, house 550 W, battery charges 1200 W, 350 W export.
+    expect(rows(2100, -350, 1200)).toEqual([
+      "sun>house 550",
+      "batt>house 0",
+      "grid>house 0",
+      "sun>battery 1200",
+      "sun>grid 350",
+    ]);
+    // Night: charging 2400 W from the grid, house 150 W.
+    expect(rows(0, 2550, 2400).slice(3)).toEqual(["grid>battery 2400", "sun>grid 0"]);
+    // Sun 400 W and grid together charge 1200 W.
+    expect(rows(400, 800, 1200)[3]).toBe("sun_grid>battery 1200");
+    // The battery exports: house 300 W, battery 1000 W.
+    expect(rows(0, -700, -1000).slice(3)).toEqual(["sun>battery 0", "batt>grid 700"]);
   });
 });

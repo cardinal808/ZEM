@@ -19,6 +19,7 @@ import {
   percent,
   sameDay,
   watts,
+  number,
 } from "./format";
 import { language, t, type Lang } from "./i18n";
 import { aircoLine } from "./airco";
@@ -50,12 +51,15 @@ import type { BackfillRequest, BackfillResult, SavingsView } from "./savings";
 import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
 import { flows } from "./flow";
-import { flowParts } from "./house";
 import {
+  NOW_ROW_MIN_W,
   nowNote,
+  nowRows,
   p1Display,
   versionState,
   zephyrUpdate,
+  type NowRow,
+  type NowSource,
   type UpdateState,
 } from "./now";
 import type {
@@ -1148,14 +1152,11 @@ export class ZephyrPanel extends LitElement {
       now.battery_w !== null && Math.abs(now.battery_w) >= 10
         ? ` · ${watts(now.battery_w, this.locale)}`
         : "";
-    // One measurement for all flows (same words as on Stroom), so no second grid figure.
-    const parts =
+    // One measurement for all flows; five fixed rows so the card does not jump (0.8.90).
+    const rows =
       now.grid_w !== null
-        ? flowParts(flows(now.solar_w, now.grid_w, now.battery_w).paths)
+        ? nowRows(flows(now.solar_w, now.grid_w, now.battery_w).paths)
         : [];
-    const src = (k: string) => this.tr(`house.src_${k}`);
-    const dst = (k: string) => this.tr(`house.dst_${k}`);
-    const w = (v: number) => watts(v, this.locale);
     const note = nowNote(now.reason_code);
     return html`<article class="card">
       <div class="label">
@@ -1168,26 +1169,7 @@ export class ZephyrPanel extends LitElement {
         </div>
         ${now.grid_w !== null ? this.renderP1(now.grid_w) : nothing}
       </div>
-      ${
-        parts.length
-          ? html`<p class="flows">
-              ${parts.map(
-                (p) =>
-                  html`<span
-                    >${src(p.from)} ${w(p.total)} →
-                    ${
-                      p.to.length === 1
-                        ? dst(p.to[0][0])
-                        : p.to.map(
-                            ([d, v], i) =>
-                              html`${i ? " · " : ""}${dst(d)} ${w(v)}`,
-                          )
-                    }</span
-                  >`,
-              )}
-            </p>`
-          : nothing
-      }
+      ${rows.length ? this.renderNowRows(rows) : nothing}
       ${this.renderAirco(now)}
       ${
         note !== "hide" && now.reason
@@ -1225,6 +1207,38 @@ export class ZephyrPanel extends LitElement {
         }</span
       >
     </p>`;
+  }
+
+  private renderNowRows(rows: NowRow[]): TemplateResult {
+    const colour: Record<NowRow["key"], string> = {
+      solar_house: "var(--z-solar)",
+      battery_house: "var(--z-deliver)",
+      grid_house: "var(--z-import)",
+      to_battery: "var(--z-charge)",
+      to_grid: "var(--z-export)",
+    };
+    const from = (s: NowSource): string =>
+      s === "sun_grid"
+        ? `${this.tr("house.src_sun")} + ${this.tr("house.src_grid").toLowerCase()}`
+        : s === "sun_batt"
+          ? `${this.tr("house.src_sun")} + ${this.tr("house.src_batt").toLowerCase()}`
+          : this.tr(`house.src_${s}`);
+    const row = (r: NowRow) =>
+      html`<tr class=${r.w >= NOW_ROW_MIN_W ? "" : "zero"}>
+        <th scope="row">
+          <span class="sw" style="background:${colour[r.key]}"></span
+          >${from(r.from)} → ${this.tr(`house.dst_${r.to}`)}
+        </th>
+        <td>${number(r.w, this.locale, 0)} W</td>
+      </tr>`;
+    return html`<table class="nowrows">
+      <tbody>
+        ${rows.slice(0, 3).map(row)}
+      </tbody>
+      <tbody class="out">
+        ${rows.slice(3).map(row)}
+      </tbody>
+    </table>`;
   }
 
   private renderP1(gridW: number): TemplateResult {
@@ -1602,6 +1616,43 @@ export class ZephyrPanel extends LitElement {
           right: auto;
           left: 0;
         }
+      }
+      .nowrows {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+        font-size: 14px;
+      }
+      .nowrows th {
+        text-align: left;
+        font-weight: 400;
+        padding: 2px 0;
+        white-space: nowrap;
+      }
+      .nowrows td {
+        text-align: right;
+        padding: 2px 0;
+        white-space: nowrap;
+      }
+      .nowrows tbody.out tr:first-child th,
+      .nowrows tbody.out tr:first-child td {
+        border-top: 1px solid var(--z-border);
+        padding-top: 6px;
+      }
+      .nowrows tbody:not(.out) tr:last-child th,
+      .nowrows tbody:not(.out) tr:last-child td {
+        padding-bottom: 6px;
+      }
+      .nowrows tr.zero {
+        color: var(--z-muted);
+        opacity: 0.75;
+      }
+      .nowrows .sw {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        margin-right: 8px;
       }
       .flows {
         margin: 0;
