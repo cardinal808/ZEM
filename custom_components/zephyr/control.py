@@ -70,6 +70,8 @@ if TYPE_CHECKING:
     from . import ZephyrConfigEntry, ZephyrRuntime
 
 LIVE_HISTORY = 20
+WATCH_REPORTS_FOR = 30.0
+"""s after a command during which every new report of the sets is logged too."""
 
 
 def _p1_watts(state: State | None) -> float | None:
@@ -161,6 +163,8 @@ class ZephyrControl:
         """The last 10 minutes of the controller (screen Stroom)."""
         """How well the meter stayed at its target today (screen Stroom)."""
         self._zero_store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.zero")
+        self._watch_reports_until = 0.0
+        self._last_logged_ac: list[int] | None = None
         self.handed_over = False
         self.reload_reason: list[str] | None = None
         """The options that asked for a reload (names only), for the log at the hand-over."""
@@ -749,7 +753,14 @@ class ZephyrControl:
         previous = self.result
         self.result = result
         self._zero_step(now, result, excluded)
-        if result.commands or previous is None or (previous.setpoint, previous.reason) != (result.setpoint, result.reason):
+        report = self._report_info(now)
+        if result.commands:
+            self._watch_reports_until = now + WATCH_REPORTS_FOR
+        changed = result.commands or previous is None or (previous.setpoint, previous.reason) != (result.setpoint, result.reason)
+        # After a command, also every new report of the sets for a while: how fast they follow.
+        watching = now < self._watch_reports_until and report.get("ac") != self._last_logged_ac
+        if changed or watching:
+            self._last_logged_ac = report.get("ac")
             self.log_file.add(
                 {
                     "time": dt_util.utcnow().isoformat(timespec="seconds"),
@@ -771,10 +782,40 @@ class ZephyrControl:
                     **({"excluded": round(self.engine.excluded_now)} if self.engine.excluded_now else {}),
                     "commands": [{"set": self.runtime.coordinators[c.key].number, "kind": c.kind, **c.props} for c in result.commands],
                     "sent": not self.shadow and bool(result.commands),
+                    **report,
+                    **({} if changed else {"report_only": True}),
                 }
             )
         for listener in list(self._listeners):
             listener()
+
+    def _report_info(self, now: float) -> dict[str, Any]:
+        """Per decision: what the sets report on the AC side and how old that is.
+
+        ``report_age_s``: since the last good read; ``content_age_s``: since the report's
+        content last changed (a read can bring the same values again). Seen 28-11: the
+        reported power stayed for up to 37 s after a command while P1 had already moved.
+        """
+        grid_in = home_out = 0
+        read_age: float | None = None
+        content_age: float | None = None
+        for coordinator in self.runtime.coordinators.values():
+            data = coordinator.data
+            if data is None or data.report is None or not data.online:
+                continue
+            grid_in += round(data.report.grid_input_power)
+            home_out += round(data.report.output_home_power)
+            if coordinator.health.last_success is not None:
+                age = now - coordinator.health.last_success
+                read_age = age if read_age is None else max(read_age, age)
+            if coordinator.report_changed_at is not None:
+                age = now - coordinator.report_changed_at
+                content_age = age if content_age is None else max(content_age, age)
+        return {
+            "ac": [grid_in, home_out],
+            "report_age_s": None if read_age is None else round(max(read_age, 0.0), 1),
+            "content_age_s": None if content_age is None else round(max(content_age, 0.0), 1),
+        }
 
     # --- prices: deliver in the most expensive hours, reserve (PLAN-M4b §2.6) ----------
 
