@@ -136,6 +136,15 @@ export function formatNumber(
   }).format(value);
 }
 
+/**
+ * The value in the input. A tariff field that the supplier's table fills shows the amount in use
+ * (greyed out), not the own value behind it (0.8.74).
+ */
+export function controlValue(f: SettingField, shown: unknown): unknown {
+  if (f.tariff && f.active === false && f.in_use !== undefined && f.in_use !== null) return f.in_use;
+  return shown;
+}
+
 @customElement("zephyr-settings")
 export class ZephyrSettings extends LitElement {
   @property({ attribute: false }) view?: SettingsView;
@@ -316,7 +325,7 @@ export class ZephyrSettings extends LitElement {
               }}
             >
               <span>${this.tr(`settings.groups.${g.key}`)}</span>
-              ${g.modified ? html`<span class="badge">${this.tr("settings.modified_n", { n: g.modified })}</span>` : nothing}
+
             </button>`,
         )}
       </nav>
@@ -681,7 +690,13 @@ export class ZephyrSettings extends LitElement {
             ${this.saved === f.key ? html`<span class="saved" role="status">${this.tr("settings.saved")}</span>` : nothing}
           </div>
           <span class="help">${this.tr(`settings.fields.${f.key}.help`)}</span>
-          ${open ? html`<div class="more" role="note">${this.tr(`settings.fields.${f.key}.more`)}</div>` : nothing}
+          ${
+            open
+              ? html`<div class="more" role="note">${this.tr(`settings.fields.${f.key}.more`, {
+                  in_use: f.in_use === undefined || f.in_use === null ? "–" : this.display(f, f.in_use),
+                })}</div>`
+              : nothing
+          }
           ${this.meta(f)}
           ${this.errors[f.key] ? html`<span class="error" role="alert">${this.errorText(f, this.errors[f.key])}</span>` : nothing}
           ${this.curtailWarning(f) ? html`<span class="warnline" role="note">${this.tr("settings.curtail_rated_missing")}</span>` : nothing}
@@ -742,15 +757,6 @@ export class ZephyrSettings extends LitElement {
     const parts: string[] = [];
     const modified = this.isModified(f);
     if (modified) parts.push(this.defaultText(f));
-    if (
-      f.tariff &&
-      f.active === false &&
-      f.in_use !== undefined &&
-      f.in_use !== null
-    )
-      parts.push(
-        this.tr("settings.in_use", { value: this.display(f, f.in_use) }),
-      );
     const st = f.status;
     if (st) {
       if (st.state === "unset") parts.push(this.tr("settings.status.unset"));
@@ -817,7 +823,7 @@ export class ZephyrSettings extends LitElement {
       !this.editable ||
       this.busy ||
       (f.active === false && f.tariff);
-    const value = this.shown(f);
+    const value = controlValue(f, this.shown(f));
     switch (f.kind) {
       case "bool":
         return html`<button
@@ -1149,14 +1155,6 @@ export class ZephyrSettings extends LitElement {
     .info:focus-visible {
       outline: 2px solid var(--z-charge);
       outline-offset: 2px;
-    }
-    .badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: var(--z-info-bg);
-      color: var(--z-text);
-      white-space: nowrap;
     }
     .fields {
       flex: 999 1 520px;

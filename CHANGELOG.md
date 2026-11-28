@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.77 — Settings: amounts in the fields, no counters in the menu, better info texts
+- **Menu:** no more *x gewijzigd* per group; the orange dot on a changed field stays.
+- **Tariffs from the supplier's table:** the greyed-out fields show the amount in use (e.g. *Opslag inkoop* 0,01653 instead of 0); the line *in gebruik: …* is gone. With own tariffs the fields show and edit your own values as before.
+- **Info texts (i) for all 38 fields** rewritten (NL and EN, `VOORSTEL-tooltips.md`): what to fill in, where to find it, a common value or example (e.g. *Btw*: statutory rate, 21 % in the Netherlands), and what higher or lower does. No internal decision codes any more. *Energiebelasting* shows the amount in use in its text.
+- Tests: `controlValue`, info text with the amount in use (vitest).
+
 ### 0.8.76 — Second controller: no false alarm for a set catching up, every mismatch in the log
 - **False alarm (28-11):** ZEPHYR sent A and a few seconds later B; a slow set still showed A. Only "still the limits from before B" counted as not yet applied, so A counted as foreign, and twice in 5 minutes stopped live control. A report equal (within 20 W) to a command ZEPHYR itself sent in the last 30 s now counts as a set catching up. The writer keeps its last 6 limits for this.
 - **Every mismatch in the 48-hour log** as event `foreign_report`, also when it does not stop live control: set, limits sent and reported, seconds after the command, the limits before, the last commands with their age, the age of the report, smartMode sent/reported, acMode, acStatus, packState, SOC, power and the number of mismatches in the window.
