@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.93 — Reload without 0 W, no 0 W when HA stops, slow band without export
+- **Reload hands over** (`handover.py`): a reload (a setting that needs one, a set added) no longer leaves the sets at 0 W. The unload parks the running engine (setpoint, P1, `acMode`, twin, counters, live state); the new setup takes it over and goes on live at once: no 0 W, no relay switch, no wait for the P1, no `p1_missing`. Nobody takes over within 120 s (a failed setup): 0 W then. Different sets than before: fresh start, the old sets to 0 W.
+- **0 W only where it belongs:** switching *ZEPHYR stuurt de accu* off, a second controller, disabling or removing the integration. **Not** when Home Assistant stops, restart or not (nobody shuts HA down; at a power cut there is no time to send it).
+- **Log:** the hand-over with the options that asked for the reload (`handover`, `changed`), in the live history and the log.
+- **Slow P1 profile** (OPDRACHT-p1-profiel §7.4): the dead zone while delivering is −20…+55 W (`slow_export_band` 20 W), so a 10 s meter no longer sits on 30–45 W export for minutes. The medium profile already had −20…+30 W.
+- **P1 hiccups** (§7.1): an unavailable or unknown P1 holds the last setpoint (as before) and is counted: `control.p1_profile` `invalid_1h`, `invalid_24h`, `invalid_longest_24h_s`, `invalid_now`.
+- Tests: reload while live (no power command, no `acMode`, no late 0 W), unload without a new setup (0 W after 120 s), disable and remove (0 W), HA stop (nothing), the slow band (−35 W corrects, +40 W and −15 W not), P1 hiccups, the reload reason.
+
 ### 0.8.92 — Card Nu: five fixed rows
 - **The card *Nu* no longer jumps:** always the same five rows in the same order, at least 0 W, right-aligned and in W: *Zon → huis*, *Accu → huis*, *Net → huis*, and below a line *… → accu* and *… → net* with their source in front (*Zon → accu*, *Net → accu*, *Zon + net → accu*; *Zon → net*, *Accu → net*, *Zon + accu → net*). With nothing flowing the usual source (the sun), grey. Replaces the flows in words (`nowRows`, from the same measurement as the P1 value).
 - Tests: `nowRows` (vitest).

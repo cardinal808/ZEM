@@ -90,13 +90,87 @@ async def test_live_refused_without_p1(hass: HomeAssistant, fake_sets: FakeSets,
     assert hass.states.get("switch.zephyr_control").state == "off"
 
 
-async def test_stop_while_live_sends_zero(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+async def test_stop_while_live_keeps_the_last_command(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    """HA stops without a restart: no 0 W either (nobody shuts HA down; at a power cut there is no time)."""
     await _install_with_p1(hass, fake_sets)
     await _p1(hass, freezer, 300)
     await _switch(hass, True)
     await _p1(hass, freezer, 300)
+    count = len(fake_sets.writes)
     hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
     await hass.async_block_till_done()
+    assert len(fake_sets.writes) == count
+
+
+def _power_writes(fake_sets: FakeSets, start: int) -> list[dict[str, int]]:
+    """Power and acMode commands (the fake set keeps reporting other SOC limits: those it gets anyway)."""
+    return [p for _, p in fake_sets.writes[start:] if {"outputLimit", "inputLimit", "acMode"} & set(p)]
+
+
+async def test_reload_while_live_hands_over(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    """A reload leaves the sets at their command: no 0 W, no acMode, live at once (handover.py)."""
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    for _ in range(3):
+        await _p1(hass, freezer, 300)
+    old = entry.runtime_data.control
+    setpoint = old.engine.controller.setpoint
+    count = len(fake_sets.writes)
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    control = entry.runtime_data.control
+    assert control is not old and control.handed_over
+    assert not control.shadow and hass.states.get("switch.zephyr_control").state == "on"
+    assert control.engine.controller.setpoint == setpoint
+    assert _power_writes(fake_sets, count) == []  # nothing at the reload itself
+    for _ in range(3):
+        await _p1(hass, freezer, 300)
+    writes = _power_writes(fake_sets, count)
+    assert all(w.get("outputLimit", 1) != 0 and "acMode" not in w for w in writes), writes
+    assert [e["event"] for e in control.live_history][-1] == "handover"
+    freezer.tick(timedelta(seconds=200))  # the hand-over timer was cancelled: no late 0 W
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert not any(w == {"inputLimit": 0, "outputLimit": 0, "smartMode": 1} for w in _power_writes(fake_sets, count))
+
+
+async def test_unload_without_new_setup_goes_to_zero(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    """Nobody takes the control over within 120 s (a failed setup): the sets go to 0 W then."""
+    from custom_components.zephyr.handover import HANDOVER_FOR
+
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    await _p1(hass, freezer, 300)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    count = len(fake_sets.writes)
+    freezer.tick(timedelta(seconds=HANDOVER_FOR + 1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert _power_writes(fake_sets, count) == [{"inputLimit": 0, "outputLimit": 0, "smartMode": 1}]
+
+
+async def test_disable_while_live_sends_zero(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    from homeassistant.config_entries import ConfigEntryDisabler
+
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    await _p1(hass, freezer, 300)
+    assert await hass.config_entries.async_set_disabled_by(entry.entry_id, ConfigEntryDisabler.USER)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert fake_sets.writes[-1][1] == {"inputLimit": 0, "outputLimit": 0, "smartMode": 1}
+
+
+async def test_remove_while_live_sends_zero(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    await _p1(hass, freezer, 300)
+    await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert fake_sets.writes[-1][1] == {"inputLimit": 0, "outputLimit": 0, "smartMode": 1}
 
 
@@ -332,3 +406,38 @@ def test_report_equal_to_an_earlier_own_command_is_not_foreign() -> None:
     assert _matches_earlier(0, 810, recent, 115.0, 30.0)
     assert not _matches_earlier(0, 810, recent, 140.0, 30.0)  # too long ago: foreign after all
     assert not _matches_earlier(0, 1500, recent, 115.0, 30.0)  # never sent by ZEPHYR
+
+
+async def test_p1_hiccup_holds_and_is_counted(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    """OPDRACHT-p1-profiel §7.1/§8: P1 briefly unavailable while delivering: no command, counted."""
+    from .test_shadow import P1
+
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    for _ in range(4):
+        await _p1(hass, freezer, 20)
+    count = len(fake_sets.writes)
+    for _ in range(2):  # two hiccups shortly after each other, as 15:53:57 and 15:53:59
+        freezer.tick(timedelta(seconds=1))
+        hass.states.async_set(P1, "unavailable")
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+        await _p1(hass, freezer, 20)
+    assert _power_writes(fake_sets, count) == []
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    profile = diag["control"]["p1_profile"]
+    assert profile["invalid_24h"] == 2 and profile["invalid_longest_24h_s"] == 1.0 and not profile["invalid_now"]
+
+
+async def test_reload_reason_is_logged(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    await _p1(hass, freezer, 300)
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "price_entity": "sensor.other_price"})
+    await hass.async_block_till_done()
+    control = entry.runtime_data.control
+    assert control.handed_over and not control.shadow
+    assert control.live_history[-1] == control.live_history[-1] | {"event": "handover", "changed": ["price_entity"]}
+    assert any(e.get("event") == "handover" and e.get("changed") == ["price_entity"] for e in control.log)

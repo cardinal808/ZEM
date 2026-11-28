@@ -324,7 +324,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> b
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ZephyrConfigEntry) -> None:
+    from .handover import take
     from .panel import async_remove_panel
+
+    handover = take(hass, entry.entry_id)
+    if handover is not None and handover.live:
+        # Removed while live: the unload parked the control for a reload; the sets go to 0 W now.
+        await handover.zero()
 
     async_remove_panel(hass, entry.entry_id, final=True)
 
@@ -338,6 +344,9 @@ async def _async_options_updated(hass: HomeAssistant, entry: ZephyrConfigEntry) 
     changed = {k for k in set(new) | set(runtime.options) if new.get(k) != runtime.options.get(k)}
     if not changed or any(k not in BY_KEY or BY_KEY[k].reload for k in changed):
         # No option changed (a set was added or renamed) or a source changed: start again.
+        # The running control is handed over (handover.py); the log keeps why.
+        if runtime.control is not None:
+            runtime.control.reload_reason = sorted(changed) or ["sets"]
         await hass.config_entries.async_reload(entry.entry_id)
         return
     runtime.options = new

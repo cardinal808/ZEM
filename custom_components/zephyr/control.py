@@ -61,6 +61,7 @@ from .core.settings import Settings
 from .core.solar_now import CounterPower, total, watts
 from .core.stroom import ZERO_REASONS, RegulationLog, ZeroScore
 from .core.zensdk import power_command, standby_command
+from .handover import Handover, park, take
 from .log_file import FLUSH_EVERY, MAX_LINES, LogFile
 from .prices import price_state
 from .writer import SetWriter
@@ -139,6 +140,9 @@ class ZephyrControl:
         self.p1_watts: float | None = None
         """Last P1 value (W, + import) and when it came (monotonic); read by the cost log."""
         self.p1_at: float | None = None
+        self._p1_gap_since: float | None = None
+        self.p1_gaps: deque[tuple[float, float]] = deque(maxlen=500)
+        """Hiccups of the P1 entity: (monotonic end, length in s); kept over a reload."""
         self._test_task: asyncio.Task[None] | None = None
         # B41: a load the battery may not feed (the air conditioner while heating).
         self.excluded_energy: str | None = options.get(CONF_EXCLUDED_ENERGY)
@@ -157,8 +161,66 @@ class ZephyrControl:
         """The last 10 minutes of the controller (screen Stroom)."""
         """How well the meter stayed at its target today (screen Stroom)."""
         self._zero_store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.zero")
+        self.handed_over = False
+        self.reload_reason: list[str] | None = None
+        """The options that asked for a reload (names only), for the log at the hand-over."""
+        """This setup took the control over from the previous one (reload, handover.py)."""
+        self._adopt(take(hass, entry.entry_id))
 
     # --- lifecycle ----------------------------------------------------------
+
+    def _adopt(self, handover: Handover | None) -> None:
+        """Go on with the engine of the previous setup after a reload: same setpoint, P1, set
+        states (``acMode``) and live state, so no 0 W, no relay switch and no wait for the P1."""
+        if handover is None:
+            return
+        if set(handover.writers) != set(self.writers):
+            # Other sets than before: start fresh, and the old sets to 0 W if they were live.
+            if handover.live:
+                self.hass.async_create_background_task(handover.zero(), "zephyr: sets changed at reload, sets to 0 W")
+            return
+        engine = handover.engine
+        engine.update_settings(self.engine.settings)
+        self.engine = engine
+        self.user_max_soc = engine.settings.max_soc
+        self._previous_mode = engine.mode
+        self.p1_watts, self.p1_at = handover.p1_watts, handover.p1_at
+        self.p1_gaps.extend(handover.p1_gaps)
+        for key, writer in self.writers.items():
+            old = handover.writers[key]
+            writer.last_props, writer.last_at, writer.limits_before = old.last_props, old.last_at, old.limits_before
+            writer.recent.extend(old.recent)
+        self.live_history.extend(handover.live_history)
+        self.handed_over = True
+        if handover.live:
+            self.shadow = False
+            self.wanted_live = True
+            self.live_since = handover.live_since
+        LOGGER.info("ZEPHYR took over the running control after the reload (%s)", "live" if handover.live else "shadow mode")
+
+    def _hand_over(self) -> None:
+        """Unload for a reload: park the control for the next setup instead of 0 W (handover.py)."""
+        live = not self.shadow
+        changed = self.reload_reason or ["unknown"]
+        if live:
+            self.note_live("handover", "reload", changed=changed)
+        self._log_event("handover", live=live, changed=changed)
+        park(
+            self.hass,
+            self.entry.entry_id,
+            Handover(
+                engine=self.engine,
+                live=live,
+                live_since=self.live_since,
+                p1_watts=self.p1_watts,
+                p1_at=self.p1_at,
+                p1_gaps=list(self.p1_gaps),
+                writers=self.writers,
+                live_history=list(self.live_history),
+                zero=self._all_to_zero,
+            ),
+        )
+        self.shadow = True  # this setup writes nothing more
 
     @callback
     def _track_peaks(self) -> None:
@@ -203,14 +265,14 @@ class ZephyrControl:
             unsubs.append(async_track_state_change_event(self.hass, list(self.p1_pair), self._on_pair_event))
             unsubs.append(async_track_state_report_event(self.hass, list(self.p1_pair), self._on_pair_event))
             watts = self._pair_watts()
-            if watts is not None:
+            if watts is not None and not self.handed_over:  # handed over: the engine has the P1
                 self._p1_value(watts)
             unsubs.append(self._cancel_pair_pending)
         elif self.p1_entity:
             unsubs.append(async_track_state_change_event(self.hass, [self.p1_entity], self._on_p1_changed))
             unsubs.append(async_track_state_report_event(self.hass, [self.p1_entity], self._on_p1_reported))
             watts = _p1_watts(self.hass.states.get(self.p1_entity))
-            if watts is not None:
+            if watts is not None and not self.handed_over:  # handed over: the engine has the P1
                 self._p1_value(watts)
         if self.excluded is not None and self.excluded_energy:
             unsubs.append(async_track_state_change_event(self.hass, [self.excluded_energy], self._on_excluded_energy))
@@ -237,10 +299,12 @@ class ZephyrControl:
         unsubs.append(async_track_time_interval(self.hass, self._save_zero, timedelta(minutes=5)))
         unsubs.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_stop))
         self.hass.async_create_task(self._restore_zero(), "zephyr: restore the zero score")
-        self.hass.async_create_task(self._restore_writes(), "zephyr: restore the write counters")
+        if not self.handed_over:  # handed over: the engine still has its counters and history
+            self.hass.async_create_task(self._restore_writes(), "zephyr: restore the write counters")
         self.hass.async_create_task(self.log_file.async_restore(), "zephyr: restore the log")
         unsubs.append(async_track_time_interval(self.hass, self.log_file.async_flush, FLUSH_EVERY))
-        self.hass.async_create_task(self._restore_live_history(), "zephyr: restore the live history")
+        if not self.handed_over:
+            self.hass.async_create_task(self._restore_live_history(), "zephyr: restore the live history")
         unsubs.append(async_track_time_interval(self.hass, self._save_writes, timedelta(minutes=5)))
 
         def save_writes() -> None:
@@ -252,15 +316,20 @@ class ZephyrControl:
         self._apply_poll_interval()
 
         def stop() -> None:
+            # First the hand-over or 0 W, so its log line is in the last flush (log_file.py).
+            if self.entry.disabled_by is not None:
+                if not self.shadow:
+                    # Disabled while live: leave the sets at 0 W, not at the last power.
+                    self.shadow = True
+                    self.note_live("shadow", "disabled")
+                    self.hass.async_create_background_task(self._all_to_zero(), "zephyr stop: sets to 0 W")
+            else:
+                # A reload (or a removal, async_remove_entry writes 0 W then): the next setup goes on.
+                self._hand_over()
             for unsub in unsubs:
                 unsub()
             if self._test_task is not None and not self._test_task.done():
                 self._test_task.cancel()
-            if not self.shadow:
-                # Unload or reload while live: leave the sets at 0 W, not at the last power.
-                self.shadow = True
-                self.note_live("shadow", "unload")
-                self.hass.async_create_background_task(self._all_to_zero(), "zephyr stop: sets to 0 W")
 
         return stop
 
@@ -380,14 +449,30 @@ class ZephyrControl:
     def _on_p1(self, state: State | None) -> None:
         watts = _p1_watts(state)
         if watts is None:
+            # A hiccup (unavailable, unknown): the last value holds until p1_stale_after (§7.1).
+            if self._p1_gap_since is None:
+                self._p1_gap_since = time.monotonic()
             return
         self._p1_value(watts)
         self.async_step()
 
     def _p1_value(self, watts: float) -> None:
         now = time.monotonic()
+        if self._p1_gap_since is not None:
+            self.p1_gaps.append((now, now - self._p1_gap_since))
+            self._p1_gap_since = None
         self.p1_watts, self.p1_at = watts, now
         self.engine.p1_reported(now, watts)
+
+    def p1_gaps_view(self, now: float) -> dict[str, Any]:
+        """Short P1 hiccups (invalid state, then a value again), for control.p1_profile."""
+        day = [length for at, length in self.p1_gaps if now - at <= 86400]
+        return {
+            "invalid_1h": len([1 for at, _ in self.p1_gaps if now - at <= 3600]),
+            "invalid_24h": len(day),
+            "invalid_longest_24h_s": round(max(day), 1) if day else None,
+            "invalid_now": self._p1_gap_since is not None,
+        }
 
     @callback
     def _on_tick(self, _now: datetime) -> None:
@@ -516,13 +601,13 @@ class ZephyrControl:
         return bool(data and data.online)
 
     async def _on_stop(self, _event: Event) -> None:
-        if not self.shadow and self.hass.exit_code == RESTART_EXIT_CODE:
-            # A restart: the sets keep their last command and ZEPHYR takes over again after
-            # the start (B35, B47). 0 W would open the relay and draw from the grid meanwhile.
-            LOGGER.info("Home Assistant restarts: the sets keep their last command")
-            self.live_history.append({"time": dt_util.utcnow().isoformat(timespec="seconds"), "event": "restart", "reason": "ha_restart"})
-        elif not self.shadow:
-            await self._all_to_zero()
+        if not self.shadow:
+            # Home Assistant stops (restart or shutdown): the sets keep their last command and
+            # ZEPHYR takes over again after the start (B35, B47). 0 W would open the relay and
+            # draw from the grid meanwhile; at a power cut there is no time to send it anyway.
+            LOGGER.info("Home Assistant stops: the sets keep their last command")
+            reason = "ha_restart" if self.hass.exit_code == RESTART_EXIT_CODE else "ha_stop"
+            self.live_history.append({"time": dt_util.utcnow().isoformat(timespec="seconds"), "event": "restart", "reason": reason})
         await self._save_zero()
         await self._save_writes()
         await self.log_file.async_flush()

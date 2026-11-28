@@ -99,6 +99,10 @@ class Settings:
     slow_gain: float = 1.0
     """The controller waits for a new P1 value after the set has settled, so full correction is safe."""
     slow_deadband: float = 50.0
+    slow_export_band: float = 20.0
+    """W; slow profile while delivering: the dead zone stops at this much export (−20…+55 W
+    with the delivering target of 5 W), so a 10 s meter does not sit on export for minutes
+    (OPDRACHT-p1-profiel §7.4). The medium profile has −20…+30 W already (``deadband``)."""
 
     # Blocks
     discharge_block_delay: float = 10.0
