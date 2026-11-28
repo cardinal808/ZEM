@@ -43,6 +43,7 @@ def async_setup(hass: HomeAssistant) -> None:
     async_register_command(hass, ws_subscribe)
     async_register_command(hass, ws_plan)
     async_register_command(hass, ws_sets)
+    async_register_command(hass, ws_battery_days)
     async_register_command(hass, ws_settings_get)
     async_register_command(hass, ws_settings_set)
     async_register_command(hass, ws_events)
@@ -369,6 +370,28 @@ def ws_sets(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, An
         connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
         return
     connection.send_result(msg["id"], sets_view(hass, entry))
+
+
+@websocket_command({vol.Required("type"): "zephyr/battery_days"})
+@async_response
+async def ws_battery_days(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """What the battery did per day, the last 7 days, from the cost log (SPEC-ui §4.3)."""
+    from .core.battery_days import battery_days
+
+    entry = _entry(hass)
+    costs = entry.runtime_data.costs if entry is not None else None
+    control = entry.runtime_data.control if entry is not None else None
+    if entry is None or costs is None or control is None:
+        connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
+        return
+    runtime = entry.runtime_data
+    settings = control.engine.settings
+    today = dt_util.now().date()
+    records = await costs.async_records(today - timedelta(days=6), today)
+    capacity = runtime.totals().capacity_kwh
+    usable = None if not capacity else capacity * max(settings.max_soc - settings.min_soc, 0) / 100
+    tz = dt_util.get_default_time_zone()
+    connection.send_result(msg["id"], battery_days(records, today, tz, usable, capacity or None))
 
 
 def _source_status(hass: HomeAssistant, entry: ZephyrConfigEntry, key: str, value: Any) -> dict[str, Any] | None:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { packName, summarize, type Pack, type PackDay, type SetInfo } from "../src/sets";
+import { dayBars, packName, summarize, type BatteryDay, type Pack, type PackDay, type SetInfo } from "../src/sets";
 
 const days = (mvs: (number | null)[]): PackDay[] =>
   mvs.map((mv, i) => ({
@@ -86,5 +86,39 @@ describe("sets", () => {
 
   it("lists offline sets", () => {
     expect(summarize([set([], false)]).offline).toHaveLength(1);
+  });
+
+  it("shows the warmest inverter in the summary, not the warmest pack", () => {
+    const a = set(packs);
+    const b = { ...set(packs), id: "b", number: 2, enclosure_temp: 31 };
+    expect(summarize([a]).inverter).toBe(20);
+    expect(summarize([a, b]).inverter).toBe(31);
+    expect(summarize([{ ...a, enclosure_temp: null }]).inverter).toBeNull();
+  });
+});
+
+describe("battery per day", () => {
+  const d = (solar: number, grid: number, house: number, exp: number): BatteryDay => ({
+    date: "2026-11-27",
+    solar_battery: solar,
+    grid_battery: grid,
+    battery_house: house,
+    battery_grid: exp,
+    soc_min: 10,
+    soc_max: 100,
+    cycles: 0.5,
+    quarters: 96,
+  });
+
+  it("puts charged and delivered on one scale: the largest side fills half", () => {
+    const bars = dayBars([d(1, 3, 2, 0), d(0, 0, 8, 0)], 80);
+    expect(bars[1].house).toBe(80);
+    expect(bars[0]).toEqual({ solar: 10, grid: 30, house: 20, export: 0 });
+  });
+
+  it("does not blow up an almost empty week", () => {
+    const bars = dayBars([d(0, 0, 0.1, 0), d(0, 0, 0, 0)], 80);
+    expect(bars[0].house).toBe(16);
+    expect(bars[1]).toEqual({ solar: 0, grid: 0, house: 0, export: 0 });
   });
 });
