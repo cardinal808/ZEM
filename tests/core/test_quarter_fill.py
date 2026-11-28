@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from custom_components.zephyr.core.costs import add_to_day, quarter_status
-from custom_components.zephyr.core.quarter_fill import (
+from zephyr_core.costs import add_to_day, quarter_status
+from zephyr_core.quarter_fill import (
     HISTORY,
     INTERPOLATED,
     NONE,
