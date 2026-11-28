@@ -22,6 +22,13 @@ def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
 
 
 @pytest.fixture(autouse=True)
+def log_dir_in_tmp(tmp_path: Any) -> Generator[Any]:
+    """The 48-hour log goes to a temporary folder, not into the test config of the package."""
+    with patch("custom_components.zephyr.log_file.log_dir", lambda _hass, entry_id: tmp_path / "zephyr_log" / entry_id):
+        yield tmp_path / "zephyr_log"
+
+
+@pytest.fixture(autouse=True)
 def no_timers_from_other_threads() -> Generator[None]:
     """Fail when a timer is scheduled on the event loop from a worker thread.
 
