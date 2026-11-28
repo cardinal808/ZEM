@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.8.87 — Devices: `via_device_id` instead of the deprecated `via_device`
+- HA 2026.11 warns that `via_device` stops working in 2027.8. The set and appliance devices now link to the installation device with `via_device_id` where HA supports it; older versions (down to 2026.1, `hacs.json`) keep `via_device`. Test: every set device hangs under the installation device.
+
 ### 0.8.86 — Planner: price forecast of jeroen.nl as an optional source (indicative)
 - **Optional, off by default** (OPDRACHT-prijsvoorspelling-jeroen): new settings *price forecast (entity)*, *use in the plan* (off / indicative / take into account), *forecast days* (0–2, default 1) and *value from the band* (low / middle, default low). ZEPHYR reads only the sensor of the HACS integration ha-jeroen-nl (the user's own API key) and fetches nothing from jeroen.nl.
 - **Reader** (`core/price_forecast.py`): only quarters with `forecast: true`; the bare `market`, `low`, `high` are priced with ZEPHYR's own tariffs (the sensor's all-in `price` is not used). Units recognised (€/kWh, €/MWh, cents); slots by UTC start, days of 92/100 quarters work. Without `low`/`high`: `market`, with a note. A value but nothing readable: repair issue `price_forecast_format`.
