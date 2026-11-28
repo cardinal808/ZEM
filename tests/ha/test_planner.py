@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from freezegun.api import FrozenDateTimeFactory
@@ -520,3 +521,35 @@ async def test_stroom_websocket(hass: HomeAssistant, fake_sets: FakeSets, freeze
     assert result["zero"]["date"] == "2026-11-26" and len(result["zero"]["buckets"]) == 288
     assert result["live"] is False and result["zero"]["steering_s"] == 0  # shadow mode does not steer
     assert result["regulation"]["window_s"] == 600 and isinstance(result["regulation"]["samples"], list)
+
+
+async def test_planner_memory_survives_a_restart_across_a_quarter(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    # 28-11: at a start the cost log closes the quarter the restart interrupted and the planner
+    # learns from it before it loaded its store; the pending save then was what it loaded (an
+    # empty planner): the calibration count, profile, reserve and expectations were lost.
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (9, 0), price_entity=PRICE)
+    await _tick(hass, freezer, 60)
+    first = entry.runtime_data.planner.calibration.last_full
+    mean_count = entry.runtime_data.planner.profile.mean_count
+    assert first is not None
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    freezer.tick(timedelta(minutes=20))
+    from custom_components.zephyr.planner_runner import PlanRunner
+
+    original = PlanRunner.async_start
+
+    async def save_first(self: Any) -> Any:  # what a plan run asked for during the start does
+        save = getattr(self, "_save", None)
+        save(10) if save is not None else self._store.async_delay_save(self._data, 10)
+        return await original(self)
+
+    with patch.object(PlanRunner, "async_start", save_first):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    planner = entry.runtime_data.planner
+    assert planner.calibration.last_full == first
+    assert planner.profile.mean_count >= mean_count

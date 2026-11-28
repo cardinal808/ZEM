@@ -172,6 +172,8 @@ class PlanRunner:
         self._again = False
         self._last_snapshot: datetime | None = None
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}.planner")
+        self._loaded = False
+        self._save_after_load = False
 
     @property
     def enabled(self) -> bool:
@@ -190,6 +192,7 @@ class PlanRunner:
 
     async def async_start(self) -> Callable[[], None]:
         stored = await self._store.async_load() or {}
+        self._loaded = True
         self.profile = LoadProfile.from_dict(stored.get("profile"))
         self.hour = dict(stored.get("hour") or {})
         self.reserve = _slots_from_store(stored.get("reserve"))
@@ -197,7 +200,10 @@ class PlanRunner:
         self.excluded_profile = LoadProfile.from_dict(stored.get("excluded_profile"))
         self.vacation_profile = LoadProfile.from_dict(stored.get("vacation_profile"))
         self.calibration = Calibration.from_dict(stored.get("calibration"), self.calibration_days)
+        new_count = self.calibration.last_full is None
         self._calibration_tick(dt_util.utcnow())
+        if new_count or self._save_after_load:
+            self._save(1)  # also the start of a new calibration count, not only with the next save
         self.ahead = {str(k): v for k, v in (stored.get("ahead") or {}).items() if isinstance(v, dict)}
         # B41: a profile learned with another (or no) excluded load mixes it in: fill again.
         changed = stored.get("profile", None) is not None and stored.get("excluded_entity") != self.excluded_entity
@@ -238,7 +244,7 @@ class PlanRunner:
         # old profile stays until the recorder (or the live hours) give a better one.
         if filled < MIN_FILL_HOURS and self.profile.mean_count == 0:
             await self._learn_from_history()
-        self._store.async_delay_save(self._data, 10)
+        self._save(10)
 
     async def async_reset_profile(self, refill: bool = True) -> dict[str, Any]:
         """Action ``zephyr.reset_profile`` (PT9): forget the learned consumption, optionally fill it again."""
@@ -247,7 +253,7 @@ class PlanRunner:
         if refill:
             await self._fill_profile()
         else:
-            self._store.async_delay_save(self._data, 1)
+            self._save(1)
         LOGGER.info("Consumption profile reset (%s, %s hours)", self.profile_source, self.profile.mean_count)
         self.async_request()
         return {"profile_source": self.profile_source, "hours": self.profile.mean_count}
@@ -444,7 +450,7 @@ class PlanRunner:
         reserve = remember(self.reserve, source, now)
         if [(s.start, s.price) for s in reserve] != [(s.start, s.price) for s in self.reserve]:
             self.reserve = reserve
-            self._store.async_delay_save(self._data, 10)
+            self._save(10)
         prices = merge_reserve(source, self.reserve)
         await self._check_days([dt_util.as_local(now).date() + timedelta(days=d) for d in range(3)])
         from_reserve = price_at(source, quarter_floor(now)) is None and price_at(prices, quarter_floor(now)) is not None
@@ -572,7 +578,7 @@ class PlanRunner:
         expected = expectations(outcome, tomorrow, tz)
         if expected:  # only with tomorrow's real prices (not the indicative pattern)
             self.ahead[tomorrow.isoformat()] = expected
-            self._store.async_delay_save(self._data, 60)
+            self._save(60)
         for key in [k for k in self.ahead if k < today.isoformat()]:
             del self.ahead[key]
 
@@ -582,7 +588,7 @@ class PlanRunner:
         """Learn from a closed cost quarter; return the plan fields for its record (B38)."""
         appliances = self.runtime.appliances
         self._learn_quarter(start, record, solar_known, appliances.take_energy() if appliances is not None else 0.0)
-        self._store.async_delay_save(self._data, 30)
+        self._save(30)
         key = dt_util.as_utc(start).isoformat()
         fields = record_fields(self.ahead.get(dt_util.as_local(start).date().isoformat(), {}).get(key))
         planned = self.by_quarter.get(key)
@@ -739,7 +745,7 @@ class PlanRunner:
         self.hour = {}
         self.profile_source = f"recorder ({len(hours)} h)"
         LOGGER.debug("Consumption profile filled from %s recorder hours", len(hours))
-        self._store.async_delay_save(self._data, 10)
+        self._save(10)
         return len(hours)
 
     async def _learn_from_history(self) -> None:
@@ -754,7 +760,7 @@ class PlanRunner:
         if records:
             self.profile_source = "cost log"
             LOGGER.debug("Consumption profile filled from %s cost quarters", len(records))
-            self._store.async_delay_save(self._data, 10)
+            self._save(10)
 
     def _calibration_tick(self, now: datetime) -> None:
         """SPEC-planner §3.5: track the last full battery, raise the limit when due, rest at 100 %."""
@@ -769,9 +775,23 @@ class PlanRunner:
             control.set_calibration(*state)
         if event is not None:
             LOGGER.info("Calibration: %s (%s)", event, self.calibration.view(now))
-            self._store.async_delay_save(self._data, 5)
+            self._save(5)
         if state != was:
             self.async_request()
+
+    def _save(self, delay: float) -> None:
+        """Save the planner's memory, but never before it was loaded.
+
+        28-11: a save scheduled before ``async_start`` (a plan run asked for while Home Assistant
+        was still starting) left a pending write, and ``Store.async_load`` returns a pending write
+        instead of the file: the planner loaded its own empty start state. Every restart so lost
+        the calibration count, the profile (filled again from the recorder), the price reserve and
+        the expectations.
+        """
+        if not self._loaded:
+            self._save_after_load = True
+            return
+        self._store.async_delay_save(self._data, delay)
 
     def _data(self) -> dict[str, Any]:
         return {
