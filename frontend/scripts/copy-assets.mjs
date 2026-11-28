@@ -17,5 +17,6 @@ writeFileSync(
 );
 copyFileSync("../custom_components/zephyr/brand/icon.png", "../custom_components/zephyr/frontend/logo.png");
 // House picture on the screen Stroom (an illustration, not a real house).
-copyFileSync("assets/house.webp", "../custom_components/zephyr/frontend/house.webp");
-console.log(`assets: ${files.length} fonts, the logo and the house picture`);
+// house.webp: the old house; house-3/house-2: the default and alternative house (scripts/house_build.py).
+for (const f of ["house.webp", "house-3.webp", "house-2.webp"]) copyFileSync(`assets/${f}`, `../custom_components/zephyr/frontend/${f}`);
+console.log(`assets: ${files.length} fonts, the logo and the house pictures`);

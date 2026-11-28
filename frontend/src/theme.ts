@@ -25,6 +25,15 @@ export const theme = css`
     --z-good-text: #0b5a4b;
     --z-bad-bg: #fbdcdc;
     --z-bad-text: #7a1414;
+    /* House picture on Stroom: flow lines, boxes and labels (light: the ontwerpchat mock). */
+    --h-sun: #f2a900;
+    --h-batt: #1fb866;
+    --h-grid: #e5484d;
+    --h-house: #2f8cff;
+    --h-ev: #8b5cf6;
+    --h-exp: #e5484d;
+    --h-box: #ffffff;
+    --h-pill: #ffffff;
     --z-font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
     --z-font-head: "Space Grotesk", Inter, system-ui, sans-serif;
   }
@@ -51,6 +60,14 @@ export const theme = css`
     --z-good-text: #9fe3cf;
     --z-bad-bg: #3d1a1a;
     --z-bad-text: #f5b4b4;
+    --h-sun: #ffcf1f;
+    --h-batt: #22d3b5;
+    --h-grid: #ff4d4d;
+    --h-house: #2f8cff;
+    --h-ev: #a86bff;
+    --h-exp: #ff3b3b;
+    --h-box: #202523;
+    --h-pill: #191d1b;
   }
 `;
 

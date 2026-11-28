@@ -978,7 +978,14 @@
     "src_grid": "Net",
     "dst_house": "huis",
     "dst_battery": "accu",
-    "dst_grid": "net"
+    "dst_grid": "net",
+    "shed_short": "Schuur",
+    "roof_short": "Dak",
+    "import_t": "Afname",
+    "export_t2": "Teruglevering",
+    "grid_zero": "Op nul",
+    "roof_box": "Zonnepanelen dak",
+    "shed_box": "Zonnepanelen schuur"
   },
   "picture": {
     "title": "Plaatje op Stroom",
@@ -996,7 +1003,14 @@
     "uploading": "Uploaden…",
     "error": "Uploaden mislukt: {msg}",
     "unplaced": "Nog niet geplaatst",
-    "hidden": "Verborgen"
+    "hidden": "Verborgen",
+    "default_sub": "3 verdiepingen",
+    "alt": "Alternatief huis",
+    "alt_sub": "2 verdiepingen",
+    "old": "Oud huis",
+    "old_sub": "het plaatje tot nu toe",
+    "own_sub": "uploaden en plaatsen",
+    "alt_note": "Bij het alternatieve huis staat wat op Zolder staat op de 1e verdieping; de keuze per verbruiker blijft bewaard."
   },
   "version": {
     "update": "Update {latest}",

@@ -396,6 +396,7 @@ export class ZephyrSettings extends LitElement {
                 .uiLang=${this.uiLang}
                 .call=${this.houseCall}
                 .sign=${this.sign}
+                .base=${this.base}
                 .changed=${this.reload}
               ></zephyr-house-editor>`
             : nothing
@@ -470,6 +471,8 @@ export class ZephyrSettings extends LitElement {
   ) => Promise<unknown>;
   @property({ attribute: false }) sign?: (path: string) => Promise<string>;
   @property({ attribute: false }) reload?: () => Promise<void>;
+  /** URL of the panel's files (the house pictures for the choice). */
+  @property() base = "";
   @property({ attribute: false }) saveHouse?: (
     floors: Record<string, string>,
     hidden: string[],
@@ -513,7 +516,13 @@ export class ZephyrSettings extends LitElement {
         diff(d, k),
       ),
     );
-    const floors = ["attic", "first", "ground", "shed", "outside"];
+    // The alternative house has no attic: what is there shows on the 1st floor (the choice stays).
+    const pic = this.view?.house_picture;
+    const twoStoreys = !pic?.custom && pic?.style === "alt";
+    const floors = twoStoreys
+      ? ["first", "ground", "shed", "outside"]
+      : ["attic", "first", "ground", "shed", "outside"];
+    const shownAs = (f: string) => (twoStoreys && f === "attic" ? "first" : f);
     const save = async () => {
       const updates = devices
         .filter(
@@ -576,11 +585,11 @@ export class ZephyrSettings extends LitElement {
               }
               <label
                 >${this.tr("settings.house_floor")}<select
-                  .value=${dr.floor}
+                  .value=${shownAs(dr.floor)}
                   ?disabled=${!canEdit}
                   @change=${(e: Event) => set(d.id, { floor: (e.target as HTMLSelectElement).value })}
                 >
-                  ${floors.map((f) => html`<option value=${f} ?selected=${f === dr.floor}>${this.tr(`settings.floors.${f}`)}</option>`)}
+                  ${floors.map((f) => html`<option value=${f} ?selected=${f === shownAs(dr.floor)}>${this.tr(`settings.floors.${f}`)}</option>`)}
                 </select></label
               >
               <label class="check"

@@ -978,7 +978,14 @@
     "src_grid": "Grid",
     "dst_house": "house",
     "dst_battery": "battery",
-    "dst_grid": "grid"
+    "dst_grid": "grid",
+    "shed_short": "Shed",
+    "roof_short": "Roof",
+    "import_t": "Import",
+    "export_t2": "Export",
+    "grid_zero": "At zero",
+    "roof_box": "Solar panels roof",
+    "shed_box": "Solar panels shed"
   },
   "picture": {
     "title": "Picture on Power",
@@ -996,7 +1003,14 @@
     "uploading": "Uploading…",
     "error": "Upload failed: {msg}",
     "unplaced": "Not placed yet",
-    "hidden": "Hidden"
+    "hidden": "Hidden",
+    "default_sub": "3 storeys",
+    "alt": "Alternative house",
+    "alt_sub": "2 storeys",
+    "old": "Old house",
+    "old_sub": "the picture until now",
+    "own_sub": "upload and place",
+    "alt_note": "In the alternative house, what is in the Attic shows on the 1st floor; the choice per consumer is kept."
   },
   "version": {
     "update": "Update {latest}",
