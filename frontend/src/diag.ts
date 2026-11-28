@@ -187,36 +187,6 @@ export function eventKind(
   return "control";
 }
 
-export interface FastButton {
-  mode: "fast_charge" | "fast_discharge";
-  /** This fast mode runs now: the button stops it. */
-  active: boolean;
-  /** Mode to switch to on a tap. */
-  target: string;
-}
-
-/**
- * Snel laden and Snel ontladen, always in the same place (a second tap must not hit another button):
- * the running one stops and goes back to the mode it came from.
- */
-export function fastButtons(
-  mode: string,
-  modes: string[],
-  previous: string,
-): FastButton[] {
-  const back =
-    previous === "fast_charge" || previous === "fast_discharge"
-      ? "zero_meter"
-      : previous;
-  return (["fast_charge", "fast_discharge"] as const)
-    .filter((m) => modes.includes(m))
-    .map((m) => ({
-      mode: m,
-      active: mode === m,
-      target: mode === m ? back : m,
-    }));
-}
-
 const BLOCKERS: [RegExp, string][] = [
   [/^no P1 sensor chosen$/, "no_p1"],
   [/^P1 is not reporting$/, "p1_silent"],

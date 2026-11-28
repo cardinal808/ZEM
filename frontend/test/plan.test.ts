@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   bands,
@@ -146,7 +146,9 @@ describe("plan helpers", () => {
     expect(lane?.[0].past).toBe(true);
   });
 
-  it("gives the spread as a percentage of the lowest price", () => {
+  it("gives the spread as the highest price above the mean, in %", () => {
+    // Bjorn 28-11: mean € 0,36, highest € 0,41 → 14 %.
+    expect(spreadPct(0.36, 0.41)).toBe(14);
     expect(spreadPct(0.21, 0.38)).toBe(81);
     expect(spreadPct(0.2, 0.2)).toBe(0);
     expect(spreadPct(0, 0.3)).toBeNull();
@@ -162,7 +164,14 @@ describe("tomorrow on its own", () => {
     expect(currentIndex(tomorrow, Date.UTC(2026, 10, 28, 0, 5))).toBe(0);
   });
   it("starts the SOC line at the first quarter's value, not at the SOC now", () => {
-    const pts = socPoints(tomorrow, 43).split(" ");
-    expect(pts[0]).toBe("0,60.0");
+    // socPoints reads the clock: fix it the evening before, so the test does not depend on the day it runs.
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.UTC(2026, 10, 27, 17, 0));
+    try {
+      const pts = socPoints(tomorrow, 43).split(" ");
+      expect(pts[0]).toBe("0,60.0");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

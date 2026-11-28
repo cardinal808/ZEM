@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.69 — Panel: card Nu without double figures, version in the header, spread vs. the mean
+- **Card *Nu*:** below the action the flows now, from one measurement and in the same words as on *Stroom* (*Accu 440 W → huis · Net 10 W → huis*). The separate *Net* line is gone (it came from a later reading than the control's sentence, so two grid figures could differ). The control's sentence shows only when it adds something (full/empty, blocked, P1 problem, temperature, calibrating …); problems in the warning colour. Sentences that repeat the action (*Levert … aan het huis*, *Laadt … uit zonne-overschot*, *Plan: …*) are hidden.
+- **Header:** *Stuurt* is now *Actief* (EN *Active*). The clock is replaced by the running version (`panel.py` passes it in the panel config). When HACS has a newer version (its update entity, found by the release URL), admins get a button *Update x*: after confirming, `update.install`; with a link to the release notes. Once installed but not yet running: *Herstart nodig* (restart HA after confirming). Others see the version and *update x* as text.
+- **Snel laden / Snel ontladen** buttons removed from *Plan* (left over from the first test scenario); the modes themselves stay.
+- **Spread** in the price row: the highest price above the day's mean in % (was: above the lowest). Example 28-11: mean € 0,36, highest € 0,41 → 14 % (was 26 %). Mean around zero or below: the difference in euro.
+- Tests: `nowNote`, `zephyrUpdate`, `versionState` (vitest); the SOC-line test for *Morgen* no longer depends on the time it runs.
+
 ### 0.8.68 — Calibration safety net (SPEC-planner §3.5)
 - ZEPHYR remembers when the battery was last full (SOC ≥ 99 %, or the set's own calibration — `socStatus` 1 → 0 — ended), kept over restarts. New setting *Planner: calibration after days* (default 21, 0 = off).
 - From half that period on the planner gets a growing incentive (up to €0.30) to reach 100 % when it is cheap (solar, a cheap night hour); from the last day on it is a hard requirement (€2), so the planner picks the cheapest moment in the horizon. "Reached" counts anywhere in the horizon, not only at its end (a second layer in the planner).
