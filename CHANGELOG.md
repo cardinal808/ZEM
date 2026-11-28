@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+### 0.8.89 — Cost log: the older months are filled once too
+- The one-off fill of 0.8.80 (missing quarters made, incomplete ones filled, missing prices interpolated) only touched the current month. Now every stored month before it gets the same, once; each month is evaluated again on its own (the current month's pools stay), and its days are summed anew. Days worked out from hourly statistics are left alone. Diagnostics: `costs.history_filled.older_months`.
 ### 0.8.88 — Terugrekenen: pools capped by the battery's content, warning for Gielz counters
 - **Pools capped** (TOETS-besparing bevinding 5): the backfill (`zephyr/savings/backfill`) takes an optional `soc_entity`; its hourly mean × the installation's capacity caps the pools, as in the cost log, so conversion losses of stored solar land in *Zon bewaard* instead of *Prijsverschil*. The total does not change. The answer says `capped_by_soc`.
 - **Warning** (bevinding 11): when the charge or discharge counter belongs to another Zendure integration (Gielz), the answer holds `warnings: ["pv_in_battery_counters"]`: those counters include the set's own PV, so on summer days that PV counts as battery. The panel can show it (UI chat).
