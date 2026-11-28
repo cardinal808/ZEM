@@ -230,6 +230,8 @@ async def test_second_controller_stops_live(hass: HomeAssistant, fake_sets: Fake
     last = control.last_shadow
     assert last is not None and last["reason"] == "second_controller" and last["reports"]
     assert last["reports"][-1]["reported"] == [0, 1500] and not control.wanted_live
+    foreign = [e for e in control.log if e.get("event") == "foreign_report"]
+    assert len(foreign) == 2 and foreign[-1]["reported"] == [0, 1500] and "recent" in foreign[-1]
 
 
 async def test_calibrating_set_is_left_alone(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
@@ -320,3 +322,13 @@ async def test_calibration_raises_the_limit_and_rests_at_full(
     assert diag["control"]["last"]["setpoint"] >= 0  # nothing delivered while resting
     control.set_calibration(False, False)
     assert control.engine.settings.max_soc == user_max and not control.calibration_rest
+
+
+def test_report_equal_to_an_earlier_own_command_is_not_foreign() -> None:
+    # 28-11: ZEPHYR sent A, then B a few seconds later; the set, slow, still showed A.
+    from custom_components.zephyr.control import _matches_earlier
+
+    recent = [(100.0, 0, 800), (105.0, 0, 1200)]
+    assert _matches_earlier(0, 810, recent, 115.0, 30.0)
+    assert not _matches_earlier(0, 810, recent, 140.0, 30.0)  # too long ago: foreign after all
+    assert not _matches_earlier(0, 1500, recent, 115.0, 30.0)  # never sent by ZEPHYR
