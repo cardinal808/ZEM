@@ -130,15 +130,16 @@
     "neg_both": "Vandaag en morgen {hours} uur negatieve terugleverprijs. Afknijpen staat uit; dat kost naar verwachting {euro}.",
     "neg_link": "Instelling aanpassen →",
     "legend_negative": "Negatieve terugleverprijs",
-    "fc_peak": "(verwacht {when}: {price}, kans 80 %: {low}–{high})",
-    "fc_would": "Met de verwachting zou ZEPHYR nu {action}.",
-    "fc_used": "Het plan rekent met de prijsverwachting.",
-    "fc_day": "Verwachting {day}: gemiddeld {avg}, duurst {high} om {at}, goedkoopst {low} om {lowat}.",
-    "fc_source": "Verwachting: Bron:",
+    "fc_would": "zou nu {action}",
+    "fc_used": "plan rekent mee",
+    "fc_source": "bron: {name}",
     "fc_action_L": "laden",
     "fc_action_H": "vasthouden",
     "fc_action_N": "leveren",
-    "fc_action_X": "terugleveren"
+    "fc_action_X": "terugleveren",
+    "fc_label": "Verwacht",
+    "fc_stats": "gem. {avg} · laagst {lowat} · hoogst {at}",
+    "fc_info": "alleen ter info"
   },
   "blocks": {
     "title": "Blokken",

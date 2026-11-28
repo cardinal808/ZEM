@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.95 — Price forecast in one small line
+- **Prijzen en plan:** the three notes of the jeroen.nl forecast are one small grey line under the price cells: *Verwacht ma 30 nov · € 0,33 – € 0,47 · gem. € 0,40 · laagst 23:45 · hoogst 08:00 · plan rekent mee · bron: jeroen.nl*. No dashes, no link; the source in a smaller font. The mode is a short phrase (`forecastMode`): *plan rekent mee*, *alleen ter info* or *zou nu laden*. The 80 % band is no longer in the text (the dashed line and band stay in the chart).
+- Tests: `forecastMode`, the texts in both languages.
+
 ### 0.8.94 — Twin P1 at the moment of the measurement, measured P1 in shadow mode
 - **Twin without jumps on a slow meter** (OPDRACHT-p1-profiel §7.2): the virtual P1 pairs the P1 measurement with the real battery power and the twin **at the moment of that measurement** (last 60 s kept), not with the power now. On a DSMR 4 (every 10 s) a step of the current controller between two measurements no longer makes the virtual P1 jump (seen at Peter: −43 W measured, virtual −158 W). A repeat of the same value by the integration keeps the moment of the measurement it repeats. Fast meters: unchanged.
 - Decisions in shadow mode also carry `battery_real_at_p1` and `p1_age_s`.
