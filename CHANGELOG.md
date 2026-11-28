@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.78 — Planner: its memory survives a restart
+- **Bug (28-11):** a save of the planner scheduled before it loaded its store at the start (a plan run asked for while Home Assistant was still starting) left a pending write, and `Store.async_load` returns a pending write instead of the file. The planner so loaded its own empty start state, and every restart lost the calibration count (the 21 days began again at each start), the consumption profile (filled again from the recorder), the price reserve and the expectations for tomorrow.
+- Saves before the load are now held back and done right after it; the start of a new calibration count is saved at once.
+- Test: a save before the start, then a restart across a quarter: the calibration count and the profile stay.
+
 ### 0.8.77 — Settings: amounts in the fields, no counters in the menu, better info texts
 - **Menu:** no more *x gewijzigd* per group; the orange dot on a changed field stays.
 - **Tariffs from the supplier's table:** the greyed-out fields show the amount in use (e.g. *Opslag inkoop* 0,01653 instead of 0); the line *in gebruik: …* is gone. With own tariffs the fields show and edit your own values as before.
