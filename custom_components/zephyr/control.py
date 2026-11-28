@@ -61,13 +61,13 @@ from .core.settings import Settings
 from .core.solar_now import CounterPower, total, watts
 from .core.stroom import ZERO_REASONS, RegulationLog, ZeroScore
 from .core.zensdk import power_command, standby_command
+from .log_file import FLUSH_EVERY, MAX_LINES, LogFile
 from .prices import price_state
 from .writer import SetWriter
 
 if TYPE_CHECKING:
     from . import ZephyrConfigEntry, ZephyrRuntime
 
-LOG_SIZE = 500
 LIVE_HISTORY = 20
 
 
@@ -115,7 +115,9 @@ class ZephyrControl:
         self._live_store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.live")
         self._foreign_seen: list[dict[str, Any]] = []
         self.result: StepResult | None = None
-        self.log: deque[dict[str, Any]] = deque(maxlen=LOG_SIZE)
+        self.log: deque[dict[str, Any]] = deque(maxlen=MAX_LINES)
+        self.log_file = LogFile(hass, entry.entry_id, self.log)
+        """The log over the last 48 hours, kept over restarts (log_file.py)."""
         self._listeners: list[Callable[[], None]] = []
         self._previous_mode = Mode.ZERO_METER
         self.writers = {key: SetWriter(hass, c) for key, c in runtime.coordinators.items()}
@@ -236,6 +238,8 @@ class ZephyrControl:
         unsubs.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_stop))
         self.hass.async_create_task(self._restore_zero(), "zephyr: restore the zero score")
         self.hass.async_create_task(self._restore_writes(), "zephyr: restore the write counters")
+        self.hass.async_create_task(self.log_file.async_restore(), "zephyr: restore the log")
+        unsubs.append(async_track_time_interval(self.hass, self.log_file.async_flush, FLUSH_EVERY))
         self.hass.async_create_task(self._restore_live_history(), "zephyr: restore the live history")
         unsubs.append(async_track_time_interval(self.hass, self._save_writes, timedelta(minutes=5)))
 
@@ -243,6 +247,8 @@ class ZephyrControl:
             self.hass.async_create_task(self._save_writes(), "zephyr: save the write counters")
 
         unsubs.append(save_writes)
+
+        unsubs.append(self.log_file.flush_at_unload)
         self._apply_poll_interval()
 
         def stop() -> None:
@@ -519,6 +525,7 @@ class ZephyrControl:
             await self._all_to_zero()
         await self._save_zero()
         await self._save_writes()
+        await self.log_file.async_flush()
         await self._save_live_history()
 
     def _count_written(self, key: str, kinds: list[str]) -> None:
@@ -617,7 +624,7 @@ class ZephyrControl:
         del self.test["reports"][:-60]
 
     def _log_event(self, event: str, **extra: Any) -> None:
-        self.log.append({"time": dt_util.utcnow().isoformat(timespec="seconds"), "event": event, **extra})
+        self.log_file.add({"time": dt_util.utcnow().isoformat(timespec="seconds"), "event": event, **extra})
 
     # --- the step ---------------------------------------------------------------
 
@@ -658,7 +665,7 @@ class ZephyrControl:
         self.result = result
         self._zero_step(now, result, excluded)
         if result.commands or previous is None or (previous.setpoint, previous.reason) != (result.setpoint, result.reason):
-            self.log.append(
+            self.log_file.add(
                 {
                     "time": dt_util.utcnow().isoformat(timespec="seconds"),
                     "mode": result.mode.value,

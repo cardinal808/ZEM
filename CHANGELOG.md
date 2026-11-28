@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.75 — Log over 48 hours, kept over restarts
+- The control log (decisions on a change of setpoint or reason, and events such as live, shadow, calibration and a write test) covers the last 48 hours instead of the last 500 lines, and survives restarts and updates. Until now a restart emptied it, so the reason for something before the restart was gone (28-11).
+- Once a minute the new lines are appended to one file per UTC hour under `.storage/zephyr_log/<entry>/`; files older than 48 hours are removed. Appends keep the disk writes small (a Store rewrites its whole file). On a stop of Home Assistant and at an unload the rest is written; a reload reads the files only after that.
+- At most 40 000 lines (about 6 MB). Diagnostics: `control.decisions` holds the whole 48 hours (was the last 200), `control.log` gives `since`, `lines` and `from_before_start`. The panel's *Gebeurtenissen* now also shows events from before a restart.
+- Tests: the log over a reload (HA), removing old files and skipping broken lines.
 ### 0.8.74 — Live control: resume does not give up, the reason for shadow is kept
 - **Bug (28-11):** after a restart ZEPHYR tried to go live again for 10 minutes. When the P1 or a set was not there in time it gave up: the switch stayed off and that state was saved, so the next restart did not resume either. Now:
   - the switch keeps what the user wants (`wanted_live`) apart from its state, over restarts; a start that cannot go live yet keeps that wish;
