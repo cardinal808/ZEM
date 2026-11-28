@@ -2,7 +2,7 @@
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-import { clock, day, kwh, percent, sameDay, signedWatts } from "./format";
+import { clock, day, euro, kwh, percent, sameDay, signedWatts } from "./format";
 import { t, type Lang } from "./i18n";
 import { actionFill } from "./theme";
 
@@ -71,12 +71,58 @@ export function packName(pack: Pack, packs: Pack[], lang: Lang): string {
   return same > 1 ? `${pack.model} ${pack.number}` : pack.model;
 }
 
+/** One local day from \`zephyr/battery_days\` (kWh at the inverter's AC side). */
+export interface BatteryDay {
+  date: string;
+  solar_battery: number;
+  grid_battery: number;
+  battery_house: number;
+  battery_grid: number;
+  soc_min: number | null;
+  soc_max: number | null;
+  cycles: number | null;
+  quarters: number;
+}
+
+export interface BatteryDaysView {
+  days: BatteryDay[];
+  week: {
+    solar_battery: number;
+    grid_battery: number;
+    charged: number;
+    delivered: number;
+    cycles: number | null;
+    efficiency: number | null;
+    grid_price: number | null;
+  };
+  usable_kwh: number | null;
+}
+
+/** Heights (px) of the four parts of each day's bar: charged up, delivered down, on one scale. */
+export function dayBars(
+  days: BatteryDay[],
+  half: number,
+): { solar: number; grid: number; house: number; export: number }[] {
+  const top = Math.max(
+    0.5,
+    ...days.map((d) => Math.max(d.solar_battery + d.grid_battery, d.battery_house + d.battery_grid)),
+  );
+  const h = (v: number): number => Math.round((Math.max(v, 0) / top) * half * 10) / 10;
+  return days.map((d) => ({
+    solar: h(d.solar_battery),
+    grid: h(d.grid_battery),
+    house: h(d.battery_house),
+    export: h(d.battery_grid),
+  }));
+}
+
 export interface Summary {
   packs: number;
   online: boolean;
   socMin: number | null;
   socMax: number | null;
-  warmest: number | null;
+  /** Warmest inverter (enclosure) over the sets. */
+  inverter: number | null;
   /** Largest cell difference judged right now (near full, small current); null when none is judged now. */
   now: { pack: Pack; mv: number; status: CellStatus } | null;
   /** Largest judged difference of the most recent judged day, when nothing is judged now. */
@@ -93,7 +139,7 @@ const STATUS_FOR = (mv: number): CellStatus => (mv <= 30 ? "good" : mv <= 100 ? 
 export function summarize(sets: SetInfo[]): Summary {
   const packs = sets.flatMap((s) => s.packs);
   const socs = packs.map((p) => p.soc);
-  const temps = packs.map((p) => p.temp).filter((v): v is number => v !== null);
+  const temps = sets.map((s) => s.enclosure_temp).filter((v): v is number => v !== null);
   let now: Summary["now"] = null;
   for (const p of packs) {
     if (!p.cell_judged || p.cell_delta_mv === null || p.cell_status === null) continue;
@@ -121,7 +167,7 @@ export function summarize(sets: SetInfo[]): Summary {
     online: sets.every((s) => s.online),
     socMin: socs.length ? Math.min(...socs) : null,
     socMax: socs.length ? Math.max(...socs) : null,
-    warmest: temps.length ? Math.max(...temps) : null,
+    inverter: temps.length ? Math.max(...temps) : null,
     now,
     lastDay,
     imbalance,
@@ -132,6 +178,7 @@ export function summarize(sets: SetInfo[]): Summary {
 
 @customElement("zephyr-sets")
 export class ZephyrSets extends LitElement {
+  @property({ attribute: false }) days?: BatteryDaysView;
   @property({ attribute: false }) view?: SetsView;
   @property({ attribute: false }) uiLang: Lang = "en";
   @property() locale = "en";
@@ -150,7 +197,6 @@ export class ZephyrSets extends LitElement {
     if (!view) return html`<div class="card skeleton" aria-hidden="true"></div>`;
     if (!view.sets.length) return html`<section class="card"><p class="text">${this.tr("sets.none")}</p></section>`;
     const sum = summarize(view.sets);
-    const allPacks = view.sets.flatMap((s) => s.packs);
     return html`
       ${this.renderSummary(sum, view.sets)}
       ${view.sets.map(
@@ -158,7 +204,7 @@ export class ZephyrSets extends LitElement {
           ${this.renderSet(s, view.sets.length)} ${this.renderPacks(s)}
         </div>`,
       )}
-      ${allPacks.length ? this.renderBalance(view.sets) : nothing} ${view.sets.length === 1 ? this.renderActivity(view) : nothing}
+      ${this.days ? this.renderDays(this.days) : nothing} ${view.sets.length === 1 ? this.renderActivity(view) : nothing}
     `;
   }
 
@@ -193,7 +239,7 @@ export class ZephyrSets extends LitElement {
         this.tr("sets.soc_spread"),
         sum.socMin === null ? "–" : sum.socMin === sum.socMax ? percent(sum.socMin, this.locale) : `${this.num(sum.socMin)}–${percent(sum.socMax as number, this.locale)}`,
       )}
-      ${this.stat(this.tr("sets.warmest"), sum.warmest === null ? "–" : `${this.num(sum.warmest)} °C`)}
+      ${this.stat(this.tr("sets.inverter"), sum.inverter === null ? "–" : `${this.num(sum.inverter)} °C`)}
       ${this.stat(sum.now || !sum.lastDay ? this.tr("sets.largest_delta") : this.tr("sets.largest_delta_day", { day: day(`${sum.lastDay.day}T12:00:00Z`, this.locale, this.timeZone) }), cells)}
       <p class="line"><strong>${this.tr("sets.in_short")}</strong> ${line}</p>
     </section>`;
@@ -294,35 +340,75 @@ export class ZephyrSets extends LitElement {
     </section>`;
   }
 
-  private renderBalance(sets: SetInfo[]): TemplateResult {
-    const first = sets.find((s) => s.packs.length)?.packs[0];
-    const days = first?.history ?? [];
-    return html`<section class="card" aria-label=${this.tr("sets.balance_title")}>
+  private renderDays(v: BatteryDaysView): TemplateResult {
+    const HALF = 80;
+    const bars = dayBars(v.days, HALF);
+    const k = (x: number): string => this.num(x, 1);
+    const todayIso = v.days[v.days.length - 1]?.date;
+    const row = (label: string, sub: string | null, cell: (d: BatteryDay) => string): TemplateResult =>
+      html`<div class="tr" role="row">
+        <span role="rowheader" class="rh">${label}${sub ? html`<small>${sub}</small>` : nothing}</span>
+        ${v.days.map((d) => {
+          const text = d.quarters ? cell(d) : "–";
+          return html`<span role="cell" class="cell val ${text === "–" ? "empty" : ""}">${text}</span>`;
+        })}
+      </div>`;
+    const w = v.week;
+    const first = v.days[0]?.date;
+    const dayName = (iso: string): string => day(`${iso}T12:00:00Z`, this.locale, this.timeZone);
+    const weekParts = [
+      this.tr("sets.days_week_charged", { kwh: k(w.charged), solar: k(w.solar_battery), grid: k(w.grid_battery) }),
+      this.tr("sets.days_week_delivered", { kwh: k(w.delivered) }),
+      w.cycles === null ? null : this.tr("sets.days_week_cycles", { n: this.num(w.cycles, 1) }),
+      w.efficiency === null ? null : this.tr("sets.days_week_efficiency", { pct: percent(w.efficiency * 100, this.locale) }),
+      w.grid_price === null ? null : this.tr("sets.days_week_price", { price: euro(w.grid_price, this.locale) }),
+    ].filter((x): x is string => x !== null);
+    return html`<section class="card" aria-label=${this.tr("sets.days_title")}>
       <div class="head">
-        <h2>${this.tr("sets.balance_title")}</h2>
-        <span class="muted">${this.tr("sets.balance_note")}</span>
+        <h2>${this.tr("sets.days_title")}</h2>
+        <div class="legend">
+          <span><i style="background:var(--z-solar)"></i>${this.tr("sets.days_solar")}</span>
+          <span><i style="background:var(--z-charge)"></i>${this.tr("sets.days_grid")}</span>
+          <span><i style="background:var(--z-deliver)"></i>${this.tr("sets.days_house")}</span>
+          <span><i style="background:var(--z-export)"></i>${this.tr("sets.days_export")}</span>
+        </div>
       </div>
+      <span class="muted">${this.tr("sets.days_note")}</span>
       <div class="table" role="table">
         <div class="tr" role="row">
           <span role="columnheader"></span>
-          ${days.map((d) => html`<span role="columnheader" class="dh">${day(`${d.day}T12:00:00Z`, this.locale, this.timeZone)}</span>`)}
+          ${v.days.map((d) => html`<span role="columnheader" class="dh ${d.date === todayIso ? "today" : ""}">${dayName(d.date)}</span>`)}
         </div>
-        ${sets.flatMap((s) =>
-          s.packs.map(
-            (p) => html`<div class="tr" role="row">
-              <span role="rowheader" class="rh">${sets.length > 1 ? `${s.number} · ` : ""}${packName(p, s.packs, this.uiLang)}</span>
-              ${p.history.map(
-                (d) => html`<span
-                  role="cell"
-                  class="cell ${d.status ?? "none"}"
-                  title=${d.max_mv === null ? this.tr("sets.no_judged") : `${d.max_mv} mV · ${this.tr(`sets.cell.${d.status}`)}`}
-                  >${d.max_mv === null ? "–" : this.num(d.max_mv)}${d.full ? html` <span aria-label=${this.tr("sets.full_day")}>▲</span>` : nothing}</span
-                >`,
-              )}
+        <div class="tr bars" aria-hidden="true">
+          <span class="rh axis"><small>${this.tr("sets.days_up")}</small><small>${this.tr("sets.days_down")}</small></span>
+          ${bars.map(
+            (b, i) => html`<div class="daybar" style="--half:${HALF}px">
+              <div class="up">
+                <i style="height:${b.solar}px;background:var(--z-solar)"></i
+                ><i style="height:${b.grid}px;background:var(--z-charge)"></i>
+              </div>
+              <div class="dn">
+                <i style="height:${b.house}px;background:var(--z-deliver)"></i
+                ><i style="height:${b.export}px;background:var(--z-export)"></i>
+              </div>
+              <span class="sr">${dayName(v.days[i].date)}</span>
             </div>`,
-          ),
+          )}
+        </div>
+        ${row(this.tr("sets.days_charged"), this.tr("sets.days_charged_sub"), (d) => k(d.solar_battery + d.grid_battery))}
+        ${row(this.tr("sets.days_delivered"), this.tr("sets.days_delivered_sub"), (d) => k(d.battery_house + d.battery_grid))}
+        ${row(this.tr("sets.days_cycles"), null, (d) => (d.cycles === null ? "–" : this.num(d.cycles, 2)))}
+        ${row(this.tr("sets.days_soc"), this.tr("sets.days_soc_sub"), (d) =>
+          d.soc_min === null || d.soc_max === null ? "–" : `${this.num(d.soc_min)}–${percent(d.soc_max, this.locale)}`,
         )}
       </div>
+      <div class="week">
+        <span class="rh">${this.tr("sets.days_week")}<small>${first && todayIso ? `${dayName(first)} – ${dayName(todayIso)}` : ""}</small></span>
+        <span>${weekParts.join(" · ")}</span>
+      </div>
+      <p class="text small">
+        ${this.tr("sets.days_explain", { usable: v.usable_kwh === null ? "–" : k(v.usable_kwh) })}
+      </p>
     </section>`;
   }
 
@@ -639,9 +725,86 @@ export class ZephyrSets extends LitElement {
       font-weight: 600;
       font-variant-numeric: tabular-nums;
     }
-    .cell.none {
+    .cell.val {
       background: var(--z-track);
+      font-weight: 400;
+      font-size: 14px;
+    }
+    .cell.val.empty {
       color: var(--z-muted);
+    }
+    .cell.val {
+      white-space: nowrap;
+    }
+    .dh.today {
+      color: var(--z-text);
+      font-weight: 600;
+    }
+    .rh small {
+      display: block;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--z-muted);
+    }
+    .rh.axis {
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+    }
+    .daybar {
+      position: relative;
+      height: calc(var(--half) * 2 + 8px);
+      border-top: 0;
+      background: linear-gradient(var(--z-border), var(--z-border)) 0 calc(var(--half) + 4px) / 100% 1px no-repeat;
+    }
+    .daybar .up,
+    .daybar .dn {
+      position: absolute;
+      left: 25%;
+      right: 25%;
+      display: flex;
+    }
+    .daybar .up {
+      bottom: calc(var(--half) + 4px);
+      flex-direction: column-reverse;
+    }
+    .daybar .dn {
+      top: calc(var(--half) + 5px);
+      flex-direction: column;
+    }
+    .daybar i {
+      display: block;
+    }
+    .daybar .up i:last-child {
+      border-radius: 4px 4px 0 0;
+    }
+    .daybar .dn i:last-child {
+      border-radius: 0 0 4px 4px;
+    }
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+    .week {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 6px;
+      align-items: center;
+      border-top: 1px solid var(--z-border);
+      padding-top: 12px;
+      font-size: 14px;
+    }
+    @media (max-width: 600px) {
+      .tr {
+        grid-template-columns: 84px repeat(7, minmax(64px, 1fr));
+      }
+      .week {
+        grid-template-columns: 1fr;
+      }
     }
     .legend {
       display: flex;

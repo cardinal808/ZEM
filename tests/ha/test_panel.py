@@ -269,6 +269,29 @@ async def test_sets_command(hass: HomeAssistant, fake_sets: FakeSets, hass_ws_cl
     assert entry.runtime_data.coordinators[s["id"]].data.report.serial not in text
 
 
+async def test_battery_days_command(hass: HomeAssistant, fake_sets: FakeSets, hass_ws_client: WebSocketGenerator) -> None:
+    """zephyr/battery_days: 7 days from the cost log, today last; usable capacity from the limits."""
+    entry = await _install_with_p1(hass, fake_sets)
+    costs = entry.runtime_data.costs
+    assert costs is not None
+    start = dt_util.as_utc(dt_util.start_of_local_day()) + timedelta(hours=1)
+    costs.current.append(
+        {"start": start.isoformat(), "charge_kwh": 1.0, "discharge_kwh": 0.0, "solar_kwh": 0.0, "house_kwh": 0.2, "buy": 0.21, "soc": 60}
+    )
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "zephyr/battery_days"})
+    msg = await client.receive_json()
+    assert msg["success"] is True
+    view = msg["result"]
+    assert len(view["days"]) == 7
+    today = view["days"][-1]
+    assert today["date"] == dt_util.now().date().isoformat()
+    assert today["grid_battery"] == pytest.approx(1.0) and today["soc_max"] == 60
+    assert view["week"]["grid_price"] == pytest.approx(0.21)
+    settings = entry.runtime_data.control.engine.settings
+    assert view["usable_kwh"] == pytest.approx(11.04 * (settings.max_soc - settings.min_soc) / 100, abs=0.01)
+
+
 async def test_events_for_the_screen_diagnose(
     hass: HomeAssistant, fake_sets: FakeSets, hass_ws_client: WebSocketGenerator, freezer: FrozenDateTimeFactory
 ) -> None:

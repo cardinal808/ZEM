@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.71 — Accu: the inverter in the summary, what the battery did per day
+- **Summary:** *Warmste accu* is replaced by *Omvormer* (the set's enclosure temperature; with more sets the warmest).
+- **What the battery did per day · last 7 days** replaces *Celverschil per dag* (at full the cells always differ a lot, so the grid was red every day and said little). Per local day from the cost log's closed quarters: a bar with charged up (solar / grid) and delivered down (house / grid) on one scale, and rows *Geladen*, *Geleverd*, *Cycli* (delivered ÷ usable capacity between the limits) and the lowest–highest SoC. Below: the week with charged (solar · grid), delivered, cycles, round-trip efficiency (delivered ÷ charged, corrected for the change in SoC; shown only from 2 kWh and between 50 and 98 %) and the mean price of what went from the grid into the battery.
+- New websocket command `zephyr/battery_days` (core `battery_days.py`); the cell balance per pack stays in the pack cards and the summary.
+- Tests: `battery_days` (core: routes per local day, SoC range, efficiency with the change in storage, hourly backfill skipped), the command (HA), `dayBars` and the inverter in the summary (vitest).
+
 ### 0.8.70 — Stroom: *Regeling* and *Nul op de meter* swapped
 - *Regeling · laatste 10 minuten* now comes before *Nul op de meter vandaag*: on a wide panel the regulation chart gets the wide column under the house picture (it was hard to read in the narrow one), *Nul op de meter* moves to the narrow column. On a phone *Regeling* comes first.
 

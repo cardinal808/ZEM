@@ -33,7 +33,7 @@ import {
 import { storedPeriod } from "./prices-plan";
 import "./prices-plan";
 import "./sets";
-import type { SetsView } from "./sets";
+import type { BatteryDaysView, SetsView } from "./sets";
 import "./settings";
 import type { SettingsView } from "./settings";
 import type { SetResult } from "./settings-edit";
@@ -95,6 +95,7 @@ export class ZephyrPanel extends LitElement {
   @state() private clockMs = Date.now();
   @state() private planView?: PlanView;
   @state() private setsView?: SetsView;
+  @state() private batteryDays?: BatteryDaysView;
   @state() private settingsView?: SettingsView;
   @state() private period: Period = storedPeriod();
   @state() private eventsView?: EventsView;
@@ -340,6 +341,7 @@ export class ZephyrPanel extends LitElement {
     if (!this.hass || this.view !== "sets") return;
     try {
       this.setsView = await this.hass.callWS<SetsView>({ type: "zephyr/sets" });
+      this.batteryDays = await this.hass.callWS<BatteryDaysView>({ type: "zephyr/battery_days" });
     } catch {
       // Not loaded: the banner says so.
     }
@@ -888,6 +890,7 @@ export class ZephyrPanel extends LitElement {
       return html`<zephyr-sets
         class=${this.status === "ok" ? "" : "stale"}
         .view=${this.setsView}
+        .days=${this.batteryDays}
         .uiLang=${this.uiLang}
         .locale=${this.locale}
         .timeZone=${this.timeZone}
