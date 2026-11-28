@@ -441,3 +441,29 @@ async def test_reload_reason_is_logged(hass: HomeAssistant, fake_sets: FakeSets,
     assert control.handed_over and not control.shadow
     assert control.live_history[-1] == control.live_history[-1] | {"event": "handover", "changed": ["price_entity"]}
     assert any(e.get("event") == "handover" and e.get("changed") == ["price_entity"] for e in control.log)
+
+
+async def test_decisions_show_report_age_and_follow_reports_after_a_command(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    """Diagnosis 28-11: the reported power lagged after a command; the log now shows it."""
+    entry = await _install_with_p1(hass, fake_sets)
+    await _p1(hass, freezer, 300)
+    await _switch(hass, True)
+    for _ in range(3):
+        await _p1(hass, freezer, 300)
+    control = entry.runtime_data.control
+    last = [d for d in control.log if "reason" in d][-1]
+    assert {"ac", "report_age_s", "content_age_s"} <= set(last)
+    assert last["ac"] == [0, 760]
+    # A command, then the set's report changes while nothing else does: an extra line.
+    control._watch_reports_until = float("inf")
+    answer = fake_sets.answers["10.0.0.10"]
+    assert isinstance(answer, dict)
+    answer["properties"]["outputHomePower"] = 700
+    answer["timestamp"] += 5
+    freezer.tick(timedelta(seconds=6))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    await _p1(hass, freezer, 300)
+    assert any(d.get("ac") == [0, 700] for d in control.log)
