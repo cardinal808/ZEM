@@ -1,10 +1,16 @@
 // Screen "Besparing" (SPEC-ui §1, M6 part 2): what the battery saved, from the cost log (B38).
+import { element } from "./define";
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 
 import { euro, kwh } from "./format";
 import { t, type Lang } from "./i18n";
-import { choiceLabel, entityChoices, resolveEntity, type EntityChoice } from "./settings-edit";
+import {
+  choiceLabel,
+  entityChoices,
+  resolveEntity,
+  type EntityChoice,
+} from "./settings-edit";
 
 export type SavingsPeriod = "today" | "week" | "month" | "year";
 
@@ -22,12 +28,32 @@ export interface SavingsSummary {
   discharge_kwh: number;
   days: number;
   quarters: number;
+  /** Quarters that could not be filled or have no price: only then the amounts are too low. */
   incomplete_quarters: number;
+  missing_quarters?: number;
+  /** Filled quarters (HA was off, the set or P1 was away, the price was guessed). */
+  estimated_quarters?: number;
+  price_interpolated_quarters?: number;
+  // OPDRACHT-besparing-zon: null without a solar counter.
+  includes_solar?: boolean;
+  cost_no_solar?: number | null;
+  savings_solar?: number | null;
+  savings_total?: number | null;
+  solar_direct_value?: number | null;
+  solar_export_value?: number | null;
+  solar_bonus_value?: number | null;
+  solar_kwh?: number | null;
+  solar_direct_kwh?: number | null;
+  export_kwh?: number | null;
+  self_consumption?: number | null;
 }
 
 export interface SavingsDay {
   day: string;
   savings_battery: number | null;
+  savings_solar?: number | null;
+  /** Some quarters were filled (estimated). */
+  estimated?: boolean;
   /** Quarters missing or without a price: the day is not complete. */
   incomplete: boolean;
   /** Worked out afterwards from hourly statistics (before the cost log). */
@@ -40,6 +66,8 @@ export interface BackfillRequest {
   discharge_entity: string;
   solar_entity: string | null;
   price_entity: string | null;
+  /** Battery SOC statistic: caps the pools on the battery's content (optional). */
+  soc_entity?: string | null;
 }
 
 export interface BackfillResult {
@@ -55,6 +83,9 @@ export interface BackfillResult {
   first?: string | null;
   last?: string | null;
   removed?: number;
+  /** ``pv_in_battery_counters``: the counters belong to another Zendure integration. */
+  warnings?: string[];
+  capped_by_soc?: boolean;
 }
 
 export interface SavingsView {
@@ -79,9 +110,22 @@ const roundUp = (v: number) => (v <= 0 ? 0 : Math.ceil(v * 2) / 2);
  * Euro axis for the day bars. One test day with a large loss (or a large gain) would flatten the rest:
  * a value above twice the typical day is cut at the axis and drawn with an arrow and its amount.
  */
-export function dayScale(days: SavingsDay[]): { top: number; bottom: number } {
-  const values = days.map((d) => d.savings_battery ?? 0);
-  const sizes = values.map(Math.abs).filter((v) => v > 0).sort((a, b) => a - b);
+export function dayScale(
+  days: SavingsDay[],
+  withSolar = false,
+): { top: number; bottom: number } {
+  // Stacked (with solar): solar and a positive battery part go up, a negative battery part down.
+  const ups = days.map((d) =>
+    withSolar
+      ? Math.max(d.savings_solar ?? 0, 0) + Math.max(d.savings_battery ?? 0, 0)
+      : (d.savings_battery ?? 0),
+  );
+  const downs = days.map((d) => (withSolar ? Math.min(d.savings_battery ?? 0, 0) : (d.savings_battery ?? 0)));
+  const values = [...ups, ...downs];
+  const sizes = values
+    .map(Math.abs)
+    .filter((v) => v > 0)
+    .sort((a, b) => a - b);
   const typical = sizes.length ? sizes[Math.floor(sizes.length * 0.75)] : 0.5;
   const cap = Math.max(0.5, typical * 2);
   const max = Math.min(cap, Math.max(0, ...values));
@@ -89,7 +133,7 @@ export function dayScale(days: SavingsDay[]): { top: number; bottom: number } {
   return { top: Math.max(0.5, roundUp(max)), bottom: -roundUp(-min) };
 }
 
-@customElement("zephyr-savings")
+@element("zephyr-savings")
 export class ZephyrSavings extends LitElement {
   @property({ attribute: false }) view?: SavingsView;
   @property({ attribute: false }) uiLang: Lang = "en";
@@ -97,15 +141,22 @@ export class ZephyrSavings extends LitElement {
   @property() timeZone = "UTC";
   @property({ type: Boolean }) admin = false;
   @property({ attribute: false }) states?: States;
-  @property({ attribute: false }) backfill?: (req: BackfillRequest | null) => Promise<BackfillResult>;
+  @property({ attribute: false }) backfill?: (
+    req: BackfillRequest | null,
+  ) => Promise<BackfillResult>;
 
   @state() private period: SavingsPeriod = "month";
   /** The last choice is kept in this browser, so a second run needs no picking again. */
   @state() private form: Partial<BackfillRequest> = ZephyrSavings.storedForm();
   @state() private busy = false;
   @state() private result: BackfillResult | null = null;
+  /** Day bars: solar + battery (default when solar is known) or the battery alone. */
+  @state() private batteryOnly = false;
 
-  private tr(key: string, params: Record<string, string | number> = {}): string {
+  private tr(
+    key: string,
+    params: Record<string, string | number> = {},
+  ): string {
     return t(this.uiLang, key, params);
   }
 
@@ -116,19 +167,34 @@ export class ZephyrSavings extends LitElement {
     return html`<div class="layout">
       <section class="card hero" aria-labelledby="sv-title">
         <div class="head">
-          <h2 id="sv-title">${this.tr("savings.title")}</h2>
-          <div class="tabs" role="group" aria-label=${this.tr("savings.period")}>
+          <h2 id="sv-title">
+            ${this.tr(s.includes_solar ? "savings.title_solar" : "savings.title")}
+          </h2>
+          <div
+            class="tabs"
+            role="group"
+            aria-label=${this.tr("savings.period")}
+          >
             ${(["today", "week", "month", "year"] as const).map(
-              (p) => html`<button type="button" class=${p === this.period ? "on" : ""} aria-pressed=${p === this.period ? "true" : "false"} @click=${() => (this.period = p)}>
-                <span class="long">${this.tr(`savings.p_${p}`)}</span><span class="short">${this.tr(`savings.ps_${p}`)}</span>
-              </button>`,
+              (p) =>
+                html`<button
+                  type="button"
+                  class=${p === this.period ? "on" : ""}
+                  aria-pressed=${p === this.period ? "true" : "false"}
+                  @click=${() => (this.period = p)}
+                >
+                  <span class="long">${this.tr(`savings.p_${p}`)}</span
+                  ><span class="short">${this.tr(`savings.ps_${p}`)}</span>
+                </button>`,
             )}
           </div>
         </div>
         ${this.renderHero(s)}
       </section>
       <section class="card split" aria-labelledby="sv-split">
-        <h2 id="sv-split">${this.tr("savings.split_title", { period: this.tr(`savings.p_${this.period}`).toLowerCase() })}</h2>
+        <h2 id="sv-split">
+          ${this.tr("savings.split_title", { period: this.tr(`savings.p_${this.period}`).toLowerCase() })}
+        </h2>
         ${this.renderSplit(s)}
       </section>
       <section class="card days" aria-labelledby="sv-days">
@@ -140,10 +206,15 @@ export class ZephyrSavings extends LitElement {
         <ul>
           <li>${this.tr("savings.note_compare")}</li>
           <li>${this.tr("savings.note_fixed")}</li>
+          ${view.periods[this.period].includes_solar ? html`<li>${this.tr("savings.note_solar")}</li>` : nothing}
           ${view.saldering_until ? html`<li>${this.tr("savings.note_saldering", { date: this.date(view.saldering_until) })}</li>` : nothing}
-          ${view.backfilled_days && view.measured_since
-            ? html`<li>${this.tr("savings.note_hourly", { date: this.date(view.measured_since) })}</li>`
-            : nothing}
+          ${
+            view.backfilled_days && view.measured_since
+              ? html`<li>
+                  ${this.tr("savings.note_hourly", { date: this.date(view.measured_since) })}
+                </li>`
+              : nothing
+          }
           ${view.since ? html`<li>${this.tr("savings.note_since", { date: this.date(view.since) })}</li>` : nothing}
         </ul>
       </section>
@@ -151,15 +222,28 @@ export class ZephyrSavings extends LitElement {
     </div>`;
   }
 
-  private choices(deviceClass: string | null, domain = "sensor"): EntityChoice[] {
+  private choices(
+    deviceClass: string | null,
+    domain = "sensor",
+  ): EntityChoice[] {
     return entityChoices(this.states, domain, deviceClass);
   }
 
-  private picker(key: keyof BackfillRequest, label: string, choices: EntityChoice[], value: string | null | undefined, optional: boolean): TemplateResult {
+  private picker(
+    key: keyof BackfillRequest,
+    label: string,
+    choices: EntityChoice[],
+    value: string | null | undefined,
+    optional: boolean,
+  ): TemplateResult {
     const id = `bf-${key}`;
-    const current = value ? (choices.find((c) => c.id === value) ?? { id: value, name: value }) : null;
+    const current = value
+      ? (choices.find((c) => c.id === value) ?? { id: value, name: value })
+      : null;
     return html`<label class="field" for=${id}>
-      <span>${label}${optional ? html` <em>(${this.tr("savings.optional")})</em>` : nothing}</span>
+      <span
+        >${label}${optional ? html` <em>(${this.tr("savings.optional")})</em>` : nothing}</span
+      >
       <input
         id=${id}
         type="text"
@@ -169,10 +253,16 @@ export class ZephyrSavings extends LitElement {
         .value=${current ? choiceLabel(current) : ""}
         @change=${(e: Event) => {
           const raw = (e.target as HTMLInputElement).value;
-          this.form = { ...this.form, [key]: resolveEntity(raw, choices) ?? (raw.trim() ? raw.trim() : null) };
+          this.form = {
+            ...this.form,
+            [key]:
+              resolveEntity(raw, choices) ?? (raw.trim() ? raw.trim() : null),
+          };
         }}
       />
-      <datalist id=${`${id}-list`}>${choices.map((c) => html`<option value=${choiceLabel(c)}></option>`)}</datalist>
+      <datalist id=${`${id}-list`}>
+        ${choices.map((c) => html`<option value=${choiceLabel(c)}></option>`)}
+      </datalist>
     </label>`;
   }
 
@@ -187,7 +277,12 @@ export class ZephyrSavings extends LitElement {
     try {
       const raw = window.localStorage.getItem("zephyr.backfill");
       const data = raw ? (JSON.parse(raw) as Partial<BackfillRequest>) : {};
-      return { charge_entity: data.charge_entity, discharge_entity: data.discharge_entity, price_entity: data.price_entity };
+      return {
+        charge_entity: data.charge_entity,
+        discharge_entity: data.discharge_entity,
+        price_entity: data.price_entity,
+        soc_entity: data.soc_entity,
+      };
     } catch {
       return {};
     }
@@ -207,7 +302,10 @@ export class ZephyrSavings extends LitElement {
     try {
       this.result = await this.backfill(req);
     } catch (err) {
-      this.result = { ok: false, error: (err as { message?: string })?.message ?? String(err) };
+      this.result = {
+        ok: false,
+        error: (err as { message?: string })?.message ?? String(err),
+      };
     } finally {
       this.busy = false;
     }
@@ -219,26 +317,47 @@ export class ZephyrSavings extends LitElement {
       first: this.form.first ?? this.defaultFirst(view),
       charge_entity: this.form.charge_entity ?? "",
       discharge_entity: this.form.discharge_entity ?? "",
-      solar_entity: this.form.solar_entity === undefined ? (view.defaults?.solar_entity ?? null) : this.form.solar_entity,
-      price_entity: this.form.price_entity === undefined ? (view.defaults?.price_entity ?? null) : this.form.price_entity,
+      solar_entity:
+        this.form.solar_entity === undefined
+          ? (view.defaults?.solar_entity ?? null)
+          : this.form.solar_entity,
+      price_entity:
+        this.form.price_entity === undefined
+          ? (view.defaults?.price_entity ?? null)
+          : this.form.price_entity,
+      soc_entity: this.form.soc_entity ?? null,
     };
     const ready = Boolean(f.first && f.charge_entity && f.discharge_entity);
     const r = this.result;
     return html`<section class="card backfill" aria-labelledby="sv-bf">
       <h2 id="sv-bf">${this.tr("savings.bf_title")}</h2>
-      <p class="muted">${this.tr("savings.bf_intro", { date: view.measured_since ? this.date(view.measured_since) : "–" })}</p>
+      <p class="muted">
+        ${this.tr("savings.bf_intro", { date: view.measured_since ? this.date(view.measured_since) : "–" })}
+      </p>
       <div class="form">
         <label class="field" for="bf-first">
           <span>${this.tr("savings.bf_first")}</span>
-          <input id="bf-first" type="date" .value=${f.first} max=${view.measured_since ?? ""} @change=${(e: Event) => (this.form = { ...this.form, first: (e.target as HTMLInputElement).value })} />
+          <input
+            id="bf-first"
+            type="date"
+            .value=${f.first}
+            max=${view.measured_since ?? ""}
+            @change=${(e: Event) => (this.form = { ...this.form, first: (e.target as HTMLInputElement).value })}
+          />
         </label>
         ${this.picker("charge_entity", this.tr("savings.bf_charge"), energy, f.charge_entity, false)}
         ${this.picker("discharge_entity", this.tr("savings.bf_discharge"), energy, f.discharge_entity, false)}
         ${this.picker("solar_entity", this.tr("savings.bf_solar"), energy, f.solar_entity, true)}
+        ${this.picker("soc_entity", this.tr("savings.bf_soc"), this.choices("battery"), f.soc_entity, true)}
         <fieldset class="field price">
           <legend>${this.tr("savings.bf_price")}</legend>
           <label class="radio">
-            <input type="radio" name="bf-price" .checked=${f.price_entity === "energyzero"} @change=${() => (this.form = { ...this.form, price_entity: "energyzero" })} />
+            <input
+              type="radio"
+              name="bf-price"
+              .checked=${f.price_entity === "energyzero"}
+              @change=${() => (this.form = { ...this.form, price_entity: "energyzero" })}
+            />
             ${this.tr("savings.bf_price_ez")}
           </label>
           <label class="radio">
@@ -255,75 +374,174 @@ export class ZephyrSavings extends LitElement {
       </div>
       <p class="muted small">${this.tr("savings.bf_help")}</p>
       <div class="buttons">
-        <button type="button" class="primary" ?disabled=${!ready || this.busy} @click=${() => void this.run(f as BackfillRequest)}>
+        <button
+          type="button"
+          class="primary"
+          ?disabled=${!ready || this.busy}
+          @click=${() => void this.run(f as BackfillRequest)}
+        >
           ${this.tr(this.busy ? "savings.bf_busy" : "savings.bf_run")}
         </button>
-        ${view.backfilled_days
-          ? html`<button type="button" class="ghost" ?disabled=${this.busy} @click=${() => void this.run(null)}>
-              ${this.tr("savings.bf_clear", { n: view.backfilled_days })}
-            </button>`
-          : nothing}
+        ${
+          view.backfilled_days
+            ? html`<button
+                type="button"
+                class="ghost"
+                ?disabled=${this.busy}
+                @click=${() => void this.run(null)}
+              >
+                ${this.tr("savings.bf_clear", { n: view.backfilled_days })}
+              </button>`
+            : nothing
+        }
       </div>
-      ${r
-        ? html`<p class=${r.ok ? "result" : "result bad"} role="status">
-            ${r.ok
-              ? r.removed !== undefined
-                ? this.tr("savings.bf_removed", { n: r.removed })
-                : r.days
-                  ? this.tr("savings.bf_done", {
-                      n: r.days,
-                      first: this.date(r.first as string),
-                      last: this.date(r.last as string),
-                      skipped: r.skipped ?? 0,
-                      unpriced: (r.hours ?? 0) - (r.priced_hours ?? 0),
-                    }) + (r.price_failed_days ? ` ${this.tr("savings.bf_ez_failed", { n: r.price_failed_days })}` : "")
-                  : this.tr("savings.bf_nothing")
-              : this.tr(`savings.bf_err_${r.error}`, { entities: (r.entities ?? []).join(", ") })}
-          </p>`
-        : nothing}
+      ${
+        r
+          ? html`<p class=${r.ok ? "result" : "result bad"} role="status">
+              ${
+                r.ok
+                  ? r.removed !== undefined
+                    ? this.tr("savings.bf_removed", { n: r.removed })
+                    : r.days
+                      ? this.tr("savings.bf_done", {
+                          n: r.days,
+                          first: this.date(r.first as string),
+                          last: this.date(r.last as string),
+                          skipped: r.skipped ?? 0,
+                          unpriced: (r.hours ?? 0) - (r.priced_hours ?? 0),
+                        }) +
+                        (r.price_failed_days
+                          ? ` ${this.tr("savings.bf_ez_failed", { n: r.price_failed_days })}`
+                          : "") +
+                        (r.warnings?.includes("pv_in_battery_counters")
+                          ? ` ${this.tr("savings.bf_warn_pv")}`
+                          : "")
+                      : this.tr("savings.bf_nothing")
+                  : this.tr(`savings.bf_err_${r.error}`, {
+                      entities: (r.entities ?? []).join(", "),
+                    })
+              }
+            </p>`
+          : nothing
+      }
     </section>`;
   }
 
   private date(iso: string): string {
-    return new Intl.DateTimeFormat(this.locale, { day: "numeric", month: "long", year: "numeric", timeZone: this.timeZone }).format(new Date(iso));
+    return new Intl.DateTimeFormat(this.locale, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: this.timeZone,
+    }).format(new Date(iso));
   }
 
   private renderHero(s: SavingsSummary): TemplateResult {
-    if (s.cost === null || s.cost_no_battery === null || s.savings_battery === null)
+    if (
+      s.cost === null ||
+      s.cost_no_battery === null ||
+      s.savings_battery === null
+    )
       return html`<p class="muted">${this.tr("savings.no_data")}</p>`;
-    const saved = s.savings_battery;
+    const solar = s.includes_solar && s.savings_total != null && s.cost_no_solar != null;
+    const saved = solar ? (s.savings_total as number) : s.savings_battery;
     const loss = saved < 0;
-    const max = Math.max(s.cost, s.cost_no_battery, 0.01);
+    const max = Math.max(s.cost, s.cost_no_battery, solar ? (s.cost_no_solar as number) : 0, 0.01);
     return html`<div class="big ${loss ? "loss" : "win"}">
-        <span class="amount">${loss ? "−" : ""}${euro(Math.abs(saved), this.locale)}</span>
-        <span class="label">${this.tr(loss ? "savings.lost" : "savings.saved")}</span>
+        <span class="amount"
+          >${loss ? "−" : ""}${euro(Math.abs(saved), this.locale)}</span
+        >
+        <span class="label"
+          >${this.tr(loss ? "savings.lost" : "savings.saved")}</span
+        >
       </div>
       <div class="compare">
+        ${
+          solar
+            ? html`<div class="row">
+                <span class="name">${this.tr("savings.without_both")}</span>
+                <span class="bar"
+                  ><i
+                    class="ns"
+                    style="width:${(Math.max(0, s.cost_no_solar as number) / max) * 100}%"
+                  ></i
+                ></span>
+                <span class="val">${euro(s.cost_no_solar as number, this.locale)}</span>
+              </div>`
+            : nothing
+        }
         <div class="row">
           <span class="name">${this.tr("savings.without")}</span>
-          <span class="bar"><i class="nb" style="width:${(Math.max(0, s.cost_no_battery) / max) * 100}%"></i></span>
+          <span class="bar"
+            ><i
+              class="nb"
+              style="width:${(Math.max(0, s.cost_no_battery) / max) * 100}%"
+            ></i
+          ></span>
           <span class="val">${euro(s.cost_no_battery, this.locale)}</span>
         </div>
         <div class="row">
           <span class="name">${this.tr("savings.paid")}</span>
-          <span class="bar"><i class="paid" style="width:${(Math.max(0, s.cost) / max) * 100}%"></i></span>
+          <span class="bar"
+            ><i
+              class="paid"
+              style="width:${(Math.max(0, s.cost) / max) * 100}%"
+            ></i
+          ></span>
           <span class="val">${euro(s.cost, this.locale)}</span>
         </div>
       </div>
-      ${s.incomplete_quarters
-        ? html`<p class="warn">${this.tr("savings.incomplete", { n: s.incomplete_quarters, total: s.quarters })}</p>`
-        : nothing}`;
+      ${
+        s.estimated_quarters
+          ? html`<p class="info">
+              ${this.tr("savings.estimated", { n: s.estimated_quarters, total: s.quarters })}${
+                s.price_interpolated_quarters
+                  ? ` ${this.tr("savings.estimated_price", { n: s.price_interpolated_quarters })}`
+                  : ""
+              }
+            </p>`
+          : nothing
+      }
+      ${
+        s.incomplete_quarters
+          ? html`<p class="warn">
+              ${this.tr("savings.incomplete", { n: s.incomplete_quarters, total: s.quarters })}
+            </p>`
+          : nothing
+      }`;
   }
 
   private renderDays(days: SavingsDay[]): TemplateResult {
-    if (!days.length) return html`<p class="muted">${this.tr("savings.no_data")}</p>`;
-    const { top, bottom } = dayScale(days);
+    if (!days.length)
+      return html`<p class="muted">${this.tr("savings.no_data")}</p>`;
+    const withSolar = !this.batteryOnly && days.some((d) => d.savings_solar != null);
+    const { top, bottom } = dayScale(days, withSolar);
     const span = top - bottom;
     const zero = (top / span) * 100;
     const fmtDay = (d: string) =>
-      new Intl.DateTimeFormat(this.locale, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${d}T12:00:00Z`));
-    const total = days.reduce((a, d) => a + (d.savings_battery ?? 0), 0);
-    return html`<p class="muted">${this.tr("savings.days_total", { n: days.length, amount: euro(total, this.locale) })}</p>
+      new Intl.DateTimeFormat(this.locale, {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      }).format(new Date(`${d}T12:00:00Z`));
+    const total = days.reduce(
+      (a, d) => a + (d.savings_battery ?? 0) + (withSolar ? (d.savings_solar ?? 0) : 0),
+      0,
+    );
+    const toggle = days.some((d) => d.savings_solar != null)
+      ? html`<label class="only">
+          <input
+            type="checkbox"
+            .checked=${this.batteryOnly}
+            @change=${(e: Event) => (this.batteryOnly = (e.target as HTMLInputElement).checked)}
+          />
+          ${this.tr("savings.battery_only")}
+        </label>`
+      : nothing;
+    return html`${toggle}<p class="muted">
+        ${this.tr("savings.days_total", { n: days.length, amount: euro(total, this.locale) })}
+      </p>
       <div class="dchart">
         <div class="daxis" aria-hidden="true">
           <span style="top:0">${euro(top, this.locale)}</span>
@@ -333,15 +551,42 @@ export class ZephyrSavings extends LitElement {
         <div class="dbars">
           <div class="zero" style="top:${zero}%"></div>
           ${days.map((d) => {
-            const v = d.savings_battery ?? 0;
+            const bat = d.savings_battery ?? 0;
+            const sun = withSolar ? Math.max(d.savings_solar ?? 0, 0) : 0;
+            const v = bat + sun;
             const shown = Math.max(bottom, Math.min(top, v));
             const cut = shown !== v;
             const h = (Math.abs(shown) / span) * 100;
-            const style = v >= 0 ? `top:${zero - h}%;height:${h}%` : `top:${zero}%;height:${h}%`;
-            const notes = [d.incomplete ? this.tr("savings.day_incomplete") : "", d.hourly ? this.tr("savings.day_hourly") : ""].filter(Boolean);
+            const style =
+              v >= 0
+                ? `top:${zero - h}%;height:${h}%`
+                : `top:${zero}%;height:${h}%`;
+            const notes = [
+              withSolar && d.savings_solar != null
+                ? this.tr("savings.day_split", { sun: euro(d.savings_solar, this.locale), bat: euro(bat, this.locale) })
+                : "",
+              d.estimated ? this.tr("savings.day_estimated") : "",
+              d.incomplete ? this.tr("savings.day_incomplete") : "",
+              d.hourly ? this.tr("savings.day_hourly") : "",
+            ].filter(Boolean);
             const label = `${fmtDay(d.day)}: ${d.savings_battery === null ? this.tr("savings.unknown") : euro(v, this.locale)}${notes.length ? ` (${notes.join(", ")})` : ""}`;
+            // Stacked: the solar part from zero, the battery on top of it (or below zero when negative).
+            const sunH = withSolar && sun > 0 ? (Math.min(sun, top) / span) * 100 : 0;
+            const batShown = bat >= 0 ? Math.min(bat, Math.max(top - sun, 0)) : Math.max(bat, bottom);
+            const batH = (Math.abs(batShown) / span) * 100;
+            const batStyle =
+              bat >= 0 ? `top:${zero - sunH - batH}%;height:${batH}%` : `top:${zero}%;height:${batH}%`;
+            const flags = `${d.incomplete ? " part" : ""}${d.hourly || d.estimated ? " hourly" : ""}`;
             return html`<div class="dcol" title=${label} aria-label=${label}>
-              <i class=${`${v >= 0 ? "win" : "loss"}${d.incomplete ? " part" : ""}${cut ? " cut" : ""}${d.hourly ? " hourly" : ""}`} style=${style}></i>
+              ${
+                withSolar
+                  ? html`${sunH > 0 ? html`<i class=${`sun${flags}`} style="top:${zero - sunH}%;height:${sunH}%"></i>` : nothing}
+                      <i class=${`${bat >= 0 ? "win" : "loss"}${flags}${cut ? " cut" : ""}`} style=${batStyle}></i>`
+                  : html`<i
+                      class=${`${v >= 0 ? "win" : "loss"}${flags}${cut ? " cut" : ""}`}
+                      style=${style}
+                    ></i>`
+              }
               ${cut ? html`<span class=${v >= 0 ? "cutlabel up" : "cutlabel down"}>${v >= 0 ? "▲" : "▼"} ${euro(v, this.locale)}</span>` : nothing}
             </div>`;
           })}
@@ -349,24 +594,67 @@ export class ZephyrSavings extends LitElement {
         <div class="dticks" aria-hidden="true">
           ${days.map((d, i) =>
             i % 7 === 0 && days.length - i > 3
-              ? html`<span style="left:${((i + 0.5) / days.length) * 100}%">${new Intl.DateTimeFormat(this.locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${d.day}T12:00:00Z`))}</span>`
+              ? html`<span style="left:${((i + 0.5) / days.length) * 100}%"
+                  >${new Intl.DateTimeFormat(this.locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${d.day}T12:00:00Z`))}</span
+                >`
               : nothing,
           )}
         </div>
       </div>
       <div class="legend">
+        ${withSolar ? html`<span><i class="sw sun"></i>${this.tr("savings.leg_sun")}</span>` : nothing}
         <span><i class="sw win"></i>${this.tr("savings.leg_win")}</span>
         <span><i class="sw loss"></i>${this.tr("savings.leg_loss")}</span>
         <span><i class="sw part"></i>${this.tr("savings.leg_part")}</span>
         ${days.some((d) => d.hourly) ? html`<span><i class="sw hourly"></i>${this.tr("savings.leg_hourly")}</span>` : nothing}
+        ${days.some((d) => d.estimated) ? html`<span><i class="sw hourly"></i>${this.tr("savings.leg_estimated")}</span>` : nothing}
       </div>`;
   }
 
   private renderSplit(s: SavingsSummary): TemplateResult {
     const solar = s.savings_solar_via_battery;
     const trade = s.savings_trade;
-    const avg = s.discharge_kwh > 0 && s.savings_battery !== null ? s.savings_battery / s.discharge_kwh : null;
-    return html`<dl>
+    const avg =
+      s.discharge_kwh > 0 && s.savings_battery !== null
+        ? s.savings_battery / s.discharge_kwh
+        : null;
+    const sun = s.includes_solar && s.savings_solar != null;
+    return html`${
+      sun
+        ? html`<dl class="group">
+            <div class="grouphead">
+              <dt><i class="sw sun"></i>${this.tr("savings.sun_group")}</dt>
+              <dd>${euro(s.savings_solar as number, this.locale)}</dd>
+            </div>
+            <div>
+              <dt>${this.tr("savings.sun_direct")}</dt>
+              <dd>${euro(s.solar_direct_value ?? 0, this.locale)}</dd>
+              <p>${kwh(s.solar_direct_kwh ?? 0, this.locale)} · ${this.tr("savings.sun_direct_help")}</p>
+            </div>
+            <div>
+              <dt>${this.tr("savings.sun_export")}</dt>
+              <dd>${euro(s.solar_export_value ?? 0, this.locale)}</dd>
+              <p>
+                ${this.tr("savings.sun_export_help")}${
+                  s.solar_bonus_value
+                    ? ` ${this.tr("savings.sun_bonus", { euro: euro(s.solar_bonus_value, this.locale) })}`
+                    : ""
+                }${
+                  this.view?.saldering_until && new Date() >= new Date(this.view.saldering_until)
+                    ? ` ${this.tr("savings.sun_after_saldering")}`
+                    : ""
+                }
+              </p>
+            </div>
+          </dl>
+          <dl class="group">
+            <div class="grouphead">
+              <dt><i class="sw win"></i>${this.tr("savings.battery_group")}</dt>
+              <dd>${s.savings_battery === null ? "–" : euro(s.savings_battery, this.locale)}</dd>
+            </div>
+          </dl>`
+        : nothing
+    }<dl>
         <div>
           <dt><i class="sw solar"></i>${this.tr("savings.solar_part")}</dt>
           <dd>${solar === null ? "–" : euro(solar, this.locale)}</dd>
@@ -379,9 +667,17 @@ export class ZephyrSavings extends LitElement {
         </div>
       </dl>
       <div class="facts">
-        <span><b>${kwh(s.charge_kwh, this.locale)}</b> ${this.tr("savings.charged")}</span>
-        <span><b>${kwh(s.discharge_kwh, this.locale)}</b> ${this.tr("savings.delivered")}</span>
+        <span
+          ><b>${kwh(s.charge_kwh, this.locale)}</b>
+          ${this.tr("savings.charged")}</span
+        >
+        <span
+          ><b>${kwh(s.discharge_kwh, this.locale)}</b>
+          ${this.tr("savings.delivered")}</span
+        >
         ${avg !== null ? html`<span><b>${euro(avg, this.locale)}</b> ${this.tr("savings.per_kwh")}</span>` : nothing}
+        ${sun && s.solar_kwh != null ? html`<span><b>${kwh(s.solar_kwh, this.locale)}</b> ${this.tr("savings.sun_total")}</span>` : nothing}
+        ${sun && s.self_consumption != null ? html`<span><b>${Math.round(s.self_consumption * 100)} %</b> ${this.tr("savings.self_consumption")}</span>` : nothing}
       </div>`;
   }
 
@@ -492,6 +788,44 @@ export class ZephyrSavings extends LitElement {
     .bar .nb {
       background: var(--z-hold-a);
     }
+    .bar .ns {
+      background: var(--z-solar);
+    }
+    .info {
+      margin: 0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: var(--z-track);
+      color: var(--z-muted);
+      font-size: 13px;
+    }
+    i.sun,
+    .sw.sun {
+      background: var(--z-solar);
+    }
+    .only {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--z-muted);
+      align-self: flex-end;
+    }
+    .subhead {
+      margin: 4px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      justify-content: space-between;
+    }
+    .subhead span {
+      font-variant-numeric: tabular-nums;
+    }
+    .grouphead dt,
+    .grouphead dd {
+      font-size: 15px;
+    }
     .bar .paid {
       background: var(--z-text);
     }
@@ -591,10 +925,19 @@ export class ZephyrSavings extends LitElement {
       display: none;
     }
     i.hourly {
-      background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0 2px, transparent 2px 5px);
+      background-image: repeating-linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.45) 0 2px,
+        transparent 2px 5px
+      );
     }
     .sw.hourly {
-      background: var(--z-export) repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0 2px, transparent 2px 4px);
+      background: var(--z-export)
+        repeating-linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.55) 0 2px,
+          transparent 2px 4px
+        );
     }
     .backfill {
       grid-column: 1 / -1;
@@ -692,7 +1035,11 @@ export class ZephyrSavings extends LitElement {
       color: var(--z-bad-text);
     }
     .sw.part {
-      background: repeating-linear-gradient(45deg, var(--z-export) 0 2px, transparent 2px 4px);
+      background: repeating-linear-gradient(
+        45deg,
+        var(--z-export) 0 2px,
+        transparent 2px 4px
+      );
       border: 1px solid var(--z-export);
       box-sizing: border-box;
     }

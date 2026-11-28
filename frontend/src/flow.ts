@@ -1,6 +1,7 @@
 // Screen "Stroom" (SPEC-ui §1, M6 part 2): power flow between solar, grid, house and battery, now.
+import { element } from "./define";
 import { LitElement, css, html, nothing, svg, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 
 import { percent, watts } from "./format";
 import { t, type Lang } from "./i18n";
@@ -107,7 +108,7 @@ const ICONS: Record<Node, string> = {
     "M8 5.5h8a1.5 1.5 0 0 1 1.5 1.5v12.5A1.5 1.5 0 0 1 16 21H8a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 8 5.5zM10 3h4",
 };
 
-@customElement("zephyr-flow")
+@element("zephyr-flow")
 export class ZephyrFlow extends LitElement {
   @property({ attribute: false }) now?: Now;
   @property({ attribute: false }) uiLang: Lang = "en";

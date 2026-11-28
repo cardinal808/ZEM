@@ -43,6 +43,94 @@ export interface PlanView {
   blocks: PlanBlock[];
   /** curtail_off / curtail_external / curtail_zephyr (B45). */
   curtail_mode?: string | null;
+  /** jeroen.nl forecast after the known prices (OPDRACHT-ui-prijsvoorspelling); null when off. */
+  price_forecast?: PriceForecast | null;
+}
+
+export interface ForecastSlot {
+  start: string;
+  market: number;
+  low: number;
+  high: number;
+  /** All-in buy price from market, low and high (own tariffs). */
+  buy: number;
+  buy_low: number;
+  buy_high: number;
+}
+
+export interface PriceForecast {
+  source: { name: string; url: string };
+  mode: "indicative" | "use";
+  value: "low" | "mid";
+  slots: ForecastSlot[];
+  compare: {
+    action_without: string;
+    action_with: string;
+    first_action_differs: boolean;
+    expected_cost_without: number;
+    expected_cost_with: number;
+    grid_charge_kwh_without: number;
+    grid_charge_kwh_with: number;
+  } | null;
+}
+
+/** Height (0–100 %, from the bottom) of a price on the chart's scale, clamped. */
+export function level(price: number, s: Scale): number {
+  return Math.max(0, Math.min(100, ((price - s.lo) / (s.hi - s.lo)) * 100));
+}
+
+/**
+ * Dashed line and band (svg points, viewBox 0..n × 0..100) of the forecast over the chart's
+ * quarters, in runs of consecutive quarters. Quarters without a forecast break the line.
+ */
+export function forecastPaths(
+  quarters: Quarter[],
+  forecast: ForecastSlot[] | undefined,
+  s: Scale,
+): { line: string; band: string }[] {
+  if (!forecast?.length) return [];
+  const byStart = new Map(forecast.map((f) => [new Date(f.start).getTime(), f]));
+  const out: { line: string; band: string }[] = [];
+  let run: { i: number; f: ForecastSlot }[] = [];
+  const flush = () => {
+    if (run.length) {
+      const y = (v: number) => (100 - level(v, s)).toFixed(2);
+      const line = run.map(({ i, f }) => `${i + 0.5},${y(f.buy)}`).join(" ");
+      const top = run.map(({ i, f }) => `${i + 0.5},${y(f.buy_high)}`);
+      const bottom = run.map(({ i, f }) => `${i + 0.5},${y(f.buy_low)}`).reverse();
+      out.push({ line, band: [...top, ...bottom].join(" ") });
+    }
+    run = [];
+  };
+  quarters.forEach((q, i) => {
+    const f = byStart.get(new Date(q.start).getTime());
+    if (f) run.push({ i, f });
+    else flush();
+  });
+  flush();
+  return out;
+}
+
+/** Per local day of the forecast that the chart does not show: mean and the dearest quarter. */
+export function forecastDays(
+  forecast: ForecastSlot[] | undefined,
+  shown: Quarter[],
+  timeZone: string,
+): { day: string; avg: number; max: ForecastSlot; min: ForecastSlot }[] {
+  if (!forecast?.length) return [];
+  const shownDays = new Set(shown.map((q) => dayKey(q.start, timeZone)));
+  const groups = new Map<string, ForecastSlot[]>();
+  for (const f of forecast) {
+    const key = dayKey(f.start, timeZone);
+    if (shownDays.has(key)) continue;
+    groups.set(key, [...(groups.get(key) ?? []), f]);
+  }
+  return [...groups.entries()].map(([day, list]) => ({
+    day,
+    avg: list.reduce((a, f) => a + f.buy, 0) / list.length,
+    max: list.reduce((a, f) => (f.buy > a.buy ? f : a)),
+    min: list.reduce((a, f) => (f.buy < a.buy ? f : a)),
+  }));
 }
 
 export type Period = "today" | "tomorrow" | "both";

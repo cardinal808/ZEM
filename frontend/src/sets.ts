@@ -1,6 +1,7 @@
 // Screen "Accu" (one set) / "Sets" (several): sets, batteries in the set, cell balance (SPEC-ui §4.3, UI-4).
+import { element } from "./define";
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { property } from "lit/decorators.js";
 
 import { clock, day, euro, kwh, percent, sameDay, signedWatts } from "./format";
 import { t, type Lang } from "./i18n";
@@ -107,9 +108,15 @@ export function dayBars(
 ): { solar: number; grid: number; house: number; export: number }[] {
   const top = Math.max(
     0.5,
-    ...days.map((d) => Math.max(d.solar_battery + d.grid_battery, d.battery_house + d.battery_grid)),
+    ...days.map((d) =>
+      Math.max(
+        d.solar_battery + d.grid_battery,
+        d.battery_house + d.battery_grid,
+      ),
+    ),
   );
-  const h = (v: number): number => Math.round((Math.max(v, 0) / top) * half * 10) / 10;
+  const h = (v: number): number =>
+    Math.round((Math.max(v, 0) / top) * half * 10) / 10;
   return days.map((d) => ({
     solar: h(d.solar_battery),
     grid: h(d.grid_battery),
@@ -136,21 +143,28 @@ export interface Summary {
   offline: SetInfo[];
 }
 
-const STATUS_FOR = (mv: number): CellStatus => (mv <= 30 ? "good" : mv <= 100 ? "balancing" : "imbalance");
+const STATUS_FOR = (mv: number): CellStatus =>
+  mv <= 30 ? "good" : mv <= 100 ? "balancing" : "imbalance";
 
 export function summarize(sets: SetInfo[]): Summary {
   const packs = sets.flatMap((s) => s.packs);
   const socs = packs.map((p) => p.soc);
-  const temps = sets.map((s) => s.enclosure_temp).filter((v): v is number => v !== null);
+  const temps = sets
+    .map((s) => s.enclosure_temp)
+    .filter((v): v is number => v !== null);
   let now: Summary["now"] = null;
   for (const p of packs) {
-    if (!p.cell_judged || p.cell_delta_mv === null || p.cell_status === null) continue;
-    if (!now || p.cell_delta_mv > now.mv) now = { pack: p, mv: p.cell_delta_mv, status: p.cell_status };
+    if (!p.cell_judged || p.cell_delta_mv === null || p.cell_status === null)
+      continue;
+    if (!now || p.cell_delta_mv > now.mv)
+      now = { pack: p, mv: p.cell_delta_mv, status: p.cell_status };
   }
   let lastDay: Summary["lastDay"] = null;
   const days = packs[0]?.history.map((d) => d.day) ?? [];
   for (let i = days.length - 1; i >= 0 && !lastDay; i--) {
-    const values = packs.map((p) => p.history[i]?.max_mv).filter((v): v is number => v !== null && v !== undefined);
+    const values = packs
+      .map((p) => p.history[i]?.max_mv)
+      .filter((v): v is number => v !== null && v !== undefined);
     if (values.length) {
       const mv = Math.max(...values);
       lastDay = { day: days[i], mv, status: STATUS_FOR(mv) };
@@ -161,9 +175,17 @@ export function summarize(sets: SetInfo[]): Summary {
     const bad = p.history.filter((d) => d.status === "imbalance");
     if (!bad.length) continue;
     const last = bad[bad.length - 1];
-    if (!imbalance || bad.length > imbalance.days) imbalance = { pack: p, days: bad.length, lastDay: last.day, mv: last.max_mv as number };
+    if (!imbalance || bad.length > imbalance.days)
+      imbalance = {
+        pack: p,
+        days: bad.length,
+        lastDay: last.day,
+        mv: last.max_mv as number,
+      };
   }
-  const judgedDays = packs.some((p) => p.history.some((d) => d.max_mv !== null));
+  const judgedDays = packs.some((p) =>
+    p.history.some((d) => d.max_mv !== null),
+  );
   return {
     packs: packs.length,
     online: sets.every((s) => s.online),
@@ -178,7 +200,7 @@ export function summarize(sets: SetInfo[]): Summary {
   };
 }
 
-@customElement("zephyr-sets")
+@element("zephyr-sets")
 export class ZephyrSets extends LitElement {
   @property({ attribute: false }) days?: BatteryDaysView;
   @property({ attribute: false }) view?: SetsView;
@@ -186,46 +208,75 @@ export class ZephyrSets extends LitElement {
   @property() locale = "en";
   @property() timeZone = "UTC";
 
-  private tr(key: string, params: Record<string, string | number> = {}): string {
+  private tr(
+    key: string,
+    params: Record<string, string | number> = {},
+  ): string {
     return t(this.uiLang, key, params);
   }
 
   private num(value: number, digits = 0): string {
-    return new Intl.NumberFormat(this.locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+    return new Intl.NumberFormat(this.locale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value);
   }
 
   protected override render(): TemplateResult {
     const view = this.view;
-    if (!view) return html`<div class="card skeleton" aria-hidden="true"></div>`;
-    if (!view.sets.length) return html`<section class="card"><p class="text">${this.tr("sets.none")}</p></section>`;
+    if (!view)
+      return html`<div class="card skeleton" aria-hidden="true"></div>`;
+    if (!view.sets.length)
+      return html`<section class="card">
+        <p class="text">${this.tr("sets.none")}</p>
+      </section>`;
     const sum = summarize(view.sets);
     return html`
       ${this.renderSummary(sum, view.sets)}
       ${view.sets.map(
-        (s) => html`<div class="row">
-          ${this.renderSet(s, view.sets.length)} ${this.renderPacks(s)}
-        </div>`,
+        (s) =>
+          html`<div class="row">
+            ${this.renderSet(s, view.sets.length)} ${this.renderPacks(s)}
+          </div>`,
       )}
-      ${this.days ? this.renderDays(this.days) : nothing} ${view.sets.length === 1 ? this.renderActivity(view) : nothing}
+      ${this.days ? this.renderDays(this.days) : nothing}
+      ${view.sets.length === 1 ? this.renderActivity(view) : nothing}
     `;
   }
 
   private stat(label: string, value: string): TemplateResult {
-    return html`<div class="stat"><span class="cap">${label}</span><span class="value">${value}</span></div>`;
+    return html`<div class="stat">
+      <span class="cap">${label}</span><span class="value">${value}</span>
+    </div>`;
   }
 
   private renderSummary(sum: Summary, sets: SetInfo[]): TemplateResult {
     const packs = sets.flatMap((s) => s.packs);
     let line: string;
-    if (sum.offline.length) line = this.tr("sets.offline_line", { sets: sum.offline.map((s) => this.tr("sets.set", { n: s.number })).join(", ") });
+    if (sum.offline.length)
+      line = this.tr("sets.offline_line", {
+        sets: sum.offline
+          .map((s) => this.tr("sets.set", { n: s.number }))
+          .join(", "),
+      });
     else if (sum.imbalance && sum.imbalance.days >= 3)
-      line = this.tr("sets.line_persistent", { pack: packName(sum.imbalance.pack, packs, this.uiLang), days: sum.imbalance.days });
+      line = this.tr("sets.line_persistent", {
+        pack: packName(sum.imbalance.pack, packs, this.uiLang),
+        days: sum.imbalance.days,
+      });
     else if (sum.now?.status === "imbalance")
-      line = this.tr("sets.line_now", { pack: packName(sum.now.pack, packs, this.uiLang), mv: sum.now.mv });
+      line = this.tr("sets.line_now", {
+        pack: packName(sum.now.pack, packs, this.uiLang),
+        mv: sum.now.mv,
+      });
     else if (sum.imbalance)
       line = this.tr("sets.line_recent", {
         pack: packName(sum.imbalance.pack, packs, this.uiLang),
-        day: day(`${sum.imbalance.lastDay}T12:00:00Z`, this.locale, this.timeZone),
+        day: day(
+          `${sum.imbalance.lastDay}T12:00:00Z`,
+          this.locale,
+          this.timeZone,
+        ),
         mv: sum.imbalance.mv,
       });
     else if (sum.notFull) line = this.tr("sets.line_not_full");
@@ -235,11 +286,18 @@ export class ZephyrSets extends LitElement {
       : sum.lastDay
         ? `${this.num(sum.lastDay.mv)} mV · ${this.tr(`sets.cell.${sum.lastDay.status}`)}`
         : "–";
-    return html`<section class="card summary" aria-label=${this.tr("sets.summary")}>
+    return html`<section
+      class="card summary"
+      aria-label=${this.tr("sets.summary")}
+    >
       ${this.stat(this.tr("sets.batteries"), this.tr(sum.online ? "sets.all_online" : "sets.some_offline", { n: sum.packs }))}
       ${this.stat(
         this.tr("sets.soc_spread"),
-        sum.socMin === null ? "–" : sum.socMin === sum.socMax ? percent(sum.socMin, this.locale) : `${this.num(sum.socMin)}–${percent(sum.socMax as number, this.locale)}`,
+        sum.socMin === null
+          ? "–"
+          : sum.socMin === sum.socMax
+            ? percent(sum.socMin, this.locale)
+            : `${this.num(sum.socMin)}–${percent(sum.socMax as number, this.locale)}`,
       )}
       ${this.stat(this.tr("sets.inverter"), sum.inverter === null ? "–" : `${this.num(sum.inverter)} °C`)}
       ${this.stat(sum.now || !sum.lastDay ? this.tr("sets.largest_delta") : this.tr("sets.largest_delta_day", { day: day(`${sum.lastDay.day}T12:00:00Z`, this.locale, this.timeZone) }), cells)}
@@ -250,7 +308,11 @@ export class ZephyrSets extends LitElement {
   private renderSet(s: SetInfo, count: number): TemplateResult {
     const soc = s.soc ?? 0;
     const status = s.online ? (s.status ?? "standby") : "offline";
-    const dl = (label: string, value: string): TemplateResult => html`<div><dt>${label}</dt><dd>${value}</dd></div>`;
+    const dl = (label: string, value: string): TemplateResult =>
+      html`<div>
+        <dt>${label}</dt>
+        <dd>${value}</dd>
+      </div>`;
     const lastFull = s.last_full
       ? sameDay(s.last_full, Date.now(), this.timeZone)
         ? `${this.tr("sets.today")} ${clock(s.last_full, this.locale, this.timeZone)}`
@@ -261,26 +323,39 @@ export class ZephyrSets extends LitElement {
         <div>
           <h2>${this.tr("sets.set", { n: s.number })}</h2>
           <span class="muted"
-            >${s.model}${s.packs.length ? ` · ${this.tr("sets.packs_n", { n: s.packs.length })}` : ""}${s.capacity_kwh
-              ? ` · ${kwh(s.capacity_kwh, this.locale)}`
-              : ""}</span
+            >${s.model}${s.packs.length ? ` · ${this.tr("sets.packs_n", { n: s.packs.length })}` : ""}${
+              s.capacity_kwh ? ` · ${kwh(s.capacity_kwh, this.locale)}` : ""
+            }</span
           >
         </div>
         <span class="chip ${status}">${this.tr(`sets.status.${status}`)}</span>
       </div>
-      ${s.soc === null
-        ? html`<p class="text">${this.tr("battery.unknown")}</p>`
-        : html`<div class="big-row">
-              <span class="big">${percent(soc, this.locale)}</span>
-              ${s.energy_kwh !== null && s.capacity_kwh
-                ? html`<span class="muted">${this.tr("battery.of", { energy: kwh(s.energy_kwh, this.locale), capacity: kwh(s.capacity_kwh, this.locale) })}</span>`
-                : nothing}
-            </div>
-            <div class="bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${Math.round(soc)} aria-label=${this.tr("battery.title")}>
-              <div class="fill" style="width:${soc}%"></div>
-              ${s.limits?.min != null ? html`<div class="mark" style="left:${s.limits.min}%"></div>` : nothing}
-              ${s.limits?.max != null ? html`<div class="mark" style="left:${s.limits.max}%"></div>` : nothing}
-            </div>`}
+      ${
+        s.soc === null
+          ? html`<p class="text">${this.tr("battery.unknown")}</p>`
+          : html`<div class="big-row">
+                <span class="big">${percent(soc, this.locale)}</span>
+                ${
+                  s.energy_kwh !== null && s.capacity_kwh
+                    ? html`<span class="muted"
+                        >${this.tr("battery.of", { energy: kwh(s.energy_kwh, this.locale), capacity: kwh(s.capacity_kwh, this.locale) })}</span
+                      >`
+                    : nothing
+                }
+              </div>
+              <div
+                class="bar"
+                role="meter"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow=${Math.round(soc)}
+                aria-label=${this.tr("battery.title")}
+              >
+                <div class="fill" style="width:${soc}%"></div>
+                ${s.limits?.min != null ? html`<div class="mark" style="left:${s.limits.min}%"></div>` : nothing}
+                ${s.limits?.max != null ? html`<div class="mark" style="left:${s.limits.max}%"></div>` : nothing}
+              </div>`
+      }
       <dl>
         ${dl(this.tr("sets.power"), s.power_w === null ? "–" : signedWatts(s.power_w, this.locale))}
         ${s.solar_w ? dl(this.tr("sets.solar"), signedWatts(s.solar_w, this.locale).replace("+", "")) : nothing}
@@ -289,7 +364,9 @@ export class ZephyrSets extends LitElement {
         ${dl(this.tr("sets.switches"), s.relays_24h === null ? "–" : this.tr("sets.switches_n", { n: s.relays_24h }))}
         ${dl(
           this.tr("sets.limits"),
-          s.limits?.min != null && s.limits?.max != null ? `${this.num(s.limits.min)}–${this.num(s.limits.max)} %` : "–",
+          s.limits?.min != null && s.limits?.max != null
+            ? `${this.num(s.limits.min)}–${this.num(s.limits.max)} %`
+            : "–",
         )}
       </dl>
       <div class="foot">
@@ -301,7 +378,10 @@ export class ZephyrSets extends LitElement {
 
   private renderPacks(s: SetInfo): TemplateResult {
     if (!s.packs.length) return html``;
-    return html`<section class="card packs" aria-label=${this.tr("sets.in_set")}>
+    return html`<section
+      class="card packs"
+      aria-label=${this.tr("sets.in_set")}
+    >
       <div class="head">
         <h2>${this.tr("sets.in_set")}</h2>
         <span class="muted">${this.tr("sets.pack_power_note")}</span>
@@ -310,28 +390,51 @@ export class ZephyrSets extends LitElement {
         ${s.packs.map((p) => {
           const status = p.cell_status;
           return html`<div class="pack ${s.online ? "" : "off"}">
-            <div class="ph"><strong>${packName(p, s.packs, this.uiLang)}</strong><span class="muted">${p.capacity_kwh ? kwh(p.capacity_kwh, this.locale, 2) : this.tr("sets.unknown_type")}</span></div>
+            <div class="ph">
+              <strong>${packName(p, s.packs, this.uiLang)}</strong
+              ><span class="muted"
+                >${p.capacity_kwh ? kwh(p.capacity_kwh, this.locale, 2) : this.tr("sets.unknown_type")}</span
+              >
+            </div>
             <div class="big-row">
               <span class="mid">${percent(p.soc, this.locale)}</span>
               ${p.energy_kwh !== null ? html`<span class="muted">${kwh(p.energy_kwh, this.locale, 2)}</span>` : nothing}
             </div>
-            <div class="bar thin"><div class="fill" style="width:${p.soc}%"></div></div>
+            <div class="bar thin">
+              <div class="fill" style="width:${p.soc}%"></div>
+            </div>
             <dl>
-              <div><dt>${this.tr("sets.power")}</dt><dd>${signedWatts(p.power_w, this.locale)}</dd></div>
-              <div><dt>${this.tr("sets.temp")}</dt><dd>${p.temp === null ? "–" : `${this.num(p.temp)} °C`}</dd></div>
+              <div>
+                <dt>${this.tr("sets.power")}</dt>
+                <dd>${signedWatts(p.power_w, this.locale)}</dd>
+              </div>
+              <div>
+                <dt>${this.tr("sets.temp")}</dt>
+                <dd>${p.temp === null ? "–" : `${this.num(p.temp)} °C`}</dd>
+              </div>
               <div>
                 <dt>${this.tr("sets.cells")}</dt>
-                <dd>${p.cell_min_v === null || p.cell_max_v === null ? "–" : `${this.num(p.cell_min_v, 2)}–${this.num(p.cell_max_v, 2)} V`}</dd>
+                <dd>
+                  ${p.cell_min_v === null || p.cell_max_v === null ? "–" : `${this.num(p.cell_min_v, 2)}–${this.num(p.cell_max_v, 2)} V`}
+                </dd>
               </div>
               <div>
                 <dt>${this.tr("sets.cell_delta")}</dt>
                 <dd class="delta">
                   ${p.cell_delta_mv === null ? "–" : `${this.num(p.cell_delta_mv)} mV`}
-                  ${status
-                    ? html`<span class="tag ${status}">${this.tr(`sets.cell.${status}`)}</span>`
-                    : p.cell_delta_mv !== null
-                      ? html`<span class="tag none" title=${this.tr("sets.not_judged_title")}>${this.tr("sets.not_judged")}</span>`
-                      : nothing}
+                  ${
+                    status
+                      ? html`<span class="tag ${status}"
+                          >${this.tr(`sets.cell.${status}`)}</span
+                        >`
+                      : p.cell_delta_mv !== null
+                        ? html`<span
+                            class="tag none"
+                            title=${this.tr("sets.not_judged_title")}
+                            >${this.tr("sets.not_judged")}</span
+                          >`
+                        : nothing
+                  }
                 </dd>
               </div>
             </dl>
@@ -347,35 +450,72 @@ export class ZephyrSets extends LitElement {
     const bars = dayBars(v.days, HALF);
     const k = (x: number): string => this.num(x, 1);
     const todayIso = v.days[v.days.length - 1]?.date;
-    const row = (label: string, sub: string | null, cell: (d: BatteryDay) => string): TemplateResult =>
+    const row = (
+      label: string,
+      sub: string | null,
+      cell: (d: BatteryDay) => string,
+    ): TemplateResult =>
       html`<div class="tr" role="row">
-        <span role="rowheader" class="rh">${label}${sub ? html`<small>${sub}</small>` : nothing}</span>
+        <span role="rowheader" class="rh"
+          >${label}${sub ? html`<small>${sub}</small>` : nothing}</span
+        >
         ${v.days.map((d) => {
           const text = d.quarters ? cell(d) : "–";
-          return html`<span role="cell" class="cell val ${text === "–" ? "empty" : ""}">${text}</span>`;
+          return html`<span
+            role="cell"
+            class="cell val ${text === "–" ? "empty" : ""}"
+            >${text}</span
+          >`;
         })}
       </div>`;
     const w = v.week;
     const first = v.days[0]?.date;
-    const dayName = (iso: string): string => day(`${iso}T12:00:00Z`, this.locale, this.timeZone);
+    const dayName = (iso: string): string =>
+      day(`${iso}T12:00:00Z`, this.locale, this.timeZone);
     const weekParts = [
-      this.tr("sets.days_week_charged", { kwh: k(w.charged), solar: k(w.solar_battery), grid: k(w.grid_battery) }),
+      this.tr("sets.days_week_charged", {
+        kwh: k(w.charged),
+        solar: k(w.solar_battery),
+        grid: k(w.grid_battery),
+      }),
       this.tr("sets.days_week_delivered", { kwh: k(w.delivered) }),
-      w.cycles === null ? null : this.tr("sets.days_week_cycles", { n: this.num(w.cycles, 1) }),
+      w.cycles === null
+        ? null
+        : this.tr("sets.days_week_cycles", { n: this.num(w.cycles, 1) }),
       w.efficiency === null
         ? null
-        : this.tr("sets.days_week_efficiency", { pct: percent(w.efficiency * 100, this.locale) }) +
-          (w.efficiency_days && w.efficiency_days < 7 ? ` (${this.tr("sets.days_n", { n: w.efficiency_days })})` : ""),
-      w.grid_price === null ? null : this.tr("sets.days_week_price", { price: euro(w.grid_price, this.locale) }),
+        : this.tr("sets.days_week_efficiency", {
+            pct: percent(w.efficiency * 100, this.locale),
+          }) +
+          (w.efficiency_days && w.efficiency_days < 7
+            ? ` (${this.tr("sets.days_n", { n: w.efficiency_days })})`
+            : ""),
+      w.grid_price === null
+        ? null
+        : this.tr("sets.days_week_price", {
+            price: euro(w.grid_price, this.locale),
+          }),
     ].filter((x): x is string => x !== null);
     return html`<section class="card" aria-label=${this.tr("sets.days_title")}>
       <div class="head">
         <h2>${this.tr("sets.days_title")}</h2>
         <div class="legend">
-          <span><i style="background:var(--z-solar)"></i>${this.tr("sets.days_solar")}</span>
-          <span><i style="background:var(--z-charge)"></i>${this.tr("sets.days_grid")}</span>
-          <span><i style="background:var(--z-deliver)"></i>${this.tr("sets.days_house")}</span>
-          <span><i style="background:var(--z-export)"></i>${this.tr("sets.days_export")}</span>
+          <span
+            ><i style="background:var(--z-solar)"></i
+            >${this.tr("sets.days_solar")}</span
+          >
+          <span
+            ><i style="background:var(--z-charge)"></i
+            >${this.tr("sets.days_grid")}</span
+          >
+          <span
+            ><i style="background:var(--z-deliver)"></i
+            >${this.tr("sets.days_house")}</span
+          >
+          <span
+            ><i style="background:var(--z-export)"></i
+            >${this.tr("sets.days_export")}</span
+          >
         </div>
       </div>
       <span class="muted">${this.tr("sets.days_note")}</span>
@@ -385,30 +525,42 @@ export class ZephyrSets extends LitElement {
           ${v.days.map((d) => html`<span role="columnheader" class="dh ${d.date === todayIso ? "today" : ""}">${dayName(d.date)}</span>`)}
         </div>
         <div class="tr bars" aria-hidden="true">
-          <span class="rh axis"><small>${this.tr("sets.days_up")}</small><small>${this.tr("sets.days_down")}</small></span>
+          <span class="rh axis"
+            ><small>${this.tr("sets.days_up")}</small
+            ><small>${this.tr("sets.days_down")}</small></span
+          >
           ${bars.map(
-            (b, i) => html`<div class="daybar" style="--half:${HALF}px">
-              <div class="up">
-                <i style="height:${b.solar}px;background:var(--z-solar)"></i
-                ><i style="height:${b.grid}px;background:var(--z-charge)"></i>
-              </div>
-              <div class="dn">
-                <i style="height:${b.house}px;background:var(--z-deliver)"></i
-                ><i style="height:${b.export}px;background:var(--z-export)"></i>
-              </div>
-              <span class="sr">${dayName(v.days[i].date)}</span>
-            </div>`,
+            (b, i) =>
+              html`<div class="daybar" style="--half:${HALF}px">
+                <div class="up">
+                  <i style="height:${b.solar}px;background:var(--z-solar)"></i
+                  ><i style="height:${b.grid}px;background:var(--z-charge)"></i>
+                </div>
+                <div class="dn">
+                  <i style="height:${b.house}px;background:var(--z-deliver)"></i
+                  ><i
+                    style="height:${b.export}px;background:var(--z-export)"
+                  ></i>
+                </div>
+                <span class="sr">${dayName(v.days[i].date)}</span>
+              </div>`,
           )}
         </div>
         ${row(this.tr("sets.days_charged"), this.tr("sets.days_charged_sub"), (d) => k(d.solar_battery + d.grid_battery))}
         ${row(this.tr("sets.days_delivered"), this.tr("sets.days_delivered_sub"), (d) => k(d.battery_house + d.battery_grid))}
         ${row(this.tr("sets.days_cycles"), null, (d) => (d.cycles === null ? "–" : this.num(d.cycles, 2)))}
         ${row(this.tr("sets.days_soc"), this.tr("sets.days_soc_sub"), (d) =>
-          d.soc_min === null || d.soc_max === null ? "–" : `${this.num(d.soc_min)}–${percent(d.soc_max, this.locale)}`,
+          d.soc_min === null || d.soc_max === null
+            ? "–"
+            : `${this.num(d.soc_min)}–${percent(d.soc_max, this.locale)}`,
         )}
       </div>
       <div class="week">
-        <span class="rh">${this.tr("sets.days_week")}<small>${first && todayIso ? `${dayName(first)} – ${dayName(todayIso)}` : ""}</small></span>
+        <span class="rh"
+          >${this.tr("sets.days_week")}<small
+            >${first && todayIso ? `${dayName(first)} – ${dayName(todayIso)}` : ""}</small
+          ></span
+        >
         <span>${weekParts.join(" · ")}</span>
       </div>
       <p class="text small">
@@ -420,15 +572,34 @@ export class ZephyrSets extends LitElement {
   private renderActivity(view: SetsView): TemplateResult {
     const end = new Date(view.now).getTime();
     const start = end - 24 * 3600_000;
-    const pct = (iso: string): number => Math.max(0, Math.min(100, ((new Date(iso).getTime() - start) / (end - start)) * 100));
+    const pct = (iso: string): number =>
+      Math.max(
+        0,
+        Math.min(
+          100,
+          ((new Date(iso).getTime() - start) / (end - start)) * 100,
+        ),
+      );
     const totals = { charge: 0, deliver: 0 };
-    return html`<section class="card" aria-label=${this.tr("sets.activity_title")}>
+    return html`<section
+      class="card"
+      aria-label=${this.tr("sets.activity_title")}
+    >
       <div class="head">
         <h2>${this.tr("sets.activity_title")}</h2>
         <div class="legend">
-          <span><i style="background:${actionFill("charge")}"></i>${this.tr("action.charge")}</span>
-          <span><i style="background:${actionFill("deliver")}"></i>${this.tr("action.deliver")}</span>
-          <span><i style="background:${actionFill("hold")}"></i>${this.tr("action.hold")}</span>
+          <span
+            ><i style="background:${actionFill("charge")}"></i
+            >${this.tr("action.charge")}</span
+          >
+          <span
+            ><i style="background:${actionFill("deliver")}"></i
+            >${this.tr("action.deliver")}</span
+          >
+          <span
+            ><i style="background:${actionFill("hold")}"></i
+            >${this.tr("action.hold")}</span
+          >
         </div>
       </div>
       <div class="activity" aria-hidden="true">
@@ -761,7 +932,8 @@ export class ZephyrSets extends LitElement {
       position: relative;
       height: calc(var(--half) * 2 + 8px);
       border-top: 0;
-      background: linear-gradient(var(--z-border), var(--z-border)) 0 calc(var(--half) + 4px) / 100% 1px no-repeat;
+      background: linear-gradient(var(--z-border), var(--z-border)) 0
+        calc(var(--half) + 4px) / 100% 1px no-repeat;
     }
     .daybar .up,
     .daybar .dn {

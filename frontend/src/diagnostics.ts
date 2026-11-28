@@ -1,6 +1,7 @@
 // Screen "Diagnose" (SPEC-ui §4.5, UI-8): download, cost export, counters, recent events.
+import { element } from "./define";
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 
 import {
   allGaps,
@@ -28,7 +29,7 @@ export type ExportResult = { path: string; rows: number };
 /** Gaps shown before *Toon alle* (the energy counters). */
 const GAPS_SHOWN = 5;
 
-@customElement("zephyr-diagnostics")
+@element("zephyr-diagnostics")
 export class ZephyrDiagnostics extends LitElement {
   @property({ attribute: false }) view?: EventsView;
   @property({ attribute: false }) uiLang: Lang = "en";
@@ -400,44 +401,44 @@ export class ZephyrDiagnostics extends LitElement {
       ${
         gaps.length
           ? html`<ul class="gaps">
-              ${gaps.map(
-                (g) =>
-                  html`<li>
-                    <span class="when"
-                      >${time(g.start)} ·
-                      ${dur(g.seconds)}${multi ? html` · ${this.tr("diag.set")} ${g.set}` : nothing}</span
+                ${gaps.map(
+                  (g) =>
+                    html`<li>
+                      <span class="when"
+                        >${time(g.start)} ·
+                        ${dur(g.seconds)}${multi ? html` · ${this.tr("diag.set")} ${g.set}` : nothing}</span
+                      >
+                      <span
+                        >${this.tr(`diag.energy_m_${["none", "interpolate", "soc"].includes(g.method) ? g.method : "none"}`)}${g.restart ? ` · ${this.tr("diag.energy_restart")}` : ""}</span
+                      >
+                      <span class="muted"
+                        >${
+                          Object.entries(g.kwh)
+                            .filter(([key]) =>
+                              (ENERGY_KEYS as readonly string[]).includes(key),
+                            )
+                            .map(
+                              ([key, v]) =>
+                                `${this.tr(`diag.energy_${key}`).toLowerCase()} ${k(v)} kWh`,
+                            )
+                            .join(" · ") || this.tr("diag.energy_nothing")
+                        }</span
+                      >
+                    </li>`,
+                )}
+              </ul>
+              ${
+                every.length > GAPS_SHOWN
+                  ? html`<button
+                      type="button"
+                      class="linkish"
+                      aria-expanded=${this.allGapsOpen ? "true" : "false"}
+                      @click=${() => (this.allGapsOpen = !this.allGapsOpen)}
                     >
-                    <span
-                      >${this.tr(`diag.energy_m_${["none", "interpolate", "soc"].includes(g.method) ? g.method : "none"}`)}${g.restart ? ` · ${this.tr("diag.energy_restart")}` : ""}</span
-                    >
-                    <span class="muted"
-                      >${
-                        Object.entries(g.kwh)
-                          .filter(([key]) =>
-                            (ENERGY_KEYS as readonly string[]).includes(key),
-                          )
-                          .map(
-                            ([key, v]) =>
-                              `${this.tr(`diag.energy_${key}`).toLowerCase()} ${k(v)} kWh`,
-                          )
-                          .join(" · ") || this.tr("diag.energy_nothing")
-                      }</span
-                    >
-                  </li>`,
-              )}
-            </ul>
-            ${
-              every.length > GAPS_SHOWN
-                ? html`<button
-                    type="button"
-                    class="linkish"
-                    aria-expanded=${this.allGapsOpen ? "true" : "false"}
-                    @click=${() => (this.allGapsOpen = !this.allGapsOpen)}
-                  >
-                    ${this.allGapsOpen ? this.tr("diag.energy_gaps_less") : this.tr("diag.energy_gaps_all", { n: every.length })}
-                  </button>`
-                : nothing
-            }`
+                      ${this.allGapsOpen ? this.tr("diag.energy_gaps_less") : this.tr("diag.energy_gaps_all", { n: every.length })}
+                    </button>`
+                  : nothing
+              }`
           : html`<p class="muted">${this.tr("diag.energy_no_gaps")}</p>`
       }
       <p class="muted small">${this.tr("diag.energy_note")}</p>

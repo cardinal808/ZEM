@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.91 — Panel: solar savings, estimated quarters, price forecast, backfill SOC, one-time element registration
+- **Besparing — zon en accu** (OPDRACHT-besparing-zon): with a solar counter the screen shows the saving of solar + battery, three bars (without solar and battery / without battery / paid), the split *Zon* (used directly, exported, of which solar bonus; after 2027 a note) and *Accu* (solar stored, price difference), solar kWh and the share used yourself, and stacked day bars (solar yellow under the battery) with a switch *Alleen accu*. Without a solar counter the screen stays as it was.
+- **Geschatte kwartieren** (OPDRACHT-ui-geschatte-kwartieren): a neutral notice "x quarters estimated (…)", with the provisional prices; the warning "amounts too low" only for quarters without data. Days with estimated quarters are hatched.
+- **Prijsvoorspelling** (OPDRACHT-ui-prijsvoorspelling): the jeroen.nl forecast as a dashed line with its band over the chart, a line per day past the chart (mean, dearest and cheapest quarter), the reason line ("with the forecast ZEPHYR would … now", or that the plan takes it into account) and the credit "Verwachting: Bron: jeroen.nl" with a link.
+- **Terugrekenen:** optional battery SOC sensor (caps the pools) and the warning when the counters belong to another Zendure integration.
+- **Fix:** the panel's elements are registered only once (`define.ts`). When HA loaded the panel module a second time, `zephyr-prices-plan has already been used with this registry` stopped the module.
+
 ### 0.8.90 — Settings: subtabs in Bronnen and Planner
 - **Subtabs** (`Field.section`, in `settings/get` as `section`): *Bronnen* → *Meter · Prijzen · Zon · Tellers*; *Planner* → *Plan · Afknijpen*. Same look as *Vandaag · Morgen · 48 uur*; an orange dot on a subtab with a changed field; on a phone they scroll sideways. The chosen subtab is kept per group; saving stays per group (drafts on other subtabs are kept). An error on another subtab opens that subtab.
 - **Moved:** *Kalibratie na dagen* to *Accu en grenzen*; the workday sensor to *Bronnen → Tellers*.

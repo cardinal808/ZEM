@@ -12,7 +12,11 @@ export function language(code: string | undefined): Lang {
 }
 
 /** Text by dotted key, with {name} placeholders. Falls back to English, then to the key. */
-export function t(lang: Lang, key: string, params: Record<string, string | number> = {}): string {
+export function t(
+  lang: Lang,
+  key: string,
+  params: Record<string, string | number> = {},
+): string {
   const find = (texts: unknown): string | undefined => {
     let node: unknown = texts;
     for (const part of key.split(".")) {
@@ -22,5 +26,7 @@ export function t(lang: Lang, key: string, params: Record<string, string | numbe
     return typeof node === "string" ? node : undefined;
   };
   const template = find(TEXTS[lang]) ?? find(TEXTS.en) ?? key;
-  return template.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match));
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in params ? String(params[name]) : match,
+  );
 }
