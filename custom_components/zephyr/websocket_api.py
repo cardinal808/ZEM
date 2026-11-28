@@ -648,6 +648,23 @@ def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
             "missing_quarters": gaps,
             "estimated_quarters": d["estimated_quarters"],
             "price_interpolated_quarters": d["price_interpolated_quarters"],
+            # OPDRACHT-besparing-zon: null without a solar counter (or a quarter without solar).
+            **{
+                k: d[k] if d["includes_solar"] else None
+                for k in (
+                    "cost_no_solar",
+                    "savings_solar",
+                    "savings_total",
+                    "solar_direct_value",
+                    "solar_export_value",
+                    "solar_bonus_value",
+                    "solar_kwh",
+                    "solar_direct_kwh",
+                    "export_kwh",
+                    "self_consumption",
+                )
+            },
+            "includes_solar": d["includes_solar"],
         }
 
     days: list[dict[str, Any]] = []
@@ -662,7 +679,9 @@ def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         if totals is None:
             days.append({"day": key, "savings_battery": None, "incomplete": True})
             continue
-        saved = Summary(days=1, totals=dict(totals)).savings_battery
+        day_summary = Summary(days=1, totals=dict(totals))
+        saved = day_summary.savings_battery
+        solar_saved = day_summary.savings_solar
         gaps = bool(totals.get("incomplete") or totals.get("no_price"))
         # Today is still running; an earlier day with fewer than 92 quarters (the shortest day) misses some.
         short = day != today and totals.get("quarters", 0) < 92
@@ -670,6 +689,7 @@ def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
             {
                 "day": key,
                 "savings_battery": None if saved is None else round(saved, 2),
+                "savings_solar": None if solar_saved is None else round(solar_saved, 2),
                 "incomplete": gaps or short,
                 "estimated": bool(totals.get("estimated")),
                 "hourly": totals.get("source") is not None,

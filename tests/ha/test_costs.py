@@ -372,7 +372,7 @@ async def test_history_filled_once_after_the_update(hass: HomeAssistant, fake_se
     await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
     costs = entry.runtime_data.costs
-    assert len(costs.current) == 6 and costs.fill_version == 1
+    assert len(costs.current) == 6 and costs.fill_version == 2
     made, filled = costs.current[3], costs.current[4]
     assert made["status"] == "estimated" and made["import_kwh"] == pytest.approx(0.1, abs=0.005)
     assert filled["status"] == "estimated" and filled["import_kwh"] == pytest.approx(0.1, abs=0.005)
@@ -467,3 +467,24 @@ async def test_prices_around_midnight(hass: HomeAssistant, fake_sets: FakeSets, 
     by_start = {dt_util.as_local(datetime.fromisoformat(r["start"])).strftime("%H:%M"): r for r in costs.current}
     assert by_start["23:45"]["market"] == pytest.approx(0.21) and by_start["23:45"]["price_source"] == "nordpool"
     assert [by_start[k]["market"] for k in ("00:00", "00:15", "00:30")] == pytest.approx([0.30, 0.30, 0.30])
+
+
+async def test_solar_savings_split(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # OPDRACHT-besparing-zon: with a solar counter the saving splits into solar (direct + export,
+    # with the solar bonus) and battery; direct + export = Z0 − Z1.
+    solar = "sensor.solar_total"
+    hass.states.async_set(solar, "50.0", ENERGY)
+    entry = await _setup(hass, fake_sets, freezer, solar_energy_entity=solar, tariff_solar_bonus=10.0)
+    await _run(hass, freezer, 10)
+    hass.states.async_set(solar, "50.3", ENERGY)  # 0.3 kWh solar in the quarter, house imports 400 W
+    await _run(hass, freezer, 900, -200.0)
+    costs = entry.runtime_data.costs
+    q = costs.current[-1]
+    assert q["solar_direct_value"] is not None
+    assert q["solar_direct_value"] + q["solar_export_value"] == pytest.approx(q["cost_no_solar"] - q["cost_no_battery"], abs=1e-4)
+    assert q["solar_bonus_value"] >= 0
+    state = hass.states.get("sensor.zephyr_savings_today")
+    assert state.attributes["battery"] == state.attributes["savings_battery"]
+    assert "solar" in state.attributes and "total" in state.attributes
+    client_view = costs.summary("today").as_dict()
+    assert "self_consumption" in client_view and "savings_total" in client_view

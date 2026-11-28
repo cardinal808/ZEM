@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### 0.8.81 — Savings: what the solar panels saved, split (backend of OPDRACHT-besparing-zon)
+- **Per quarter** (with a solar counter and a price): `solar_direct_value` (solar the house used directly × buy price), `solar_export_value` (export without battery × export price, bonus included) and `solar_bonus_value` (the solar bonus part). Direct + export = Z0 − Z1 = `savings_solar`. `Tariffs.bonus()` gives the bonus per kWh.
+- **Day totals and summary:** the three sums, `savings_total` (solar + battery, only when every priced quarter has solar), `solar_direct_kwh`, `self_consumption` (share of the solar the house used, directly or later from the battery).
+- **Panel data** (`savings_view`): per period `cost_no_solar`, `savings_solar`, `savings_total`, the three values, `solar_kwh`, `solar_direct_kwh`, `export_kwh`, `self_consumption`, `includes_solar` (null without solar); per day `savings_solar`. The screen follows in the UI chat.
+- **Sensors** `sensor.zephyr_savings_today|month|year`: attributes `solar`, `battery`, `total`.
+- **History:** once after the update the three values are worked out for all stored quarters from their stored prices and kWh, and added to the day totals. Days worked out from hourly statistics get them with the next run of *terugrekenen*.
+
 ### 0.8.80 — Cost log: quarters while HA was off, the history once, and always a price (steps 2 and 3)
 - **HA was off** (eis 3): at the next close the missed quarters get a record (`last_closed` is kept). Import/export: interpolated between the quarter before and the rate after, scaled on the P1 counter difference over the whole interruption (which also sets this quarter's share, so the day equals the meter); the battery from the own counters' restart gap (T2), else interpolated; external solar only by day, scaled on the solar counter. Price from Nord Pool of that day, else filled. Status `estimated`, cause `ha_off`; diagnostics `costs.missed_quarters`. Longer than a month: not filled, logged.
 - **History once** (eis 5): after the update the stored current month is filled once: missing quarters made, incomplete ones filled between their neighbours, missing prices interpolated; the month is evaluated again and its days are summed anew. Diagnostics `costs.history_filled`.

@@ -70,8 +70,9 @@ STORAGE_VERSION = 1
 KEEP_MONTHS = 24
 P1_FRESH = 10.0
 """s; an older P1 value is not integrated (a gap in the quarter)."""
-FILL_VERSION = 1
-"""Version of the one-off fill of the stored history (OPDRACHT-onvolledige-kwartieren eis 5)."""
+FILL_VERSION = 2
+"""Version of the one-off work on the stored history: 1 fills it (OPDRACHT-onvolledige-kwartieren
+eis 5), 2 adds the solar savings split (OPDRACHT-besparing-zon)."""
 MAX_GAP_QUARTERS = 31 * 96
 """A longer interruption is not filled with quarters (a month of guesses helps nobody)."""
 
@@ -190,7 +191,9 @@ class CostRecorder:
         self.last_closed = self._find_last_closed(data.get("last_closed"))
         self.fill_version = int(data.get("fill_version") or 0)
         if self.fill_version < FILL_VERSION:
-            self._repair_history()
+            if self.fill_version < 1:
+                self._repair_history()
+            await self._add_solar_values()
             self.fill_version = FILL_VERSION
             await self.async_save()
         self._open(quarter_floor(now))
@@ -457,6 +460,46 @@ class CostRecorder:
         return record
 
     # --- filling (OPDRACHT-onvolledige-kwartieren) -----------------------------------------
+
+    async def _add_solar_values(self) -> None:
+        """Once: the solar savings split (direct, export, bonus) for the stored quarters, from
+        their stored prices and kWh; the day totals get the sums (OPDRACHT-besparing-zon)."""
+        from .core.costs import SOLAR_VALUE_FIELDS
+
+        added = 0
+        for month in sorted(self.months):
+            quarters = (
+                self.current
+                if month == self.current_month
+                else list((await self._month_store(month).async_load() or {}).get("quarters") or [])
+            )
+            changed = False
+            for record in quarters:
+                if record.get("cost_no_solar") is None or "solar_direct_value" in record:
+                    continue
+                buy, sell, market = record.get("buy"), record.get("sell"), record.get("market")
+                if buy is None or sell is None or market is None:
+                    continue
+                local = dt_util.as_local(datetime.fromisoformat(record["start"])).date()
+                tariffs = self.tariffs.tariffs_for(local)
+                exp_nb = float(record.get("export_no_battery_kwh") or 0.0)
+                values = {
+                    "solar_direct_value": round(float(record.get("solar_direct_kwh") or 0.0) * float(buy), 5),
+                    "solar_export_value": round(exp_nb * float(sell), 5),
+                    "solar_bonus_value": round(exp_nb * tariffs.bonus(float(market), bool(record.get("daylight"))), 5),
+                }
+                record.update(values)
+                day = self.days.get(local.isoformat())
+                if day is not None and day.get("source") is None:
+                    for name in SOLAR_VALUE_FIELDS:
+                        day[name] = round(day.get(name, 0.0) + values[name], 5)
+                changed = True
+                added += 1
+            if changed and month != self.current_month:
+                await self._month_store(month).async_save({"quarters": quarters})
+        if added:
+            self._summaries.clear()
+            LOGGER.info("Cost log: solar savings split added to %d stored quarters", added)
 
     def _repair_history(self) -> None:
         """Once (eis 5): fill the stored quarters of this month that were incomplete, make the

@@ -482,7 +482,12 @@ class ZephyrCostSensor(InstallationIds, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {**self._costs.summary(self._period).as_dict(), "tariffs": self._costs.tariffs.tariffs_for(dt_util.now().date()).source}
+        data = self._costs.summary(self._period).as_dict()
+        extra: dict[str, Any] = {"tariffs": self._costs.tariffs.tariffs_for(dt_util.now().date()).source}
+        if self._kind == "savings":
+            # OPDRACHT-besparing-zon: the saving split; solar and total only with a solar counter.
+            extra.update({"solar": data["savings_solar"], "battery": data["savings_battery"], "total": data["savings_total"]})
+        return {**data, **extra}
 
 
 # --- planner (M5, SPEC-planner §4) ------------------------------------------------------
