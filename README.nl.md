@@ -10,64 +10,54 @@
 *Zendure Energy Planning, Home Yield & Regulation*  
 **Forecasting Tomorrow. Planning Today.**
 
-**ZEPHYR** is een Home Assistant-integratie (HACS) voor thuisaccu's van Zendure. ZEPHYR stuurt één tot drie Zendure-sets lokaal aan via de zenSDK-API, houdt de P1-meter op nul en plant per kwartier laden en leveren op basis van dynamische prijzen en de zonverwachting.
+[English](README.md)
 
-> **Status: in ontwikkeling (0.5, testfase live sturen).** Standaard draait ZEPHYR in de schaduwmodus: het leest je Zendure-sets uit en rekent elke seconde uit wat het zou doen, zonder de accu aan te sturen, zodat je veilig kunt vergelijken met je huidige systeem. Met de schakelaar **"ZEPHYR stuurt de accu"** (`switch.zephyr_control`) stuurt ZEPHYR de accu echt aan in de modus Nul op de meter. Zet dan eerst je huidige aansturing uit.
+**ZEPHYR** is een Home Assistant-integratie (HACS) voor thuisaccu's van Zendure. ZEPHYR praat rechtstreeks met je Zendure-set in je eigen netwerk (de lokale zenSDK-API, geen cloud), houdt je P1-meter op nul en plant per kwartier wanneer de accu laadt, vasthoudt of levert, op basis van dynamische stroomprijzen, de zonverwachting en wat je huis gewoonlijk verbruikt.
 
-> **Overstappen van ZEM (0.3.x)?** De integratie heeft een nieuwe naam en het domein is veranderd van `zem` naar `zephyr`. Verwijder in HACS de integratie ZEM en de oude custom repository, voeg `https://github.com/cardinal808/ZEPHYR` toe, installeer ZEPHYR, herstart Home Assistant en voeg ZEPHYR opnieuw toe. De entiteiten heten nu `sensor.zephyr_…`.
+![Het scherm Plan: prijzen en het accuplan voor vandaag en morgen](docs/plan-nl.webp)
 
-## Installatie (testversie)
-1. In HACS: *Aangepaste repositories* → `https://github.com/cardinal808/ZEPHYR` toevoegen als type *Integratie*, daarna **ZEPHYR** installeren. Of kopieer `custom_components/zephyr` naar de map `custom_components` van Home Assistant.
+*Het scherm Plan (voorbeelddata): wat de accu nu doet, de prijzen van vandaag en morgen, het verwachte laadpercentage en in gewone taal waarom dit het plan is. Hier levert ZEPHYR aan het huis tijdens de dure avond, laadt het uit het net in de goedkoopste kwartieren van de nacht en dekt het de ochtend- en avondpiek van de volgende dag.*
+
+> **Status: in ontwikkeling.** ZEPHYR werkt en wordt getest op echte installaties, maar is nog niet af. Er verandert nog van alles. Zie de [CHANGELOG](CHANGELOG.md) voor de wijzigingen.
+
+## Wat het doet
+
+**Stuurt de accu**
+- **Nul op de meter:** volgt je P1-meter, laadt de accu met zonne-overschot en levert wat het huis verbruikt, zodat er zo min mogelijk naar of van het net gaat.
+- **Dynamische Forecasting:** dezelfde regeling, gestuurd door een plan. ZEPHYR bepaalt per kwartier of de accu laadt (met zon of uit het net), de lading vasthoudt voor later, of levert.
+- Daarnaast **Standby**, **Snel opladen** en **Snel ontladen**.
+- **Schaduwmodus:** ZEPHYR kan eerst naast je huidige systeem meedraaien en alleen uitrekenen wat het zou doen, zonder de accu aan te sturen. Live sturen is één schakelaar.
+- **Veiligheid voorop:** bij twijfel (geen meterdata, set offline, een ander systeem stuurt de set) gaat ZEPHYR naar 0 W. Stopt Home Assistant, dan gaat de accu eerst naar 0 W.
+
+**Plant vooruit**
+- Gebruikt de day-ahead-prijzen (Nord Pool) van vandaag en, zodra bekend, morgen; optioneel een prijsverwachting voor de dagen daarna.
+- Gebruikt je zonverwachting (Solcast of de verwachting uit het Energie-dashboard).
+- Leert je huishoudelijk verbruik per kwartier, voor werkdagen, weekenden en feestdagen.
+- Laadt alleen uit het net als dat goedkoper is dan wachten, inclusief rondgangsverlies en slijtage van de accu.
+- Houdt rekening met verbruik dat je niet uit de accu wilt halen (zoals verwarmen met de airco), apparaten die je inplant (wasmachine, droger, vaatwasser), een vakantiemodus en negatieve terugleverprijzen (dan kan het je omvormer begrenzen).
+
+**Laat zien en legt uit**
+- Een eigen paneel in de zijbalk van Home Assistant: **Plan**, **Stroom** (live stroomflows door je huis), **Accu** (laadpercentage, cellen, wat de accu per dag deed), **Besparing**, **Instellingen** en **Diagnose**. Nederlands en Engels, licht en donker.
+- Houdt per kwartier een kostenlogboek bij: wat je betaalde, en wat je zonder accu of zonder zon had betaald.
+- Houdt eigen energietellers bij voor de accu, met gaten gevonden en opgevuld.
+
+## Installatie
+1. In HACS: *Aangepaste repositories* → `https://github.com/cardinal808/ZEPHYR` toevoegen als type *Integratie*, daarna **ZEPHYR** installeren.
 2. Herstart Home Assistant.
 3. Meestal wordt je set automatisch gevonden (*Instellingen → Apparaten en diensten*). Anders voeg je **ZEPHYR** toe en vul je het IP-adres van de set in.
-4. Meer sets (tot 3): open ZEPHYR en kies *Set toevoegen*.
-5. Open ZEPHYR → *Configureren* en kies je P1-meter (wordt automatisch voorgesteld): één netto sensor, of de sensoren voor afname en teruglevering van de DSMR-integratie (aanbevolen: die melden elk telegram). De schaduwmodus start in de modus *Nul op de meter*.
+4. Open het paneel **ZEPHYR** in de zijbalk → *Instellingen* en kies je P1-meter, prijsbron en zonverwachting (er worden voorstellen getoond). ZEPHYR start in de schaduwmodus.
 
 Vereisten: HEMS uit in de Zendure-app; Home Assistant 2026.1 of nieuwer.
 
-## Wat 0.3 biedt
-- Schaduwmodus: `sensor.zephyr_setpoint` (wat ZEPHYR van de accu zou vragen, + laden, − leveren), `sensor.zephyr_action`, `sensor.zephyr_reason` (in gewone taal), `select.zephyr_mode`, `binary_sensor.zephyr_p1_ok`, en per set `sensor.zephyr_set_1_setpoint`. Er wordt niets naar de accu gestuurd. ZEPHYR rekent met een virtuele set die zijn eigen commando's uitvoert, in plaats van de echte set die je huidige systeem aanstuurt; de diagnostiek vergelijkt afname en teruglevering van beide (`control.twin`).
-- Het beslislog staat in de diagnose-download.
-- Per set: laadpercentage, accuvermogen (+ laden, − leveren), laad- en leververmogen, zonnevermogen, status, capaciteit (uit de packs), temperatuur, online en fout.
-- Totalen over alle sets: laadpercentage (gewogen naar capaciteit), energie in de accu, capaciteit, vermogen, sets online.
-- Diagnose-download met verborgen serienummers en IP-adressen.
-
-[English](README.md)
-
-## Live sturen (0.5, testfase)
-- **Schakelaar** `switch.zephyr_control`, standaard uit. Aanzetten lukt alleen als de P1 meldt en de set online is zonder fout; ZEPHYR gaat verder vanaf wat de set nu doet (geen dip). Uitzetten: één keer 0 W, daarna neemt je huidige systeem het weer over. Na een herstart blijft de schakelaar uit (optie *Live sturen uit na herstart*, standaard aan tijdens de testfase).
-- **Alleen leveren in de duurste uren** (optioneel): kies in de opties een Nord Pool-prijssensor. ZEPHYR levert dan alleen in de N duurste uren van de dag (standaard 4) en laadt verder alleen met zon. **Reserve** (standaard 20 %): zit de accu eronder, dan laadt ZEPHYR bij in de goedkoopste uren vóór het volgende dure blok; in de dure uren mag de reserve gewoon gebruikt worden.
-- **Veiligheid:** stuurt een ander systeem de set, dan stopt ZEPHYR met schrijven en meldt dat. Te veel schrijfacties naar flash: standby wordt 0 W in RAM. HA stopt: eerst alle sets 0 W.
-- **Schrijftest:** actie `zephyr.test_command` (bijvoorbeeld `power: -300` = 60 s 300 W leveren, daarna standby), alleen in de schaduwmodus met de modus Standby.
-- **Testdashboard:** [`dashboards/zephyr-test.yaml`](dashboards/zephyr-test.yaml) met de schakelaar, de modus, knoppen voor de schrijftest, een grafiek en de tellers. Toevoegen: *Instellingen → Dashboards → Dashboard toevoegen*, openen, ⋮ → *Dashboard bewerken* → ⋮ → *Ruwe configuratie-editor*, en het bestand plakken. Tellers niet zichtbaar? Schakel `sensor.zephyr_set_1_write_count` en `…_switch_count` in (bij installaties van vóór 0.5.2 staan ze standaard uit).
-
-## Kostenlogboek (0.6)
-- Per kwartier: afname, teruglevering, accu geladen/geleverd, zon en de Nord Pool-prijs, met de kosten **werkelijk**, **zonder accu** en **zonder accu en zon**. Werkt ook in de schaduwmodus (dan: de kosten van je huidige systeem).
-- Vul in de opties je **eigen tarieven** in: energiebelasting (2026: €0,09161), opslag inkoop en teruglevering, btw, een zonnebonus (Zonneplan: 10 %) en eventueel de vaste kosten per maand. Of kies je **leverancier** (0.6.1): dan komen de tarieven uit de tarieventabel in deze repository, die ZEPHYR maandelijks ophaalt. Alleen leveranciers waarvan een gebruiker de bedragen met een factuur heeft gecontroleerd staan erin; aanvullingen graag als pull request op `custom_components/zephyr/data/tariffs.json` met een link naar de tariefpagina. Saldering (t/m 2026) wordt meegerekend en per jaar verrekend.
-- Optioneel de kWh-tellers van je meter (tarief 1 en 2) voor afname en teruglevering; zonder tellers integreert ZEPHYR het P1-vermogen. Met een zonteller ook de besparing door de zon.
-- Entiteiten: `sensor.zephyr_costs_today|month|year` en `sensor.zephyr_savings_today|month|year` (€), met de uitsplitsing als attributen. Actie `zephyr.export_costs` schrijft de kwartieren als CSV naar `config/zephyr/`.
-
-## Paneel (0.8, in opbouw)
-- **ZEPHYR** in de zijbalk van Home Assistant: wat de accu nu doet en waarom, het laadpercentage met de grenzen, en de volgende stap van het plan. Licht en donker volgen Home Assistant; Nederlands of Engels volgt je profiel.
-- Wordt stap voor stap gebouwd: het plan met de prijzen van vandaag, de sets en de instellingen volgen in de volgende versies. Tot die tijd blijft het testdashboard beschikbaar.
-- Broncode in `frontend/` (TypeScript + Lit); het gebouwde paneel staat in `custom_components/zephyr/frontend/`. Bouwen: `cd frontend && npm ci && npm run build`. Lettertypen: Inter en Space Grotesk (SIL Open Font License).
-
 ## Ondersteunde sets en accu's
-- Sets met de lokale zenSDK-API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro en 4000 AC+. Tot nu toe getest: 2400 Pro en 2400 AC+. Zet HEMS uit in de Zendure-app.
+- Sets met de lokale zenSDK-API: SolarFlow 800, 800 Plus, 800 Pro, 1600 AC+, 2400 AC, 2400 AC+, 2400 Pro en 4000 AC+. Tot nu toe getest: 2400 Pro en 2400 AC+.
 - Accu's worden herkend aan hun serienummer: AB1000, AB1000S, AB2000(S/X), AB3000X, AB3000L en de ingebouwde accu's van de 2400 Pro, 2400 AC+, 4000 AC+ en AIO 2400.
 - Nieuwere modellen (800 AC+, 800 Pro 2, 3000/4000 Mix) en accu's (AB2000L, AB3000S, B6400) werken waarschijnlijk voor uitlezen, maar staan nog niet in de tabellen; met een diagnose-download kunnen we ze toevoegen.
-- **Niet ondersteund** (geen lokale zenSDK-API): SolarFlow Hub 1200/2000, Hyper 2000, Ace 1500, AIO 2400 en SuperBase. Alleen de ingebouwde accu van een AIO 2400 die als extra pack aan een SolarFlow hangt, wordt herkend.
-- Accu niet herkend? Home Assistant toont een reparatiemelding. Vul de capaciteit in via ZEPHYR → de set → *Opnieuw configureren*, en open graag een issue met de regel uit de melding, dan voegen we hem toe.
-
-## Geplande functies
-- Modi: Standby, Nul op de meter, Dynamische Forecasting, Snel opladen, Snel ontladen.
-- Eén tot drie sets, met de vraag van het huis verdeeld over de sets.
-- Planner voor vandaag en morgen (dynamische prijzen, zonverwachting, geleerd verbruik).
-- Rendement per set gemeten, zonder invulveld.
-- Schaduwmodus: ZEPHYR rekent mee naast een bestaand systeem zonder de accu aan te sturen.
+- **Niet ondersteund** (geen lokale zenSDK-API): SolarFlow Hub 1200/2000, Hyper 2000, Ace 1500, AIO 2400 en SuperBase.
+- Accu niet herkend? Home Assistant toont een reparatiemelding. Vul de capaciteit in via ZEPHYR → de set → *Opnieuw configureren*, en open graag een issue met de regel uit de melding.
 
 ## Herkomst
-ZEPHYR is een nieuwe implementatie. Er zit geen code of tekst in van andere Zendure-integraties of -pakketten. Waar andere projecten zijn geraadpleegd, is alleen hun gedrag vergeleken, nadat onze eigen specificatie was geschreven.
+ZEPHYR is een nieuwe implementatie. Het bevat geen code of tekst uit andere Zendure-integraties of -pakketten. Waar andere projecten zijn geraadpleegd, is alleen hun gedrag vergeleken, nadat onze eigen specificatie was geschreven.
 
 ## Licentie
 MIT, zie [LICENSE](LICENSE).
