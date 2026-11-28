@@ -9,6 +9,10 @@
   - Switching off by hand or a second controller (L4) turns the wish off; those stay off.
 - **Why live stopped, kept over restarts:** the last 20 switches between live and shadow with time and reason (`user`, `resumed`, `unload`, `second_controller` with the limits sent and reported, `not_resumed` with the blockers, `ha_restart`) in Store `zephyr.<entry>.live`. In diagnostics under `control.live.history` (with `wanted`), and as attributes `last_shadow_at`, `last_shadow_reason`, `wanted_live` and `resuming` of `switch.zephyr_control`.
 - Tests: resume after more than 10 minutes, the wish over a restart (both ways), the history over a restart, the reason for a second controller.
+### 0.8.73 — Installation device: *ZEPHYR Applicatie*
+- The installation device (the one HA lists under *Apparaten die niet tot een sub-item behoren*; that heading is HA's own) is now called **ZEPHYR Applicatie** (EN *ZEPHYR Application*, a translated device name) with type **Regeling en planner** (EN *Control and planner*; was *Installation*). Display names of its entities follow (*ZEPHYR Applicatie Modus*).
+- **Entity ids do not change:** existing ones stay as registered; a new installation still gets `zephyr_…` (the installation entities suggest `zephyr_<English name>` themselves, `InstallationIds`), not `zephyr_applicatie_…`.
+- Tests: name, type and ids in English and Dutch (HA).
 
 ### 0.8.72 — Diagnose: tidier layout
 - **Top:** one wide bar with *Diagnose downloaden* and *Kostenlogboek exporteren*.
