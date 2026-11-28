@@ -760,6 +760,7 @@ class ZephyrControl:
                         {
                             "p1_measured": None if result.measured_grid_power is None else round(result.measured_grid_power),
                             "battery_real": round(sum(v.report.battery_power_ac for v in views if v.report and v.online)),
+                            **(self.engine.twin_alignment(now) or {}),
                         }
                         if self.engine.twin_enabled
                         else {}

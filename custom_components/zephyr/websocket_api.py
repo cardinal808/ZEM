@@ -179,6 +179,8 @@ def now_snapshot(hass: HomeAssistant, entry: ZephyrConfigEntry) -> dict[str, Any
         "reason_code": None if result is None else str(result.reason.code),
         "setpoint_w": None if result is None else result.setpoint,
         "grid_w": None if result is None else _round(result.grid_power, 0),
+        # Shadow mode: grid_w is the twin's (what the meter would show); this is the real meter.
+        "grid_measured_w": None if result is None or not control.engine.twin_enabled else _round(result.measured_grid_power, 0),
         "battery_w": _round(totals.power, 0),
         **_solar_now(control, totals.solar_power),
         "soc": _round(totals.soc),

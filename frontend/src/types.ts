@@ -66,6 +66,8 @@ export interface Now {
   reason_code: string | null;
   setpoint_w: number | null;
   grid_w: number | null;
+  /** Shadow mode: the real meter; grid_w is then what the meter would show if ZEPHYR controlled. */
+  grid_measured_w?: number | null;
   battery_w: number | null;
   solar_w: number | null;
   /** Part from inverters the sets do not see; estimated = from the solar energy counter. */

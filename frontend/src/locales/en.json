@@ -37,7 +37,10 @@
     "shadow_note": "What ZEPHYR would do (shadow mode).",
     "p1_import": "P1 · import",
     "p1_export": "P1 · export",
-    "p1_zero": "P1"
+    "p1_zero": "P1",
+    "p1_computed": "Computed",
+    "p1_measured": "measured",
+    "p1_computed_hint": "Computed: what the meter would show if ZEPHYR were in control. Measured now: {measured}."
   },
   "battery": {
     "title": "Battery",
