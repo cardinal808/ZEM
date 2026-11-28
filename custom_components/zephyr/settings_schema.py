@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from .const import (
+    CONF_CALIBRATION_DAYS,
     CONF_COST_EXPORT_COUNTERS,
     CONF_COST_IMPORT_COUNTERS,
     CONF_CURTAIL_INVERTER_W,
@@ -166,6 +167,7 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_PLAN_ALLOW_EXPORT, "planner", "bool", False),
     Field(CONF_PLAN_LOAD_MARGIN, "planner", "number", 0, "%", 0, 50, 1),
     Field(CONF_PLAN_BUFFER, "planner", "number", 0, "%", 0, 50, 1),
+    Field(CONF_CALIBRATION_DAYS, "planner", "number", 21, "d", 0, 90, 1),
     Field(CONF_WORKDAY_ENTITY, "planner", "entity", optional=True, reload=True, domain="binary_sensor"),
     Field(CONF_CURTAIL_MODE, "planner", "select", CURTAIL_OFF, options=CURTAIL_MODES, reload=True),
     Field(CONF_CURTAIL_SWITCH, "planner", "entity", optional=True, reload=True, domain="switch", show_if=_ZEPHYR_CURTAILS),

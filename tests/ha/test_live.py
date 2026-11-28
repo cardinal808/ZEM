@@ -294,3 +294,25 @@ async def test_live_counters_match_the_writes_and_survive_a_reload(
     await hass.async_block_till_done(wait_background_tasks=True)
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert next(iter(diag["control"]["counters"].values()))["ram_24h"] >= before
+
+
+async def test_calibration_raises_the_limit_and_rests_at_full(
+    hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory
+) -> None:
+    """SPEC-planner §3.5: limit to 100 % while due (cause calibration), no delivering while resting."""
+    entry = await _install_with_p1(hass, fake_sets)
+    control = entry.runtime_data.control
+    user_max = control.engine.settings.max_soc
+    control.set_calibration(True, False)
+    assert control.engine.settings.max_soc == 100.0 and control.engine.limits_cause == "calibration"
+    for _ in range(20):  # import: zero-meter delivers
+        await _p1(hass, freezer, 800)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["control"]["last"]["setpoint"] < 0, diag["control"]["last"]
+    control.set_calibration(True, True)  # full: rest while the set calibrates
+    for _ in range(20):
+        await _p1(hass, freezer, 800)
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["control"]["last"]["setpoint"] >= 0  # nothing delivered while resting
+    control.set_calibration(False, False)
+    assert control.engine.settings.max_soc == user_max and not control.calibration_rest

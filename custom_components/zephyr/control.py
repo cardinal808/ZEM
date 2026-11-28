@@ -100,6 +100,10 @@ class ZephyrControl:
         self.p1_entity: str | None = None if self.p1_pair else options.get(CONF_P1_ENTITY)
         self._pair_pending: Callable[[], None] | None = None
         self.engine = ZephyrEngine(settings_from_options(entry.options), Mode.ZERO_METER)
+        self.user_max_soc = self.engine.settings.max_soc
+        self.calibration_active = False
+        self.calibration_rest = False
+        """Calibration (SPEC-planner §3.5): upper limit 100 %; at 100 % no delivering until the set calibrated."""
         self.engine.enable_twin()  # shadow mode: a virtual set carries out the commands (core/twin.py)
         self.shadow = True
         self.result: StepResult | None = None
@@ -160,11 +164,27 @@ class ZephyrControl:
 
     def apply_options(self, options: Mapping[str, Any]) -> None:
         """Battery limits and zero-meter settings changed without a reload (UI-7)."""
-        self.engine.update_settings(self.engine.settings.with_changes(**_limits(options)))
+        self.user_max_soc = float(_limits(options).get("max_soc", self.engine.settings.max_soc))
+        limits = _limits(options)
+        if self.calibration_active:
+            limits["max_soc"] = 100.0
+        self.engine.update_settings(self.engine.settings.with_changes(**limits))
         self.expensive_hours = int(options.get(CONF_EXPENSIVE_HOURS, DEFAULT_EXPENSIVE_HOURS))
         self.reserve_soc = float(options.get(CONF_RESERVE_SOC, DEFAULT_RESERVE_SOC))
         self.min_price = options.get(CONF_MIN_PRICE)
         self.solar_power_entities = list(options.get(CONF_SOLAR_POWER) or [])
+
+    def set_calibration(self, active: bool, rest: bool) -> None:
+        """Raise the set's upper SOC limit to 100 % while a calibration is due (one flash write
+        each way, cause "calibration"), and hold delivering while the set calibrates at 100 %."""
+        self.calibration_rest = rest
+        if active == self.calibration_active:
+            return
+        self.calibration_active = active
+        self.engine.limits_cause = "calibration"
+        max_soc = 100.0 if active else self.user_max_soc
+        self.engine.update_settings(self.engine.settings.with_changes(max_soc=max_soc))
+        self._log_event("calibration_on" if active else "calibration_off", max_soc=max_soc)
 
     def async_start(self) -> Callable[[], None]:
         unsubs: list[Callable[[], None]] = []
@@ -581,6 +601,7 @@ class ZephyrControl:
         result = self.engine.step(
             now,
             views,
+            discharge_blocked=self.calibration_rest,
             price_block=price_block,
             reserve_charge=reserve_charge,
             plan_action=plan_action,

@@ -451,6 +451,11 @@
         "label": "Inverter rated power",
         "help": "Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.",
         "more": "For a SolarEdge the nominal power of the inverter model, e.g. 5000 W for an SE5K."
+      },
+      "calibration_days": {
+        "label": "Calibration after days",
+        "help": "After this many days without 100 % the planner charges the battery full and lets the set calibrate.",
+        "more": "The longer the battery has not been full, the further the packs drift apart. From half these days on the planner picks a cheap moment or solar to charge full; on the last day it is a hard requirement. Afterwards ZEPHYR does not deliver until the set has finished calibrating (socStatus), at most 2 hours. 0 = off."
       }
     },
     "restarting": "ZEPHYR is restarting with the new settings…",

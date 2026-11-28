@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 0.8.68 — Calibration safety net (SPEC-planner §3.5)
+- ZEPHYR remembers when the battery was last full (SOC ≥ 99 %, or the set's own calibration — `socStatus` 1 → 0 — ended), kept over restarts. New setting *Planner: calibration after days* (default 21, 0 = off).
+- From half that period on the planner gets a growing incentive (up to €0.30) to reach 100 % when it is cheap (solar, a cheap night hour); from the last day on it is a hard requirement (€2), so the planner picks the cheapest moment in the horizon. "Reached" counts anywhere in the horizon, not only at its end (a second layer in the planner).
+- While a calibration is due, the set's upper SOC limit is 100 % (flash write, cause `calibration`); once full, ZEPHYR does not deliver from the battery until the set finished calibrating, at most 2 hours; then the user's limit returns and the count restarts.
+- Diagnostics `planner.calibration` (last full, days, penalty, active, resting, set calibrating) and the decision log (`calibration_on`/`_off`).
+
 ### 0.8.67 — Buffer refilled when it pays (B37)
 - The buffer is now a **reserve at the bottom of the battery** instead of a smaller battery: the planner never plans to deliver from it, but sees how full it is and refills it. Energy in the buffer is worth the mean buy price of the horizon (× discharge efficiency), so the planner charges it from the grid only in an hour that is clearly cheaper (with the grid-charge threshold and wear as before); solar fills it for free. Planned delivery stops at min_SOC + buffer as before; the regulator may still use the buffer when the load is higher than expected.
 - Plan state attribute and diagnostics `buffer`: size and content (kWh), *short*, and when and how it is refilled (`refill_at`, `refill_by` grid/solar), or `reason: no_cheap_moment` when it is not refilled in the horizon ("buffer not refilled").

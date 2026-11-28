@@ -412,7 +412,8 @@
           "curtail_negative": "Surplus solar at a negative price",
           "curtail_switch": "Inverter curtail switch",
           "curtail_number": "Inverter power limit",
-          "curtail_inverter_w": "Inverter rated power"
+          "curtail_inverter_w": "Inverter rated power",
+          "calibration_days": "Planner: calibration after days"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -451,7 +452,8 @@
           "curtail_negative": "What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and curtails the inverter: with the switch or with the power limit below (one of the two).",
           "curtail_switch": "On while the export price is negative. Alternative to the power limit.",
           "curtail_number": "Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.",
-          "curtail_inverter_w": "Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set."
+          "curtail_inverter_w": "Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.",
+          "calibration_days": "When the battery has not reached 100 % for this many days, the planner charges it full at the cheapest moment (the upper limit goes to 100 % for a while) and does not deliver until the set has calibrated itself (max. 2 hours). From half these days on it already charges full when that is cheap. 0 = off."
         }
       }
     },
