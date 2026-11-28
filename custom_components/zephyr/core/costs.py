@@ -190,14 +190,31 @@ class Pools:
     grid_kwh: float = 0.0
     solar_value: float = 0.0
     """Export revenue given up when the solar in the pool was charged (€)."""
+    grid_value: float = 0.0
+    """What the grid energy in the pool cost when it was charged (€; 0.8.83, for the day boundary)."""
+
+    @property
+    def value(self) -> float:
+        """What the energy in the battery cost (paid or given up): the battery's content in €."""
+        return self.solar_value + self.grid_value
 
     def as_dict(self) -> dict[str, float]:
-        return {"solar_kwh": round(self.solar_kwh, 4), "grid_kwh": round(self.grid_kwh, 4), "solar_value": round(self.solar_value, 5)}
+        return {
+            "solar_kwh": round(self.solar_kwh, 4),
+            "grid_kwh": round(self.grid_kwh, 4),
+            "solar_value": round(self.solar_value, 5),
+            "grid_value": round(self.grid_value, 5),
+        }
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any] | None) -> Pools:
         data = data or {}
-        return cls(float(data.get("solar_kwh", 0.0)), float(data.get("grid_kwh", 0.0)), float(data.get("solar_value", 0.0)))
+        return cls(
+            float(data.get("solar_kwh", 0.0)),
+            float(data.get("grid_kwh", 0.0)),
+            float(data.get("solar_value", 0.0)),
+            float(data.get("grid_value", 0.0)),
+        )
 
 
 RECORD_FIELDS: Final = (
@@ -279,6 +296,8 @@ def evaluate(q: QuarterInput, tariffs: Tariffs, pools: Pools, days_in_month: int
     pools.grid_kwh += chg - from_solar_charge
     if sell is not None:
         pools.solar_value += from_solar_charge * max(sell, 0.0)
+    if buy is not None:
+        pools.grid_value += (chg - from_solar_charge) * buy
     total = pools.solar_kwh + pools.grid_kwh
     from_solar = released = lost = 0.0
     if dis > 0 and total > 0:
@@ -288,7 +307,10 @@ def evaluate(q: QuarterInput, tariffs: Tariffs, pools: Pools, days_in_month: int
         taken = min(dis, total)
         pools.solar_kwh -= from_solar
         pools.solar_value -= released
-        pools.grid_kwh = max(pools.grid_kwh - (taken - from_solar), 0.0)
+        from_grid = min(taken - from_solar, pools.grid_kwh)
+        if pools.grid_kwh > 0:
+            pools.grid_value -= pools.grid_value * from_grid / pools.grid_kwh
+        pools.grid_kwh = max(pools.grid_kwh - from_grid, 0.0)
     if q.stored_kwh is not None:
         total = pools.solar_kwh + pools.grid_kwh
         if total > q.stored_kwh:
@@ -297,6 +319,7 @@ def evaluate(q: QuarterInput, tariffs: Tariffs, pools: Pools, days_in_month: int
             pools.solar_kwh *= scale
             pools.grid_kwh *= scale
             pools.solar_value *= scale
+            pools.grid_value *= scale
 
     cost = cost_nb = cost_ns = sal = sal_nb = via = None
     sun_direct = sun_export = sun_bonus = None
@@ -339,6 +362,7 @@ def evaluate(q: QuarterInput, tariffs: Tariffs, pools: Pools, days_in_month: int
         "solar_export_value": _r(sun_export, 5),
         "solar_bonus_value": _r(sun_bonus, 5),
         "fixed": round(tariffs.fixed_month / days_in_month * q.minutes / 1440, 5),
+        "content": {"solar": round(pools.solar_value, 5), "grid": round(pools.grid_value, 5)},
         "plan_action": None,
         "plan_cost": None,
     }
@@ -396,9 +420,33 @@ def add_to_day(day: dict[str, float], record: Mapping[str, Any]) -> None:
             for name in SOLAR_VALUE_FIELDS:
                 day[name] = day.get(name, 0.0) + float(record.get(name) or 0.0)
     plan_check.add_to_day(day, record)
+    _content_to_day(day, record)
     for key in list(day):
         if isinstance(day[key], float):
             day[key] = round(day[key], 5)
+
+
+def _content_to_day(day: dict[str, Any], record: Mapping[str, Any]) -> None:
+    """The battery's content in € at the start and end of the day (TOETS-besparing §5, 0.8.83).
+
+    Kept apart from the summed fields: a period takes the start of its first day and the end of
+    its last. Quarters are added in time order; a correction refreshes it (``refresh_content``).
+    """
+    content = record.get("content")
+    if not isinstance(content, Mapping):
+        return
+    box = day.setdefault("content", {})
+    pools = record.get("pools")
+    if "start" not in box and isinstance(pools, Mapping) and "grid_value" in pools:
+        box["start"] = {"solar": float(pools.get("solar_value", 0.0)), "grid": float(pools.get("grid_value", 0.0))}
+    box["end"] = {"solar": float(content.get("solar", 0.0)), "grid": float(content.get("grid", 0.0))}
+
+
+def refresh_content(day: dict[str, Any], records: Iterable[Mapping[str, Any]]) -> None:
+    """Set a day's battery content again from its quarters (in time order), after a correction."""
+    day.pop("content", None)
+    for record in records:
+        _content_to_day(day, record)
 
 
 def quarter_status(record: Mapping[str, Any]) -> str:
@@ -423,6 +471,30 @@ class Summary:
     totals: dict[str, float] = field(default_factory=dict)
     saldering_correction: float = 0.0
     saldering_correction_no_battery: float = 0.0
+    content_start: Mapping[str, float] | None = None
+    content_end: Mapping[str, float] | None = None
+    """The battery's content (€, solar and grid part) at the start and end of the period."""
+
+    def __post_init__(self) -> None:
+        box: Any = self.totals.get("content")
+        if self.content_start is None and self.content_end is None and isinstance(box, Mapping):
+            self.content_start, self.content_end = box.get("start"), box.get("end")
+
+    @property
+    def content_change(self) -> tuple[float, float]:
+        """Change of the battery's content over the period (solar, grid), in €.
+
+        What was charged and is still in the battery at the end was paid in this period but
+        earns only in a later one; what was delivered from an earlier charge earns now but was
+        paid before. Counting the change keeps day and week figures from swinging with the
+        state of charge (TOETS-besparing bevinding 2). Over a longer period it adds up to 0.
+        """
+        if self.content_start is None or self.content_end is None:
+            return 0.0, 0.0
+        return (
+            float(self.content_end.get("solar", 0.0)) - float(self.content_start.get("solar", 0.0)),
+            float(self.content_end.get("grid", 0.0)) - float(self.content_start.get("grid", 0.0)),
+        )
 
     @property
     def cost(self) -> float | None:
@@ -444,7 +516,7 @@ class Summary:
     @property
     def savings_battery(self) -> float | None:
         cost, cost_nb = self.cost, self.cost_no_battery
-        return None if cost is None or cost_nb is None else cost_nb - cost
+        return None if cost is None or cost_nb is None else cost_nb - cost + sum(self.content_change)
 
     @property
     def savings_solar(self) -> float | None:
@@ -473,7 +545,8 @@ class Summary:
     def as_dict(self) -> dict[str, Any]:
         t = self.totals
         battery = self.savings_battery
-        via = t.get("solar_via_battery") if t.get("priced") else None
+        via = t["solar_via_battery"] + self.content_change[0] if t.get("priced") and "solar_via_battery" in t else None
+        solar_change, grid_change = self.content_change
         house = t.get("house_kwh")
         cost = self.cost
         priced = t.get("priced", 0)
@@ -497,6 +570,8 @@ class Summary:
             "solar_direct_kwh": r(t.get("solar_direct_kwh"), 3),
             "self_consumption": r(self.self_consumption, 3),
             "includes_solar": self.solar_known,
+            "battery_content_change": r(solar_change + grid_change),
+            "battery_content_end": r(None if self.content_end is None else sum(float(v) for v in self.content_end.values())),
             "fixed": r(t.get("fixed", 0.0)),
             "cost_incl_fixed": r(None if cost is None else cost + t.get("fixed", 0.0)),
             "saldering_correction": r(self.saldering_correction),
@@ -533,7 +608,15 @@ def summarize(days: Mapping[str, Mapping[str, float]], first: date, last: date, 
     whole range lies inside the period (in practice: the year summary).
     """
     selected = {k: v for k, v in days.items() if first.isoformat() <= k <= last.isoformat()}
-    summary = Summary(days=len(selected), totals=_sum(selected.values()))
+    boxes: list[Any] = [box for _, v in sorted(selected.items()) if isinstance(box := v.get("content"), Mapping)]
+    starts = [b["start"] for b in boxes if "start" in b]
+    ends = [b["end"] for b in boxes if "end" in b]
+    summary = Summary(
+        days=len(selected),
+        totals=_sum(selected.values()),
+        content_start=starts[0] if starts else None,
+        content_end=ends[-1] if ends else None,
+    )
     if first.month == 1 and first.day == 1 and first.year == last.year and first < tariffs.saldering_until:
         summary.saldering_correction = saldering_correction(summary.totals, "")
         summary.saldering_correction_no_battery = saldering_correction(summary.totals, "_no_battery")

@@ -43,6 +43,7 @@ from .core.costs import (
     counter_delta,
     evaluate,
     quarter_status,
+    refresh_content,
     summarize,
     to_csv,
 )
@@ -184,6 +185,14 @@ class CostRecorder:
         data = await self._main.async_load() or {}
         self.days = {k: dict(v) for k, v in (data.get("days") or {}).items()}
         self.pools = Pools.from_dict(data.get("pools"))
+        if "grid_value" not in (data.get("pools") or {"grid_value": 0}) and self.pools.grid_kwh > 0:
+            # Before 0.8.83 the pools did not keep what the grid energy cost: start at the mean
+            # buy price of the last week (only the energy now in the battery).
+            week = summarize(
+                self.days, dt_util.now().date() - timedelta(days=7), dt_util.now().date(), self.tariffs.tariffs_for(dt_util.now().date())
+            )
+            mean = week.as_dict().get("mean_buy_price")
+            self.pools.grid_value = self.pools.grid_kwh * float(mean or 0.0)
         self.counters = dict(data.get("counters") or {})
         self.months = list(data.get("months") or [])
         now = dt_util.utcnow()
@@ -915,9 +924,16 @@ class CostRecorder:
             LOGGER.debug("Cost log: gap correction not possible (quarters missing or from before 0.8.31): %s", corrections)
             return False
         self.pools, changes = result
+        touched: set[str] = set()
         for old, new in changes:
             day = dt_util.as_local(datetime.fromisoformat(new["start"])).date().isoformat()
             day_delta(self.days.setdefault(day, {}), old, new)
+            touched.add(day)
+        for day in touched:  # the battery's content at the day's start and end (0.8.83)
+            refresh_content(
+                self.days[day],
+                (r for r in self.current if dt_util.as_local(datetime.fromisoformat(r["start"])).date().isoformat() == day),
+            )
         LOGGER.debug("Cost log: %d quarters evaluated again after a gap", len(changes))
         return True
 

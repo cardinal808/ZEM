@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -48,3 +48,33 @@ def test_day_totals_and_summary() -> None:
     assert s["savings_solar"] == pytest.approx(s["solar_direct_value"] + s["solar_export_value"], abs=0.01)
     assert s["savings_total"] == pytest.approx(s["savings_solar"] + s["savings_battery"], abs=0.01)
     assert s["self_consumption"] == pytest.approx((2.0 - 0.8) / 2.0)
+
+
+def test_day_boundary_values_the_battery_content() -> None:
+    # TOETS-besparing bevinding 2: charged at night at 0.20 and delivered the next evening at
+    # 0.40. Day 1 alone used to show a loss and day 2 a big gain; with the content valued, the
+    # charge cost waits in the battery and both days add up to the same total.
+    from zephyr_core.costs import summarize
+
+    tariffs = Tariffs()
+    pools = Pools()
+    day1: dict = {}
+    day2: dict = {}
+
+    def quarter(when: datetime, imp: float, exp: float, chg: float, dis: float, market: float, stored: float) -> dict:
+        before = pools.as_dict()
+        q = QuarterInput(when, 15, imp, exp, chg, dis, None, market, stored_kwh=stored)
+        record = evaluate(q, tariffs, pools)
+        record["pools"] = before
+        return record
+
+    add_to_day(day1, quarter(datetime(2026, 11, 26, 2, 0, tzinfo=UTC), 2.0, 0.0, 2.0, 0.0, 0.20, 2.0))
+    add_to_day(day2, quarter(datetime(2026, 11, 27, 18, 0, tzinfo=UTC), 0.0, 0.0, 0.0, 1.7, 0.40, 0.0))
+    days = {"2026-11-26": day1, "2026-11-27": day2}
+    one = summarize(days, date(2026, 11, 26), date(2026, 11, 26), tariffs)
+    two = summarize(days, date(2026, 11, 27), date(2026, 11, 27), tariffs)
+    both = summarize(days, date(2026, 11, 26), date(2026, 11, 27), tariffs)
+    assert one.savings_battery == pytest.approx(0.0, abs=1e-6)  # the cost of the charge is in the battery
+    assert one.savings_battery + two.savings_battery == pytest.approx(both.savings_battery, abs=1e-6)
+    assert both.content_change == pytest.approx((0.0, 0.0), abs=1e-6)  # empty again: no correction
+    assert both.savings_battery == pytest.approx(1.7 * tariffs.buy(0.40) - 2.0 * tariffs.buy(0.20), abs=1e-4)
