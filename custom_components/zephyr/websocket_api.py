@@ -775,6 +775,7 @@ def stroom_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
         "rest_today_kwh": round(max(0.0, today["house_kwh"] - known), 3) if devices else None,
         "battery_label": _battery_label(entry),
         "picture": runtime.house.picture_view() if runtime.house is not None and runtime.house.picture["custom"] else None,
+        "house_style": runtime.house.picture["style"] if runtime.house is not None else "default",
         "zero": control.zero.view() if control is not None else None,
         "regulation": control.regulation.view(time.monotonic()) if control is not None else None,
         "live": control is not None and not control.shadow,
@@ -808,6 +809,7 @@ _POINT = vol.All([vol.Coerce(float)], vol.Length(min=2, max=2))
     {
         vol.Required("type"): "zephyr/house/picture",
         vol.Required("custom"): bool,
+        vol.Optional("style"): vol.In(["default", "alt", "old"]),
         vol.Optional("items", default=dict): {str: {vol.Optional("box"): _POINT, vol.Optional("point"): _POINT}},
         vol.Optional("hidden", default=list): [str],
     }
@@ -820,7 +822,7 @@ async def ws_house_picture(hass: HomeAssistant, connection: ActiveConnection, ms
     if entry is None or entry.runtime_data.house is None:
         connection.send_error(msg["id"], "not_loaded", "ZEPHYR is not loaded")
         return
-    await entry.runtime_data.house.async_set_picture(msg["custom"], msg["items"], msg["hidden"])
+    await entry.runtime_data.house.async_set_picture(msg["custom"], msg["items"], msg["hidden"], msg.get("style"))
     connection.send_result(msg["id"], entry.runtime_data.house.picture_view())
 
 

@@ -75,6 +75,8 @@ export interface RegulationView {
 /** An own house picture: boxes and spots as fractions (0–1) of the picture. */
 export interface HousePicture {
   custom: boolean;
+  /** Built-in house: default (3 storeys), alt (2) or old. */
+  style?: "default" | "alt" | "old";
   has_image: boolean;
   version: number;
   width: number;
@@ -126,6 +128,8 @@ export interface StroomView {
   /** "SolarFlow 2400 Pro + 3 × AB3000L" per set. */
   battery_label?: string | null;
   picture?: HousePicture | null;
+  /** Built-in house when there is no own picture: default (3 storeys), alt (2) or old. */
+  house_style?: "default" | "alt" | "old";
   rest_today_kwh?: number | null;
   today: StroomToday;
   zero: ZeroView | null;
@@ -229,7 +233,11 @@ export class ZephyrStroom extends LitElement {
     const v = this.view;
     const pic = v?.picture;
     const ar =
-      pic && pic.width && pic.height ? pic.width / pic.height : 1700 / 1225;
+      pic && pic.width && pic.height
+        ? pic.width / pic.height
+        : v?.house_style === "old"
+          ? 1700 / 1225
+          : 1800 / 1150;
     return html`<div class="layout" style=${`--house-ar:${ar.toFixed(4)}`}>
       <zephyr-house
         .sign=${this.sign}
@@ -836,10 +844,9 @@ export class ZephyrStroom extends LitElement {
     @container (min-width: 1200px) {
       /* Wide panel: picture on the left (as high as the screen allows), today's cards next to it. */
       .layout {
-        grid-template-columns: minmax(
-            0,
-            calc((100vh - 300px) * var(--house-ar, 1.3878) + 30px)
-          ) minmax(360px, 1fr);
+        grid-template-columns:
+          minmax(0, calc((100vh - 300px) * var(--house-ar, 1.3878) + 30px))
+          minmax(360px, 1fr);
         grid-template-rows: auto 1fr;
         align-items: stretch;
       }

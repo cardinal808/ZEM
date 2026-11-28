@@ -114,13 +114,14 @@ export const LAYOUT = {
 
 const SOURCE_COLOR: Record<string, string> = {};
 
+/** Colours of the flows; CSS variables (theme.ts), so they follow the light or dark theme. */
 export const COLORS = {
-  sun: "#ffcf1f",
-  batt: "#22d3b5",
-  house: "#2f8cff",
-  grid: "#ff4d4d",
-  ev: "#a86bff",
-  exp: "#ff3b3b",
+  sun: "var(--h-sun)",
+  batt: "var(--h-batt)",
+  house: "var(--h-house)",
+  grid: "var(--h-grid)",
+  ev: "var(--h-ev)",
+  exp: "var(--h-exp)",
 };
 Object.assign(SOURCE_COLOR, {
   sun: COLORS.sun,
@@ -266,6 +267,114 @@ export function ownLine(
   ];
 }
 
+/** Built-in picture on Stroom: the default house (3 storeys), the alternative (2) or the old one. */
+export type HouseStyle = "default" | "alt" | "old";
+
+/** Size of the default and alternative house (frontend/scripts/house_gen.py). */
+export const NW = 1800;
+export const NH = 1150;
+/** x of the main line in the default and alternative house. */
+const NBUS = 1230;
+
+/**
+ * Where things are in the default (3) and alternative (2) house, in picture pixels
+ * (OPDRACHT-ui-huisplaatje-isometrisch §4; points from the projection in house_gen.py).
+ * Sources run to the main line; from it, branches go to the floor boxes, into the house (the
+ * rest, at the meter cupboard) and to the charge point.
+ */
+export function houseLayout(storeys: 2 | 3) {
+  const three = storeys === 3;
+  return {
+    storeys,
+    bus: [52, 1030] as [number, number],
+    battery: { from: [416, three ? 524 : 494] as Pt, y: 52 },
+    shedSolar: { from: [486, three ? 437 : 407] as Pt, y: 80 },
+    roof: { from: [931, three ? 354 : 399] as Pt },
+    floors: (three
+      ? { attic: 462, first: 640, ground: 840 }
+      : { first: 560, ground: 800 }) as Partial<Record<FloorKey, number>>,
+    rest: { y: three ? 750 : 705, x: 1106 },
+    ev: { y: three ? 968 : 935, to: [722, three ? 912 : 884] as Pt },
+    grid: { y: 1030, x: 1290 },
+    boxes: {
+      header: [1300, 24, 450, 132] as Box,
+      home: [1300, 196, 450, 104] as Box,
+      attic: [1300, 418, 450, 88] as Box,
+      first: (three ? [1300, 596, 450, 88] : [1300, 504, 450, 112]) as Box,
+      ground: (three ? [1300, 796, 450, 88] : [1300, 756, 450, 88]) as Box,
+      grid: [1300, 990, 450, 80] as Box,
+      roof: [36, 104, 280, 112] as Box,
+      shed_solar: [36, 228, 280, 112] as Box,
+      battery: [36, 352, 280, 172] as Box,
+      shed: [36, 540, 280, 100] as Box,
+      ev: [36, 980, 280, 88] as Box,
+    },
+    /** Dashed pointers from a box on the left to its place in the picture. */
+    pointers: {
+      roof: [[316, 160], three ? [600, 300] : [640, 290]] as Pt[],
+      shed_solar: [
+        [316, 284],
+        [452, three ? 470 : 440],
+      ] as Pt[],
+      battery: [
+        [316, 440],
+        [408, three ? 520 : 490],
+      ] as Pt[],
+      shed: [
+        [316, 590],
+        [528, three ? 546 : 516],
+      ] as Pt[],
+      ev: [
+        [316, 1010],
+        [700, three ? 930 : 900],
+      ] as Pt[],
+    },
+  };
+}
+
+/** A connection on the main line: power into the line (+ from a source, − to a consumer). */
+export interface Tap {
+  y: number;
+  w: number;
+}
+
+/** A piece of the main line between two connections, with the power through it and its direction. */
+export interface BusSegment {
+  y0: number;
+  y1: number;
+  w: number;
+  /** 1: downwards, −1: upwards, 0: (almost) nothing flows. */
+  dir: 1 | -1 | 0;
+}
+
+/**
+ * The pieces of the main line between its connections (OPDRACHT §3). Through each piece flows
+ * the sum of everything above it: sources count +, consumers − (charging the battery and export
+ * are consumers on the line side). A positive sum flows down, a negative one up; below 10 W
+ * the piece gets no dots.
+ */
+export function busSegments(taps: Tap[], min = 10): BusSegment[] {
+  const sorted = [...taps].sort((a, b) => a.y - b.y);
+  const out: BusSegment[] = [];
+  let sum = 0;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    sum += sorted[i].w;
+    if (sorted[i + 1].y === sorted[i].y) continue;
+    out.push({
+      y0: sorted[i].y,
+      y1: sorted[i + 1].y,
+      w: Math.abs(sum),
+      dir: Math.abs(sum) < min ? 0 : sum > 0 ? 1 : -1,
+    });
+  }
+  return out;
+}
+
+/** The floor a consumer is shown on: the alternative house has no attic, so the attic is the 1st floor. */
+export function shownFloor(floor: string, storeys: 2 | 3): string {
+  return storeys === 2 && floor === "attic" ? "first" : floor;
+}
+
 /** A flow line on an own picture from a spot to the Huis spot: level first, then straight. */
 export function hubPath(from: Pt, hub: Pt): Pt[] {
   if (from[0] === hub[0] || from[1] === hub[1]) return [from, hub];
@@ -302,10 +411,18 @@ export class ZephyrHouse extends LitElement {
     const ev = devices.find((d) => d.kind === "ev") ?? null;
     const items = this.items(now, devices);
     const own = this.view?.picture ?? null;
+    const style = this.view?.house_style ?? "default";
+    const storeys: 2 | 3 = style === "alt" ? 2 : 3;
     return html`<section class="card" aria-label=${this.tr("house.title")}>
-      ${own ? this.ownStage(own, items) : this.defaultStage(items)}
+      ${
+        own
+          ? this.ownStage(own, items)
+          : style === "old"
+            ? this.defaultStage(items)
+            : this.newStage(items, storeys)
+      }
       ${this.bar(f, ev)}
-      ${this.list(devices, Math.max(0, f.house - this.known(devices)))}
+      ${this.list(devices, Math.max(0, f.house - this.known(devices)), own || style === "old" ? 3 : storeys)}
     </section>`;
   }
 
@@ -432,7 +549,7 @@ export class ZephyrHouse extends LitElement {
       f.house >= 10 || Math.abs(bat) >= 10 || Math.abs(f.grid) >= 10;
     const tag = (at: Pt, text: string, color: string, on: boolean) =>
       on
-        ? svg`<text x=${at[0]} y=${at[1]} class="tag" fill=${color}>${text}</text>`
+        ? svg`<text x=${at[0]} y=${at[1]} class="tag" style=${`fill:${color}`}>${text}</text>`
         : nothing;
     const to = (key: string) => this.tr(`house.to_${key}`);
     return html`<div class="stage">
@@ -452,7 +569,7 @@ export class ZephyrHouse extends LitElement {
             ? svg`${this.line(ln, c, it[k].power)}${this.arrow(end[0], end[1], c)}`
             : nothing;
         })}
-        ${busOn ? svg`<circle cx=${BUS} cy="96" r="8" fill=${c}></circle><circle cx=${BUS} cy="1145" r="8" fill=${c}></circle>` : nothing}
+        ${busOn ? svg`<circle cx=${BUS} cy="96" r="8" style=${`fill:${c}`}></circle><circle cx=${BUS} cy="1145" r="8" style=${`fill:${c}`}></circle>` : nothing}
         ${tag(L.roof.label, this.w(it.roof.power), COLORS.sun, it.roof.power >= 10)}
         ${tag(L.battery.label, `${this.w(Math.abs(bat))} ${to(bat > 0 ? "battery" : "house")}`, COLORS.batt, Math.abs(bat) >= 10)}
         ${tag(L.grid.label, `${this.w(Math.abs(f.grid))} ${to(f.grid > 0 ? "house" : "grid")}`, COLORS.grid, Math.abs(f.grid) >= 10)}
@@ -467,6 +584,318 @@ export class ZephyrHouse extends LitElement {
         ${this.box(L.home.box, { ...it.home, color: c })}
         ${FLOOR_KEYS.map((k) => this.box(L.floors[k].box, it[k]))}
       </div>
+    </div>`;
+  }
+
+  /**
+   * The default (3 storeys) or alternative (2 storeys) house: every source runs to the main line;
+   * from it, branches go to the floors with measured consumers, into the house and to the charge
+   * point. The main line carries dots per piece, in the direction the power goes there.
+   */
+  private newStage(it: Record<ItemKey, Item>, storeys: 2 | 3): TemplateResult {
+    const L = houseLayout(storeys);
+    const now = this.now!;
+    const airco = now.excluded?.active ? (now.excluded.power_w ?? 0) : 0;
+    const f = flows(now.solar_w, now.grid_w, now.battery_w, airco);
+    const c = this.mainColor(f);
+    const bat = f.battery;
+    const devices = (this.view?.devices ?? []).filter(
+      (d) => d.kind !== "ev" && d.shown,
+    );
+    const onFloor = (k: FloorKey) =>
+      devices.filter((d) => shownFloor(d.floor, storeys) === k);
+    const floorW = (k: FloorKey) =>
+      onFloor(k).reduce((s, d) => s + (d.power_w ?? 0), 0);
+    const floors = (Object.keys(L.floors) as FloorKey[]).map((k) => ({
+      k,
+      y: L.floors[k] as number,
+      w: floorW(k),
+    }));
+    const ev = it.ev.active ? it.ev.power : 0;
+    const taps: Tap[] = [
+      { y: L.battery.y, w: -bat },
+      { y: L.shedSolar.y, w: it.shed_solar.power },
+      { y: L.roof.from[1], w: it.roof.power },
+      ...floors.map((x) => ({ y: x.y, w: -x.w })),
+      { y: L.rest.y, w: -it.home.power },
+      { y: L.ev.y, w: -ev },
+      { y: L.grid.y, w: f.grid },
+    ];
+    const busOn = taps.some((x) => Math.abs(x.w) >= 10);
+    const B = NBUS;
+    const rev = (pts: Pt[], yes: boolean): Pt[] =>
+      yes ? [...pts].reverse() : pts;
+    const bLine: Pt[] = [
+      L.battery.from,
+      [L.battery.from[0], L.battery.y],
+      [B, L.battery.y],
+    ];
+    const sLine: Pt[] = [
+      L.shedSolar.from,
+      [L.shedSolar.from[0], L.shedSolar.y],
+      [B, L.shedSolar.y],
+    ];
+    const rLine: Pt[] = [L.roof.from, [B, L.roof.from[1]]];
+    const gLine: Pt[] = [
+      [L.grid.x, L.grid.y],
+      [B, L.grid.y],
+    ];
+    const eLine: Pt[] = [[B, L.ev.y], [L.ev.to[0], L.ev.y], L.ev.to];
+    const oLine: Pt[] = [
+      [B, L.rest.y],
+      [L.rest.x, L.rest.y],
+    ];
+    const to = (key: string) => this.tr(`house.to_${key}`);
+    const on = (w: number) => Math.abs(w) >= 10;
+    const joints: [Pt, string, number][] = [
+      [[B, L.battery.y], COLORS.batt, bat],
+      [L.battery.from, COLORS.batt, bat],
+      [[B, L.shedSolar.y], COLORS.sun, it.shed_solar.power],
+      [L.shedSolar.from, COLORS.sun, it.shed_solar.power],
+      [[B, L.roof.from[1]], COLORS.sun, it.roof.power],
+      [L.roof.from, COLORS.sun, it.roof.power],
+      [[B, L.grid.y], COLORS.grid, f.grid],
+      ...floors.map((x) => [[B, x.y], c, x.w] as [Pt, string, number]),
+      [[B, L.rest.y], c, it.home.power],
+      [[B, L.ev.y], c, ev],
+    ];
+    const boxes = L.boxes;
+    const floorBox = (k: FloorKey) => {
+      const devs = onFloor(k);
+      return this.nbox(boxes[k], {
+        cap: this.tr(`settings.floors.${k}`),
+        color: c,
+        accent: true,
+        lines: devs.length
+          ? devs.map(
+              (d) =>
+                html`<span class=${(d.power_w ?? 0) >= 10 ? "" : "dim"}
+                  >${d.name ?? this.tr(`stroom.kind_${d.kind}`)}
+                  <b>${this.w(d.power_w)}</b></span
+                >`,
+            )
+          : [html`<span class="dim">–</span>`],
+      });
+    };
+    const label = this.view?.battery_label;
+    const battState = this.tr(
+      bat > 10
+        ? "house.charging"
+        : bat < -10
+          ? "house.delivering"
+          : "house.idle",
+    );
+    return html`<div class="stage new">
+      <img
+        src=${`${this.base}/house-${storeys}.webp`}
+        alt=""
+        draggable="false"
+      />
+      <svg viewBox="0 0 ${NW} ${NH}" aria-hidden="true">
+        ${(["roof", "shed_solar", "battery", "ev"] as const).map((k) =>
+          k === "ev" && !it.ev.active
+            ? nothing
+            : svg`<path d=${`M${L.pointers[k].map((q) => q.join(" ")).join(" L")}`} class="pointer2"></path>
+              <circle cx=${L.pointers[k][1][0]} cy=${L.pointers[k][1][1]} r="4" class="pdot"></circle>`,
+        )}
+        ${
+          onFloor("shed").length
+            ? svg`<path d=${`M${L.pointers.shed.map((q) => q.join(" ")).join(" L")}`} class="pointer2"></path>`
+            : nothing
+        }
+        ${busOn ? this.bus(L.bus, c, taps) : nothing}
+        ${this.bead(rev(bLine, bat > 0), COLORS.batt, Math.abs(bat), bat > 0)}
+        ${this.bead(sLine, COLORS.sun, it.shed_solar.power)}
+        ${this.bead(rLine, COLORS.sun, it.roof.power)}
+        ${this.bead(rev(gLine, f.grid < 0), COLORS.grid, Math.abs(f.grid))}
+        ${floors.map((x) =>
+          this.bead(
+            [
+              [B, x.y],
+              [1288, x.y],
+            ],
+            c,
+            x.w,
+            true,
+          ),
+        )}
+        ${this.bead(oLine, c, it.home.power, true)}
+        ${this.bead(eLine, c, ev, true)}
+        ${joints.map(([p, color, w]) => (on(w) ? this.joint(p, color) : nothing))}
+        ${on(bat) ? this.pill([700, L.battery.y], `${this.tr("house.battery")} ${this.w(Math.abs(bat))} ${to(bat > 0 ? "battery" : "house")}`, COLORS.batt) : nothing}
+        ${on(it.shed_solar.power) ? this.pill([900, L.shedSolar.y], `${this.tr("house.shed_short")} ${this.w(it.shed_solar.power)}`, COLORS.sun) : nothing}
+        ${on(it.roof.power) ? this.pill([1085, L.roof.from[1]], `${this.tr("house.roof_short")} ${this.w(it.roof.power)}`, COLORS.sun) : nothing}
+        ${on(it.home.power) ? this.pill([1160, L.rest.y - 34], `${this.tr("house.rest")} ${this.w(it.home.power)}`, c) : nothing}
+        ${on(ev) ? this.pill([960, L.ev.y], this.w(ev), c) : nothing}
+        ${on(f.grid) ? this.pill([1120, L.grid.y], `${this.tr("house.grid")} ${this.w(Math.abs(f.grid))} ${to(f.grid > 0 ? "house" : "grid")}`, COLORS.grid) : nothing}
+      </svg>
+      <div class="boxes">
+        ${this.nbox(boxes.header, {
+          cap: this.tr("house.title"),
+          color: c,
+          cls: "hdr",
+          lines: this.header(f.paths).lines,
+        })}
+        ${this.nbox(boxes.home, {
+          cap: this.tr("house.home"),
+          color: c,
+          frame: true,
+          big: this.w(f.house),
+          lines: [
+            html`<span class="dim"
+              >${this.tr("house.rest_of")} ${this.w(it.home.power)}</span
+            >`,
+          ],
+        })}
+        ${floors.map((x) => floorBox(x.k))}
+        ${this.nbox(boxes.grid, {
+          cap: this.tr("house.grid"),
+          color: COLORS.grid,
+          frame: true,
+          lines: [
+            f.grid >= 10
+              ? html`<b class="strong" style="color:var(--h-grid)"
+                  >${this.tr("house.import_t")} ${this.w(f.grid)}</b
+                >`
+              : f.grid <= -10
+                ? html`<b class="strong" style="color:var(--h-batt)"
+                    >${this.tr("house.export_t2")} ${this.w(-f.grid)}</b
+                  >`
+                : html`<span class="dim">${this.tr("house.grid_zero")}</span>`,
+          ],
+        })}
+        ${this.nbox(boxes.roof, {
+          cap: this.tr("house.roof_box"),
+          color: COLORS.sun,
+          accent: true,
+          big: this.w(it.roof.power),
+          lines: it.roof.lines.slice(1),
+          extra: now.curtail?.active
+            ? html`<span class="red">${this.curtailText(now.curtail)}</span>`
+            : undefined,
+        })}
+        ${this.nbox(boxes.shed_solar, {
+          cap: this.tr("house.shed_box"),
+          color: COLORS.sun,
+          accent: true,
+          big: this.w(it.shed_solar.power),
+          lines: [],
+        })}
+        ${this.nbox(boxes.battery, {
+          cap: this.tr("house.battery"),
+          color: COLORS.batt,
+          accent: true,
+          lines: [
+            ...(label ? [html`<span class="dim small">${label}</span>`] : []),
+            html`<b class="strong" style=${on(bat) ? "color:var(--h-batt)" : ""}
+              >${battState}${on(bat) ? ` ${this.w(Math.abs(bat))}` : ""}</b
+            >`,
+            ...(now.soc !== null
+              ? [html`<b>${percent(now.soc, this.locale)}</b>`]
+              : []),
+            ...(now.curtail?.export_blocked
+              ? [
+                  html`<span class="red"
+                    >${this.tr("flow.export_blocked")}</span
+                  >`,
+                ]
+              : []),
+          ],
+        })}
+        ${onFloor("shed").length ? floorBox("shed") : nothing}
+        ${this.nbox(boxes.ev, {
+          cap: this.tr("house.ev"),
+          color: c,
+          accent: true,
+          off: !it.ev.active,
+          big: it.ev.active ? this.w(ev) : "–",
+          lines: [],
+        })}
+      </div>
+    </div>`;
+  }
+
+  /** The main line with its glow and, per piece, dots in the direction the power goes there. */
+  private bus(y: [number, number], color: string, taps: Tap[]) {
+    const x = NBUS;
+    const d = `M${x} ${y[0]} L${x} ${y[1]}`;
+    return svg`<path d=${d} class="busglow" style=${`stroke:${color}`}></path>
+      <path d=${d} class="buscore" style=${`stroke:${color}`}></path>
+      <path d=${d} class="busshine"></path>
+      ${busSegments(taps).map((s) =>
+        s.dir === 0
+          ? nothing
+          : this.beads(
+              s.dir > 0
+                ? `M${x} ${s.y0} L${x} ${s.y1}`
+                : `M${x} ${s.y1} L${x} ${s.y0}`,
+              color,
+              s.w,
+            ),
+      )}`;
+  }
+
+  /** A flow line in the new houses: glow, line and moving beads; an arrow at the end if asked. */
+  private bead(pts: Pt[], color: string, power: number, arrow = false) {
+    if (power < 10) return nothing;
+    const d = `M${pts.map((p) => p.join(" ")).join(" L")}`;
+    return svg`<path d=${d} class="nglow" style=${`stroke:${color}`}></path>
+      <path d=${d} class="ncore" style=${`stroke:${color}`}></path>
+      ${this.beads(d, color, power)}
+      ${arrow ? this.arrowAt(pts, color) : nothing}`;
+  }
+
+  private beads(d: string, color: string, power: number) {
+    const dur = `animation-duration:${Math.max(0.5, 1.7 - power / 3000).toFixed(2)}s`;
+    return svg`<path d=${d} class="bead" style=${`stroke:${color};${dur}`}></path>
+      <path d=${d} class="beadc" style=${dur}></path>`;
+  }
+
+  /** An arrow head at the end of a line, pointing along its last piece. */
+  private arrowAt(pts: Pt[], color: string) {
+    const [a, b] = pts.slice(-2);
+    const ang = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+    return svg`<path d="M0 0 l-14 -8 l0 16 z" style=${`fill:${color}`}
+      transform=${`translate(${b[0]} ${b[1]}) rotate(${ang.toFixed(1)})`}></path>`;
+  }
+
+  /** A connection point: white with a ring in the line's colour. */
+  private joint(p: Pt, color: string) {
+    return svg`<circle cx=${p[0]} cy=${p[1]} r="7" class="joint" style=${`stroke:${color}`}></circle>`;
+  }
+
+  /** A label on a line, centred on `at`. */
+  private pill(at: Pt, text: string, color: string) {
+    const w = text.length * 10.4 + 30;
+    return svg`<g class="pill">
+      <rect x=${at[0] - w / 2} y=${at[1] - 15} width=${w} height="30" rx="15" style=${`stroke:${color}`}></rect>
+      <text x=${at[0]} y=${at[1] + 6.5}>${text}</text>
+    </g>`;
+  }
+
+  /** A box in the new houses: a small caption, an optional large value and lines. */
+  private nbox(
+    b: Box,
+    o: {
+      cap: string;
+      color: string;
+      lines: (TemplateResult | string)[];
+      big?: string;
+      accent?: boolean;
+      frame?: boolean;
+      off?: boolean;
+      extra?: TemplateResult;
+      cls?: string;
+    },
+  ): TemplateResult {
+    const [x, y, w, h] = b;
+    const style = `left:${(x / NW) * 100}%;top:${(y / NH) * 100}%;width:${(w / NW) * 100}%;min-height:${(h / NH) * 100}%;--c:${o.color}`;
+    const cls = `nbox${o.accent ? " accent" : ""}${o.frame ? " frame" : ""}${o.off ? " off" : ""}${o.cls ? ` ${o.cls}` : ""}`;
+    return html`<div class=${cls} style=${style}>
+      <span class="cap">${o.cap}</span>
+      ${o.big !== undefined ? html`<span class="big">${o.big}</span>` : nothing}
+      ${o.lines.map((l) => html`<span class="nl">${l}</span>`)}
+      ${o.extra ? html`<span class="nl">${o.extra}</span>` : nothing}
     </div>`;
   }
 
@@ -524,7 +953,7 @@ export class ZephyrHouse extends LitElement {
           const color = k === "home" ? c : it[k].color;
           // With a Huis spot the box only points at its spot; the flow runs on the hub lines.
           return hub
-            ? svg`<path d=${`M${pts.map((q) => q.join(" ")).join(" L")}`} class="pointer" stroke=${color}></path>${this.dot(end, color)}`
+            ? svg`<path d=${`M${pts.map((q) => q.join(" ")).join(" L")}`} class="pointer" style=${`stroke:${color}`}></path>${this.dot(end, color)}`
             : svg`${this.line(pts, color, it[k].power)}${this.dot(end, color)}`;
         })}
       </svg>
@@ -654,18 +1083,18 @@ export class ZephyrHouse extends LitElement {
     const d = `M${pts.map((p) => p.join(" ")).join(" L")}`;
     // No power, no line: a faint line over the picture only looks blurred (Bjorn 27-11).
     if (power < 10) return nothing;
-    return svg`<path d=${d} class="glow" stroke=${color}></path>
-      <path d=${d} class="core" stroke=${color}></path>
+    return svg`<path d=${d} class="glow" style=${`stroke:${color}`}></path>
+      <path d=${d} class="core" style=${`stroke:${color}`}></path>
       <path d=${d} class="dots" style=${`animation-duration:${Math.max(0.5, 1.6 - power / 3000)}s`}></path>`;
   }
 
   private dot(p: Pt, color: string) {
-    return svg`<circle cx=${p[0]} cy=${p[1]} r="6" fill=${color}></circle>`;
+    return svg`<circle cx=${p[0]} cy=${p[1]} r="6" style=${`fill:${color}`}></circle>`;
   }
 
   /** An arrow pointing right with its tip at (x, y). */
   private arrow(x: number, y: number, color: string) {
-    return svg`<path d=${`M${x} ${y} l-16 -9 l0 18 z`} fill=${color}></path>`;
+    return svg`<path d=${`M${x} ${y} l-16 -9 l0 18 z`} style=${`fill:${color}`}></path>`;
   }
 
   private bar(
@@ -743,7 +1172,11 @@ export class ZephyrHouse extends LitElement {
   }
 
   /** On a phone the boxes on the picture are too small: the consumers as a list below. */
-  private list(devices: HouseDevice[], rest: number): TemplateResult {
+  private list(
+    devices: HouseDevice[],
+    rest: number,
+    storeys: 2 | 3,
+  ): TemplateResult {
     const shown = devices.filter((d) => d.shown);
     return html`<ul class="list">
       ${shown.map(
@@ -751,7 +1184,9 @@ export class ZephyrHouse extends LitElement {
           html`<li>
             <span
               >${d.name ?? this.tr(`stroom.kind_${d.kind}`)}
-              <small>${this.tr(`settings.floors.${d.floor}`)}</small></span
+              <small
+                >${this.tr(`settings.floors.${shownFloor(d.floor, storeys)}`)}</small
+              ></span
             ><b>${this.w(d.power_w)}</b>
           </li>`,
       )}
@@ -770,11 +1205,11 @@ export class ZephyrHouse extends LitElement {
       container: house / inline-size;
       max-width: var(--house-max);
       margin: 0 auto;
-      background: #0f1d27;
-      border: 1px solid #1f3342;
+      background: var(--z-card);
+      border: 1px solid var(--z-border);
       border-radius: 18px;
       padding: 14px;
-      color: #eef2f5;
+      color: var(--z-text);
       font-family: var(--z-font);
       /* Next to the today cards: as high as they are, the bar at the bottom. */
       box-sizing: border-box;
@@ -920,8 +1355,8 @@ export class ZephyrHouse extends LitElement {
     }
     .bar {
       display: flex;
-      background: #0f1f2a;
-      border: 1px solid #23435a;
+      background: var(--h-box);
+      border: 1px solid var(--z-border);
       border-radius: 16px;
       padding: 14px 6px;
     }
@@ -931,7 +1366,7 @@ export class ZephyrHouse extends LitElement {
       flex-direction: column;
       align-items: center;
       text-align: center;
-      border-right: 1px solid #23435a;
+      border-right: 1px solid var(--z-border);
       padding: 0 6px;
       min-width: 0;
     }
@@ -959,7 +1394,7 @@ export class ZephyrHouse extends LitElement {
       font-size: 18px;
     }
     .bs {
-      color: #9fb3c2;
+      color: var(--z-muted);
       font-size: 12px;
     }
     .list {
@@ -972,15 +1407,154 @@ export class ZephyrHouse extends LitElement {
       display: flex;
       justify-content: space-between;
       padding: 7px 2px;
-      border-bottom: 1px solid #23435a;
+      border-bottom: 1px solid var(--z-border);
     }
     .list small {
-      color: #9fb3c2;
+      color: var(--z-muted);
+    }
+    /* The default and alternative house (OPDRACHT-ui-huisplaatje-isometrisch). */
+    .nglow,
+    .busglow {
+      fill: none;
+      stroke-width: 15;
+      opacity: 0.16;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .busglow {
+      stroke-width: 19;
+    }
+    .ncore {
+      fill: none;
+      stroke-width: 5.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .buscore {
+      fill: none;
+      stroke-width: 9;
+      stroke-linecap: round;
+    }
+    .busshine {
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+      opacity: 0.55;
+    }
+    .bead,
+    .beadc {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 0.01 30;
+      animation: bead 1.4s linear infinite;
+    }
+    .bead {
+      stroke-width: 11;
+    }
+    .beadc {
+      stroke: #fff;
+      stroke-width: 6;
+    }
+    @keyframes bead {
+      from {
+        stroke-dashoffset: 30;
+      }
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+    .joint {
+      fill: #fff;
+      stroke-width: 3;
+    }
+    .pointer2 {
+      fill: none;
+      stroke: var(--z-muted);
+      stroke-width: 1.4;
+      stroke-dasharray: 4 4;
+      opacity: 0.8;
+    }
+    .pdot {
+      fill: var(--z-muted);
+    }
+    .pill rect {
+      fill: var(--h-pill);
+      stroke-width: 1.6;
+    }
+    .pill text {
+      font: 600 18px var(--z-font);
+      fill: var(--z-text);
+      text-anchor: middle;
+    }
+    .nbox {
+      position: absolute;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15cqw;
+      padding: 0.8cqw 1cqw 0.8cqw 1.3cqw;
+      background: var(--h-box);
+      border: 1px solid var(--z-border);
+      border-radius: 0.9cqw;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      color: var(--z-text);
+      font-size: max(11px, 1.05cqw);
+      line-height: 1.35;
+      overflow: hidden;
+    }
+    .nbox.accent::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 16%;
+      bottom: 16%;
+      width: max(3px, 0.3cqw);
+      border-radius: 3px;
+      background: var(--c);
+    }
+    .nbox.frame {
+      border: 2px solid var(--c);
+    }
+    .nbox.off {
+      opacity: 0.6;
+    }
+    .nbox .cap {
+      font-size: max(11px, 0.85cqw);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--z-muted);
+    }
+    .nbox .big {
+      font-size: max(14px, 1.45cqw);
+      font-weight: 700;
+    }
+    .nbox .nl {
+      font-weight: 600;
+    }
+    .nbox .nl .dim,
+    .nbox .nl.dim {
+      color: var(--z-muted);
+      font-weight: 500;
+    }
+    .nbox.hdr .nl {
+      font-size: max(11px, 0.95cqw);
+    }
+    .nbox .small {
+      font-size: max(11px, 0.85cqw);
+    }
+    .nbox .strong {
+      font-size: max(12px, 1.2cqw);
     }
     @container house (max-width: 680px) {
       .stage > svg,
       .boxes {
         display: none;
+      }
+      /* Without lines and boxes the empty right part of the new houses is not needed. */
+      .stage.new img {
+        width: 150%;
       }
       .list {
         display: block;

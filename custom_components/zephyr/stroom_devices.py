@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 STORAGE_VERSION = 1
 AIRCO = "airco"
 # Items of the house picture: each can get a box and a spot on an own picture.
+# Built-in pictures: the default house (3 storeys), the alternative house (2 storeys), the old house.
+HOUSE_STYLES = ("default", "alt", "old")
 PICTURE_ITEMS = ("roof", "shed_solar", "battery", "grid", "ev", "home", "attic", "first", "ground", "shed")
 PICTURE_MAX_BYTES = 3_000_000
 _MAGIC = ((b"\xff\xd8\xff", "image/jpeg"), (b"\x89PNG", "image/png"))
@@ -113,13 +115,14 @@ class StroomDevices:
 
     @staticmethod
     def _empty_picture() -> dict[str, Any]:
-        return {"custom": False, "version": 0, "mime": None, "width": 0, "height": 0, "items": {}, "hidden": []}
+        return {"custom": False, "style": "default", "version": 0, "mime": None, "width": 0, "height": 0, "items": {}, "hidden": []}
 
     def _clean_picture(self, raw: Any) -> dict[str, Any]:
         out = self._empty_picture()
         if not isinstance(raw, dict):
             return out
         out["version"] = int(raw.get("version") or 0)
+        out["style"] = raw.get("style") if raw.get("style") in HOUSE_STYLES else "default"
         out["mime"] = raw.get("mime") if raw.get("mime") in ("image/jpeg", "image/png", "image/webp") else None
         out["width"], out["height"] = int(raw.get("width") or 0), int(raw.get("height") or 0)
         out["custom"] = bool(raw.get("custom")) and out["mime"] is not None
@@ -144,6 +147,7 @@ class StroomDevices:
         p = self.picture
         return {
             "custom": p["custom"],
+            "style": p["style"],
             "has_image": p["mime"] is not None,
             "version": p["version"],
             "width": p["width"],
@@ -170,9 +174,11 @@ class StroomDevices:
             handle.write(data)
         os.replace(tmp, self.picture_path)
 
-    async def async_set_picture(self, custom: bool, items: dict[str, Any], hidden: list[str]) -> None:
-        """Own picture on or off, and where each item's box and spot are (fractions of the picture)."""
+    async def async_set_picture(self, custom: bool, items: dict[str, Any], hidden: list[str], style: str | None = None) -> None:
+        """Own picture on or off, which built-in house, and where each item's box and spot are (fractions of the picture)."""
         self.picture["custom"] = custom and self.picture["mime"] is not None
+        if style in HOUSE_STYLES:
+            self.picture["style"] = style
         self.picture["items"] = self._clean_items(items)
         self.picture["hidden"] = [x for x in hidden if x in PICTURE_ITEMS]
         await self._save()
@@ -180,7 +186,7 @@ class StroomDevices:
     async def async_clear_picture(self) -> None:
         """Remove the own picture; the default house returns."""
         await self.hass.async_add_executor_job(self._remove_picture)
-        self.picture = {**self._empty_picture(), "version": self.picture["version"] + 1}
+        self.picture = {**self._empty_picture(), "style": self.picture["style"], "version": self.picture["version"] + 1}
         await self._save()
 
     def _remove_picture(self) -> None:

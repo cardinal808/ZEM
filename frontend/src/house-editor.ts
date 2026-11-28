@@ -7,7 +7,14 @@ import { element } from "./define";
 import { LitElement, css, html, nothing, svg, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 
-import { COLORS, ITEM_KEYS, OWN_BOX_W, ownLine, type ItemKey } from "./house";
+import {
+  COLORS,
+  ITEM_KEYS,
+  OWN_BOX_W,
+  ownLine,
+  type HouseStyle,
+  type ItemKey,
+} from "./house";
 import { t, type Lang } from "./i18n";
 import type { HousePicture } from "./stroom";
 
@@ -78,9 +85,12 @@ export class ZephyrHouseEditor extends LitElement {
   @property({ attribute: false }) sign?: (path: string) => Promise<string>;
   /** Asks the panel to load the settings (and so this picture) again. */
   @property({ attribute: false }) changed?: () => Promise<void>;
+  /** URL of the panel's files (the built-in house pictures). */
+  @property() base = "";
 
   @state() private draft: {
     custom: boolean;
+    style: HouseStyle;
     items: Partial<Record<string, Place>>;
     hidden: string[];
   } | null = null;
@@ -108,6 +118,7 @@ export class ZephyrHouseEditor extends LitElement {
     return (
       this.draft ?? {
         custom: !!p?.custom,
+        style: p?.style ?? "default",
         items: p?.items ?? {},
         hidden: p?.hidden ?? [],
       }
@@ -130,27 +141,44 @@ export class ZephyrHouseEditor extends LitElement {
     const edit = this.canEdit && !this.busy;
     return html`<h3>${this.tr("picture.title")}</h3>
       <div class="choice" role="radiogroup">
-        <button
-          type="button"
-          role="radio"
-          aria-checked=${!cur.custom}
-          class=${cur.custom ? "" : "on"}
-          ?disabled=${!edit}
-          @click=${() => this.patch({ custom: false })}
-        >
-          ${this.tr("picture.default")}
-        </button>
+        ${(["default", "alt", "old"] as HouseStyle[]).map((st) => {
+          const on = !cur.custom && cur.style === st;
+          const img =
+            st === "old" ? "house.webp" : `house-${st === "alt" ? 2 : 3}.webp`;
+          return html`<button
+            type="button"
+            role="radio"
+            aria-checked=${on}
+            class=${on ? "opt on" : "opt"}
+            ?disabled=${!edit}
+            @click=${() => this.patch({ custom: false, style: st })}
+          >
+            <span
+              class=${st === "old" ? "thumb old" : "thumb"}
+              style=${`background-image:url(${this.base}/${img})`}
+            ></span>
+            <b>${this.tr(`picture.${st}`)}</b>
+            <small>${this.tr(`picture.${st}_sub`)}</small>
+          </button>`;
+        })}
         <button
           type="button"
           role="radio"
           aria-checked=${cur.custom}
-          class=${cur.custom ? "on" : ""}
+          class=${cur.custom ? "opt on" : "opt"}
           ?disabled=${!edit}
           @click=${() => (p?.has_image ? this.patch({ custom: true }) : this.pickFile())}
         >
-          ${this.tr("picture.own")}
+          <span
+            class="thumb up"
+            style=${p?.has_image && this.url ? `background-image:url(${this.url})` : ""}
+            >${p?.has_image ? "" : "+"}</span
+          >
+          <b>${this.tr("picture.own")}</b>
+          <small>${this.tr("picture.own_sub")}</small>
         </button>
       </div>
+      ${!cur.custom && cur.style === "alt" ? html`<p class="muted">${this.tr("picture.alt_note")}</p>` : nothing}
       <p class="muted">${this.tr("picture.note")}</p>
       ${this.busy ? html`<p class="muted" role="status">${this.tr("picture.uploading")}</p>` : nothing}
       ${this.error ? html`<p class="err" role="alert">${this.tr("picture.error", { msg: this.error })}</p>` : nothing}
@@ -212,8 +240,8 @@ export class ZephyrHouseEditor extends LitElement {
             if (!place?.box || !place.point) return nothing;
             const pts = ownLine(place.box, place.point, w, h);
             const end = pts[pts.length - 1];
-            return svg`<path d=${`M${pts.map((q) => q.join(" ")).join(" L")}`} stroke=${COLOR[k]} stroke-width=${w / 300} fill="none"></path>
-              <circle cx=${end[0]} cy=${end[1]} r=${w / 150} fill=${COLOR[k]}></circle>`;
+            return svg`<path d=${`M${pts.map((q) => q.join(" ")).join(" L")}`} style=${`stroke:${COLOR[k]}`} stroke-width=${w / 300} fill="none"></path>
+              <circle cx=${end[0]} cy=${end[1]} r=${w / 150} style=${`fill:${COLOR[k]}`}></circle>`;
           })}
         </svg>
         ${shown.map((k) => {
@@ -281,6 +309,7 @@ export class ZephyrHouseEditor extends LitElement {
   private patch(
     p: Partial<{
       custom: boolean;
+      style: HouseStyle;
       items: Partial<Record<string, Place>>;
       hidden: string[];
     }>,
@@ -356,6 +385,7 @@ export class ZephyrHouseEditor extends LitElement {
       await this.call({
         type: "zephyr/house/picture",
         custom: d.custom,
+        style: d.style,
         items: d.items,
         hidden: d.hidden,
       });
@@ -406,7 +436,58 @@ export class ZephyrHouseEditor extends LitElement {
       color: var(--z-danger, #c62828);
       font-size: 13px;
     }
-    .choice,
+    .choice {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 700px) {
+      .choice {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    .choice .opt {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      padding: 8px;
+      border-radius: 12px;
+      text-align: left;
+      background: var(--z-bg);
+    }
+    .choice .opt.on {
+      border: 2px solid var(--z-charge);
+      padding: 7px;
+      background: var(--z-info-bg);
+      color: var(--z-text);
+    }
+    .choice .opt b {
+      font-size: 14px;
+    }
+    .choice .opt small {
+      color: var(--z-muted);
+      font-size: 12px;
+    }
+    .thumb {
+      align-self: stretch;
+      height: 110px;
+      margin-bottom: 4px;
+      border-radius: 8px;
+      background: var(--z-track) 30% 58% / 165% no-repeat;
+    }
+    .thumb.old {
+      background-size: cover;
+    }
+    .thumb.up {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: var(--z-muted);
+      border: 1px dashed var(--z-border);
+      background-size: cover;
+    }
     .row,
     .chips {
       display: flex;

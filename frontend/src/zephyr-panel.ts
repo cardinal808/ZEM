@@ -945,6 +945,7 @@ export class ZephyrPanel extends LitElement {
         .saveHouse=${this.saveHouse}
         .houseCall=${this.houseCall}
         .sign=${this.signPath}
+        .base=${this.base}
         .reload=${() => this.loadSettings()}
         .openGroup=${this.openGroup}
         .appliances=${this.appliancesView}

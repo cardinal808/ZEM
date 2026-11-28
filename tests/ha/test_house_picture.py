@@ -43,6 +43,7 @@ async def test_upload_place_serve_and_remove(
     _set_prices(hass)
     entry = await _setup(hass, fake_sets, freezer, (9, 0), price_entity=PRICE)
     assert stroom_view(entry)["picture"] is None
+    assert stroom_view(entry)["house_style"] == "default"  # the 3-storey house
     # A fresh token: the fixture's would have expired while the clock moved to 09:00.
     refresh = await hass.auth.async_create_refresh_token(hass_admin_user, "https://example.com/app")
     auth = {"Authorization": f"Bearer {hass.auth.async_create_access_token(refresh)}"}
@@ -72,13 +73,17 @@ async def test_upload_place_serve_and_remove(
     assert response.status == 200 and response.content_type == "image/png"
     assert await response.read() == PNG
 
-    await client.send_json_auto_id({"type": "zephyr/house/picture", "custom": False, "items": items})
+    await client.send_json_auto_id({"type": "zephyr/house/picture", "custom": False, "style": "alt", "items": items})
     assert (await client.receive_json())["success"]
-    assert stroom_view(entry)["picture"] is None  # default house again, the upload stays
+    assert stroom_view(entry)["picture"] is None  # a built-in house again, the upload stays
+    assert stroom_view(entry)["house_style"] == "alt"
+    await client.send_json_auto_id({"type": "zephyr/house/picture", "custom": False, "style": "roof"})
+    assert not (await client.receive_json())["success"]  # unknown house
     assert settings_view(hass, entry)["house_picture"]["has_image"] is True
 
     path = entry.runtime_data.house.picture_path
     await client.send_json_auto_id({"type": "zephyr/house/picture/delete"})
     assert (await client.receive_json())["result"]["has_image"] is False
     assert not os.path.exists(path)
+    assert stroom_view(entry)["house_style"] == "alt"  # removing the upload keeps the chosen house
     assert (await http.get("/api/zephyr/house_picture", headers=auth)).status == 404

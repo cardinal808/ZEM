@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.99 — New default house on Stroom (isometric, 3 or 2 storeys)
+- **Stroom:** a new drawn, fictional house with a transparent background (`frontend/scripts/house_gen.py`, built to `house-3.webp` and `house-2.webp` by `house_build.py`). Choice in *Instellingen → Apparaten → Plaatje op Stroom*: **Standaard huis** (3 storeys, the default), **Alternatief huis** (2 storeys), **Oud huis** (the picture until now) or **Eigen afbeelding**, as picture buttons (`picture.style`, `stroom.house_style`). In the alternative house what is on the *Zolder* shows on the *1e verdieping* (the stored floor stays); the floor choice then has no *Zolder*.
+- **Lines as in the ontwerpchat mock** (OPDRACHT-ui-huisplaatje-isometrisch): battery at the top and shed panels below it (no crossing), roof panels straight to the main line, the grid from the *Net* box, branches with an arrow to the floors with measured consumers, *Overig* into the house at the meter cupboard, the charge point level and then straight up. Labels as pills on the lines; boxes with a small caption and a colour bar.
+- **Dots on the main line per piece** (`busSegments`): each piece between two connections runs the way its power goes (sum of everything above it), so charging the battery or a grid import never runs the wrong way.
+- **Follows the HA theme:** light card in light mode (colours of the mock), in dark mode the panel's own card colour (no blue background) with the existing line colours. Line colours are CSS variables (`--h-*` in `theme.ts`). Phone: the house without the empty right part, the list below as before.
+- Own picture (0.8.58) unchanged; removing it keeps the chosen built-in house.
+- Tests: `busSegments` (the mock, sun only, battery + grid, export, below 10 W), floor boxes on their branches, `shownFloor`, texts; HA: `house_style` default/alt and an unknown style refused.
+
 ### 0.8.97 — Built-in battery named after its set
 - **Accu:** the built-in battery is called after the set's model without *SolarFlow* (*2400 Pro*, *AIO 2400*) instead of *Ingebouwd*, in the pack cards and *In het kort*. Unknown model: *Ingebouwd* as before (`builtInName`).
 - Tests: `packName` with the set model, `builtInName`.
