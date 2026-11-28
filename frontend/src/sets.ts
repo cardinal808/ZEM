@@ -64,9 +64,25 @@ export interface SetsView {
   activity_24h: Activity[];
 }
 
-/** Display name of a pack: "Ingebouwd", "AB3000L 2" (number only when the model occurs more than once). */
-export function packName(pack: Pack, packs: Pack[], lang: Lang): string {
-  if (pack.built_in) return t(lang, "sets.built_in");
+/** Short name of a set's own model for its built-in battery: "SolarFlow 2400 Pro" → "2400 Pro". */
+export function builtInName(
+  setModel: string | null | undefined,
+): string | null {
+  const name = (setModel ?? "").replace(/^SolarFlow\s+/i, "").trim();
+  return name || null;
+}
+
+/**
+ * Display name of a pack: "2400 Pro" (the built-in battery, after its set; "Ingebouwd" without a
+ * model), "AB3000L 2" (number only when the model occurs more than once).
+ */
+export function packName(
+  pack: Pack,
+  packs: Pack[],
+  lang: Lang,
+  setModel?: string | null,
+): string {
+  if (pack.built_in) return builtInName(setModel) ?? t(lang, "sets.built_in");
   if (!pack.model) return t(lang, "sets.pack", { n: pack.index + 1 });
   const same = packs.filter((p) => p.model === pack.model).length;
   return same > 1 ? `${pack.model} ${pack.number}` : pack.model;
@@ -252,6 +268,7 @@ export class ZephyrSets extends LitElement {
 
   private renderSummary(sum: Summary, sets: SetInfo[]): TemplateResult {
     const packs = sets.flatMap((s) => s.packs);
+    const modelOf = (p: Pack) => sets.find((s) => s.packs.includes(p))?.model;
     let line: string;
     if (sum.offline.length)
       line = this.tr("sets.offline_line", {
@@ -261,17 +278,27 @@ export class ZephyrSets extends LitElement {
       });
     else if (sum.imbalance && sum.imbalance.days >= 3)
       line = this.tr("sets.line_persistent", {
-        pack: packName(sum.imbalance.pack, packs, this.uiLang),
+        pack: packName(
+          sum.imbalance.pack,
+          packs,
+          this.uiLang,
+          modelOf(sum.imbalance.pack),
+        ),
         days: sum.imbalance.days,
       });
     else if (sum.now?.status === "imbalance")
       line = this.tr("sets.line_now", {
-        pack: packName(sum.now.pack, packs, this.uiLang),
+        pack: packName(sum.now.pack, packs, this.uiLang, modelOf(sum.now.pack)),
         mv: sum.now.mv,
       });
     else if (sum.imbalance)
       line = this.tr("sets.line_recent", {
-        pack: packName(sum.imbalance.pack, packs, this.uiLang),
+        pack: packName(
+          sum.imbalance.pack,
+          packs,
+          this.uiLang,
+          modelOf(sum.imbalance.pack),
+        ),
         day: day(
           `${sum.imbalance.lastDay}T12:00:00Z`,
           this.locale,
@@ -391,7 +418,7 @@ export class ZephyrSets extends LitElement {
           const status = p.cell_status;
           return html`<div class="pack ${s.online ? "" : "off"}">
             <div class="ph">
-              <strong>${packName(p, s.packs, this.uiLang)}</strong
+              <strong>${packName(p, s.packs, this.uiLang, s.model)}</strong
               ><span class="muted"
                 >${p.capacity_kwh ? kwh(p.capacity_kwh, this.locale, 2) : this.tr("sets.unknown_type")}</span
               >

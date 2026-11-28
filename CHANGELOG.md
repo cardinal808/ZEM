@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.97 — Built-in battery named after its set
+- **Accu:** the built-in battery is called after the set's model without *SolarFlow* (*2400 Pro*, *AIO 2400*) instead of *Ingebouwd*, in the pack cards and *In het kort*. Unknown model: *Ingebouwd* as before (`builtInName`).
+- Tests: `packName` with the set model, `builtInName`.
+
 ### 0.8.96 — Forecast band bare like the expected price
 - **Fix** (OPDRACHT-band-prijsverwachting): ha-jeroen-nl gives `market` bare but `low` and `high` **all-in** (its `_row`: `low=all_in(p.low)`). ZEPHYR added its own tariff on top once more: expected € 0.47, band € 0.66–0.82 (28-11). The reader now turns an all-in band back into bare prices on the line through the sensor's (`market`, `price`) pairs, so `low ≤ market ≤ high` and *laag* plans with the real p10 again.
 - **Check in the reader:** a band that still does not hold `market` is dropped for that quarter (`market` as `low` and `high`), with a note in `planner.price_forecast.issues`; `band_all_in` counts the converted quarters.
