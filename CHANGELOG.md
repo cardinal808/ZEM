@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 0.8.74 — Live control: resume does not give up, the reason for shadow is kept
+- **Bug (28-11):** after a restart ZEPHYR tried to go live again for 10 minutes. When the P1 or a set was not there in time it gave up: the switch stayed off and that state was saved, so the next restart did not resume either. Now:
+  - the switch keeps what the user wants (`wanted_live`) apart from its state, over restarts; a start that cannot go live yet keeps that wish;
+  - after 10 minutes the repair issue `live_not_resumed` comes as before, but ZEPHYR keeps trying every 30 s and goes live by itself; the issue then disappears.
+  - Switching off by hand or a second controller (L4) turns the wish off; those stay off.
+- **Why live stopped, kept over restarts:** the last 20 switches between live and shadow with time and reason (`user`, `resumed`, `unload`, `second_controller` with the limits sent and reported, `not_resumed` with the blockers, `ha_restart`) in Store `zephyr.<entry>.live`. In diagnostics under `control.live.history` (with `wanted`), and as attributes `last_shadow_at`, `last_shadow_reason`, `wanted_live` and `resuming` of `switch.zephyr_control`.
+- Tests: resume after more than 10 minutes, the wish over a restart (both ways), the history over a restart, the reason for a second controller.
+
 ### 0.8.72 — Diagnose: tidier layout
 - **Top:** one wide bar with *Diagnose downloaden* and *Kostenlogboek exporteren*.
 - **Planner:** *Plan tegen werkelijkheid* and *Verbruiksprofiel* side by side and equally high; *Apparaatprofielen* below over the full width.

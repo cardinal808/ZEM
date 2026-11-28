@@ -95,6 +95,8 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
                     str(control.runtime.coordinators[key].number): w.stats.snapshot(time.monotonic()) for key, w in control.writers.items()
                 },
                 "test": control.test,
+                "wanted": control.wanted_live,
+                "history": list(control.live_history),
             },
             "price": None
             if control.price_entity is None
