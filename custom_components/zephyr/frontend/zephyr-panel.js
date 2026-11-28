@@ -8200,8 +8200,8 @@ var Vn = [
       ></zephyr-house>
       ${e ? this.renderRoutes(e.today) : b`<section class="card skeleton"></section>`}
       ${e && (e.devices?.length || e.airco_set) ? this.renderDevices(e) : C}
-      ${e ? this.renderZero(e) : C}
       ${e?.regulation ? this.renderRegulation(e.regulation, e.live) : C}
+      ${e ? this.renderZero(e) : C}
     </div>`;
 	}
 	renderZero(e) {

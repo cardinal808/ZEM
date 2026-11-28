@@ -237,8 +237,8 @@ export class ZephyrStroom extends LitElement {
       ></zephyr-house>
       ${v ? this.renderRoutes(v.today) : html`<section class="card skeleton"></section>`}
       ${v && (v.devices?.length || v.airco_set) ? this.renderDevices(v) : nothing}
-      ${v ? this.renderZero(v) : nothing}
       ${v?.regulation ? this.renderRegulation(v.regulation, v.live) : nothing}
+      ${v ? this.renderZero(v) : nothing}
     </div>`;
   }
 

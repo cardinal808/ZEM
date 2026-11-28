@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.8.70 — Stroom: *Regeling* and *Nul op de meter* swapped
+- *Regeling · laatste 10 minuten* now comes before *Nul op de meter vandaag*: on a wide panel the regulation chart gets the wide column under the house picture (it was hard to read in the narrow one), *Nul op de meter* moves to the narrow column. On a phone *Regeling* comes first.
+
 ### 0.8.69 — Panel: card Nu without double figures, version in the header, spread vs. the mean
 - **Card *Nu*:** below the action the flows now, from one measurement and in the same words as on *Stroom* (*Accu 440 W → huis · Net 10 W → huis*). The separate *Net* line is gone (it came from a later reading than the control's sentence, so two grid figures could differ). The control's sentence shows only when it adds something (full/empty, blocked, P1 problem, temperature, calibrating …); problems in the warning colour. Sentences that repeat the action (*Levert … aan het huis*, *Laadt … uit zonne-overschot*, *Plan: …*) are hidden.
 - **Header:** *Stuurt* is now *Actief* (EN *Active*). The clock is replaced by the running version (`panel.py` passes it in the panel config). When HACS has a newer version (its update entity, found by the release URL), admins get a button *Update x*: after confirming, `update.install`; with a link to the release notes. Once installed but not yet running: *Herstart nodig* (restart HA after confirming). Others see the version and *update x* as text.
