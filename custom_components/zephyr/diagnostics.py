@@ -148,6 +148,11 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ZephyrC
         }
     solar = runtime.solar.diagnostics() if runtime.solar is not None and runtime.solar.enabled else None
     costs = runtime.costs.diagnostics() if runtime.costs is not None else None
+    if costs is not None and runtime.costs is not None and runtime.costs.price_entity:
+        try:
+            costs["price_check"] = await runtime.costs.async_price_check()
+        except Exception as err:
+            costs["price_check"] = {"error": f"{type(err).__name__}: {err}"}
     planner = runtime.planner.diagnostics() if runtime.planner is not None else None
     from .foreign import foreign_entities
 

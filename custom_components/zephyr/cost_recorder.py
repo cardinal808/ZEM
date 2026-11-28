@@ -1150,6 +1150,36 @@ class CostRecorder:
             }
         return out
 
+    def energy_balance(self, days: int = 7) -> list[dict[str, Any]]:
+        """Per day: charged × η − delivered against the change of the battery's energy (diagnostics)."""
+        from .core.cost_checks import energy_balance
+
+        tz = dt_util.get_default_time_zone()
+        first = (dt_util.now().date() - timedelta(days=days - 1)).isoformat()
+        records = [r for r in self.current if dt_util.as_local(datetime.fromisoformat(r["start"])).date().isoformat() >= first]
+        totals = self.runtime.totals()
+        eta_in = eta_out = 0.93
+        planner = self.runtime.planner
+        battery = (planner.inputs or {}).get("battery") if planner is not None else None
+        if isinstance(battery, Mapping):
+            eta_in, eta_out = float(battery.get("eta_in", eta_in)), float(battery.get("eta_out", eta_out))
+        return energy_balance(records, totals.capacity_kwh, eta_in, eta_out, tz)
+
+    async def async_price_check(self, days: int = 2) -> dict[str, Any]:
+        """Quarter prices of the last days against EnergyZero's hour prices (diagnostics)."""
+        from .core.cost_checks import price_check
+
+        tz = dt_util.get_default_time_zone()
+        today = dt_util.now().date()
+        first = today - timedelta(days=days - 1)
+        records = [r for r in self.current if dt_util.as_local(datetime.fromisoformat(r["start"])).date() >= first]
+        key = f"check@{dt_util.utcnow().strftime('%Y-%m-%dT%H')}"
+        if key not in self._ez_cache:
+            self._ez_cache = {k: v for k, v in self._ez_cache.items() if not k.startswith("check@")}
+            self._ez_cache[key], _failed = await self._energyzero(first, today + timedelta(days=1), tz)
+        hourly = self._ez_cache[key]
+        return {"hours_compared": len(hourly), "deviations": price_check(records, hourly)}
+
     def diagnostics(self) -> dict[str, Any]:
         return {
             "tariffs": self.tariffs.diagnostics(),
@@ -1167,6 +1197,7 @@ class CostRecorder:
             "last_quarters": self.current[-8:],
             "gap_corrections": self._corrections_log[-10:],
             "fill_by_day": self._fill_by_day(7),
+            "energy_balance": self.energy_balance(7),
             "missed_quarters": self._gap_log[-10:],
             "history_filled": self.repaired,
             "last_closed": None if self.last_closed is None else self.last_closed.isoformat(),
