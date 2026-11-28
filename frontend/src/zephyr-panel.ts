@@ -50,7 +50,7 @@ import type { ExportResult } from "./diagnostics";
 import { actionFill, theme } from "./theme";
 import { flows } from "./flow";
 import { flowParts } from "./house";
-import { nowNote, versionState, zephyrUpdate, type UpdateState } from "./now";
+import { nowNote, p1Display, versionState, zephyrUpdate, type UpdateState } from "./now";
 import type {
   HomeAssistant,
   Now,
@@ -96,6 +96,7 @@ export class ZephyrPanel extends LitElement {
   @state() private planView?: PlanView;
   @state() private setsView?: SetsView;
   @state() private batteryDays?: BatteryDaysView;
+  private batteryDaysAt = 0;
   @state() private settingsView?: SettingsView;
   @state() private period: Period = storedPeriod();
   @state() private eventsView?: EventsView;
@@ -244,6 +245,18 @@ export class ZephyrPanel extends LitElement {
   }
 
   /** Fetch prices and plan when there is a new plan (or when ``force``). */
+  /** For the RTE on the card Accu; changes slowly, so at most every 15 minutes. */
+  private async loadBatteryDays(): Promise<void> {
+    if (!this.hass || Date.now() - this.batteryDaysAt < 15 * 60_000) return;
+    this.batteryDaysAt = Date.now();
+    try {
+      this.batteryDays = await this.hass.callWS<BatteryDaysView>({ type: "zephyr/battery_days" });
+      this.batteryDaysAt = Date.now();
+    } catch {
+      // Older backend or not loaded yet: no RTE.
+    }
+  }
+
   private async loadPlan(force = false): Promise<void> {
     const now = this.now;
     if (!this.hass || !now?.price_entity || this.planBusy) {
@@ -613,6 +626,7 @@ export class ZephyrPanel extends LitElement {
       this.clockMs = Date.now();
       void this.loadPlan();
       void this.loadAppliances();
+      void this.loadBatteryDays();
     } else if (event.type === "unloaded") {
       // The installation reloads; the server already closed this subscription.
       this.unsubscribe = undefined;
@@ -1130,8 +1144,11 @@ export class ZephyrPanel extends LitElement {
         <span class="dot" style="background:${actionFill(action)}"></span
         >${this.tr("now.title")}
       </div>
-      <div class="big">
-        ${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}
+      <div class="now-top">
+        <div class="big">
+          ${now.action ? this.tr(`action.${action}`) + power : this.tr("now.waiting")}
+        </div>
+        ${now.grid_w !== null ? this.renderP1(now.grid_w) : nothing}
       </div>
       ${
         parts.length
@@ -1189,6 +1206,14 @@ export class ZephyrPanel extends LitElement {
         }</span
       >
     </p>`;
+  }
+
+  private renderP1(gridW: number): TemplateResult {
+    const p = p1Display(gridW, this.locale);
+    return html`<div class="p1 ${p.kind}">
+      <strong>${p.text}</strong>
+      <span>${this.tr(`now.p1_${p.kind}`)}</span>
+    </div>`;
   }
 
   private renderBattery(now: Now): TemplateResult {
@@ -1249,9 +1274,20 @@ export class ZephyrPanel extends LitElement {
               : ""
           }</span
         >
+        ${this.renderRte()}
         <span>${sets}</span>
       </div>
     </article>`;
+  }
+
+  /** Round-trip efficiency over 7 days, the same figure as on the screen Accu. */
+  private renderRte(): TemplateResult | typeof nothing {
+    const week = this.batteryDays?.week;
+    if (!week) return nothing;
+    const value = week.efficiency === null ? "–" : percent(week.efficiency * 100, this.locale);
+    return html`<span class="rte" title=${this.tr("battery.rte_title")}
+      >${this.tr("battery.rte", { value })} <span class="muted">· ${this.tr("battery.rte_days")}</span></span
+    >`;
   }
 
   private renderNext(now: Now): TemplateResult {
@@ -1735,6 +1771,37 @@ export class ZephyrPanel extends LitElement {
         font-size: 26px;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
+      }
+      .now-top {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .p1 {
+        text-align: right;
+        line-height: 1.15;
+        white-space: nowrap;
+      }
+      .p1 strong {
+        display: block;
+        font-family: var(--z-font-head);
+        font-size: 20px;
+        font-variant-numeric: tabular-nums;
+      }
+      .p1 span {
+        font-size: 12px;
+        color: var(--z-muted);
+      }
+      .p1.import strong {
+        color: var(--z-import);
+      }
+      .p1.export strong {
+        color: var(--z-export);
+      }
+      .rte {
+        color: var(--z-text);
       }
       .big-row {
         display: flex;

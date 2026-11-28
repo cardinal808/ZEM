@@ -34,7 +34,10 @@
   "now": {
     "title": "Now",
     "waiting": "Waiting for the first measurement…",
-    "shadow_note": "What ZEPHYR would do (shadow mode)."
+    "shadow_note": "What ZEPHYR would do (shadow mode).",
+    "p1_import": "P1 · import",
+    "p1_export": "P1 · export",
+    "p1_zero": "P1"
   },
   "battery": {
     "title": "Battery",
@@ -44,7 +47,10 @@
     "sets": "{online} of {total} sets online",
     "set": "1 set",
     "set_offline": "set offline",
-    "unknown": "No data from the set yet"
+    "unknown": "No data from the set yet",
+    "rte": "RTE {value}",
+    "rte_days": "7 days",
+    "rte_title": "Round-trip efficiency: delivered ÷ charged over the last 7 days, corrected for the change in SoC (same as on the screen Accu)."
   },
   "next": {
     "title": "Next step",
