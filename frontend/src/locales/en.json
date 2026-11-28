@@ -246,7 +246,6 @@
       "vacation": "Vacation",
       "house": "Appliances"
     },
-    "modified_n": "{n} changed",
     "default": "standard: {value}",
     "none": "empty",
     "yes": "on",
@@ -254,8 +253,7 @@
     "more": "More about {label}",
     "readonly": "Only an administrator can change settings.",
     "reload_note": "Changes in this group are saved together; ZEPHYR then restarts briefly.",
-    "supplier_note": "With a supplier the amounts from the tariff table apply ({source}). They can only be changed with own tariffs.",
-    "in_use": "in use: {value}",
+    "supplier_note": "With a supplier the amounts from the tariff table apply ({source}). The greyed-out fields show those amounts; they can only be changed with own tariffs.",
     "status": {
       "unset": "not set",
       "missing": "not found: {entities}",
@@ -286,192 +284,192 @@
       "min_soc": {
         "label": "Minimum state of charge",
         "help": "Below this the battery stops delivering.",
-        "more": "Default 10 %. Lower gives more usable energy, but the battery is more often nearly empty. Also written to the set, so it stops when ZEPHYR is not running."
+        "more": "Default 10 %; common 5–15 %. Lower = more usable energy, but the battery is more often nearly empty. ZEPHYR also sets this in the set, so it stops when ZEPHYR is not running. Example: 11 kWh and 10 % → 1.1 kWh always stays."
       },
       "max_soc": {
         "label": "Maximum state of charge",
         "help": "Above this the battery stops charging.",
-        "more": "Not charging to 100 % saves a little wear. The set needs 100 % now and then to reset its SOC and balance the cells."
+        "more": "Default 95 %; 90–95 % saves a little wear, 100 % gives about 5 % more usable energy. Now and then the set needs 100 % to reset its SOC reading and balance the cells; see Calibration after days."
       },
       "p1_source": {
         "label": "P1 measurement",
         "help": "One sensor with net power, or import and export separately.",
-        "more": "ZEPHYR watches the grid and steers the battery until the grid is at zero. The more often the meter reports, the faster and more precise. When the meter is silent for more than 10 s, ZEPHYR stops safely."
+        "more": "Choose One sensor if your meter gives one power that goes negative when exporting (usually a P1 dongle such as HomeWizard). Choose Import and export with two separate sensors (DSMR integration). The more often the meter reports, the better: DSMR 5 reports every second, DSMR 4 every 10 s. If the meter is silent for more than 10 s, ZEPHYR stops safely."
       },
       "p1_entity": {
         "label": "P1 sensor (net)",
         "help": "Grid power: + = import, − = export.",
-        "more": "A sensor in W or kW."
+        "more": "A power sensor in W or kW, positive when importing. For example Active power of a HomeWizard P1 meter. Not the kWh counter."
       },
       "p1_import_entity": {
         "label": "P1 import",
         "help": "Power from the grid.",
-        "more": "Together with the export sensor; ZEPHYR uses import − export."
+        "more": "For example Power consumption of the DSMR integration (in kW or W). ZEPHYR uses import − export."
       },
       "p1_export_entity": {
         "label": "P1 export",
         "help": "Power to the grid.",
-        "more": "Together with the import sensor."
+        "more": "For example Power production of the DSMR integration. Must belong to the same meter as the import sensor."
       },
       "price_entity": {
         "label": "Price sensor",
         "help": "Nord Pool: the HACS integration, or the current price of Home Assistant's own Nord Pool integration.",
-        "more": "Tomorrow's prices arrive around 13:00. Without a price sensor ZEPHYR makes no plan."
+        "more": "For example the Nord Pool integration (HACS) or HA's own Nord Pool integration, area NL, prices per quarter without taxes (ZEPHYR adds markup, tax and VAT itself). Tomorrow's prices arrive around 13:00. Without a price sensor ZEPHYR makes no plan and only keeps the meter at zero."
       },
       "solar_forecast_entity": {
         "label": "Solar forecast",
         "help": "Solcast (tomorrow) with half-hour detail. Empty: the solar forecast of HA's Energy dashboard.",
-        "more": "Left empty it works with any source in the Energy dashboard (Forecast.Solar, Solcast, Open-Meteo and others), per hour and without lower and upper bounds. Without a forecast there either, the planner uses yesterday's production per hour."
+        "more": "Recommended: Solcast (free for home use), most precise per half hour. Leaving it empty works with any source in HA's Energy dashboard (Forecast.Solar, Open-Meteo …), per hour. Without a forecast the planner uses yesterday's yield."
       },
       "solar_energy_entity": {
         "label": "Solar counter",
         "help": "Production in kWh (increasing).",
-        "more": "Tells ZEPHYR what your panels really produced: for the house consumption, the cost log and correcting the forecast."
+        "more": "Your inverter's increasing kWh counter, e.g. Lifetime energy of SolarEdge. The same as Solar panels in the Energy dashboard. Used for house consumption, the cost log and tuning the solar forecast."
       },
       "excluded_energy_entity": {
         "label": "Air conditioner: energy counter",
         "help": "kWh counter of a load the battery may not feed.",
-        "more": "ZEPHYR estimates the power from the counter steps and does not deliver for the air conditioner while it runs in a blocked mode. The rest of the house still comes from the battery; solar surplus still charges it."
+        "more": "A kWh counter of the air conditioner only, e.g. from a smart plug or sub-meter, or the energy sensor of the air conditioner integration. ZEPHYR does not deliver for it while it runs in a blocked mode; the rest of the house still comes from the battery."
       },
       "excluded_climate_entity": {
         "label": "Air conditioner: climate entity",
         "help": "Says at once whether it runs and in which mode.",
-        "more": "Without it ZEPHYR cannot tell heating from cooling and never feeds the air conditioner from the battery; it also notices a stop only from the counter."
+        "more": "The air conditioner's climate entity. With it ZEPHYR sees right away whether it is on and whether it heats or cools. Without: it never comes from the battery and ZEPHYR only notices a stop from the counter."
       },
       "excluded_hvac_modes": {
         "label": "Air conditioner: not from the battery when",
         "help": "Modes in which the battery does not feed it.",
-        "more": "Default heating: while heating, the air conditioner takes from the grid or from solar."
+        "more": "Default heating: in winter the air conditioner uses a lot, and grid power is then often cheaper than battery power. Also choose cooling if it must never come from the battery."
       },
       "cost_import_counters": {
         "label": "Import counters",
         "help": "The kWh counters of your smart meter (tariff 1 and 2).",
-        "more": "For the cost log: more precise than adding up power."
+        "more": "Choose both kWh counters of your smart meter: Energy consumption (tarif 1) and (tarif 2). More precise than adding up power; for the cost log and savings."
       },
       "cost_export_counters": {
         "label": "Export counters",
         "help": "The kWh counters for export (tariff 1 and 2).",
-        "more": "For the cost log."
+        "more": "Choose both export counters: Energy production (tarif 1) and (tarif 2). For the cost log."
       },
       "tariff_supplier": {
         "label": "Energy supplier",
         "help": "Amounts from ZEPHYR's tariff table, or own tariffs.",
-        "more": "The table is updated with releases and fetched daily. Supplier not listed? Choose own tariffs."
+        "more": "If your supplier is in the list, choose it: tax, markups and solar bonus then come from the table and follow new tariffs. If not, choose Own tariffs and enter the amounts from your contract."
       },
       "tariff_energy_tax": {
         "label": "Energy tax",
         "help": "Per kWh, excluding VAT.",
-        "more": "Statutory amount; listed per year in the table."
+        "more": "Statutory amount per kWh, without VAT; now {in_use}. Changes every year on 1 January; with a supplier from the table that happens automatically."
       },
       "tariff_markup_import": {
         "label": "Import margin",
         "help": "What the supplier adds to the market price, excluding VAT.",
-        "more": "See your contract or invoice."
+        "more": "What the supplier charges per kWh on top of the market price, without VAT. Common € 0.01–0.03; Zonneplan € 0.01653. On your contract or tariff sheet, sometimes as purchase fee."
       },
       "tariff_markup_export": {
         "label": "Export margin",
         "help": "Added to the market price (negative = a fee), excluding VAT.",
-        "more": "Some suppliers deduct a fixed amount from what you get back: enter it as negative."
+        "more": "What you get per exported kWh on top of the market price, without VAT. If your supplier deducts something (export fee), enter it negative, e.g. −0.02. Zonneplan + € 0.01653."
       },
       "tariff_vat": {
         "label": "VAT",
         "help": "On market price, margin and energy tax.",
-        "more": "Statutory rate."
+        "more": "Statutory rate, 21 % in the Netherlands. Applies to market price, markup and energy tax."
       },
       "tariff_solar_bonus": {
         "label": "Solar bonus",
         "help": "Extra on the export price during the day.",
-        "more": "For example 10 % with Zonneplan. Only counted while the sun is up."
+        "more": "Extra percentage on the export price while the sun is up, e.g. 10 % at Zonneplan. No solar bonus: 0."
       },
       "tariff_fixed_month": {
         "label": "Fixed costs per month",
         "help": "Supply and network costs minus tax credit.",
-        "more": "Only for the cost log; does not change the plan."
+        "more": "Fixed supply charge + grid operator charge − energy tax reduction, per month including VAT. On your annual bill or tariff sheet. Only for the cost log; does not change the plan."
       },
       "plan_wear_cost": {
         "label": "Wear cost",
         "help": "Per kWh through the battery.",
-        "more": "The planner only charges and delivers when the difference is larger than this. Default €0.03 (B39)."
+        "more": "Default € 0.03 per kWh: roughly the purchase price divided by what the battery delivers in its life (e.g. € 3,000 / 6,000 cycles / 10 kWh ≈ € 0.05). Higher = the battery only works at larger price differences."
       },
       "plan_grid_charge_cost": {
         "label": "Grid charging threshold",
         "help": "Minimum gain per kWh to charge from the grid.",
-        "more": "Avoids charging from the grid for a tiny gain. Default €0.01."
+        "more": "Default € 0.01. Charging from the grid only happens when it earns at least this much per kWh, after losses and wear. Higher = less often charging from the grid for a small gain."
       },
       "plan_allow_export": {
         "label": "Export from the battery",
         "help": "May the battery deliver to the grid when that pays?",
-        "more": "Only useful when the export price is sometimes higher than recharging later, including losses and wear. Off by default."
+        "more": "Default off. On only makes sense if the export price is sometimes higher than what recharging costs later, including about 15 % loss and wear. With net metering (until 2027) it rarely pays."
       },
       "plan_load_margin": {
         "label": "Consumption margin",
         "help": "Plan with more consumption than learned.",
-        "more": "At 10 % the planner assumes 10 % more consumption."
+        "more": "Default 0 %; 5–15 % if the battery runs empty too early on busy evenings. The planner then counts on that much more consumption than learned."
       },
       "plan_buffer": {
         "label": "Buffer",
         "help": "Part of the battery the planner keeps free.",
-        "more": "The controller may use the buffer when consumption is higher than expected; the planner refills it when that is cheaper (B37)."
+        "more": "Default 0 %; e.g. 10 % if you want a reserve for unexpected consumption. The planner does not plan this part; the controller may use it when consumption turns out higher. The planner then refills it when that is cheap."
       },
       "expensive_hours": {
         "label": "Expensive hours",
         "help": "Without planner: only deliver in the N most expensive hours.",
-        "more": "Applies in Zero on the meter with a price sensor but without Dynamic Forecasting."
+        "more": "Default 4: the battery only delivers in the 4 most expensive hours of the day and holds its charge otherwise. Only in the mode Zero on the meter with a price sensor; Dynamic Forecasting chooses itself."
       },
       "reserve_soc": {
         "label": "Reserve",
         "help": "Without planner: charge to this level before the expensive hours.",
-        "more": "Becomes the planner's buffer (B37)."
+        "more": "Default 20 %: before the expensive hours ZEPHYR charges up to this percentage. Only without the planner; with Dynamic Forecasting it counts as buffer."
       },
       "min_price": {
         "label": "Minimum price",
         "help": "Without planner: do not deliver below this price.",
-        "more": "Empty = no minimum."
+        "more": "E.g. € 0.25: below this price (all-in, per kWh) the battery does not deliver. Empty = no minimum."
       },
       "live_off_after_restart": {
         "label": "Live control off after a restart (test phase)",
         "help": "Off (default): after a restart live control comes back on its own as soon as the P1 reports and the sets are online (if it was on). On: it stays off and you switch it on yourself.",
-        "more": "For the test phase: after every restart you switch control on yourself."
+        "more": "Default off: after a restart live control comes back by itself. On only while testing, if you want to check after every restart before ZEPHYR controls the battery again."
       },
       "vacation_when_away": {
         "label": "Vacation when nobody is home",
         "help": "On by itself after 24 hours with nobody home.",
-        "more": "Uses zone.home (the number of people at home). Off as soon as someone is back. The switch Vacation (with Vacation until) always works as well."
+        "more": "After 24 hours with nobody home (zone.home = 0) vacation turns on by itself: the planner then counts on low consumption. Off as soon as someone is back. Only works if phones with the HA app share their location."
       },
       "workday_entity": {
         "label": "Workday sensor",
         "help": "Holidays count as weekend days.",
-        "more": "ZEPHYR asks the Workday integration (action workday.check_date) about today, tomorrow and the days of the first fill. Without it Monday to Friday are workdays."
+        "more": "Install the Workday integration (your country) and choose its sensor. Public holidays then count as weekend days in the consumption profile. Without a sensor Monday to Friday are workdays."
       },
       "curtail_negative": {
         "label": "Surplus solar at a negative price",
         "help": "What happens to surplus solar when the export price is below zero. Off: it is exported and costs money, the planner makes room in the battery first. Another system: an inverter limiter curtails it by itself. ZEPHYR: ZEPHYR blocks export of the sets' own panels and curtails the inverter: with the switch or with the power limit below (one of the two).",
-        "more": "With saldering (until 2027) the export price is rarely below zero (energy tax is part of it); without saldering it happens on sunny spring and summer middays. The sets' own panels are blocked with gridReverse; an inverter such as a SolarEdge needs a switch (e.g. a template switch for an export limiter)."
+        "more": "With net metering (until 2027) the export price is rarely negative. Without it, it happens on sunny afternoons in spring and summer. Choose ZEPHYR if your inverter can be limited via HA (e.g. SolarEdge via Modbus), Other system if something else already does it."
       },
       "curtail_switch": {
         "label": "Inverter curtail switch",
         "help": "On while the export price is negative. Alternative to the power limit.",
-        "more": "ZEPHYR turns this switch on at the start of a quarter with a negative export price and off again after. A template switch can call any script or set the mode of an export limiter."
+        "more": "A switch that makes your inverter stop exporting, e.g. a template switch that sets your inverter's export limit. ZEPHYR turns it on at a negative export price and off again afterwards. Choose this or the power limit."
       },
       "solar_power_entities": {
         "label": "Solar panel power",
         "help": "Power sensors (W) of inverters, added up.",
-        "more": "For inverters that are not on a Zendure set, such as SolarEdge. ZEPHYR adds them to the sets' PV and shows that in Now and Power. Do not choose the Zendure set's own PV here: ZEPHYR already reads it from the set. Empty: ZEPHYR estimates the power from the solar energy counter (coarser, lags behind)."
+        "more": "Power in W of inverters not connected to a Zendure set, e.g. AC power of SolarEdge; several are added up. Not the PV of the Zendure set itself: ZEPHYR already reads that. Empty: ZEPHYR estimates it from the solar counter (coarser, lags behind)."
       },
       "curtail_number": {
         "label": "Inverter power limit",
         "help": "Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.",
-        "more": "While the export price is negative ZEPHYR sets it every 10 s so the inverter produces what the house and the battery take (the grid stays at a small import), and back to 100 % after. Needs the rated power below and a solar power sensor (Sources)."
+        "more": "E.g. Active power limit of the SolarEdge Modbus integration (a number in %). ZEPHYR sets it every 10 s so the inverter only produces what house and battery take, and back to 100 % afterwards. Needs: the rated power below and the solar power (Sources)."
       },
       "curtail_inverter_w": {
         "label": "Inverter rated power",
         "help": "Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.",
-        "more": "For a SolarEdge the nominal power of the inverter model, e.g. 5000 W for an SE5K."
+        "more": "The AC power on the rating plate, e.g. 5000 W for a SolarEdge SE5K, 3680 W for an SE3680H."
       },
       "calibration_days": {
         "label": "Calibration after days",
         "help": "After this many days without 100 % the planner charges the battery full and lets the set calibrate.",
-        "more": "The longer the battery has not been full, the further the packs drift apart. From half these days on the planner picks a cheap moment or solar to charge full; on the last day it is a hard requirement. Afterwards ZEPHYR does not deliver until the set has finished calibrating (socStatus), at most 2 hours. 0 = off."
+        "more": "Default 21 days; 0 = off. The longer the battery has not been full, the further the packs drift apart. From half of these days the planner looks for a cheap moment or sun to charge to full; on the last day it must. ZEPHYR then does not deliver until the set has finished calibrating (max. 2 hours)."
       }
     },
     "restarting": "ZEPHYR is restarting with the new settings…",

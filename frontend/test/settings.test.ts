@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatNumber } from "../src/settings";
+import { controlValue, formatNumber, type SettingField } from "../src/settings";
 import { t } from "../src/i18n";
 import en from "../src/locales/en.json";
 import nl from "../src/locales/nl.json";
@@ -23,5 +23,25 @@ describe("settings", () => {
         expect(t("en", `settings.fields.${key}.${part}`)).not.toBe(`settings.fields.${key}.${part}`);
       }
     }
+  });
+});
+
+describe("tariff fields from the table", () => {
+  const field = (over: Partial<SettingField>): SettingField =>
+    ({ key: "tariff_markup_import", kind: "number", tariff: true, active: false, in_use: 0.01653, value: 0, ...over }) as SettingField;
+
+  it("shows the amount in use while the supplier's table applies", () => {
+    expect(controlValue(field({}), 0)).toBe(0.01653);
+  });
+
+  it("shows the own value with own tariffs or without an amount in use", () => {
+    expect(controlValue(field({ active: true }), 0.02)).toBe(0.02);
+    expect(controlValue(field({ in_use: null }), 0)).toBe(0);
+    expect(controlValue(field({ tariff: false }), 5)).toBe(5);
+  });
+
+  it("puts the energy tax in use into the info text", () => {
+    expect(t("nl", "settings.fields.tariff_energy_tax.more", { in_use: "0,09161 €/kWh" })).toContain("nu 0,09161 €/kWh");
+    expect(t("en", "settings.fields.tariff_vat.more")).toContain("21 %");
   });
 });
