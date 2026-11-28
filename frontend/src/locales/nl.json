@@ -284,7 +284,11 @@
       "off": "Uit",
       "curtail_off": "Uit (gaat het net op, kost geld)",
       "curtail_external": "Ander systeem knijpt af",
-      "curtail_zephyr": "ZEPHYR knijpt af"
+      "curtail_zephyr": "ZEPHYR knijpt af",
+      "indicative": "Indicatief (alleen tonen)",
+      "use": "Meerekenen",
+      "low": "Laag (voorzichtig)",
+      "mid": "Midden"
     },
     "fields": {
       "min_soc": {
@@ -476,6 +480,26 @@
         "label": "Kalibratie na dagen",
         "help": "Na zoveel dagen zonder 100 % laadt de planner de accu vol en laat hij de set kalibreren.",
         "more": "Standaard 21 dagen; 0 = uit. Hoe langer de accu niet vol was, hoe verder de packs uit elkaar lopen. Vanaf de helft van deze dagen zoekt de planner een goedkoop moment of zon om vol te laden; op de laatste dag moet het. Daarna levert ZEPHYR niet tot de set klaar is met kalibreren (max. 2 uur)."
+      },
+      "price_forecast_entity": {
+        "label": "Prijsvoorspelling (jeroen.nl)",
+        "help": "Optioneel: de sensor van ha-jeroen-nl, om voorbij de bekende prijzen te kijken.",
+        "more": "Installeer de HACS-integratie ha-jeroen-nl met je eigen API-sleutel van jeroen.nl en kies hier de prijssensor. ZEPHYR leest alleen die sensor en haalt zelf nooit iets op bij jeroen.nl. Alleen voorspelde kwartieren na de laatste bekende Nord Pool-prijs worden gebruikt; Nord Pool blijft leidend. Bron: jeroen.nl."
+      },
+      "price_forecast_mode": {
+        "label": "Gebruik in het plan",
+        "help": "Indicatief: het plan blijft gelijk; je ziet wat het met de voorspelling zou doen.",
+        "more": "Zolang het indicatief is, vergelijkt de diagnose het plan met en zonder voorspelling. Meerekenen komt beschikbaar na een backtest van minstens 6 weken opgeslagen voorspellingen."
+      },
+      "price_forecast_days": {
+        "label": "Voorspelde dagen",
+        "help": "Hoeveel dagen voorbij de laatste bekende prijs.",
+        "more": "Standaard 1: vóór ongeveer 13:00 staat de voorspelling in voor morgen; daarna komt overmorgen erbij. 0 = de voorspelling alleen bewaren voor de kwaliteitscijfers."
+      },
+      "price_forecast_value": {
+        "label": "Waarde uit de band",
+        "help": "Laag is voorzichtig: niet laden op een optimistische verwachting.",
+        "more": "jeroen.nl geeft een band van 80 % (p10–p90). Laag gebruikt p10 voor inkoop en teruglevering, zodat de planner niet laadt voor, of energie vasthoudt voor, een piek die misschien niet komt. Midden gebruikt de verwachte waarde."
       }
     },
     "restarting": "ZEPHYR start opnieuw met de nieuwe instellingen…",

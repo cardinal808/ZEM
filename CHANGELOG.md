@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### 0.8.86 — Planner: price forecast of jeroen.nl as an optional source (indicative)
+- **Optional, off by default** (OPDRACHT-prijsvoorspelling-jeroen): new settings *price forecast (entity)*, *use in the plan* (off / indicative; *take into account* comes after the backtest), *forecast days* (0–2, default 1) and *value from the band* (low / middle, default low). ZEPHYR reads only the sensor of the HACS integration ha-jeroen-nl (the user's own API key) and fetches nothing from jeroen.nl.
+- **Reader** (`core/price_forecast.py`): only quarters with `forecast: true`; the bare `market`, `low`, `high` are priced with ZEPHYR's own tariffs (the sensor's all-in `price` is not used). Units recognised (€/kWh, €/MWh, cents); slots by UTC start, days of 92/100 quarters work. Without `low`/`high`: `market`, with a note. A value but nothing readable: repair issue `price_forecast_format`.
+- **Merge:** forecast quarters only from the end of the last known Nord Pool price on, without a gap, never for the running quarter, not when older than 36 h; they replace today's pattern for tomorrow, up to local midnight after the known prices plus the chosen days. Always indicative: not in the totals.
+- **Indicative:** the plan's actions stay as without the forecast; a second plan with it goes to the diagnostics (`planner.price_forecast.compare`: first action and expected cost with and without).
+- **Backtest store:** one forecast run a day (after 06:00) in ZEPHYR's own storage, 120 days; private: diagnostics show only summaries (slots used, first/last, run time, reason) and the quality per day ahead (mean error, share inside the band, 30 days, against the real prices of the cost log).
+- **Panel data:** `price_forecast` in the plan view (slots with market, low, high and all-in buy prices, source "jeroen.nl" with link, mode, comparison) for the dashed line with band; the chart itself follows in the UI chat. The planner plans again when the forecast sensor changes.
+- Tests: reader, units, merge (Nord Pool wins, gap, stale, no known price), 92/100 quarters, the expensive Monday morning (charges Sunday night only with the forecast, not when low is under the break-even), HA indicative (actions unchanged, summaries only, run kept, repair issue). The test data are made up with the sensor's shape: the real forecast stays private.
+
 ### 0.8.84 — Battery efficiency (RTE): only from the first SoC on
 - **Bug (Bjorn 28-11, RTE 65 % instead of ~86 %):** the efficiency counted all energy in the window but took the stored energy from the first quarter that had a SoC. Bjorn's cost log charged 4,96 kWh in the night of 25/26-11 before its first SoC (92 % after that charge), so that charge was counted twice as "put in". Now only the energy between the first and the last quarter with a SoC counts (a quarter's SoC is at its end). With his export: 83,5 % over 3 days (the set's own counters give 86 % over 7 weeks).
 - **Days:** `week.efficiency_days` (from the first to the last quarter with a SoC). The card *Accu* on Plan shows *RTE 84 % · 3 dagen* while the cost log is shorter than 7 days; the screen Accu adds *(3 dagen)* to the efficiency.

@@ -43,6 +43,10 @@ from .const import (
     CONF_PLAN_LOAD_MARGIN,
     CONF_PLAN_WEAR_COST,
     CONF_PRICE_ENTITY,
+    CONF_PRICE_FORECAST_DAYS,
+    CONF_PRICE_FORECAST_ENTITY,
+    CONF_PRICE_FORECAST_MODE,
+    CONF_PRICE_FORECAST_VALUE,
     CONF_RESERVE_SOC,
     CONF_SOLAR_ENERGY,
     CONF_SOLAR_FORECAST,
@@ -126,6 +130,7 @@ _P1_SINGLE: Final = (CONF_P1_SOURCE, (P1_SOURCE_SINGLE,))
 _P1_PAIR: Final = (CONF_P1_SOURCE, (P1_SOURCE_PAIR,))
 _ZEPHYR_CURTAILS: Final = (CONF_CURTAIL_MODE, (CURTAIL_ZEPHYR,))
 _HAS_COUNTER: Final = (CONF_EXCLUDED_ENERGY, ("*",))
+_HAS_FORECAST: Final = (CONF_PRICE_FORECAST_ENTITY, ("*",))
 
 _S = Settings()
 _T = Tariffs()
@@ -139,6 +144,10 @@ FIELDS: Final[tuple[Field, ...]] = (
     Field(CONF_P1_EXPORT, "sources", "entity", device_class="power", optional=True, reload=True, show_if=_P1_PAIR),
     Field(CONF_PRICE_ENTITY, "sources", "entity", optional=True, reload=True),
     Field(CONF_SOLAR_FORECAST, "sources", "entity", optional=True, reload=True),
+    Field(CONF_PRICE_FORECAST_ENTITY, "sources", "entity", optional=True, reload=True, domain="sensor"),
+    Field(CONF_PRICE_FORECAST_MODE, "sources", "select", "indicative", options=("off", "indicative"), show_if=_HAS_FORECAST),
+    Field(CONF_PRICE_FORECAST_DAYS, "sources", "number", 1, "d", 0, 2, 1, show_if=_HAS_FORECAST),
+    Field(CONF_PRICE_FORECAST_VALUE, "sources", "select", "low", options=("low", "mid"), show_if=_HAS_FORECAST),
     Field(CONF_SOLAR_ENERGY, "sources", "entity", device_class="energy", optional=True, reload=True),
     Field(CONF_SOLAR_POWER, "sources", "entities", device_class="power", optional=True),
     Field(CONF_EXCLUDED_ENERGY, "corrections", "entity", device_class="energy", optional=True, reload=True),
