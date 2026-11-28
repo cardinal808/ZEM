@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.92 — Card Nu: five fixed rows
+- **The card *Nu* no longer jumps:** always the same five rows in the same order, at least 0 W, right-aligned and in W: *Zon → huis*, *Accu → huis*, *Net → huis*, and below a line *… → accu* and *… → net* with their source in front (*Zon → accu*, *Net → accu*, *Zon + net → accu*; *Zon → net*, *Accu → net*, *Zon + accu → net*). With nothing flowing the usual source (the sun), grey. Replaces the flows in words (`nowRows`, from the same measurement as the P1 value).
+- Tests: `nowRows` (vitest).
+
 ### 0.8.91 — Panel: solar savings, estimated quarters, price forecast, backfill SOC, one-time element registration
 - **Besparing — zon en accu** (OPDRACHT-besparing-zon): with a solar counter the screen shows the saving of solar + battery, three bars (without solar and battery / without battery / paid), the split *Zon* (used directly, exported, of which solar bonus; after 2027 a note) and *Accu* (solar stored, price difference), solar kWh and the share used yourself, and stacked day bars (solar yellow under the battery) with a switch *Alleen accu*. Without a solar counter the screen stays as it was.
 - **Geschatte kwartieren** (OPDRACHT-ui-geschatte-kwartieren): a neutral notice "x quarters estimated (…)", with the provisional prices; the warning "amounts too low" only for quarters without data. Days with estimated quarters are hatched.

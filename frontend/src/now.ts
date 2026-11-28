@@ -110,3 +110,38 @@ export function p1Display(
   const kind = Math.abs(w) <= P1_ZERO_W ? "zero" : w > 0 ? "import" : "export";
   return { text: `${sign}${number(Math.abs(w), locale, 0)} W`, kind };
 }
+
+/** Below this the row counts as nothing flowing (grey). */
+export const NOW_ROW_MIN_W = 1;
+
+export type NowSource = "sun" | "batt" | "grid" | "sun_grid" | "sun_batt";
+
+export interface NowRow {
+  key: "solar_house" | "battery_house" | "grid_house" | "to_battery" | "to_grid";
+  from: NowSource;
+  to: "house" | "battery" | "grid";
+  w: number;
+}
+
+/**
+ * The five fixed rows of the card *Nu* (Bjorn 28-11): always the same rows in the same order, at least 0 W,
+ * so the card does not jump. Rows 4 and 5 name their source: *Net → accu*, *Zon + net → accu*, *Accu → net*;
+ * with nothing flowing the usual source (the sun).
+ */
+export function nowRows(paths: Record<string, number>): NowRow[] {
+  const p = (k: string): number => Math.max(0, Math.round(paths[k] ?? 0));
+  const solarBatt = p("solar_battery");
+  const gridBatt = p("grid_battery");
+  const solarGrid = p("solar_grid");
+  const battGrid = p("battery_grid");
+  const on = (w: number): boolean => w >= NOW_ROW_MIN_W;
+  const toBattery: NowSource = on(solarBatt) && on(gridBatt) ? "sun_grid" : on(gridBatt) ? "grid" : "sun";
+  const toGrid: NowSource = on(solarGrid) && on(battGrid) ? "sun_batt" : on(battGrid) ? "batt" : "sun";
+  return [
+    { key: "solar_house", from: "sun", to: "house", w: p("solar_house") },
+    { key: "battery_house", from: "batt", to: "house", w: p("battery_house") },
+    { key: "grid_house", from: "grid", to: "house", w: p("grid_house") },
+    { key: "to_battery", from: toBattery, to: "battery", w: solarBatt + gridBatt },
+    { key: "to_grid", from: toGrid, to: "grid", w: solarGrid + battGrid },
+  ];
+}

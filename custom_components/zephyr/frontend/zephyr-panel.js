@@ -9601,8 +9601,43 @@ function tr(e, t) {
 		kind: i
 	};
 }
+function nr(e) {
+	let t = (t) => Math.max(0, Math.round(e[t] ?? 0)), n = t("solar_battery"), r = t("grid_battery"), i = t("solar_grid"), a = t("battery_grid"), o = (e) => e >= 1, s = o(n) && o(r) ? "sun_grid" : o(r) ? "grid" : "sun", c = o(i) && o(a) ? "sun_batt" : o(a) ? "batt" : "sun";
+	return [
+		{
+			key: "solar_house",
+			from: "sun",
+			to: "house",
+			w: t("solar_house")
+		},
+		{
+			key: "battery_house",
+			from: "batt",
+			to: "house",
+			w: t("battery_house")
+		},
+		{
+			key: "grid_house",
+			from: "grid",
+			to: "house",
+			w: t("grid_house")
+		},
+		{
+			key: "to_battery",
+			from: s,
+			to: "battery",
+			w: n + r
+		},
+		{
+			key: "to_grid",
+			from: c,
+			to: "grid",
+			w: i + a
+		}
+	];
+}
 // src/zephyr-panel.ts
-var nr = "/zephyr_static", rr = [
+var rr = "/zephyr_static", ir = [
 	[
 		"Inter",
 		400,
@@ -9624,11 +9659,11 @@ var nr = "/zephyr_static", rr = [
 		"space-grotesk-latin-700-normal.woff2"
 	]
 ];
-function ir(e) {
+function ar(e) {
 	let t = "zephyr-fonts";
 	if (document.getElementById(t)) return;
 	let n = document.createElement("style");
-	n.id = t, n.textContent = rr.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
+	n.id = t, n.textContent = ir.map(([t, n, r]) => `@font-face{font-family:"${t}";font-style:normal;font-weight:${n};font-display:swap;src:url("${e}/fonts/${r}") format("woff2");}`).join("\n"), document.head.appendChild(n);
 }
 var $ = class extends E {
 	constructor(...e) {
@@ -9754,7 +9789,7 @@ var $ = class extends E {
 		};
 	}
 	get base() {
-		return this.panel?.config?.static ?? nr;
+		return this.panel?.config?.static ?? rr;
 	}
 	get uiLang() {
 		return $e(this.hass?.locale?.language ?? this.hass?.language);
@@ -9769,7 +9804,7 @@ var $ = class extends E {
 		return I(this.uiLang, e, t);
 	}
 	connectedCallback() {
-		super.connectedCallback(), ir(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
+		super.connectedCallback(), ar(this.base), this.clockTimer = window.setInterval(() => this.clockMs = Date.now(), 3e4), this.planTimer = window.setInterval(() => void this.loadPlan(!0), 3e5), this.hass && this.subscribe();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), window.clearInterval(this.clockTimer), window.clearInterval(this.planTimer), window.clearInterval(this.setsTimer), window.clearTimeout(this.retryTimer), this.watch(void 0), this.stop();
@@ -10273,7 +10308,7 @@ var $ = class extends E {
     </article>`;
 	}
 	renderNow(e) {
-		let t = e.action ?? "standby", n = e.battery_w !== null && Math.abs(e.battery_w) >= 10 ? ` · ${A(e.battery_w, this.locale)}` : "", r = e.grid_w === null ? [] : Zt(Rt(e.solar_w, e.grid_w, e.battery_w).paths), i = (e) => this.tr(`house.src_${e}`), a = (e) => this.tr(`house.dst_${e}`), o = (e) => A(e, this.locale), s = Zn(e.reason_code);
+		let t = e.action ?? "standby", n = e.battery_w !== null && Math.abs(e.battery_w) >= 10 ? ` · ${A(e.battery_w, this.locale)}` : "", r = e.grid_w === null ? [] : nr(Rt(e.solar_w, e.grid_w, e.battery_w).paths), i = Zn(e.reason_code);
 		return x`<article class="card">
       <div class="label">
         <span class="dot" style="background:${R(t)}"></span
@@ -10285,14 +10320,9 @@ var $ = class extends E {
         </div>
         ${e.grid_w === null ? w : this.renderP1(e.grid_w)}
       </div>
-      ${r.length ? x`<p class="flows">
-              ${r.map((e) => x`<span
-                    >${i(e.from)} ${o(e.total)} →
-                    ${e.to.length === 1 ? a(e.to[0][0]) : e.to.map(([e, t], n) => x`${n ? " · " : ""}${a(e)} ${o(t)}`)}</span
-                  >`)}
-            </p>` : w}
+      ${r.length ? this.renderNowRows(r) : w}
       ${this.renderAirco(e)}
-      ${s !== "hide" && e.reason ? x`<p class=${s === "warn" ? "nownote warn" : "nownote"}>
+      ${i !== "hide" && e.reason ? x`<p class=${i === "warn" ? "nownote warn" : "nownote"}>
               ${e.reason[this.uiLang]}
             </p>` : w}
       ${e.live ? w : x`<div class="foot"><span>${this.tr("now.shadow_note")}</span></div>`}
@@ -10314,6 +10344,29 @@ var $ = class extends E {
               >` : w}</span
       >
     </p>`;
+	}
+	renderNowRows(e) {
+		let t = {
+			solar_house: "var(--z-solar)",
+			battery_house: "var(--z-deliver)",
+			grid_house: "var(--z-import)",
+			to_battery: "var(--z-charge)",
+			to_grid: "var(--z-export)"
+		}, n = (e) => e === "sun_grid" ? `${this.tr("house.src_sun")} + ${this.tr("house.src_grid").toLowerCase()}` : e === "sun_batt" ? `${this.tr("house.src_sun")} + ${this.tr("house.src_batt").toLowerCase()}` : this.tr(`house.src_${e}`), r = (e) => x`<tr class=${e.w >= 1 ? "" : "zero"}>
+        <th scope="row">
+          <span class="sw" style="background:${t[e.key]}"></span
+          >${n(e.from)} → ${this.tr(`house.dst_${e.to}`)}
+        </th>
+        <td>${Ye(e.w, this.locale, 0)} W</td>
+      </tr>`;
+		return x`<table class="nowrows">
+      <tbody>
+        ${e.slice(0, 3).map(r)}
+      </tbody>
+      <tbody class="out">
+        ${e.slice(3).map(r)}
+      </tbody>
+    </table>`;
 	}
 	renderP1(e) {
 		let t = tr(e, this.locale);
@@ -10646,6 +10699,43 @@ var $ = class extends E {
           right: auto;
           left: 0;
         }
+      }
+      .nowrows {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+        font-size: 14px;
+      }
+      .nowrows th {
+        text-align: left;
+        font-weight: 400;
+        padding: 2px 0;
+        white-space: nowrap;
+      }
+      .nowrows td {
+        text-align: right;
+        padding: 2px 0;
+        white-space: nowrap;
+      }
+      .nowrows tbody.out tr:first-child th,
+      .nowrows tbody.out tr:first-child td {
+        border-top: 1px solid var(--z-border);
+        padding-top: 6px;
+      }
+      .nowrows tbody:not(.out) tr:last-child th,
+      .nowrows tbody:not(.out) tr:last-child td {
+        padding-bottom: 6px;
+      }
+      .nowrows tr.zero {
+        color: var(--z-muted);
+        opacity: 0.75;
+      }
+      .nowrows .sw {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        margin-right: 8px;
       }
       .flows {
         margin: 0;
