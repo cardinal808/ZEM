@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 0.8.88 — Terugrekenen: pools capped by the battery's content, warning for Gielz counters
+- **Pools capped** (TOETS-besparing bevinding 5): the backfill (`zephyr/savings/backfill`) takes an optional `soc_entity`; its hourly mean × the installation's capacity caps the pools, as in the cost log, so conversion losses of stored solar land in *Zon bewaard* instead of *Prijsverschil*. The total does not change. The answer says `capped_by_soc`.
+- **Warning** (bevinding 11): when the charge or discharge counter belongs to another Zendure integration (Gielz), the answer holds `warnings: ["pv_in_battery_counters"]`: those counters include the set's own PV, so on summer days that PV counts as battery. The panel can show it (UI chat).
+
 ### 0.8.86 — Planner: price forecast of jeroen.nl as an optional source (indicative)
 - **Optional, off by default** (OPDRACHT-prijsvoorspelling-jeroen): new settings *price forecast (entity)*, *use in the plan* (off / indicative / take into account), *forecast days* (0–2, default 1) and *value from the band* (low / middle, default low). ZEPHYR reads only the sensor of the HACS integration ha-jeroen-nl (the user's own API key) and fetches nothing from jeroen.nl.
 - **Reader** (`core/price_forecast.py`): only quarters with `forecast: true`; the bare `market`, `low`, `high` are priced with ZEPHYR's own tariffs (the sensor's all-in `price` is not used). Units recognised (€/kWh, €/MWh, cents); slots by UTC start, days of 92/100 quarters work. Without `low`/`high`: `market`, with a note. A value but nothing readable: repair issue `price_forecast_format`.

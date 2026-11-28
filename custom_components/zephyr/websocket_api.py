@@ -883,6 +883,7 @@ def ws_stroom(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, 
         vol.Optional("discharge_entity"): str,
         vol.Optional("solar_entity"): vol.Any(None, str),
         vol.Optional("price_entity"): vol.Any(None, str),
+        vol.Optional("soc_entity"): vol.Any(None, str),
     }
 )
 @require_admin
@@ -907,7 +908,7 @@ async def ws_savings_backfill(hass: HomeAssistant, connection: ActiveConnection,
     except ValueError:
         connection.send_result(msg["id"], {"ok": False, "error": "bad_date"})
         return
-    entities = {k: msg.get(k) for k in ("charge_entity", "discharge_entity", "solar_entity", "price_entity")}
+    entities = {k: msg.get(k) for k in ("charge_entity", "discharge_entity", "solar_entity", "price_entity", "soc_entity")}
     if not entities["charge_entity"] or not entities["discharge_entity"]:
         connection.send_result(msg["id"], {"ok": False, "error": "no_battery_counters"})
         return
@@ -915,10 +916,26 @@ async def ws_savings_backfill(hass: HomeAssistant, connection: ActiveConnection,
     if missing:
         connection.send_result(msg["id"], {"ok": False, "error": "entity_missing", "entities": missing})
         return
+    capacity = entry.runtime_data.totals().capacity_kwh
     result = await costs.async_backfill(
-        first, entities["charge_entity"], entities["discharge_entity"], entities["solar_entity"], entities["price_entity"]
+        first,
+        entities["charge_entity"],
+        entities["discharge_entity"],
+        entities["solar_entity"],
+        entities["price_entity"],
+        entities["soc_entity"],
+        capacity,
     )
-    connection.send_result(msg["id"], {"ok": True, **result})
+    # TOETS-besparing bevinding 11: counters of another Zendure integration (Gielz) are the set's
+    # AC exchange, its own PV included: summer days then count that PV as battery.
+    from .foreign import _is_zendure
+
+    warnings = []
+    if any(_is_zendure(hass, e) for e in (entities["charge_entity"], entities["discharge_entity"]) if e):
+        warnings.append("pv_in_battery_counters")
+    connection.send_result(
+        msg["id"], {"ok": True, **result, "warnings": warnings, "capped_by_soc": bool(entities["soc_entity"] and capacity)}
+    )
 
 
 # --- planned appliances (B36, SPEC-ui-planner §4.1) -------------------------------------

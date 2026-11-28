@@ -40,6 +40,9 @@ class HourInput:
     solar_kwh: float | None
     market: float | None
     """Mean market price of the hour (€/kWh)."""
+    stored_kwh: float | None = None
+    """Energy in the battery in that hour (SOC statistic × capacity): caps the pools, so conversion
+    losses of stored solar land in *Zon bewaard* as in the cost log (TOETS-besparing bevinding 5)."""
 
 
 @dataclass(slots=True)
@@ -80,6 +83,7 @@ def backfill_days(
                 discharge_kwh=dis,
                 solar_kwh=hour.solar_kwh,
                 market=hour.market,
+                stored_kwh=hour.stored_kwh,
                 # Without sun times: an hour with solar counts as daylight (for a solar bonus).
                 daylight=(hour.solar_kwh or 0.0) > 0.01,
             ),
@@ -110,6 +114,7 @@ def series_to_hours(
     discharge: Callable[[datetime], float | None],
     solar_id: str | None,
     price_id: str | None,
+    stored: Callable[[datetime], float | None] | None = None,
 ) -> list[HourInput]:
     """Hours from statistics per entity (hour start → change or mean). A missing counter makes the value unknown."""
 
@@ -128,6 +133,7 @@ def series_to_hours(
                 discharge_kwh=discharge(t),
                 solar_kwh=series.get(solar_id, {}).get(t) if solar_id else None,
                 market=series.get(price_id, {}).get(t) if price_id else None,
+                stored_kwh=None if stored is None else stored(t),
             )
         )
     return out
