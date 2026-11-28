@@ -19,6 +19,8 @@ from .costs import Pools, QuarterInput, Tariffs, add_to_day, evaluate
 QUARTER: Final = timedelta(minutes=15)
 MAX_AGE: Final = timedelta(hours=48)
 """Gaps that started longer ago are only filled in the counters, not in the cost log."""
+COUNTER_FLOWS: Final = {"charged": "charge_kwh", "discharged": "discharge_kwh", "solar": "solar_set_kwh"}
+"""Correction keys of a counter gap and the flow they fill."""
 KEEP_FROM_OLD: Final = ("plan_action", "plan_cost")
 """Fields of the stored quarter that a new evaluation must not overwrite."""
 
@@ -46,8 +48,8 @@ def _input(record: Mapping[str, Any], extra: Mapping[str, float]) -> QuarterInpu
     return QuarterInput(
         start=datetime.fromisoformat(record["start"]),
         minutes=float(record["minutes"]),
-        import_kwh=float(record["import_kwh"]),
-        export_kwh=float(record["export_kwh"]),
+        import_kwh=float(record["import_kwh"]) + extra.get("import", 0.0),
+        export_kwh=float(record["export_kwh"]) + extra.get("export", 0.0),
         charge_kwh=float(record["charge_kwh"]) + extra.get("charged", 0.0),
         discharge_kwh=float(record["discharge_kwh"]) + extra.get("discharged", 0.0),
         solar_kwh=None if solar is None else float(solar) + extra.get("solar", 0.0),
@@ -69,7 +71,7 @@ def reevaluate(
     """Evaluate ``records`` again from the first corrected quarter; changes them in place.
 
     ``corrections``: extra kWh per quarter start (ISO) for ``charged``, ``discharged``,
-    ``solar``. Returns the pools after the last quarter and the (old, new) pairs, or None
+    ``solar``, ``import`` and ``export`` (negative: less). Returns the pools after the last quarter and the (old, new) pairs, or None
     when nothing could be corrected (no such quarter, or inputs missing).
     """
     first = next((i for i, r in enumerate(records) if r.get("start") in corrections), None)
@@ -90,6 +92,15 @@ def reevaluate(
         if extra:
             new["estimated"] = True
             new["corrected_at"] = corrected_at
+            counted = {k: v for k, v in COUNTER_FLOWS.items() if extra.get(k)}
+            if counted:  # a counter gap of the set filled this quarter (SPEC-tellers T2)
+                fill = dict(new.get("fill") or {})
+                for name in counted.values():
+                    fill.setdefault(name, "counter")
+                new["fill"] = fill
+                new["fill_causes"] = sorted({*(new.get("fill_causes") or []), "set"})
+                if new.get("status") in (None, "measured"):
+                    new["status"] = "estimated"
         records[index] = new
         changes.append((old, new))
     return pools, changes

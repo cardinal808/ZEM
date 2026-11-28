@@ -639,8 +639,16 @@ def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
     def period(summary: Summary) -> dict[str, Any]:
         d = summary.as_dict()
         keys = ("cost", "cost_no_battery", "savings_battery", "savings_solar_via_battery", "savings_trade", "charge_kwh", "discharge_kwh")
-        gaps = d["incomplete_quarters"] + d["quarters_without_price"]
-        return {**{k: d[k] for k in keys}, "days": summary.days, "quarters": d["quarters"], "incomplete_quarters": gaps}
+        gaps = d["missing_quarters"] + d["quarters_without_price"]
+        return {
+            **{k: d[k] for k in keys},
+            "days": summary.days,
+            "quarters": d["quarters"],
+            "incomplete_quarters": gaps,  # only what could not be filled: the amounts are too low
+            "missing_quarters": gaps,
+            "estimated_quarters": d["estimated_quarters"],
+            "price_interpolated_quarters": d["price_interpolated_quarters"],
+        }
 
     days: list[dict[str, Any]] = []
     stored = costs.days
@@ -663,6 +671,7 @@ def savings_view(entry: ZephyrConfigEntry) -> dict[str, Any]:
                 "day": key,
                 "savings_battery": None if saved is None else round(saved, 2),
                 "incomplete": gaps or short,
+                "estimated": bool(totals.get("estimated")),
                 "hourly": totals.get("source") is not None,
             }
         )
