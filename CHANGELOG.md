@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### 0.8.89 — Cost log: the older months are filled once too
+- The one-off fill of 0.8.80 (missing quarters made, incomplete ones filled, missing prices interpolated) only touched the current month. Now every stored month before it gets the same, once; each month is evaluated again on its own (the current month's pools stay), and its days are summed anew. Days worked out from hourly statistics are left alone. Diagnostics: `costs.history_filled.older_months`.
+
 ### 0.8.86 — Planner: price forecast of jeroen.nl as an optional source (indicative)
 - **Optional, off by default** (OPDRACHT-prijsvoorspelling-jeroen): new settings *price forecast (entity)*, *use in the plan* (off / indicative / take into account), *forecast days* (0–2, default 1) and *value from the band* (low / middle, default low). ZEPHYR reads only the sensor of the HACS integration ha-jeroen-nl (the user's own API key) and fetches nothing from jeroen.nl.
 - **Reader** (`core/price_forecast.py`): only quarters with `forecast: true`; the bare `market`, `low`, `high` are priced with ZEPHYR's own tariffs (the sensor's all-in `price` is not used). Units recognised (€/kWh, €/MWh, cents); slots by UTC start, days of 92/100 quarters work. Without `low`/`high`: `market`, with a note. A value but nothing readable: repair issue `price_forecast_format`.
