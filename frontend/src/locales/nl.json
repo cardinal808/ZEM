@@ -49,8 +49,7 @@
     "set_offline": "set offline",
     "unknown": "Nog geen gegevens van de set",
     "rte": "RTE {value}",
-    "rte_days": "7 dagen",
-    "rte_title": "Round-trip efficiency: geleverd ÷ geladen over de laatste 7 dagen, met de verandering in SoC verrekend (zelfde als op het scherm Accu)."
+    "rte_title": "Round-trip efficiency: geleverd ÷ geladen, met de verandering in SoC verrekend, over de laatste 7 dagen (of minder als het kostenlogboek korter loopt). Zelfde als op het scherm Accu."
   },
   "next": {
     "title": "Volgende stap",
@@ -237,7 +236,8 @@
     "days_week_cycles": "{n} cycli",
     "days_week_efficiency": "rendement {pct}",
     "days_week_price": "uit net gem. {price}/kWh",
-    "days_explain": "Cycli = geleverd ÷ bruikbare capaciteit ({usable} kWh tussen de grenzen). Rendement = geleverd ÷ geladen over de week, met de verandering in SoC verrekend. Uit het kostenlogboek, per afgesloten kwartier."
+    "days_explain": "Cycli = geleverd ÷ bruikbare capaciteit ({usable} kWh tussen de grenzen). Rendement = geleverd ÷ geladen over de week, met de verandering in SoC verrekend. Uit het kostenlogboek, per afgesloten kwartier.",
+    "days_n": "{n} dagen"
   },
   "settings": {
     "title": "Instellingen",
