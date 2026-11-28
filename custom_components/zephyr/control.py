@@ -68,6 +68,8 @@ from .writer import SetWriter
 if TYPE_CHECKING:
     from . import ZephyrConfigEntry, ZephyrRuntime
 
+LIVE_HISTORY = 20
+
 
 def _p1_watts(state: State | None) -> float | None:
     if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN, ""):
@@ -105,6 +107,13 @@ class ZephyrControl:
         """Calibration (SPEC-planner §3.5): upper limit 100 %; at 100 % no delivering until the set calibrated."""
         self.engine.enable_twin()  # shadow mode: a virtual set carries out the commands (core/twin.py)
         self.shadow = True
+        self.wanted_live = False
+        """The user wants live control; the switch keeps this over restarts. A start that cannot
+        go live yet (P1 or set not there) keeps it, so ZEPHYR goes on trying."""
+        self.live_history: deque[dict[str, Any]] = deque(maxlen=LIVE_HISTORY)
+        """Switches between live and shadow with the reason, kept over restarts (diagnostics)."""
+        self._live_store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.live")
+        self._foreign_seen: list[dict[str, Any]] = []
         self.result: StepResult | None = None
         self.log: deque[dict[str, Any]] = deque(maxlen=MAX_LINES)
         self.log_file = LogFile(hass, entry.entry_id, self.log)
@@ -231,6 +240,7 @@ class ZephyrControl:
         self.hass.async_create_task(self._restore_writes(), "zephyr: restore the write counters")
         self.hass.async_create_task(self.log_file.async_restore(), "zephyr: restore the log")
         unsubs.append(async_track_time_interval(self.hass, self.log_file.async_flush, FLUSH_EVERY))
+        self.hass.async_create_task(self._restore_live_history(), "zephyr: restore the live history")
         unsubs.append(async_track_time_interval(self.hass, self._save_writes, timedelta(minutes=5)))
 
         def save_writes() -> None:
@@ -249,6 +259,7 @@ class ZephyrControl:
             if not self.shadow:
                 # Unload or reload while live: leave the sets at 0 W, not at the last power.
                 self.shadow = True
+                self.note_live("shadow", "unload")
                 self.hass.async_create_background_task(self._all_to_zero(), "zephyr stop: sets to 0 W")
 
         return stop
@@ -432,7 +443,7 @@ class ZephyrControl:
             reasons.append("a write test is running")
         return reasons
 
-    async def async_set_live(self, live: bool) -> None:
+    async def async_set_live(self, live: bool, reason: str = "user") -> None:
         if live == (not self.shadow):
             return
         now = time.monotonic()
@@ -446,6 +457,7 @@ class ZephyrControl:
                 )
             ir.async_delete_issue(self.hass, DOMAIN, "second_controller")
             self._foreign.clear()
+            self._foreign_seen.clear()
             for writer in self.writers.values():
                 writer.last_props = None
                 writer.last_at = None
@@ -461,7 +473,30 @@ class ZephyrControl:
             await self._all_to_zero()
             LOGGER.info("ZEPHYR back in shadow mode")
         self._log_event("live" if live else "shadow")
+        self.note_live("live" if live else "shadow", reason)
         self.async_step()
+
+    # --- why live started or stopped, kept over restarts -----------------------------
+
+    def note_live(self, event: str, reason: str, **details: Any) -> None:
+        """Record a switch between live and shadow (or a failed resume) and save it."""
+        self.live_history.append({"time": dt_util.utcnow().isoformat(timespec="seconds"), "event": event, "reason": reason, **details})
+        self.hass.async_create_task(self._save_live_history(), "zephyr: save the live history")
+
+    @property
+    def last_shadow(self) -> dict[str, Any] | None:
+        """The last time live control stopped, with the reason."""
+        return next((e for e in reversed(self.live_history) if e["event"] == "shadow"), None)
+
+    async def _restore_live_history(self) -> None:
+        data = await self._live_store.async_load()
+        old = [e for e in (data or {}).get("history", []) if isinstance(e, dict) and "event" in e]
+        new = list(self.live_history)
+        self.live_history.clear()
+        self.live_history.extend(old + new)
+
+    async def _save_live_history(self) -> None:
+        await self._live_store.async_save({"history": list(self.live_history)})
 
     async def _all_to_zero(self) -> None:
         keys = [key for key in self.writers if self._online(key) and not self._busy_itself(key)]
@@ -485,11 +520,13 @@ class ZephyrControl:
             # A restart: the sets keep their last command and ZEPHYR takes over again after
             # the start (B35, B47). 0 W would open the relay and draw from the grid meanwhile.
             LOGGER.info("Home Assistant restarts: the sets keep their last command")
+            self.live_history.append({"time": dt_util.utcnow().isoformat(timespec="seconds"), "event": "restart", "reason": "ha_restart"})
         elif not self.shadow:
             await self._all_to_zero()
         await self._save_zero()
         await self._save_writes()
         await self.log_file.async_flush()
+        await self._save_live_history()
 
     def _count_written(self, key: str, kinds: list[str]) -> None:
         now = time.monotonic()
@@ -748,6 +785,15 @@ class ZephyrControl:
                 writer.stats.smartmode_reverted.append(now)
             if mismatch:
                 self._foreign.append(now)
+                self._foreign_seen.append(
+                    {
+                        "set": self.runtime.coordinators[key].number,
+                        "reported": [report.input_limit, report.output_limit],
+                        "sent": [sent["inputLimit"], sent["outputLimit"]],
+                        "after_s": round(now - writer.last_at, 1),
+                    }
+                )
+                del self._foreign_seen[:-4]
                 LOGGER.warning(
                     "Set %s reports limits ZEPHYR did not write (in %s / out %s, sent %s / %s)",
                     self.runtime.coordinators[key].number,
@@ -766,8 +812,11 @@ class ZephyrControl:
         if self.shadow:
             return
         self.shadow = True
+        self.wanted_live = False  # the user decides when to take over again (L4)
         self.live_since = None
         self.engine.set_live(False, time.monotonic(), self._views())
+        self.note_live("shadow", "second_controller", reports=list(self._foreign_seen))
+        self._foreign_seen.clear()
         # Once 0 W, as when switching off by hand: the set must not stay at ZEPHYR's last power.
         await self._all_to_zero()
         self._log_event("second_controller")

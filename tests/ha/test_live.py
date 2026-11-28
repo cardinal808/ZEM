@@ -226,6 +226,10 @@ async def test_second_controller_stops_live(hass: HomeAssistant, fake_sets: Fake
     from homeassistant.helpers import issue_registry as ir
 
     assert ir.async_get(hass).async_get_issue(DOMAIN, "second_controller") is not None
+    control = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.control
+    last = control.last_shadow
+    assert last is not None and last["reason"] == "second_controller" and last["reports"]
+    assert last["reports"][-1]["reported"] == [0, 1500] and not control.wanted_live
 
 
 async def test_calibrating_set_is_left_alone(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:

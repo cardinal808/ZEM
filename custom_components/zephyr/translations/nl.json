@@ -363,7 +363,7 @@
     },
     "live_not_resumed": {
       "title": "ZEPHYR heeft live sturen niet hervat",
-      "description": "Live sturen stond aan voor de herstart, maar kon binnen 10 minuten niet weer starten: {reasons}. Zet \"ZEPHYR stuurt de accu\" weer aan als dat is opgelost."
+      "description": "Live sturen stond aan voor de herstart, maar kon binnen 10 minuten niet weer starten: {reasons}. ZEPHYR blijft het elke 30 seconden proberen en gaat vanzelf live zodra dat is opgelost; deze melding verdwijnt dan."
     },
     "foreign_entities": {
       "title": "ZEPHYR gebruikt entiteiten van een andere Zendure-integratie",
@@ -603,6 +603,11 @@
           "description": "Naam van het apparaat zoals ingesteld in ZEPHYR."
         }
       }
+    }
+  },
+  "device": {
+    "installation": {
+      "name": "ZEPHYR Applicatie"
     }
   }
 }

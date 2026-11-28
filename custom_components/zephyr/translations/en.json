@@ -363,7 +363,7 @@
     },
     "live_not_resumed": {
       "title": "ZEPHYR did not resume live control",
-      "description": "Live control was on before the restart, but could not start again within 10 minutes: {reasons}. Switch \"ZEPHYR controls the battery\" on again once that is solved."
+      "description": "Live control was on before the restart, but could not start again within 10 minutes: {reasons}. ZEPHYR keeps trying every 30 seconds and goes live by itself once that is solved; this notice then disappears."
     },
     "foreign_entities": {
       "title": "ZEPHYR uses entities of another Zendure integration",
@@ -603,6 +603,11 @@
           "description": "Name of the appliance as set up in ZEPHYR."
         }
       }
+    }
+  },
+  "device": {
+    "installation": {
+      "name": "ZEPHYR Application"
     }
   }
 }

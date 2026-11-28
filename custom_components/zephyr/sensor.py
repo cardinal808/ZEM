@@ -35,7 +35,7 @@ from .core.models import SetStatus
 from .core.totals import Totals
 from .cost_recorder import CostRecorder
 from .energy_recorder import EnergyRecorder
-from .entity import ZephyrApplianceEntity, ZephyrControlEntity, ZephyrSetEntity, ZephyrTotalEntity, installation_device
+from .entity import InstallationIds, ZephyrApplianceEntity, ZephyrControlEntity, ZephyrSetEntity, ZephyrTotalEntity, installation_device
 from .planner_runner import PlanRunner
 
 StateValue = float | int | str | None
@@ -442,7 +442,7 @@ class ZephyrSetCounterSensor(ZephyrSetEntity, SensorEntity):
 COST_PERIODS = ("today", "month", "year")
 
 
-class ZephyrCostSensor(SensorEntity):
+class ZephyrCostSensor(InstallationIds, SensorEntity):
     """Costs or savings of today, this month or this year (B38). € incl. VAT, without fixed costs."""
 
     _attr_has_entity_name = True
@@ -561,7 +561,7 @@ PLAN_SENSORS: tuple[ZephyrPlanSensorDescription, ...] = (
 )
 
 
-class ZephyrPlanSensor(SensorEntity):
+class ZephyrPlanSensor(InstallationIds, SensorEntity):
     """What the planner would do (shadow: calculated and shown, not carried out yet)."""
 
     _attr_has_entity_name = True
@@ -675,7 +675,7 @@ class ZephyrSetEnergySensor(ZephyrSetEntity, _EnergySensorBase):
         return attrs
 
 
-class ZephyrEnergyTotalSensor(_EnergySensorBase):
+class ZephyrEnergyTotalSensor(InstallationIds, _EnergySensorBase):
     """An own energy counter of the installation: the increases of all sets."""
 
     _attr_has_entity_name = True
