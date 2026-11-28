@@ -8,7 +8,12 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import issue_registry as ir
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, mock_restore_cache
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+    mock_restore_cache,
+    mock_restore_cache_with_extra_data,
+)
 
 from custom_components.zephyr import async_migrate_entry
 from custom_components.zephyr.const import DOMAIN
@@ -68,6 +73,62 @@ async def test_not_resumed_when_the_set_stays_away(hass: HomeAssistant, fake_set
     await _run(hass, freezer, 11 * 60)
     assert entry.runtime_data.control.shadow
     assert ir.async_get(hass).async_get_issue(DOMAIN, "live_not_resumed") is not None
+
+
+async def test_resume_goes_on_after_ten_minutes(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # 28-11: the set stayed away longer than 10 minutes after a restart; ZEPHYR gave up and the
+    # switch stayed off, also after the next restart. Now it keeps trying and goes live by itself.
+    entry = await _install_with_p1(hass, fake_sets)
+    answer = fake_sets.answers["10.0.0.10"]
+    fake_sets.fail("10.0.0.10")
+    await _restart(hass, entry)
+    await _run(hass, freezer, 11 * 60)
+    control = entry.runtime_data.control
+    assert control.shadow and control.wanted_live
+    assert control.live_history[-1]["event"] == "not_resumed"
+    fake_sets.answers["10.0.0.10"] = answer
+    await _run(hass, freezer, 90)
+    assert not control.shadow
+    assert hass.states.get(SWITCH).state == "on"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, "live_not_resumed") is None
+    assert control.live_history[-1]["reason"] == "resumed"
+
+
+async def test_wish_survives_a_restart_while_resuming(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # The state was off (still resuming), but the user wanted live: the next start resumes.
+    entry = await _install_with_p1(hass, fake_sets)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    mock_restore_cache_with_extra_data(hass, [(State(SWITCH, "off"), {"wanted_live": True})])
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await _run(hass, freezer, 30)
+    assert not entry.runtime_data.control.shadow
+
+
+async def test_switched_off_stays_off(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    entry = await _install_with_p1(hass, fake_sets)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    mock_restore_cache_with_extra_data(hass, [(State(SWITCH, "on"), {"wanted_live": False})])
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await _run(hass, freezer, 30)
+    assert entry.runtime_data.control.shadow
+
+
+async def test_live_history_is_kept_over_a_restart(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    entry = await _install_with_p1(hass, fake_sets)
+    await _run(hass, freezer, 10)
+    await hass.services.async_call("switch", "turn_on", {"entity_id": SWITCH}, blocking=True)
+    await hass.services.async_call("switch", "turn_off", {"entity_id": SWITCH}, blocking=True)
+    await hass.async_block_till_done()
+    state = hass.states.get(SWITCH)
+    assert state.attributes["last_shadow_reason"] == "user"
+    assert state.attributes["wanted_live"] is False
+    await _restart(hass, entry, "off")
+    history = entry.runtime_data.control.live_history
+    assert [(e["event"], e["reason"]) for e in history][-2:] == [("live", "user"), ("shadow", "user")]
 
 
 async def test_migration_turns_the_test_phase_setting_off(hass: HomeAssistant) -> None:
