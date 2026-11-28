@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### 0.8.83 — Savings: the battery's content at the start and end of a period (day boundary)
+- **Day boundary** (TOETS-besparing bevinding 2, SPEC-kosten §5): energy charged and still in the battery at the end of a period was counted as cost, its earnings fell in the next period; days and *Today* / *This week* swung with the state of charge. Now the battery's content is valued at what it cost (grid energy at its buy price, solar at the export revenue given up) and the change over the period counts in the battery saving (solar part in *Zon bewaard*, grid part in *Prijsverschil*). Over a longer period it adds up to 0.
+- The pools keep `grid_value` (what the grid energy in the battery cost); before 0.8.83 that was not kept, so the grid energy in the battery at the update starts at the mean buy price of the last week. Per quarter `content` (solar and grid value after it); per day `content.start` / `content.end`, refreshed after a correction.
+- Summary: `battery_content_change`, `battery_content_end`; `savings_battery`, `savings` and the sensors include the change.
+
 ### 0.8.82 — Plan: P1 value on the card Nu, RTE on the card Accu
 - **Card *Nu*:** right of the action the P1 value, always in W with a sign (*+1.100 W · afname* in red, *−350 W · teruglevering* in green, within ±50 W grey). Same measurement as the flows below it.
 - **Card *Accu*:** *RTE 86 % · 7 dagen* between the limits and the sets: the round-trip efficiency from `zephyr/battery_days` (same figure as on the screen Accu), *RTE –* with too little energy. Refreshed at most every 15 minutes.
