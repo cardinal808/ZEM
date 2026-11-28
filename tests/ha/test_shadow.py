@@ -223,3 +223,15 @@ async def test_single_phase_pair_is_suggested(hass: HomeAssistant, fake_sets: Fa
 def _pair_suggestion(result: Any) -> dict[str, Any]:
     keys = ("p1_import_entity", "p1_export_entity")
     return {str(k): k.description["suggested_value"] for k in result["data_schema"].schema if k in keys}
+
+
+async def test_set_device_hangs_under_the_installation(hass: HomeAssistant, fake_sets: FakeSets) -> None:
+    # HA 2026.11: via_device is deprecated; the link must still be the installation device.
+    from homeassistant.helpers import device_registry as dr
+
+    entry = await _install_with_p1(hass, fake_sets)
+    registry = dr.async_get(hass)
+    installation = registry.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    sets = [d for d in dr.async_entries_for_config_entry(registry, entry.entry_id) if d.id != installation.id]
+    assert installation is not None and sets
+    assert all(d.via_device_id == installation.id for d in sets)
