@@ -368,6 +368,10 @@
     "foreign_entities": {
       "title": "ZEPHYR uses entities of another Zendure integration",
       "description": "These settings point to an entity of another Zendure integration:\n{entities}\n\nZEPHYR reads the sets itself and has its own energy counters. Replace them in ZEPHYR's settings:\n- Solar panel power: only inverters outside the sets. ZEPHYR already counts the set's own PV; with the set's sensor it is counted twice.\n- Solar energy counter: the inverter's energy counter.\n- P1 and cost counters: the smart meter (DSMR).\n- Battery charge and discharge: sensor.zephyr_energy_charged and sensor.zephyr_energy_discharged.\nThis notice disappears once no setting uses such an entity."
+    },
+    "price_forecast_format": {
+      "title": "Price forecast of {entity} cannot be read",
+      "description": "The sensor {entity} has a value, but ZEPHYR finds no forecast quarters in its attribute prices (start, end, market, forecast). The planner works without the forecast. Check the sensor of ha-jeroen-nl, or clear the price forecast in the ZEPHYR options."
     }
   },
   "options": {
@@ -413,7 +417,11 @@
           "curtail_switch": "Inverter curtail switch",
           "curtail_number": "Inverter power limit",
           "curtail_inverter_w": "Inverter rated power",
-          "calibration_days": "Planner: calibration after days"
+          "calibration_days": "Planner: calibration after days",
+          "price_forecast_entity": "Planner: price forecast (jeroen.nl)",
+          "price_forecast_mode": "Planner: use of the price forecast",
+          "price_forecast_days": "Planner: forecast days",
+          "price_forecast_value": "Planner: value from the forecast band"
         },
         "data_description": {
           "p1_entity": "A meter that reports every second controls best. With corrections (EV, air conditioning) you can choose the corrected sensor of your current setup.",
@@ -453,7 +461,11 @@
           "curtail_switch": "On while the export price is negative. Alternative to the power limit.",
           "curtail_number": "Number entity that limits the inverter's power in % (e.g. SolarEdge Modbus active power limit). Only with ZEPHYR curtails.",
           "curtail_inverter_w": "Rated AC power of that inverter (W), to turn the wanted production into a %. 0 = not set.",
-          "calibration_days": "When the battery has not reached 100 % for this many days, the planner charges it full at the cheapest moment (the upper limit goes to 100 % for a while) and does not deliver until the set has calibrated itself (max. 2 hours). From half these days on it already charges full when that is cheap. 0 = off."
+          "calibration_days": "When the battery has not reached 100 % for this many days, the planner charges it full at the cheapest moment (the upper limit goes to 100 % for a while) and does not deliver until the set has calibrated itself (max. 2 hours). From half these days on it already charges full when that is cheap. 0 = off.",
+          "price_forecast_entity": "Optional. The price sensor of the HACS integration ha-jeroen-nl (with your own jeroen.nl API key). ZEPHYR then also looks past the known Nord Pool prices. Nord Pool always leads; ZEPHYR fetches nothing from jeroen.nl itself.",
+          "price_forecast_mode": "Indicative: the plan stays as without the forecast; the diagnostics show what ZEPHYR would do with it. Take into account: the planner uses the forecast to plan (for example charging tonight for an expensive day after tomorrow); blocks on forecast quarters stay indicative. The forecast can be off in level; its trend is usually clear.",
+          "price_forecast_days": "How many days past the last known price (0–2).",
+          "price_forecast_value": "Low (p10 of the 80 % band, careful: no charging on an optimistic guess) or the middle."
         }
       }
     },
@@ -495,6 +507,19 @@
         "dryer_heat_pump": "Dryer (heat pump)",
         "dryer_condenser": "Dryer (condenser)",
         "other": "Other"
+      }
+    },
+    "price_forecast_mode": {
+      "options": {
+        "off": "Off",
+        "indicative": "Indicative (show only)",
+        "use": "Take into account"
+      }
+    },
+    "price_forecast_value": {
+      "options": {
+        "low": "Low (careful)",
+        "mid": "Middle"
       }
     }
   },

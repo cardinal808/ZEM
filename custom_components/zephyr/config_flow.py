@@ -59,6 +59,10 @@ from .const import (
     CONF_PLAN_LOAD_MARGIN,
     CONF_PLAN_WEAR_COST,
     CONF_PRICE_ENTITY,
+    CONF_PRICE_FORECAST_DAYS,
+    CONF_PRICE_FORECAST_ENTITY,
+    CONF_PRICE_FORECAST_MODE,
+    CONF_PRICE_FORECAST_VALUE,
     CONF_PRODUCT,
     CONF_RESERVE_SOC,
     CONF_SERIAL,
@@ -681,6 +685,18 @@ class ZephyrOptionsFlow(OptionsFlow):
                 vol.Required(CONF_PLAN_LOAD_MARGIN, default=options.get(CONF_PLAN_LOAD_MARGIN, 0)): _percent(0, 50),
                 vol.Required(CONF_PLAN_BUFFER, default=options.get(CONF_PLAN_BUFFER, 0)): _percent(0, 50),
                 vol.Required(CONF_CALIBRATION_DAYS, default=options.get(CONF_CALIBRATION_DAYS, 21)): _box(0, 90, 1, "d"),
+                vol.Optional(CONF_PRICE_FORECAST_ENTITY, description={"suggested_value": options.get(CONF_PRICE_FORECAST_ENTITY)}): (
+                    selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor"))
+                ),
+                vol.Required(
+                    CONF_PRICE_FORECAST_MODE, default=options.get(CONF_PRICE_FORECAST_MODE, "indicative")
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=["off", "indicative", "use"], translation_key="price_forecast_mode")
+                ),
+                vol.Required(CONF_PRICE_FORECAST_DAYS, default=options.get(CONF_PRICE_FORECAST_DAYS, 1)): _box(0, 2, 1, "d"),
+                vol.Required(CONF_PRICE_FORECAST_VALUE, default=options.get(CONF_PRICE_FORECAST_VALUE, "low")): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=["low", "mid"], translation_key="price_forecast_value")
+                ),
                 vol.Optional(
                     CONF_WORKDAY_ENTITY, description={"suggested_value": options.get(CONF_WORKDAY_ENTITY) or suggest_workday(self.hass)}
                 ): (selector.EntitySelector(selector.EntitySelectorConfig(domain="binary_sensor", integration="workday"))),

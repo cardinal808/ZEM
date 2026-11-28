@@ -18,7 +18,7 @@ import asyncio
 import dataclasses
 import time
 from collections import deque
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import date, datetime, timedelta
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -77,6 +77,7 @@ from .core.load_profile import WEEKEND, WORKDAY, HourEnergy, LoadProfile, blocke
 from .core.plan_check import expectations, record_fields
 from .core.plan_view import local_midnight, plan_view
 from .core.planner import Action, PlannerSettings
+from .core.price_forecast import MODE_USE
 from .core.price_window import PriceSlot
 from .core.vacation import base_load
 from .curtail import planner_curtails
@@ -142,6 +143,10 @@ class PlanRunner:
         self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
         self.calibration_days = float(options.get(CONF_CALIBRATION_DAYS, DEFAULT_INTERVAL_DAYS))
         self.calibration = Calibration(interval_days=self.calibration_days)
+        from .price_forecast_source import PriceForecastSource
+
+        self.price_forecast = PriceForecastSource(hass, entry_id, options)
+        """Optional jeroen.nl forecast after the known prices (OPDRACHT-prijsvoorspelling-jeroen)."""
         self.profile = LoadProfile()
         self.excluded_entity: str | None = options.get(CONF_EXCLUDED_ENERGY)
         """B41: energy counter of the load the battery may not feed (the air conditioner)."""
@@ -188,11 +193,13 @@ class PlanRunner:
         self.buffer = float(options.get(CONF_PLAN_BUFFER, 0.0))
         self.calibration_days = float(options.get(CONF_CALIBRATION_DAYS, DEFAULT_INTERVAL_DAYS))
         self.calibration.interval_days = self.calibration_days
+        self.price_forecast.apply_options(options)
         self.async_request()
 
     async def async_start(self) -> Callable[[], None]:
         stored = await self._store.async_load() or {}
         self._loaded = True
+        await self.price_forecast.async_load()
         self.profile = LoadProfile.from_dict(stored.get("profile"))
         self.hour = dict(stored.get("hour") or {})
         self.reserve = _slots_from_store(stored.get("reserve"))
@@ -221,6 +228,11 @@ class PlanRunner:
         unsubs: list[Callable[[], None]] = [
             async_track_time_change(self.hass, self._on_minute, second=10),
             async_track_state_change_event(self.hass, [self.price_entity], self._on_price_change),
+            *(
+                [async_track_state_change_event(self.hass, [self.price_forecast.entity], self._on_forecast_change)]
+                if self.price_forecast.entity
+                else []
+            ),
             async_call_later(self.hass, FIRST_RUN_DELAY, self._on_first),
         ]
 
@@ -289,6 +301,10 @@ class PlanRunner:
         return None
 
     # --- triggers (§5) -------------------------------------------------------------
+
+    @callback
+    def _on_forecast_change(self, _event: Any) -> None:
+        self.async_request()
 
     @callback
     def _on_first(self, _now: datetime) -> None:
@@ -424,7 +440,7 @@ class PlanRunner:
             why = {"nl": reason(outcome, "nl", tz), "en": reason(outcome, "en", tz)}
         costs = self.runtime.costs
         history = costs.records_since(local_midnight(now, tz)) if costs is not None else None
-        return plan_view(
+        view = plan_view(
             outcome,
             prices,
             now,
@@ -438,6 +454,18 @@ class PlanRunner:
             curtail_mode=self.curtail_mode,
             curtail=self.settings.curtail,
         )
+        chart = self.price_forecast.chart()
+        if chart is not None:
+            # §3.5: the forecast quarters with their band (bare market and all-in), for a dashed line.
+            for slot in chart["slots"]:
+                start = datetime.fromisoformat(slot["start"])
+                slot["buy"] = round(self._buy(start, slot["market"]), 5)
+                slot["buy_low"] = round(self._buy(start, slot["low"]), 5)
+                slot["buy_high"] = round(self._buy(start, slot["high"]), 5)
+            chart["mode"] = self.price_forecast.mode
+            chart["compare"] = self.price_forecast.compare
+        view["price_forecast"] = chart
+        return view
 
     async def async_calculate(self) -> PlanOutcome | None:
         assert self.price_entity is not None
@@ -466,16 +494,25 @@ class PlanRunner:
         tariffs = self.runtime.tariffs
         assert tariffs is not None
         solar_fn, solar_source = self._solar()
-        slots = build_horizon(
-            markets,
-            now,
-            buy=self._buy,
-            sell=self._sell,
-            load=self._load,
-            solar=solar_fn,
-            daylight=self._daylight,
-            excluded=self._excluded if self.excluded_entity else None,
-        )
+
+        def horizon(markets_: Sequence[tuple[datetime, float, bool]]) -> list[Any]:
+            return build_horizon(
+                markets_,
+                now,
+                buy=self._buy,
+                sell=self._sell,
+                load=self._load,
+                solar=solar_fn,
+                daylight=self._daylight,
+                excluded=self._excluded if self.excluded_entity else None,
+            )
+
+        extension = self.price_forecast.extend(markets, now, tz)
+        with_forecast = extension is not None and bool(extension.used)
+        if with_forecast and self.price_forecast.mode == MODE_USE:
+            assert extension is not None
+            markets = extension.markets
+        slots = horizon(markets)
         prev_action = previous.action if previous is not None and previous.slots else Action.DELIVER
         settings = dataclasses.replace(self.settings, calibration_penalty=self.calibration.penalty(dt_util.utcnow()))
         began = time.perf_counter()
@@ -489,6 +526,21 @@ class PlanRunner:
             appliances.published()
         outcome = await self.hass.async_add_executor_job(make_plan, slots, battery, now, settings, prev_action)
         outcome.duration_s = time.perf_counter() - began
+        self.price_forecast.compare = None
+        if with_forecast and self.price_forecast.mode != MODE_USE:
+            # Indicative (§3.4): the plan's actions stay without the forecast; what it would do with it
+            # goes to the diagnostics only.
+            assert extension is not None
+            other = await self.hass.async_add_executor_job(make_plan, horizon(extension.markets), battery, now, settings, prev_action)
+            self.price_forecast.compare = {
+                "action_without": outcome.action.value,
+                "action_with": other.action.value,
+                "first_action_differs": other.action is not outcome.action,
+                "expected_cost_without": round(outcome.expected_cost, 3),
+                "expected_cost_with": round(other.expected_cost, 3),
+                "grid_charge_kwh_without": round(outcome.planned_grid_charge_kwh, 3),
+                "grid_charge_kwh_with": round(other.planned_grid_charge_kwh, 3),
+            }
         if from_reserve:
             outcome.state = PlanState.PRICE_RESERVE
         self._publish(
@@ -821,7 +873,7 @@ class PlanRunner:
             "inputs": self.inputs,
             "outcome": None if outcome is None else outcome.summary(),
             "blocks": [] if outcome is None else [b.as_dict() for b in outcome.blocks],
-            "timeline": [] if outcome is None else outcome.timeline(),
+            "timeline": [] if outcome is None else self._private_timeline(outcome.timeline()),
             "snapshots": list(self.snapshots),
             "profile": self.profile.as_dict(),
             "excluded_profile": None if not self.excluded_entity else self.excluded_profile.as_dict(),
@@ -830,7 +882,27 @@ class PlanRunner:
             "vacation_profile": self.vacation_profile.as_dict() if self.vacation_profile.mean_count else None,
             "vacation": None if self.runtime.vacation is None else self.runtime.vacation.diagnostics(),
             "planned_quarters": self.by_quarter,
+            "price_forecast": self.price_forecast.diagnostics(self._actual_market),
         }
+
+    def _private_timeline(self, timeline: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Forecast prices stay private (jeroen.nl terms): no prices on forecast quarters in the diagnostics."""
+        ext = self.price_forecast.last
+        if ext is None or not ext.used or self.price_forecast.mode != MODE_USE:
+            return timeline
+        first = ext.used[0].start.isoformat()
+        return [{**q, "buy": None, "sell": None} if str(q.get("start", "")) >= first else q for q in timeline]
+
+    def _actual_market(self, moment: datetime) -> float | None:
+        """The real (Nord Pool) market price of a past quarter, from the cost log (forecast quality)."""
+        costs = self.runtime.costs
+        if costs is None:
+            return None
+        record = costs._record_at(moment)
+        if record is None or record.get("price_source") not in (None, "nordpool"):
+            return None
+        market = record.get("market")
+        return None if market is None else float(market)
 
 
 def _price_key(state: State | None) -> tuple[Any, ...]:

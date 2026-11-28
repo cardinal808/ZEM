@@ -284,7 +284,11 @@
       "off": "Off",
       "curtail_off": "Off (exported, costs money)",
       "curtail_external": "Another system curtails",
-      "curtail_zephyr": "ZEPHYR curtails"
+      "curtail_zephyr": "ZEPHYR curtails",
+      "indicative": "Indicative (show only)",
+      "use": "Take into account",
+      "low": "Low (careful)",
+      "mid": "Middle"
     },
     "fields": {
       "min_soc": {
@@ -476,6 +480,26 @@
         "label": "Calibration after days",
         "help": "After this many days without 100 % the planner charges the battery full and lets the set calibrate.",
         "more": "Default 21 days; 0 = off. The longer the battery has not been full, the further the packs drift apart. From half of these days the planner looks for a cheap moment or sun to charge to full; on the last day it must. ZEPHYR then does not deliver until the set has finished calibrating (max. 2 hours)."
+      },
+      "price_forecast_entity": {
+        "label": "Price forecast (jeroen.nl)",
+        "help": "Optional: the sensor of ha-jeroen-nl, to look past the known prices.",
+        "more": "Install the HACS integration ha-jeroen-nl with your own jeroen.nl API key and choose its price sensor here. ZEPHYR reads only that sensor and never fetches anything from jeroen.nl itself. Only forecast quarters after the last known Nord Pool price are used; Nord Pool always leads. Source: jeroen.nl."
+      },
+      "price_forecast_mode": {
+        "label": "Use in the plan",
+        "help": "Indicative: the plan stays the same. Take into account: the planner plans with the forecast.",
+        "more": "Indicative: the diagnostics compare the plan with and without the forecast. Take into account: the planner also looks at the forecast days (by default: the day after the known prices, so after about 13:00 the day after tomorrow). The level of the forecast can be off, the trend is usually clear; with the value Low the planner stays careful. Blocks on forecast quarters stay indicative and do not count in the totals. The stored forecasts give a backtest after about 6 weeks."
+      },
+      "price_forecast_days": {
+        "label": "Forecast days",
+        "help": "How many days past the last known price.",
+        "more": "Default 1: before about 13:00 the forecast stands in for tomorrow; after that it adds the day after tomorrow. 0 = only store the forecast for the quality figures."
+      },
+      "price_forecast_value": {
+        "label": "Value from the band",
+        "help": "Low is careful: no charging on an optimistic guess.",
+        "more": "jeroen.nl gives an 80 % band (p10–p90). Low uses p10 for buying and selling, so the planner does not charge for, or hold energy for, a peak that may not come. Middle uses the expected value."
       }
     },
     "restarting": "ZEPHYR is restarting with the new settings…",

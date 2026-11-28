@@ -14,6 +14,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from custom_components.zephyr.const import DOMAIN
+from custom_components.zephyr.core.forecast_plan import local_midnight
 from custom_components.zephyr.diagnostics import async_get_config_entry_diagnostics
 
 from .conftest import FakeSets
@@ -553,3 +554,79 @@ async def test_planner_memory_survives_a_restart_across_a_quarter(
     planner = entry.runtime_data.planner
     assert planner.calibration.last_full == first
     assert planner.profile.mean_count >= mean_count
+
+
+JEROEN = "sensor.jeroen_nl_stroomprijs"
+
+
+def _jeroen(hass: HomeAssistant, first: datetime, quarters: int, made: datetime) -> None:
+    """A made-up ha-jeroen-nl sensor (the real forecast stays private, see the core tests)."""
+    rows = []
+    t = first
+    for _ in range(quarters):
+        peak = 0.45 if 7 <= dt_util.as_local(t).hour < 9 else 0.20
+        rows.append(
+            {
+                "start": t.isoformat(),
+                "end": (t + timedelta(minutes=15)).isoformat(),
+                "price": 0.4,
+                "market": peak,
+                "low": peak - 0.03,
+                "high": peak + 0.05,
+                "forecast": True,
+            }
+        )
+        t += timedelta(minutes=15)
+    hass.states.async_set(JEROEN, "0.36", {"prices": rows, "forecast_made": made.isoformat(), "unit_of_measurement": "€/kWh"})
+
+
+async def test_price_forecast_indicative(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # OPDRACHT-prijsvoorspelling-jeroen: indicative leaves the plan's actions as they are; the
+    # diagnostics compare, keep summaries only, and one run a day is kept for the backtest.
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (9, 0), price_entity=PRICE)
+    await _tick(hass, freezer, 70)
+    planner = entry.runtime_data.planner
+    without = planner.outcome
+    assert without is not None
+    known_end = local_midnight(2, dt_util.utcnow(), dt_util.get_default_time_zone()).astimezone(dt_util.UTC)
+    _jeroen(hass, known_end, 2 * 96, dt_util.utcnow() - timedelta(hours=5))
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], {"p1_entity": P1, "price_entity": PRICE, "price_forecast_entity": JEROEN}
+    )
+    await hass.async_block_till_done()
+    await _tick(hass, freezer, 70)
+    planner = entry.runtime_data.planner
+    assert planner.outcome is not None and planner.outcome.action is without.action
+    assert planner.outcome.slots[-1].start < known_end  # the plan itself does not use the forecast
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    forecast = diag["planner"]["price_forecast"]
+    assert forecast["mode"] == "indicative" and forecast["used_slots"] == 96 and forecast["reason"] is None
+    assert forecast["compare"] is not None and forecast["runs_stored"] == 1
+    assert "slots" not in forecast  # no raw series in the diagnostics
+    view = planner.view()
+    assert view["price_forecast"]["source"]["name"] == "jeroen.nl" and len(view["price_forecast"]["slots"]) == 96
+
+    hass.states.async_set(JEROEN, "0.36", {"unit_of_measurement": "€/kWh"})  # a value, but nothing to read
+    await _tick(hass, freezer, 70)
+    assert ir.async_get(hass).async_get_issue(DOMAIN, "price_forecast_format") is not None
+
+
+async def test_price_forecast_taken_into_account(hass: HomeAssistant, fake_sets: FakeSets, freezer: FrozenDateTimeFactory) -> None:
+    # Bjorn 28-11: plan with the forecast's trend (mostly the day after tomorrow).
+    _set_prices(hass)
+    entry = await _setup(hass, fake_sets, freezer, (15, 0), price_entity=PRICE)
+    known_end = local_midnight(2, dt_util.utcnow(), dt_util.get_default_time_zone()).astimezone(dt_util.UTC)
+    _jeroen(hass, known_end, 2 * 96, dt_util.utcnow() - timedelta(hours=10))
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    options = {"p1_entity": P1, "price_entity": PRICE, "price_forecast_entity": JEROEN, "price_forecast_mode": "use"}
+    await hass.config_entries.options.async_configure(result["flow_id"], options)
+    await hass.async_block_till_done()
+    await _tick(hass, freezer, 70)
+    outcome = entry.runtime_data.planner.outcome
+    assert outcome is not None and outcome.slots[-1].start >= known_end  # the day after tomorrow is in the plan
+    assert all(s.indicative for s in outcome.slots if s.start >= known_end)  # but not in the totals
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    late = [q for q in diag["planner"]["timeline"] if q["start"] >= known_end.isoformat()]
+    assert late and all(q["buy"] is None for q in late)  # forecast prices stay private
